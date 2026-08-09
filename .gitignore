@@ -1,0 +1,43 @@
+# Godot 4+ specific ignores
+.godot/
+export_credentials.cfg
+.DS_Store
+Thumbs.db
+
+# Build outputs (kept for Releases via Actions but ignore local)
+build/
+*.apk
+*.aab
+*.x86_64
+*.exe
+*.app
+
+# Logs
+logs/
+*.log
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.import
+*.tmp.*
+
+# User saves
+user://
+*.save
+
+# Debug keystore (generated in CI)
+debug.keystore
+release.keystore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Desktop.ini
