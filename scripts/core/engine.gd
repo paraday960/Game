@@ -4,29 +4,48 @@ extends Node
 signal tick_completed(new_state, events)
 signal tick_failed(reason)
 
-# ترتیب سیستم‌ها برای اجرای دترمینستیک
+# ترتیب سیستم‌ها برای اجرای دترمینستیک - 33 سیستم اصلی
 var system_order = [
-	"resources",
-	"economy",
-	"population",
-	"politics",
-	"military",
-	"diplomacy",
-	"infrastructure",
-	"technology",
-	"health",
-	"education",
-	"welfare",
-	"environment",
-	"trade",
-	"central_bank"
+	"resources",      # 3.9
+	"economy",        # 3.10
+	"population",     # 3.11
+	"politics",       # 3.12
+	"military",       # 3.13
+	"diplomacy",      # 3.14
+	"infrastructure", # 3.15
+	"technology",     # 3.16
+	"judicial",       # 3.17 - دسته اول 3تایی
+	"security",       # 3.18
+	"health",         # 3.19
+	"education",      # 3.20
+	"welfare",        # 3.21
+	"culture",        # 3.22
+	"intelligence",   # 3.23
+	"environment",    # 3.24
+	"central_bank",   # 3.25
+	"administration", # 3.26
+	"agriculture",    # 3.27
+	"industry",       # 3.28
+	"trade",          # 3.29
+	"tourism",        # 3.30
+	"ethnicity",      # 3.31
+	"stock_market",   # 3.33
+	"statistics",     # 3.34
+	"emergency",      # 3.35
+	"sports_youth",   # 3.36
+	"veterans",       # 3.37
+	"family",         # 3.38
+	"fisheries",      # 3.39
+	"heritage",       # 3.40
+	"space",          # 3.41
+	"elections"       # 3.65
 ]
 
 # سیستم‌های لود شده
 var systems: Dictionary = {}
 
 func _ready():
-	# لود سیستم‌ها
+	# لود سیستم‌های پیاده‌سازی شده
 	systems["resources"] = load("res://scripts/systems/resources_system.gd").new()
 	systems["economy"] = load("res://scripts/systems/economy_system.gd").new()
 	systems["population"] = load("res://scripts/systems/population_system.gd").new()
@@ -35,8 +54,33 @@ func _ready():
 	systems["diplomacy"] = load("res://scripts/systems/diplomacy_system.gd").new()
 	systems["infrastructure"] = load("res://scripts/systems/infrastructure_system.gd").new()
 	systems["technology"] = load("res://scripts/systems/technology_system.gd").new()
-	# برای سایر سیستم‌ها stub استفاده می‌کنیم - بعدا تکمیل
+	systems["judicial"] = load("res://scripts/systems/judicial_system.gd").new()
+	systems["security"] = load("res://scripts/systems/security_system.gd").new()
+	systems["health"] = load("res://scripts/systems/health_system.gd").new()
+	systems["education"] = load("res://scripts/systems/education_system.gd").new()
+	systems["welfare"] = load("res://scripts/systems/welfare_system.gd").new()
+	systems["environment"] = load("res://scripts/systems/environment_system.gd").new()
+	systems["culture"] = load("res://scripts/systems/culture_system.gd").new()
+	systems["intelligence"] = load("res://scripts/systems/intelligence_system.gd").new()
+	systems["central_bank"] = load("res://scripts/systems/central_bank_system.gd").new()
+	systems["trade"] = load("res://scripts/systems/trade_system.gd").new()
+	systems["tourism"] = load("res://scripts/systems/tourism_system.gd").new()
+	systems["stock_market"] = load("res://scripts/systems/stock_market_system.gd").new()
+	systems["agriculture"] = load("res://scripts/systems/agriculture_system.gd").new()
+	systems["industry"] = load("res://scripts/systems/industry_system.gd").new()
+	# باقی سیستم‌ها در دسته‌های بعدی تکمیل می‌شوند - فعلا fallback
+	_load_remaining_systems()
 	print("موتور شبیه‌سازی با %d سیستم لود شد" % systems.size())
+
+func _load_remaining_systems():
+	var remaining = ["administration", "ethnicity", "statistics", "emergency", "sports_youth", "veterans", "family", "fisheries", "heritage", "space", "elections"]
+	for name in remaining:
+		var path = "res://scripts/systems/%s_system.gd" % name
+		if ResourceLoader.exists(path):
+			systems[name] = load(path).new()
+		else:
+			# stub عمومی
+			systems[name] = load("res://scripts/systems/base_system.gd").new()
 
 # تابع اصلی تیک - اجرای اتمی
 func tick(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:
