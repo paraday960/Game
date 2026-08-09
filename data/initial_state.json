@@ -1,0 +1,15 @@
+{
+  "version": 0,
+  "tick": 0,
+  "year": 2027,
+  "message": "وضعیت اولیه شبیه‌ساز کشور",
+  "economy": {
+    "gdp": 500000000000,
+    "growth": 0.02,
+    "inflation": 0.08
+  },
+  "population": {
+    "total": 85000000,
+    "happiness": 0.60
+  }
+}

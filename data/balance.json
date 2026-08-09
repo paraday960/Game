@@ -1,0 +1,32 @@
+{
+  "balance_version": "1.0.0",
+  "notes": "مقادیر پیشنهادی اولیه - بخش ۳.۹.۴ تا ۳.۴۱",
+  "resources": {
+    "energy_crisis_factor": 0.5,
+    "food_crisis_threshold": 30,
+    "storage_base": 100,
+    "depletion_rate": 0.01
+  },
+  "economy": {
+    "tax_base": 0.20,
+    "growth_base": 0.02,
+    "debt_interest": 0.03,
+    "debt_ceiling": 2.0
+  },
+  "population": {
+    "birth_base": 15,
+    "death_base": 8,
+    "participation": 0.65,
+    "happiness_critical": 0.30
+  },
+  "politics": {
+    "stability_initial": 0.60,
+    "riot_threshold": 0.80,
+    "corruption_initial": 0.30
+  },
+  "military": {
+    "budget_share": 0.08,
+    "readiness_initial": 0.70,
+    "maintenance": 0.15
+  }
+}
