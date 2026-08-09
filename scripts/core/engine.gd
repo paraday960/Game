@@ -73,7 +73,7 @@ func _ready():
 	print("موتور شبیه‌سازی با %d سیستم لود شد" % systems.size())
 
 func _load_remaining_systems():
-	var remaining = ["administration", "ethnicity", "statistics", "emergency", "sports_youth", "veterans", "family", "fisheries", "heritage", "space", "elections"]
+	var remaining = ["administration", "ethnicity", "statistics", "emergency", "sports_youth", "veterans", "family", "fisheries", "heritage", "space", "elections", "physical", "people"]
 	for name in remaining:
 		var path = "res://scripts/systems/%s_system.gd" % name
 		if ResourceLoader.exists(path):
@@ -81,6 +81,12 @@ func _load_remaining_systems():
 		else:
 			# stub عمومی
 			systems[name] = load("res://scripts/systems/base_system.gd").new()
+
+	# لود سیستم‌های لایه فیزیکی و انسانی (با نام متفاوت)
+	if ResourceLoader.exists("res://scripts/systems/physical_system.gd"):
+		systems["physical"] = load("res://scripts/systems/physical_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/people_system.gd"):
+		systems["people"] = load("res://scripts/systems/people_system.gd").new()
 
 # تابع اصلی تیک - اجرای اتمی
 func tick(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:

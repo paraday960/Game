@@ -1,0 +1,130 @@
+extends BaseSystem
+# لایه آدم‌ها - بخش ۳.۵۳ تا ۳.۶۲ - 10 دسته افراد
+
+func compute(state: Dictionary, tick: int) -> Dictionary:
+	var people = state.get("people", {})
+	var pop = state.get("population", {})
+	var economy = state.get("economy", {})
+
+	people["total_sample"] = people.get("total_sample", 1000)
+	people["households"] = people.get("households", 25_000_000)
+	people["households_details"] = people.get("households_details", {
+		"میانگین_اندازه": 3.2,
+		"درآمد_میانگین": 5000.0,
+		"دارای_مسکن": 0.70,
+		"دارای_خودرو": 0.40
+	})
+	people["workforce"] = people.get("workforce", {
+		"کشاورز": 0.20,
+		"کارگر_صنعتی": 0.25,
+		"کارمند": 0.30,
+		"خدمات": 0.20,
+		"بیکار": 0.05
+	})
+	people["leaders"] = people.get("leaders", {
+		"وزرا": 20,
+		"نمایندگان": 290,
+		"استانداران": 31,
+		"شهرداران": 1200,
+		"مدیران_ارشد": 5000
+	})
+	people["elites"] = people.get("elites", {
+		"نخبه_علمی": 10000,
+		"کارآفرین": 50000,
+		"هنرمند": 20000,
+		"ورزشکار": 5000,
+		"روحانی": 30000
+	})
+	people["security_forces"] = people.get("security_forces", {
+		"ارتش": 500000,
+		"پلیس": 200000,
+		"اطلاعات": 30000,
+		"مرزبان": 50000
+	})
+	people["emotions"] = people.get("emotions", {
+		"خوشبختی_میانگین": pop.get("happiness",0.6),
+		"اعتماد": state.get("politics",{}).get("trust",0.55),
+		"امید": 0.60,
+		"ترس": state.get("politics",{}).get("tension",0.35),
+		"خشم": 0.20
+	})
+
+	var events = []
+
+	# رشد خانوارها با جمعیت
+	people["households"] = pop.get("total",85_000_000) / people["households_details"]["میانگین_اندازه"]
+
+	# درآمد خانوار با GDP سرانه
+	var gdp_per_capita = economy.get("gdp_per_capita",5000.0)
+	people["households_details"]["درآمد_میانگین"] = people["households_details"]["درآمد_میانگین"] * 0.99 + gdp_per_capita * 0.8 * 0.01
+
+	# ترکیب نیروی کار با اقتصاد و فناوری
+	var tech_industry = state.get("technology",{}).get("branches",{}).get("صنعت",0.20)
+	var tech_digital = state.get("technology",{}).get("branches",{}).get("دیجیتال",0.20)
+	
+	var workforce = people["workforce"]
+	# انتقال از کشاورزی به صنعت و خدمات با فناوری
+	if tech_industry > 0.3:
+		workforce["کشاورز"] -= 0.0002
+		workforce["کارگر_صنعتی"] += 0.0001
+		workforce["خدمات"] += 0.0001
+	if tech_digital > 0.4:
+		workforce["کارمند"] += 0.0001
+		workforce["خدمات"] += 0.0001
+
+	var unemployment = economy.get("unemployment",0.08)
+	workforce["بیکار"] = unemployment
+	# نرمالایز
+	var sum_work = 0.0
+	for v in workforce.values():
+		sum_work += v
+	for k in workforce.keys():
+		workforce[k] = clamp(workforce[k] / sum_work, 0.01, 0.60)
+	people["workforce"] = workforce
+
+	# احساسات و عواطف - بخش ۳.۶۶
+	var happiness = pop.get("happiness",0.6)
+	var trust = state.get("politics",{}).get("trust",0.55)
+	var tension = state.get("politics",{}).get("tension",0.35)
+	var security_feel = state.get("security",{}).get("feeling_security",0.70)
+
+	var emotions = people["emotions"]
+	emotions["خوشبختی_میانگین"] = happiness
+	emotions["اعتماد"] = trust
+	emotions["امید"] = clamp(0.5 + happiness * 0.2 + (economy.get("growth_rate",0.02) * 10.0) * 0.2 + education_quality(state) * 0.1, 0.1, 0.95)
+	emotions["ترس"] = clamp(tension * 0.6 + (1.0 - security_feel) * 0.4, 0.05, 0.85)
+	emotions["خشم"] = clamp((1.0 - happiness) * 0.5 + tension * 0.3 + (state.get("ethnicity",{}).get("discrimination",0.2)) * 0.2, 0.05, 0.80)
+	emotions["غرور_ملی"] = clamp(state.get("culture",{}).get("cohesion",0.65) * 0.5 + state.get("indicators",{}).get("power_score",55.0)/100.0 * 0.3 + state.get("sports_youth",{}).get("sports_achievements",50.0)/100.0 * 0.2, 0.1, 0.95)
+	people["emotions"] = emotions
+
+	# نخبگان - فرار مغزها
+	var brain_drain_risk = (1.0 - happiness) * 0.3 + (economy.get("gdp_per_capita",5000.0) < 3000.0) * 0.2 + (state.get("politics",{}).get("stability",0.6) < 0.4) * 0.2
+	if brain_drain_risk > 0.5 and Deterministic.chance(0.01):
+		events.append({"type": "brain_drain", "message": "فرار مغزها - مهاجرت نخبگان علمی و کارآفرینان", "risk": brain_drain_risk})
+		people["elites"]["نخبه_علمی"] -= 100
+		state["technology"]["research_rate"] = state.get("technology",{}).get("research_rate",10.0) - 0.5
+
+	# دولتمردان و مدیران - فساد
+	if state.get("politics",{}).get("corruption",0.30) > 0.5 and Deterministic.chance(0.01):
+		events.append({"type": "elite_corruption", "message": "افشای فساد در بین مدیران ارشد - بحران اعتماد"})
+
+	# حلقه: رضایت → بهره‌وری → اقتصاد → رفاه
+	var productivity_boost = happiness * 0.1 + emotions["امید"] * 0.05 - emotions["ترس"] * 0.05 - emotions["خشم"] * 0.05
+	economy["growth_rate"] = clamp(economy.get("growth_rate",0.02) + productivity_boost * 0.0001, -0.05, 0.10)
+	state["economy"] = economy
+
+	# رویدادهای انسانی
+	if emotions["خشم"] > 0.6 and Deterministic.chance(0.015):
+		events.append({"type": "public_anger", "message": "خشم عمومی بالا - خطر اعتراضات گسترده", "anger": emotions["خشم"]})
+
+	if emotions["امید"] > 0.8 and Deterministic.chance(0.01):
+		events.append({"type": "hope_rising", "message": "امید و نشاط اجتماعی بالا - افزایش مشارکت و بهره‌وری"})
+
+	if people["households_details"]["دارای_مسکن"] < 0.5 and Deterministic.chance(0.01):
+		events.append({"type": "housing_grievance", "message": "نارضایتی از مسکن - جوانان خانه‌دار نمی‌شوند"})
+
+	state["people"] = people
+	return {"success": true, "state": state, "events": events}
+
+func education_quality(state: Dictionary) -> float:
+	return state.get("education",{}).get("quality",0.55)

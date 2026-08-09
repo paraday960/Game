@@ -192,6 +192,9 @@ func init_default_state():
 		"heritage": {"sites": 20, "preservation": 0.65},
 		"space": {"level": 0.10, "satellites": 2},
 		"elections": {"participation": 0.60, "transparency": 0.55},
+		"veterans": {"count": 500000, "pension": 0.70, "health_care": 0.65, "fund_balance": 500_000_000.0},
+		"fisheries": {"catch": 500000.0, "fleet_size": 1000, "sustainability": 0.60, "stock_health": 0.65},
+		"statistics": {"accuracy": 0.75, "coverage": 0.85, "digital": 0.60, "id_coverage": 0.92},
 		# لایه‌ی اماکن فیزیکی و مردم و ...
 		"physical": {
 			"settlements": 1200,
