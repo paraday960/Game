@@ -3,6 +3,8 @@ extends Control
 # همه‌ی اعداد با ارقام فارسی، همه‌ی فرمان‌ها از طریق موتور اتمی (۳.۶)
 
 const GameCommandClass = preload("res://scripts/core/command.gd")
+const WorldMapClass = preload("res://scripts/ui/world_map.gd")
+const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 
 # ---------- وضعیت UI ----------
 var auto_tick: bool = false
@@ -65,6 +67,10 @@ const TABS := [
 
 func _ready():
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
+	var app_theme = Theme.new()
+	app_theme.default_font = PersianFont
+	app_theme.default_font_size = 18
+	theme = app_theme
 	current_state = GameState.get_state_copy()
 	_build_chrome()
 	_switch_tab("dashboard")
@@ -569,12 +575,18 @@ func _build_military():
 func _build_world():
 	var st = GameState.state
 	var dip = st.get("diplomacy", {})
+	var rel = dip.get("relations", {})
+
+	var map_card = _card("🗺️ نقشه تعاملی جهان")
+	var world_map = WorldMapClass.new()
+	world_map.set_relations(rel)
+	world_map.country_selected.connect(_on_map_country_selected)
+	map_card.add_child(world_map)
 
 	var c1 = _card("🌍 روابط بین‌الملل")
 	_row(c1, "نفوذ منطقه‌ای", PersianFormatter.format_number(int(dip.get("influence", 0))))
 	_bar(c1, "قدرت نرم", dip.get("soft_power", 35) / 100.0)
 
-	var rel = dip.get("relations", {})
 	var c2 = _card("🤝 روابط دوجانبه")
 	for country in rel.keys():
 		var h = HBoxContainer.new()
@@ -651,6 +663,14 @@ func _build_world():
 	_mk_btn(network_buttons, "اتصال به میزبان", Vector2(175, 48), _on_join_network)
 	_mk_btn(network_buttons, "قطع اتصال", Vector2(145, 48), _on_disconnect_network)
 	_refresh_network_status()
+
+func _on_map_country_selected(code: String):
+	var relation = GameState.state.get("diplomacy", {}).get("relations", {}).get(code, 0)
+	_toast("🗺️ %s — رابطه: %s (%s)" % [
+		_fa_country(code),
+		_relation_word(relation),
+		PersianFormatter.to_persian_digits(str(relation))
+	])
 
 func _fa_country(code: String) -> String:
 	var m = {
