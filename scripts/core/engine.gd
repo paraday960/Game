@@ -348,9 +348,13 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				return {"valid": false, "reason": diplomacy_check.reason}
 		elif cmd.type == "country_select":
 			var country_id = str(cmd.payload.get("country_id", ""))
+			var scenario_id = str(cmd.payload.get("scenario_id", ScenarioManager.default_scenario))
 			var country_check = WorldManager.can_select_country(state, country_id)
 			if not country_check.valid:
 				return {"valid": false, "reason": country_check.reason}
+			var scenario_check = ScenarioManager.can_select(state, scenario_id)
+			if not scenario_check.valid:
+				return {"valid": false, "reason": scenario_check.reason}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -398,10 +402,14 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 				EventLog.log_event("world_event", event, cmd.tick, cmd.version)
 	elif cmd.type == "country_select":
 		var country_id = str(cmd.payload.get("country_id", ""))
+		var scenario_id = str(cmd.payload.get("scenario_id", ScenarioManager.default_scenario))
 		snapshot = WorldManager.apply_country_profile(snapshot, country_id)
+		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		EventLog.log_event("country_selected", {
-			"message": "کشور %s برای آغاز بازی انتخاب شد" % WorldManager.get_country_name(country_id),
-			"country_id": country_id
+			"message": "کشور %s و سناریوی «%s» برای آغاز بازی انتخاب شدند" % [
+				WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)],
+			"country_id": country_id,
+			"scenario_id": scenario_id
 		}, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
@@ -442,6 +450,13 @@ func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 			"message": "دستاورد «%s» باز شد" % achievement.get("title", ""),
 			"achievement": achievement
 		}, tick, snapshot.get("version", 0))
+
+	var scenario_result = ScenarioManager.update(snapshot, tick)
+	snapshot = scenario_result.state
+	for scenario_event in scenario_result.events:
+		var wrapped_scenario = {"system": "scenario", "event": scenario_event.duplicate(true)}
+		generated_events.append(wrapped_scenario)
+		EventLog.log_event("scenario_event", scenario_event, tick, snapshot.get("version", 0))
 
 	# بررسی ثبات کلی - هیچ عدد منفی غیرمجاز
 	var integrity = _check_integrity(snapshot)

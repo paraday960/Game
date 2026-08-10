@@ -14,14 +14,26 @@ func _ready():
 		print("Balance config + initial state data: OK")
 	if not TechnologyManager.is_valid():
 		failed.append("درخت فناوری داده‌محور نامعتبر است")
+	if not ScenarioManager.is_valid():
+		failed.append("سناریوهای داده‌محور نامعتبر هستند")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
-		var country_result = GameEngine.tick(GameState.state, 0, 0, [GameCommand.create_country_select("JPN")])
+		var country_result = GameEngine.tick(GameState.state, 0, 0, [GameCommand.create_country_select("JPN", "innovation_leader")])
 		if not country_result.success or country_result.state.get("country", {}).get("id", "") != "JPN":
 			failed.append("انتخاب اتمی کشور آغازین شکست خورد")
+		elif country_result.state.get("scenario", {}).get("id", "") != "innovation_leader":
+			failed.append("سناریوی انتخابی همراه کشور اعمال نشد")
 		else:
-			print("World data: 16 countries + atomic country selection OK")
+			print("World + scenario data: country and victory condition selection OK")
+		var rich_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "USA")
+		var relation_before = float(rich_state["diplomacy"]["relations"]["TUR"])
+		var rich_tick = GameEngine.tick(rich_state, 0, 0, [])
+		var relation_delta = abs(float(rich_tick.state["diplomacy"]["relations"]["TUR"]) - relation_before)
+		if not rich_tick.success or relation_delta > 1.0:
+			failed.append("روابط کشور ثروتمند در یک روز جهش غیرواقعی داشت")
+		else:
+			print("World relation daily scaling: OK")
 
 	for n in GameEngine.system_order:
 		if not GameEngine.systems.has(n):
@@ -74,6 +86,17 @@ func _ready():
 		failed.append("دستاورد یا استریک پیشرفت ثبت نشد")
 	else:
 		print("Progression: streak + combo + achievements OK")
+
+	var scenario_state = ScenarioManager.apply_scenario(s.duplicate(true), "survival_year", 0)
+	scenario_state["population"]["happiness"] = 0.50
+	scenario_state["politics"]["stability"] = 0.50
+	scenario_state["economy"]["debt_to_gdp"] = 0.50
+	scenario_state["world"]["wars"] = {}
+	var scenario_result = ScenarioManager.update(scenario_state, 360)
+	if scenario_result.state.get("scenario", {}).get("status", "") != "won":
+		failed.append("شرط پیروزی سناریوی مهلت‌دار فعال نشد")
+	else:
+		print("Scenario objectives + deadline + victory reward OK")
 
 	# دترمینستیک؟
 	GameState.init_default_state()

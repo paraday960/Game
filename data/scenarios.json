@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "default_scenario": "balanced",
+  "scenarios": [
+    {
+      "id": "balanced",
+      "name_fa": "توسعه متوازن",
+      "difficulty_fa": "معمولی",
+      "description": "اقتصاد، رفاه، ثبات، سلامت و آموزش را هم‌زمان ارتقا دهید.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 350,
+      "reward_legacy": 40,
+      "objectives": [
+        {"id":"balanced_happiness","title_fa":"شادی عمومی ۶۸٪","path":"population.happiness","mode":"gte","value":0.68},
+        {"id":"balanced_stability","title_fa":"ثبات کشور ۶۸٪","path":"politics.stability","mode":"gte","value":0.68},
+        {"id":"balanced_income","title_fa":"رشد ۲۵٪ درآمد سرانه","path":"economy.gdp_per_capita","mode":"increase_ratio","value":0.25},
+        {"id":"balanced_health","title_fa":"کیفیت سلامت ۷۰٪","path":"health.quality","mode":"gte","value":0.70},
+        {"id":"balanced_education","title_fa":"کیفیت آموزش ۶۵٪","path":"education.quality","mode":"gte","value":0.65}
+      ]
+    },
+    {
+      "id": "economic_miracle",
+      "name_fa": "معجزه اقتصادی",
+      "difficulty_fa": "سخت",
+      "description": "در دو سال اقتصاد را جهش دهید و هم‌زمان تورم و بیکاری را مهار کنید.",
+      "deadline_days": 720,
+      "completion_rule": "all",
+      "reward_xp": 500,
+      "reward_legacy": 65,
+      "objectives": [
+        {"id":"econ_gdp","title_fa":"رشد ۴۰٪ تولید داخلی","path":"economy.gdp","mode":"increase_ratio","value":0.40},
+        {"id":"econ_jobs","title_fa":"بیکاری حداکثر ۶٪","path":"economy.unemployment","mode":"lte","value":0.06},
+        {"id":"econ_prices","title_fa":"تورم حداکثر ۸٪","path":"economy.inflation","mode":"lte","value":0.08},
+        {"id":"econ_exports","title_fa":"رشد ۲۵٪ صادرات","path":"trade.exports","mode":"increase_ratio","value":0.25}
+      ]
+    },
+    {
+      "id": "regional_power",
+      "name_fa": "قدرت منطقه‌ای",
+      "difficulty_fa": "سخت",
+      "description": "با دیپلماسی، اتحاد و آمادگی دفاعی به قدرت تعیین‌کننده منطقه تبدیل شوید.",
+      "deadline_days": 900,
+      "completion_rule": "all",
+      "reward_xp": 520,
+      "reward_legacy": 70,
+      "objectives": [
+        {"id":"power_score","title_fa":"افزایش ۲۰ واحدی قدرت","path":"indicators.power_score","mode":"increase_add","value":20},
+        {"id":"power_influence","title_fa":"نفوذ جهانی ۶۰","path":"diplomacy.influence","mode":"gte","value":60},
+        {"id":"power_alliances","title_fa":"تشکیل دو اتحاد","path":"world.alliances_count","mode":"gte","value":2},
+        {"id":"power_readiness","title_fa":"آمادگی دفاعی ۷۸٪","path":"military.readiness","mode":"gte","value":0.78}
+      ]
+    },
+    {
+      "id": "survival_year",
+      "name_fa": "سال بقا",
+      "difficulty_fa": "بحرانی",
+      "description": "یک سال در برابر بحران‌ها دوام بیاورید؛ اهداف باید در پایان سال هم برقرار باشند.",
+      "deadline_days": 360,
+      "completion_rule": "deadline",
+      "reward_xp": 450,
+      "reward_legacy": 55,
+      "objectives": [
+        {"id":"survive_happiness","title_fa":"شادی حداقل ۳۵٪","path":"population.happiness","mode":"gte","value":0.35},
+        {"id":"survive_stability","title_fa":"ثبات حداقل ۳۰٪","path":"politics.stability","mode":"gte","value":0.30},
+        {"id":"survive_debt","title_fa":"بدهی حداکثر ۱۲۰٪ تولید","path":"economy.debt_to_gdp","mode":"lte","value":1.20},
+        {"id":"survive_peace","title_fa":"بدون جنگ فعال در پایان سال","path":"world.active_wars_count","mode":"lte","value":0}
+      ]
+    },
+    {
+      "id": "green_future",
+      "name_fa": "آینده سبز",
+      "difficulty_fa": "سخت",
+      "description": "اقتصاد را به انرژی پاک، هوای سالم و فناوری سبز منتقل کنید.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 500,
+      "reward_legacy": 65,
+      "objectives": [
+        {"id":"green_share","title_fa":"سهم انرژی سبز ۳۸٪","path":"environment.green_energy_share","mode":"gte","value":0.38},
+        {"id":"green_air","title_fa":"کیفیت هوا ۷۲٪","path":"environment.air_quality","mode":"gte","value":0.72},
+        {"id":"green_carbon","title_fa":"انتشار کربن حداکثر ۴۵٪","path":"environment.carbon_emission","mode":"lte","value":0.45},
+        {"id":"green_tech","title_fa":"فناوری هیدروژن سبز","path":"technology.unlocked","mode":"contains","value":"green_hydrogen"}
+      ]
+    },
+    {
+      "id": "innovation_leader",
+      "name_fa": "رهبر نوآوری",
+      "difficulty_fa": "بسیار سخت",
+      "description": "سرمایه انسانی، پژوهش، فناوری و فضا را به سطح یک کشور پیشرو برسانید.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 600,
+      "reward_legacy": 80,
+      "objectives": [
+        {"id":"innovation_unlocks","title_fa":"بازکردن ۱۰ فناوری","path":"technology.unlocked_count","mode":"gte","value":10},
+        {"id":"innovation_education","title_fa":"کیفیت آموزش ۷۰٪","path":"education.quality","mode":"gte","value":0.70},
+        {"id":"innovation_rate","title_fa":"سرعت پژوهش سالانه ۱۲","path":"technology.research_rate","mode":"gte","value":12},
+        {"id":"innovation_space","title_fa":"سطح فضایی ۳۰٪","path":"space.level","mode":"gte","value":0.30}
+      ]
+    }
+  ]
+}

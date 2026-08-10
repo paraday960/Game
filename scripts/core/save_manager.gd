@@ -188,8 +188,12 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 		migrated = true
 	if int(state_data.get("schema_version", 1)) < 6 or not state_data.get("technology", {}).has("tree_version"):
 		state_data = TechnologyManager.migrate_state(state_data)
-		state_data["schema_version"] = 6
 		migrated = true
+	if int(state_data.get("schema_version", 1)) < 7 or not state_data.has("scenario"):
+		state_data = ScenarioManager.apply_scenario(
+			state_data, ScenarioManager.default_scenario, int(state_data.get("tick", 0)))
+		migrated = true
+	state_data["schema_version"] = 7
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:

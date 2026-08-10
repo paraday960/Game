@@ -14,6 +14,8 @@ var current_state: Dictionary = {}
 var selected_system: String = "economy"
 var selected_world_country: String = ""
 var country_select_option: OptionButton
+var scenario_select_option: OptionButton
+var scenario_description_lbl: Label
 
 # ---------- ارجاع‌های گره ----------
 var content: VBoxContainer
@@ -376,6 +378,8 @@ func _build_dashboard():
 		for i in range(min(pending_decisions.size(), 3)):
 			_add_pending_decision(decisions_card, pending_decisions[i])
 
+	_build_scenario_status_card(st)
+
 	# شورای هوش‌های تخصصی: مهم‌ترین مسئله‌ها را با دلیل و اقدام قابل اجرا پیشنهاد می‌دهد.
 	var recommendations = AIAdvisor.get_top_recommendations(st, st.get("tick", 0), 4)
 	var advisor_card = _card("🧠 شورای هوشمند کشور")
@@ -435,6 +439,54 @@ func _build_dashboard():
 			c5.add_child(badge)
 
 	_build_save_slots_card()
+
+func _build_scenario_status_card(state: Dictionary):
+	var scenario: Dictionary = state.get("scenario", {})
+	if scenario.is_empty():
+		return
+	var status = str(scenario.get("status", "active"))
+	var status_text = "در جریان"
+	var status_color = Color(0.55, 0.82, 1.0)
+	if status == "won":
+		status_text = "پیروز شدید"
+		status_color = Color(0.4, 1.0, 0.55)
+	elif status == "expired":
+		status_text = "مهلت پایان یافت"
+		status_color = Color(1.0, 0.48, 0.48)
+	var card = _card("🎯 سناریو: %s" % str(scenario.get("name", "")))
+	_row(card, "وضعیت", status_text, status_color)
+	_row(card, "درجه دشواری", str(scenario.get("difficulty", "معمولی")))
+	if status == "active":
+		_row(card, "مهلت باقی‌مانده", "%s روز" % PersianFormatter.to_persian_digits(str(ScenarioManager.days_remaining(state))))
+	_bar(card, "پیشرفت کل", float(scenario.get("progress", 0.0)))
+	var description = Label.new()
+	description.text = str(scenario.get("description", ""))
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.modulate = Color(0.78, 0.82, 0.92)
+	card.add_child(description)
+	for objective in scenario.get("objectives", []):
+		var complete = bool(objective.get("completed", false))
+		var title = ("✅ " if complete else "◻️ ") + str(objective.get("title_fa", "هدف"))
+		var value_text = "%s از %s" % [
+			_format_scenario_value(objective, objective.get("current")),
+			_format_scenario_value(objective, objective.get("target"))
+		]
+		_row(card, title, value_text, _color_for(float(objective.get("progress", 0.0))))
+
+func _format_scenario_value(objective: Dictionary, value) -> String:
+	if str(objective.get("mode", "")) == "contains":
+		return TechnologyManager.get_technology_name(str(value)) if value is String else ("تکمیل" if objective.get("completed", false) else "در انتظار")
+	if not (value is int or value is float):
+		return "ثبت نشده"
+	var path = str(objective.get("path", ""))
+	var number = float(value)
+	if path.contains("gdp") or path.contains("exports") or path.contains("imports"):
+		return PersianFormatter.format_money(number)
+	if path.contains("count") or path.contains("alliances") or path.contains("wars") or path.contains("unlocked_count"):
+		return PersianFormatter.to_persian_digits(str(int(number)))
+	if number >= 0.0 and number <= 1.5 and not path.contains("power_score") and not path.contains("influence"):
+		return PersianFormatter.format_percent(number)
+	return PersianFormatter.to_persian_digits("%.1f" % number)
 
 func _build_save_slots_card():
 	var card = _card("💾 جایگاه‌های ذخیره")
@@ -806,7 +858,28 @@ func _build_world():
 				selected_index = country_select_option.item_count - 1
 		country_select_option.select(selected_index)
 		setup.add_child(country_select_option)
-		_mk_btn(setup, "شروع بازی با کشور انتخابی", Vector2(280, 52), _on_country_start_selected)
+		var scenario_title = Label.new()
+		scenario_title.text = "سناریو و شرط پیروزی"
+		scenario_title.add_theme_font_size_override("font_size", 18)
+		setup.add_child(scenario_title)
+		scenario_select_option = OptionButton.new()
+		var active_scenario = str(st.get("scenario", {}).get("id", ScenarioManager.default_scenario))
+		var selected_scenario_index = 0
+		for scenario_id in ScenarioManager.get_scenario_ids():
+			var definition = ScenarioManager.get_scenario(scenario_id)
+			scenario_select_option.add_item("%s — %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")])
+			scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
+			if scenario_id == active_scenario:
+				selected_scenario_index = scenario_select_option.item_count - 1
+		scenario_select_option.select(selected_scenario_index)
+		scenario_select_option.item_selected.connect(_on_scenario_option_changed)
+		setup.add_child(scenario_select_option)
+		scenario_description_lbl = Label.new()
+		scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		scenario_description_lbl.modulate = Color(0.78, 0.82, 0.92)
+		setup.add_child(scenario_description_lbl)
+		_on_scenario_option_changed(selected_scenario_index)
+		_mk_btn(setup, "شروع بازی با کشور و سناریو", Vector2(320, 52), _on_country_start_selected)
 
 	var player_profile = WorldManager.get_country(player_id)
 	var identity = _card("🏛️ کشور شما: %s" % str(player_profile.get("name_fa", "")))
@@ -923,9 +996,10 @@ func _build_selected_country_card(state: Dictionary, target: String):
 	card.add_child(action_grid)
 	var actions = [
 		["improve_relations", "بهبود روابط"], ["trade_agreement", "توافق تجاری"],
-		["form_alliance", "تشکیل اتحاد"], ["sanction", "اعمال تحریم"],
-		["lift_sanction", "لغو تحریم"], ["declare_war", "اعلام جنگ"],
-		["offer_peace", "پیشنهاد صلح"]
+		["end_trade_agreement", "پایان توافق تجاری"], ["form_alliance", "تشکیل اتحاد"],
+		["leave_alliance", "خروج از اتحاد"], ["sanction", "اعمال تحریم"],
+		["lift_sanction", "لغو تحریم"], ["negotiate_sanctions", "مذاکره تحریم"],
+		["declare_war", "اعلام جنگ"], ["offer_peace", "پیشنهاد صلح"]
 	]
 	for action_def in actions:
 		var check = WorldManager.can_action(state, target, action_def[0])
@@ -940,14 +1014,30 @@ func _build_selected_country_card(state: Dictionary, target: String):
 		button.pressed.connect(_on_world_action.bind(target, action_def[0], action_def[1]))
 		action_grid.add_child(button)
 
+func _on_scenario_option_changed(index: int):
+	if scenario_select_option == null or index < 0 or index >= scenario_select_option.item_count:
+		return
+	var scenario_id = str(scenario_select_option.get_item_metadata(index))
+	var definition = ScenarioManager.get_scenario(scenario_id)
+	if scenario_description_lbl != null:
+		scenario_description_lbl.text = "%s\nمهلت: %s روز | پاداش: %s تجربه" % [
+			definition.get("description", ""),
+			PersianFormatter.to_persian_digits(str(definition.get("deadline_days", 0))),
+			PersianFormatter.to_persian_digits(str(definition.get("reward_xp", 0)))
+		]
+
 func _on_country_start_selected():
 	if country_select_option == null or country_select_option.item_count == 0:
 		return
 	var country_id = str(country_select_option.get_item_metadata(country_select_option.selected))
-	var cmd = GameCommandClass.create_country_select(country_id)
+	var scenario_id = ScenarioManager.default_scenario
+	if scenario_select_option != null and scenario_select_option.item_count > 0:
+		scenario_id = str(scenario_select_option.get_item_metadata(scenario_select_option.selected))
+	var cmd = GameCommandClass.create_country_select(country_id, scenario_id)
 	if _run_tick_with([cmd]):
 		selected_world_country = ""
-		_toast("🏳️ بازی با کشور %s آغاز شد" % WorldManager.get_country_name(country_id))
+		_toast("🏳️ بازی با %s و سناریوی «%s» آغاز شد" % [
+			WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)])
 		_switch_tab("world")
 
 func _on_map_country_selected(code: String):

@@ -3,13 +3,15 @@ extends Node
 
 const COUNTRIES_PATH = "res://data/countries.json"
 const ACTIONS = [
-	"improve_relations", "trade_agreement", "form_alliance", "sanction",
-	"lift_sanction", "declare_war", "offer_peace", "negotiate_sanctions"
+	"improve_relations", "trade_agreement", "end_trade_agreement",
+	"form_alliance", "leave_alliance", "sanction", "lift_sanction",
+	"declare_war", "offer_peace", "negotiate_sanctions"
 ]
 const ACTION_COSTS = {
-	"improve_relations": 1.0, "trade_agreement": 1.5, "form_alliance": 2.0,
-	"sanction": 1.0, "lift_sanction": 0.5, "declare_war": 3.0,
-	"offer_peace": 1.0, "negotiate_sanctions": 1.0
+	"improve_relations": 1.0, "trade_agreement": 1.5, "end_trade_agreement": 0.5,
+	"form_alliance": 2.0, "leave_alliance": 1.0, "sanction": 1.0,
+	"lift_sanction": 0.5, "declare_war": 3.0, "offer_peace": 1.0,
+	"negotiate_sanctions": 1.0
 }
 
 var countries: Dictionary = {}
@@ -137,23 +139,34 @@ func can_action(state: Dictionary, target: String, action: String) -> Dictionary
 	var wars: Dictionary = world.get("wars", {})
 	var alliances: Array = world.get("alliances", [])
 	var agreements: Array = world.get("trade_agreements", [])
+	if wars.has(target) and action != "offer_peace":
+		return {"valid": false, "reason": "در زمان جنگ فقط پیشنهاد صلح قابل ارسال است"}
 	match action:
 		"trade_agreement":
 			if relation < 45.0: return {"valid": false, "reason": "برای توافق تجاری رابطه حداقل ۴۵ لازم است"}
 			if agreements.has(target): return {"valid": false, "reason": "توافق تجاری از قبل فعال است"}
+		"end_trade_agreement":
+			if not agreements.has(target): return {"valid": false, "reason": "توافق تجاری فعالی برای پایان‌دادن وجود ندارد"}
 		"form_alliance":
 			if relation < 75.0: return {"valid": false, "reason": "برای اتحاد رابطه حداقل ۷۵ لازم است"}
 			if alliances.has(target): return {"valid": false, "reason": "اتحاد از قبل فعال است"}
+		"leave_alliance":
+			if not alliances.has(target): return {"valid": false, "reason": "اتحاد فعالی برای خروج وجود ندارد"}
 		"sanction":
+			if alliances.has(target): return {"valid": false, "reason": "اعمال تحریم علیه متحد ممکن نیست؛ ابتدا از اتحاد خارج شوید"}
 			if _has_player_sanction(diplomacy, target): return {"valid": false, "reason": "این کشور از قبل تحریم شده است"}
 		"lift_sanction":
 			if not _has_player_sanction(diplomacy, target): return {"valid": false, "reason": "تحریم فعالی برای لغو وجود ندارد"}
 		"declare_war":
 			if relation > 35.0: return {"valid": false, "reason": "اعلام جنگ فقط در رابطه ۳۵ یا کمتر ممکن است"}
+			if alliances.has(target): return {"valid": false, "reason": "برای جنگ ابتدا باید از اتحاد خارج شوید"}
+			if agreements.has(target): return {"valid": false, "reason": "برای جنگ ابتدا توافق تجاری را پایان دهید"}
 			if wars.has(target): return {"valid": false, "reason": "کشور هم‌اکنون در جنگ است"}
 			if float(state["military"].get("readiness", 0.0)) < 0.45: return {"valid": false, "reason": "آمادگی نظامی برای جنگ کافی نیست"}
 		"offer_peace":
 			if not wars.has(target): return {"valid": false, "reason": "جنگ فعالی با این کشور وجود ندارد"}
+		"negotiate_sanctions":
+			if not _has_incoming_sanction(diplomacy, target): return {"valid": false, "reason": "تحریم ورودی از این کشور وجود ندارد"}
 	return {"valid": true, "reason": ""}
 
 func apply_action(state: Dictionary, target: String, action: String, tick: int) -> Dictionary:
@@ -174,11 +187,22 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int) 
 			state["trade"]["trade_agreements"] = int(state["trade"].get("trade_agreements", 0)) + 1
 			state["trade"]["exports"] *= 1.01
 			events.append(_event("trade_agreement_signed", target, "توافق تجاری با %s امضا شد" % get_country_name(target)))
+		"end_trade_agreement":
+			world["trade_agreements"].erase(target)
+			state["trade"]["trade_agreements"] = max(0, int(state["trade"].get("trade_agreements", 0)) - 1)
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) - 5.0, 0.0, 100.0)
+			events.append(_event("trade_agreement_ended", target, "توافق تجاری با %s پایان یافت" % get_country_name(target)))
 		"form_alliance":
 			world["alliances"].append(target)
 			diplomacy["treaties"].append({"type":"alliance", "target":target, "tick":tick})
 			diplomacy["relations"][target] = max(float(diplomacy["relations"][target]), 82.0)
 			events.append(_event("alliance_formed", target, "اتحاد راهبردی با %s شکل گرفت" % get_country_name(target)))
+		"leave_alliance":
+			world["alliances"].erase(target)
+			_remove_treaty(diplomacy, "alliance", target)
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) - 12.0, 0.0, 100.0)
+			state["politics"]["trust"] = clamp(float(state["politics"].get("trust", 0.5)) - 0.01, 0.0, 1.0)
+			events.append(_event("alliance_left", target, "کشور از اتحاد با %s خارج شد" % get_country_name(target)))
 		"sanction":
 			diplomacy["sanctions"].append({"target":target, "by":"player", "tick":tick})
 			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) - 18.0, 0.0, 100.0)
@@ -200,8 +224,7 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int) 
 			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) - 0.08, 0.0, 1.0)
 			events.append(_event("peace_signed", target, "پیمان صلح با %s امضا شد" % get_country_name(target)))
 		"negotiate_sanctions":
-			if not diplomacy["sanctions"].is_empty():
-				diplomacy["sanctions"].pop_back()
+			_remove_incoming_sanction(diplomacy, target)
 			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 4.0, 0.0, 100.0)
 			events.append(_event("sanction_negotiation", target, "مذاکره تحریم با %s انجام شد" % get_country_name(target)))
 	state["diplomacy"] = diplomacy
@@ -306,6 +329,30 @@ func _remove_player_sanction(diplomacy: Dictionary, target: String):
 			continue
 		kept.append(item)
 	diplomacy["sanctions"] = kept
+
+func _has_incoming_sanction(diplomacy: Dictionary, target: String) -> bool:
+	for item in diplomacy.get("sanctions", []):
+		if item is Dictionary and item.get("target", "") == target and item.get("by", "foreign") != "player":
+			return true
+	return false
+
+func _remove_incoming_sanction(diplomacy: Dictionary, target: String):
+	var removed = false
+	var kept: Array = []
+	for item in diplomacy.get("sanctions", []):
+		if not removed and item is Dictionary and item.get("target", "") == target and item.get("by", "foreign") != "player":
+			removed = true
+			continue
+		kept.append(item)
+	diplomacy["sanctions"] = kept
+
+func _remove_treaty(diplomacy: Dictionary, treaty_type: String, target: String):
+	var kept: Array = []
+	for treaty in diplomacy.get("treaties", []):
+		if treaty is Dictionary and treaty.get("type", "") == treaty_type and treaty.get("target", "") == target:
+			continue
+		kept.append(treaty)
+	diplomacy["treaties"] = kept
 
 func _event(type: String, target: String, message: String) -> Dictionary:
 	return {"type":type, "target":target, "country":get_country_name(target), "message":message}

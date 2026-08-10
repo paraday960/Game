@@ -10,15 +10,20 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	var events = []
 
-	# روابط دوجانبه پویا
+	# روابط دوجانبه پویا با مقیاس روزانه؛ ثروت کشور نباید رابطه را یک‌روزه به ۱۰۰ برساند.
+	var world: Dictionary = state.get("world", {})
 	for country in dip["relations"].keys():
-		var rel = dip["relations"][country]
-		# f(تاریخچه، تجارت، اتحادها، ایدئولوژی، همسایگی)
-		var change = Deterministic.next_range(-1.5, 1.5)
-		# قدرت نظامی بر دیپلماسی اثر دارد
-		change += (mil["power"] - 65.0) * 0.01
-		# اقتصاد
-		change += (econ["gdp"] / 500_000_000_000.0 - 1.0) * 2.0
+		var rel = float(dip["relations"][country])
+		var change = Deterministic.next_range(-0.08, 0.08)
+		if world.get("trade_agreements", []).has(country):
+			change += (70.0 - rel) * 0.003
+		if world.get("alliances", []).has(country):
+			change += (85.0 - rel) * 0.005
+		if world.get("wars", {}).has(country):
+			change += (0.0 - rel) * 0.02
+		else:
+			# بازگشت بسیار آهسته به حالت خنثی مانع چسبیدن دائمی به کران‌ها می‌شود.
+			change += (50.0 - rel) * 0.0005
 		rel += change
 		dip["relations"][country] = clamp(rel, 0.0, 100.0)
 
