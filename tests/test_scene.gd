@@ -108,6 +108,30 @@ func _ready():
 			else:
 				print("AI advisor: 65 diagnoses + valid action OK")
 
+	# ذخیره اتمی نسخه‌دار + بارگذاری + تشخیص دستکاری checksum
+	var save_path = "user://automated-test-save.json"
+	SaveManager.delete_save(save_path)
+	var original_tax = GameState.state["economy"]["tax_rate"]
+	var save_result = SaveManager.save_game(save_path)
+	GameState.state["economy"]["tax_rate"] = 0.77
+	var load_result = SaveManager.load_game(save_path)
+	if not save_result.success or not load_result.success or not is_equal_approx(GameState.state["economy"]["tax_rate"], original_tax):
+		failed.append("ذخیره/بارگذاری نسخه‌دار شکست خورد")
+	else:
+		var save_file = FileAccess.open(save_path, FileAccess.READ)
+		var wrapped = JSON.parse_string(save_file.get_as_text())
+		save_file.close()
+		wrapped["payload"] += " "
+		var tampered = FileAccess.open(save_path, FileAccess.WRITE)
+		tampered.store_string(JSON.stringify(wrapped))
+		tampered.close()
+		var tamper_result = SaveManager.load_game(save_path)
+		if tamper_result.success:
+			failed.append("فایل ذخیره دستکاری‌شده پذیرفته شد")
+		else:
+			print("Versioned atomic save + checksum: OK")
+	SaveManager.delete_save(save_path)
+
 	# اعتبارسنجی سخت‌گیرانه فرمان ناشناخته
 	var bad_cmd = GameCommand.new("unknown_command", {})
 	var before_bad_state = JSON.stringify(GameState.state)

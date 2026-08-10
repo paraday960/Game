@@ -706,31 +706,23 @@ func _on_auto_pressed():
 		btn.text = "▶️ خودکار: روشن" if auto_tick else "⏸️ خودکار: خاموش"
 
 func _on_save_pressed():
-	var json = JSON.stringify(GameState.state)
-	var file = FileAccess.open("user://savegame.json", FileAccess.WRITE)
-	if file:
-		file.store_string(json)
-		file.close()
-		EventLog.log_event("save", {"tick": GameState.tick}, GameState.tick, GameState.version)
-		_toast("💾 بازی ذخیره شد")
+	var result = SaveManager.save_game()
+	if result.success:
+		_toast("💾 بازی با بررسی صحت و نسخه پشتیبان ذخیره شد")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "ذخیره ناموفق بود")))
 
 func _on_load_pressed():
-	if not FileAccess.file_exists("user://savegame.json"):
-		_toast("⚠️ فایل ذخیره‌ای یافت نشد")
+	var result = SaveManager.load_game()
+	if not result.success:
+		_toast("⚠️ " + str(result.get("reason", "بارگذاری ناموفق بود")))
 		return
-	var file = FileAccess.open("user://savegame.json", FileAccess.READ)
-	if not file:
-		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is Dictionary and parsed.has("economy") and parsed.has("population"):
-		GameState.set_state(parsed, parsed.get("version", 0), parsed.get("tick", 0))
-		EventLog.log_event("load", {"tick": parsed.get("tick", 0)}, parsed.get("tick", 0), parsed.get("version", 0))
-		_toast("📂 بازی بارگذاری شد — روز " + PersianFormatter.to_persian_digits(str(parsed.get("tick", 0))))
-		_refresh_header()
-		_switch_tab(current_tab)
-	else:
-		_toast("⚠️ فایل ذخیره خراب است")
+	var migration_note = " — ذخیره قدیمی ارتقا یافت" if result.get("migrated", false) else ""
+	_toast("📂 بازی بارگذاری شد — روز %s%s" % [
+		PersianFormatter.to_persian_digits(str(GameState.tick)), migration_note])
+	_refresh_header()
+	_render_events()
+	_switch_tab(current_tab)
 
 # ============================================================
 # هسته تیک
