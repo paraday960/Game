@@ -264,7 +264,7 @@
 ## 📦 خروجی اندروید
 
 - `export_presets.cfg`: Android arm64-v8a + Linux
-- `.github/workflows/build-android.yml`: نصب Godot 4.2.2 + Templates + Android SDK → Import → Export Debug APK → Artifact + Release
+- `.github/workflows/build-android.yml`: نصب و کنترل دقیق Godot 4.7.1-stable + Templates + Android SDK → Import → تست → Export Debug APK → Artifact + Release
 - هر push روی main → بیلد خودکار
 - دانلود: Actions → آخرین Workflow → Artifacts یا Releases → country-sim-debug.apk
 

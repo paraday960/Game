@@ -2,10 +2,12 @@
 
 ## اجرای محلی (Godot)
 
-1. نصب Godot 4.2.2 از https://godotengine.org
+1. نصب Godot 4.7.1-stable از https://godotengine.org (نسخه دقیق در `ENGINE_VERSION`)
 2. کلون ریپو: `git clone https://github.com/paraday960/Game.git`
 3. باز کردن پروژه در Godot: فایل `project.godot` را باز کنید
 4. اجرای صحنه اصلی: F5 یا دکمه Play
+
+> پروژه از UIDهای پایدار Godot 4.7 استفاده می‌کند؛ فایل‌های `*.gd.uid` بخشی از کد منبع هستند و باید در Git باقی بمانند.
 
 ## ساخت اندروید محلی
 
@@ -175,7 +177,7 @@
 - افکت صوتی رویه‌ای رایگان برای کلیک، موفقیت، هشدار و دستاورد؛ بدون asset پولی
 
 ## تکنولوژی (قانون ۵ - فقط رایگان)
-- Godot 4.2.2 - MIT
+- Godot 4.7.1-stable - MIT
 - GDScript
 - GitHub Actions - رایگان برای public repo
 - Vazirmatn Font - OFL

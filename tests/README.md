@@ -1,7 +1,8 @@
 # تست‌های خودکار - شبیه‌ساز کشور
 
-## اجرا (با Godot 4.2 هدلس)
+## اجرا (با Godot 4.7.1-stable هدلس)
 ```bash
+python3 tests/validate_engine_version.py
 python3 tests/validate_country_data.py
 python3 tests/validate_world_map.py
 python3 tests/validate_country_maps.py

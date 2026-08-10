@@ -49,11 +49,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Godot
+      - name: Install Godot 4.7.1 stable
         run: |
-          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip
-          unzip Godot_v4.2.2-stable_linux.x86_64.zip
-          echo "$(pwd)" >> $GITHUB_PATH
+          wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q Godot_v4.7.1-stable_linux.x86_64.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+          sudo mv Godot_v4.7.1-stable_linux.x86_64 /usr/local/bin/godot
+          wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz
+          unzip -q Godot_v4.7.1-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.7.1.stable
+          mv templates/* ~/.local/share/godot/export_templates/4.7.1.stable/
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       - name: Export APK

@@ -1,5 +1,9 @@
 name: Build Android APK - شبیه ساز کشور
 
+env:
+  GODOT_VERSION: "4.7.1"
+  GODOT_CHANNEL: "stable"
+
 on:
   push:
     branches: [ main ]
@@ -23,21 +27,42 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Godot 4.2.2 + Templates
+      - name: Cache Godot 4.7.1 export templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/4.7.1.stable
+          key: godot-${{ runner.os }}-4.7.1-stable-export-templates-v1
+
+      - name: Install Godot 4.7.1 stable + Templates
         run: |
-          echo "Downloading Godot..."
-          wget -q https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip
-          unzip -q Godot_v4.2.2-stable_linux.x86_64.zip
-          chmod +x Godot_v4.2.2-stable_linux.x86_64
-          sudo mv Godot_v4.2.2-stable_linux.x86_64 /usr/local/bin/godot
-          echo "Downloading export templates..."
-          wget -q https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz
-          mkdir -p ~/.local/share/godot/export_templates/4.2.2.stable
-          unzip -q Godot_v4.2.2-stable_export_templates.tpz
-          mv templates/* ~/.local/share/godot/export_templates/4.2.2.stable/
-          ls ~/.local/share/godot/export_templates/4.2.2.stable/ | head -n 20
+          set -euo pipefail
+          TAG="${GODOT_VERSION}-${GODOT_CHANNEL}"
+          ARCHIVE="Godot_v${TAG}_linux.x86_64.zip"
+          TEMPLATE_ARCHIVE="Godot_v${TAG}_export_templates.tpz"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_CHANNEL}"
+
+          echo "Downloading Godot ${TAG}..."
+          wget -q "https://github.com/godotengine/godot/releases/download/${TAG}/${ARCHIVE}"
+          unzip -q "$ARCHIVE"
+          chmod +x "Godot_v${TAG}_linux.x86_64"
+          sudo mv "Godot_v${TAG}_linux.x86_64" /usr/local/bin/godot
+
+          if [ ! -f "$TEMPLATE_DIR/android_debug.apk" ]; then
+            echo "Downloading Godot ${TAG} export templates..."
+            wget -q "https://github.com/godotengine/godot/releases/download/${TAG}/${TEMPLATE_ARCHIVE}"
+            unzip -q "$TEMPLATE_ARCHIVE"
+            mkdir -p "$TEMPLATE_DIR"
+            mv templates/* "$TEMPLATE_DIR/"
+          else
+            echo "Using cached Godot export templates."
+          fi
+
           echo "Godot installed:"
-          godot --version
+          godot --version | tee /tmp/godot-version.txt
+          grep -q "^${GODOT_VERSION}.${GODOT_CHANNEL}.official" /tmp/godot-version.txt
+          test -f "$TEMPLATE_DIR/android_debug.apk"
+          test -f "$TEMPLATE_DIR/linux_debug.x86_64"
+          ls -lh "$TEMPLATE_DIR" | head -n 20
 
       - name: Create debug keystore
         run: |
@@ -74,6 +99,7 @@ jobs:
       - name: Run simulation and UI tests
         run: |
           set -euo pipefail
+          python3 tests/validate_engine_version.py
           python3 tests/validate_country_data.py
           python3 tests/validate_world_map.py
           python3 tests/validate_country_maps.py
@@ -143,6 +169,7 @@ jobs:
             - نصب کنید
             
             - ساخته شده در: ${{ github.event.head_commit.timestamp }}
+            - موتور: Godot ${{ env.GODOT_VERSION }} stable
             - کامیت: ${{ github.sha }}
             
             ✅ رایگان و متن‌باز - مطابق قانون ۵ پروژه
