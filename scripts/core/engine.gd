@@ -8,9 +8,9 @@ const DecisionManagerClass = preload("res://scripts/core/decision_manager.gd")
 const ProgressionManagerClass = preload("res://scripts/core/progression_manager.gd")
 
 const SUPPORTED_COMMANDS = [
-	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy", "decision_resolve"
+	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy",
+	"country_select", "decision_resolve"
 ]
-const DIPLOMACY_ACTIONS = ["improve_relations", "negotiate_sanctions"]
 const MAX_COMMAND_RECEIPTS = 512
 
 signal tick_completed(new_state, events)
@@ -340,12 +340,16 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			if not tech_id is String or tech_id.strip_edges().is_empty():
 				return {"valid": false, "reason": "فناوری پژوهشی مشخص نشده است"}
 		elif cmd.type == "diplomacy":
-			var target = cmd.payload.get("target", "")
-			var action = cmd.payload.get("action", "")
-			if not state.get("diplomacy", {}).get("relations", {}).has(target):
-				return {"valid": false, "reason": "کشور هدف در روابط دیپلماتیک وجود ندارد"}
-			if not DIPLOMACY_ACTIONS.has(action):
-				return {"valid": false, "reason": "اقدام دیپلماتیک شناخته‌شده نیست"}
+			var target = str(cmd.payload.get("target", ""))
+			var action = str(cmd.payload.get("action", ""))
+			var diplomacy_check = WorldManager.can_action(state, target, action)
+			if not diplomacy_check.valid:
+				return {"valid": false, "reason": diplomacy_check.reason}
+		elif cmd.type == "country_select":
+			var country_id = str(cmd.payload.get("country_id", ""))
+			var country_check = WorldManager.can_select_country(state, country_id)
+			if not country_check.valid:
+				return {"valid": false, "reason": country_check.reason}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -385,13 +389,19 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		var tech_id = cmd.payload.get("tech_id", "")
 		snapshot["technology"]["in_progress"] = tech_id
 	elif cmd.type == "diplomacy":
-		var target = cmd.payload.get("target", "")
-		var action = cmd.payload.get("action", "")
-		if snapshot["diplomacy"]["relations"].has(target):
-			if action == "improve_relations":
-				snapshot["diplomacy"]["relations"][target] = clamp(snapshot["diplomacy"]["relations"][target] + 5, -100, 100)
-			elif action == "negotiate_sanctions" and snapshot["diplomacy"]["sanctions"].size() > 0:
-				snapshot["diplomacy"]["sanctions"].pop_back()
+		var world_result = WorldManager.apply_action(
+			snapshot, str(cmd.payload.get("target", "")), str(cmd.payload.get("action", "")), cmd.tick)
+		if world_result.success:
+			snapshot = world_result.state
+			for event in world_result.events:
+				EventLog.log_event("world_event", event, cmd.tick, cmd.version)
+	elif cmd.type == "country_select":
+		var country_id = str(cmd.payload.get("country_id", ""))
+		snapshot = WorldManager.apply_country_profile(snapshot, country_id)
+		EventLog.log_event("country_selected", {
+			"message": "کشور %s برای آغاز بازی انتخاب شد" % WorldManager.get_country_name(country_id),
+			"country_id": country_id
+		}, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))

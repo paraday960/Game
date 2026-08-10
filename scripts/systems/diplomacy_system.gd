@@ -2,6 +2,7 @@ extends BaseSystem
 # دیپلماسی و روابط بین‌الملل - ۳.۱۴
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
+	state = WorldManager.ensure_world(state)
 	var dip = state["diplomacy"]
 	var mil = state["military"]
 	var econ = state["economy"]
@@ -23,7 +24,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 		# آستانه خصومت <25
 		if rel < 25 and Deterministic.chance(0.02):
-			events.append({"type": "hostility", "country": country, "relation": rel, "message": "روابط با %s به مرحله خصومت رسید" % country})
+			events.append({"type": "hostility", "country": country, "relation": rel, "message": "روابط با %s به مرحله خصومت رسید" % WorldManager.get_country_name(country)})
 
 	# نفوذ = f(اقتصاد، ارتش، فناوری، قدرت نرم)
 	var influence = 0.0
@@ -40,12 +41,19 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	soft += dip["influence"] * 0.3
 	dip["soft_power"] = clamp(soft, 0.0, 100.0)
 
-	# اثر تحریم
-	if dip["sanctions"].size() > 0:
-		var sanction_penalty = dip["sanctions"].size() * 0.02
+	# فقط تحریم‌های ورودی بر اقتصاد بازیکن جریمه مستقیم دارند؛ تحریم اعمال‌شده توسط بازیکن جداست.
+	var incoming_sanctions = 0
+	for sanction in dip["sanctions"]:
+		if not sanction is Dictionary or sanction.get("by", "foreign") != "player":
+			incoming_sanctions += 1
+	if incoming_sanctions > 0:
+		var sanction_penalty = incoming_sanctions * 0.02
 		econ["gdp"] *= (1.0 - sanction_penalty / 365.0)
 		events.append({"type": "sanction_effect", "gdp_loss": sanction_penalty})
 
 	state["diplomacy"] = dip
 	state["economy"] = econ
+	var world_result = WorldManager.simulate(state, tick)
+	state = world_result.state
+	events.append_array(world_result.events)
 	return {"success": true, "state": state, "events": events}

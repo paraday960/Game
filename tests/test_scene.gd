@@ -12,6 +12,14 @@ func _ready():
 		failed.append("وضعیت آغازین داده‌محور بارگذاری نشد")
 	else:
 		print("Balance config + initial state data: OK")
+	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
+		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
+	else:
+		var country_result = GameEngine.tick(GameState.state, 0, 0, [GameCommand.create_country_select("JPN")])
+		if not country_result.success or country_result.state.get("country", {}).get("id", "") != "JPN":
+			failed.append("انتخاب اتمی کشور آغازین شکست خورد")
+		else:
+			print("World data: 16 countries + atomic country selection OK")
 
 	for n in GameEngine.system_order:
 		if not GameEngine.systems.has(n):
@@ -31,7 +39,7 @@ func _ready():
 		if i == 5:
 			cmds.append(GameCommand.create_budget_allocate({"آموزش":0.1,"بهداشت":0.1,"ارتش":0.1,"زیرساخت":0.15,"رفاه":0.15,"فناوری":0.05,"امنیت":0.05,"اداره":0.05,"محیط":0.05,"ذخیره":0.2}))
 		if i == 7:
-			cmds.append(GameCommand.create_diplomacy_action("همسایه_شرقی", "improve_relations"))
+			cmds.append(GameCommand.create_diplomacy_action("TUR", "improve_relations"))
 		var result = GameEngine.tick(s, v, t, cmds)
 		if result.success:
 			s = result.state
@@ -120,6 +128,26 @@ func _ready():
 				failed.append("پیشنهاد شورای هوشمند نامعتبر بود: " + advisor_result.reason)
 			else:
 				print("AI advisor: 65 diagnoses + valid action OK")
+
+	# دیپلماسی حرفه‌ای: توافق تجاری، جنگ روزانه و صلح
+	var trade_cmd = GameCommand.create_diplomacy_action("TUR", "trade_agreement")
+	var trade_result = GameEngine.tick(s, v, t, [trade_cmd])
+	if not trade_result.success or not trade_result.state.get("world", {}).get("trade_agreements", []).has("TUR"):
+		failed.append("توافق تجاری بین‌المللی اعمال نشد")
+	else:
+		var war_state = s.duplicate(true)
+		war_state["diplomacy"]["relations"]["USA"] = 20.0
+		war_state["diplomacy"]["action_points"] = 5.0
+		var war_result = GameEngine.tick(war_state, v, t, [GameCommand.create_diplomacy_action("USA", "declare_war")])
+		if not war_result.success or not war_result.state.get("world", {}).get("wars", {}).has("USA"):
+			failed.append("اعلام جنگ یا شبیه‌سازی نبرد فعال نشد")
+		else:
+			war_result.state["diplomacy"]["action_points"] = 5.0
+			var peace_result = GameEngine.tick(war_result.state, war_result.version, war_result.tick, [GameCommand.create_diplomacy_action("USA", "offer_peace")])
+			if not peace_result.success or peace_result.state.get("world", {}).get("wars", {}).has("USA"):
+				failed.append("پیمان صلح جنگ را پایان نداد")
+			else:
+				print("World diplomacy: trade + war simulation + peace OK")
 
 	# تبدیل رویداد به تصمیم، اجرای گزینه در موتور اتمی و ثبت تاریخچه
 	var decision_manager = load("res://scripts/core/decision_manager.gd")

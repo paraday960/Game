@@ -51,7 +51,7 @@ func _init():
 	if not ok:
 		fails.append("فرمان مالیات UI شکست خورد")
 	# دیپلماسی
-	cmd = load("res://scripts/core/command.gd").create_diplomacy_action("همسایه_شرقی", "improve_relations")
+	cmd = load("res://scripts/core/command.gd").create_diplomacy_action("TUR", "improve_relations")
 	ok = scene._run_tick_with([cmd])
 	print("UI diplomacy cmd: %s" % ("OK" if ok else "FAIL"))
 	if not ok:

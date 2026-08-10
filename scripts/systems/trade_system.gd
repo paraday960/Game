@@ -83,11 +83,15 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	econ["government_revenue"] = econ.get("government_revenue",0.0) + trade["customs_revenue"]
 	state["economy"] = econ
 
-	# اثر دیپلماسی: تحریم
-	if diplomacy.get("sanctions",[]).size() > 0:
-		trade["exports"] *= 0.95
-		trade["imports"] *= 0.90
-		events.append({"type": "sanction_trade_effect", "message": "تحریم‌ها تجارت را محدود کرد", "balance": trade["balance"]})
+	# اثر دیپلماسی: فقط تحریم‌های اعمال‌شده علیه بازیکن
+	var incoming_sanctions = 0
+	for sanction in diplomacy.get("sanctions", []):
+		if not sanction is Dictionary or sanction.get("by", "foreign") != "player":
+			incoming_sanctions += 1
+	if incoming_sanctions > 0:
+		trade["exports"] *= pow(0.95, incoming_sanctions)
+		trade["imports"] *= pow(0.90, incoming_sanctions)
+		events.append({"type": "sanction_trade_effect", "message": "تحریم‌های خارجی تجارت را محدود کرد", "balance": trade["balance"]})
 
 	# رویدادها
 	if trade["import_dependency"] > 0.7 and Deterministic.chance(0.01):

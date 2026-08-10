@@ -20,6 +20,7 @@ boot_splash/bg_color=Color(0.05, 0.08, 0.15, 1)
 [autoload]
 
 BalanceConfig="*res://scripts/core/balance_config.gd"
+WorldManager="*res://scripts/core/world_manager.gd"
 GameState="*res://scripts/core/state.gd"
 GameEngine="*res://scripts/core/engine.gd"
 EventLog="*res://scripts/core/event_log.gd"

@@ -12,11 +12,14 @@ var tick_timer: float = 0.0
 var current_tab: String = "dashboard"
 var current_state: Dictionary = {}
 var selected_system: String = "economy"
+var selected_world_country: String = ""
+var country_select_option: OptionButton
 
 # ---------- ارجاع‌های گره ----------
 var content: VBoxContainer
 var engagement_lbl: Label
 var date_lbl: Label
+var header_title: Label
 var tab_buttons: Dictionary = {}
 var event_list: VBoxContainer
 var toast_lbl: Label
@@ -146,11 +149,11 @@ func _build_chrome():
 	header.add_theme_constant_override("separation", 4)
 	root.add_child(header)
 
-	var title = Label.new()
-	title.text = "🎮 شبیه‌ساز کشور — ۲۰۲۷"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 30)
-	header.add_child(title)
+	header_title = Label.new()
+	header_title.text = "🎮 شبیه‌ساز کشور — ۲۰۲۷"
+	header_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header_title.add_theme_font_size_override("font_size", 30)
+	header.add_child(header_title)
 
 	date_lbl = Label.new()
 	date_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -239,6 +242,8 @@ func _mk_btn(parent, text, minsize, handler, node_name = ""):
 func _refresh_header():
 	var st = GameState.state
 	var clock = st.get("clock", {})
+	if header_title != null:
+		header_title.text = "🎮 شبیه‌ساز کشور — %s" % str(st.get("country", {}).get("name", "کشور شما"))
 	date_lbl.text = "📅 %s/%s/%s — %s" % [
 		PersianFormatter.to_persian_digits(str(clock.get("year", 2027))),
 		PersianFormatter.to_persian_digits("%02d" % clock.get("month", 1)),
@@ -646,65 +651,94 @@ func _build_military():
 func _build_world():
 	var st = GameState.state
 	var dip = st.get("diplomacy", {})
-	var rel = dip.get("relations", {})
+	var rel: Dictionary = dip.get("relations", {})
+	var world: Dictionary = st.get("world", {})
+	var player_id = str(world.get("player_country", WorldManager.default_country))
+	if selected_world_country == "" or not rel.has(selected_world_country):
+		selected_world_country = str(rel.keys()[0]) if not rel.is_empty() else ""
 
-	var map_card = _card("🗺️ نقشه تعاملی جهان")
+	if int(st.get("tick", 0)) == 0:
+		var setup = _card("🏳️ انتخاب کشور پیش از شروع")
+		var setup_hint = Label.new()
+		setup_hint.text = "کشور، جمعیت، اقتصاد، قدرت نظامی، فناوری و روابط آغازین را تعیین می‌کند. پس از نخستین روز قابل تغییر نیست."
+		setup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		setup.add_child(setup_hint)
+		country_select_option = OptionButton.new()
+		var selected_index = 0
+		for country_id in WorldManager.get_country_ids():
+			var profile = WorldManager.get_country(country_id)
+			country_select_option.add_item("%s — %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")])
+			country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
+			if country_id == player_id:
+				selected_index = country_select_option.item_count - 1
+		country_select_option.select(selected_index)
+		setup.add_child(country_select_option)
+		_mk_btn(setup, "شروع بازی با کشور انتخابی", Vector2(280, 52), _on_country_start_selected)
+
+	var player_profile = WorldManager.get_country(player_id)
+	var identity = _card("🏛️ کشور شما: %s" % str(player_profile.get("name_fa", "")))
+	_row(identity, "پایتخت", str(player_profile.get("capital_fa", "")))
+	_row(identity, "واحد پول", str(player_profile.get("currency_fa", "")))
+	_row(identity, "جمعیت پایه", PersianFormatter.format_large(float(player_profile.get("population", 0))) + " نفر")
+	_row(identity, "تولید داخلی پایه", PersianFormatter.format_money(float(player_profile.get("gdp", 0))))
+
+	var map_card = _card("🗺️ نقشه تعاملی ۱۶ کشور")
+	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
+	for war_target in world.get("wars", {}).keys():
+		if map_countries.has(war_target):
+			map_countries[war_target]["at_war"] = true
 	var world_map = WorldMapClass.new()
-	world_map.set_relations(rel)
+	world_map.selected_code = selected_world_country
+	world_map.set_world(map_countries, rel, player_id)
 	world_map.country_selected.connect(_on_map_country_selected)
 	map_card.add_child(world_map)
 
-	var c1 = _card("🌍 روابط بین‌الملل")
-	_row(c1, "نفوذ منطقه‌ای", PersianFormatter.format_number(int(dip.get("influence", 0))))
-	_bar(c1, "قدرت نرم", dip.get("soft_power", 35) / 100.0)
+	var overview = _card("🌍 موقعیت بین‌المللی")
+	_row(overview, "امتیاز اقدام دیپلماتیک", PersianFormatter.to_persian_digits("%.1f از 5" % dip.get("action_points", 0.0)))
+	_row(overview, "نفوذ جهانی", PersianFormatter.format_number(int(dip.get("influence", 0))))
+	_bar(overview, "قدرت نرم", dip.get("soft_power", 35) / 100.0)
+	_row(overview, "جنگ‌های فعال", PersianFormatter.to_persian_digits(str(world.get("wars", {}).size())))
 
-	var c2 = _card("🤝 روابط دوجانبه")
+	if selected_world_country != "":
+		_build_selected_country_card(st, selected_world_country)
+
+	var directory = _card("🤝 فهرست روابط")
+	var relation_grid = GridContainer.new()
+	relation_grid.columns = 2
+	directory.add_child(relation_grid)
 	for country in rel.keys():
-		var h = HBoxContainer.new()
-		c2.add_child(h)
-		var lbl = Label.new()
-		lbl.text = _fa_country(country)
-		lbl.custom_minimum_size = Vector2(150, 0)
-		lbl.add_theme_font_size_override("font_size", 16)
-		h.add_child(lbl)
-		var val = Label.new()
-		var rv = rel[country]
-		val.text = PersianFormatter.to_persian_digits(str(rv)) + " (" + _relation_word(rv) + ")"
-		val.custom_minimum_size = Vector2(180, 0)
-		val.modulate = _color_for((rv + 100.0) / 200.0)
-		h.add_child(val)
-		var btn = Button.new()
-		btn.text = "🤝 بهبود روابط"
-		btn.custom_minimum_size = Vector2(160, 46)
-		btn.pressed.connect(_on_improve_relations.bind(country))
-		h.add_child(btn)
+		var rv = float(rel[country])
+		var relation_button = Button.new()
+		relation_button.text = "%s — %s (%s)" % [
+			_fa_country(country), PersianFormatter.to_persian_digits("%.0f" % rv), _relation_word(rv)]
+		relation_button.modulate = _color_for(rv / 100.0)
+		relation_button.pressed.connect(FeedbackManager.play_click)
+		relation_button.pressed.connect(_on_map_country_selected.bind(country))
+		relation_grid.add_child(relation_button)
 
 	var sanctions = dip.get("sanctions", [])
-	var c3 = _card("🚫 تحریم‌ها")
-	if sanctions.size() == 0:
-		var ok = Label.new()
-		ok.text = "تحریم فعالی وجود ندارد ✅"
-		ok.modulate = Color(0.5, 1.0, 0.6)
-		c3.add_child(ok)
-	else:
-		for s in sanctions:
-			var l = Label.new()
-			l.text = "• " + str(s)
-			l.modulate = Color(1.0, 0.5, 0.5)
-			c3.add_child(l)
-
 	var treaties = dip.get("treaties", [])
-	var c4 = _card("📜 معاهدات")
-	if treaties.size() == 0:
-		var l0 = Label.new()
-		l0.text = "معاهده‌ای ثبت نشده"
-		l0.modulate = Color(0.8, 0.8, 0.8)
-		c4.add_child(l0)
-	else:
-		for t in treaties:
-			var l = Label.new()
-			l.text = "• " + str(t)
-			c4.add_child(l)
+	var records = _card("📜 پیمان‌ها و تحریم‌ها")
+	if sanctions.is_empty() and treaties.is_empty():
+		var none = Label.new()
+		none.text = "هنوز پیمان یا تحریمی ثبت نشده است."
+		records.add_child(none)
+	for sanction in sanctions:
+		var sanction_label = Label.new()
+		if sanction is Dictionary:
+			var direction = "اعمال‌شده توسط شما" if sanction.get("by", "") == "player" else "اعمال‌شده علیه شما"
+			sanction_label.text = "🚫 %s — %s" % [_fa_country(str(sanction.get("target", ""))), direction]
+		else:
+			sanction_label.text = "🚫 تحریم خارجی"
+		sanction_label.modulate = Color(1.0, 0.5, 0.5)
+		records.add_child(sanction_label)
+	for treaty in treaties:
+		var treaty_label = Label.new()
+		if treaty is Dictionary:
+			treaty_label.text = "🤝 اتحاد با %s" % _fa_country(str(treaty.get("target", "")))
+		else:
+			treaty_label.text = "🤝 " + str(treaty)
+		records.add_child(treaty_label)
 
 	var network = _card("🌐 چندنفره مستقیم و رایگان")
 	var hint = Label.new()
@@ -736,34 +770,75 @@ func _build_world():
 	_mk_btn(network_buttons, "قطع اتصال", Vector2(145, 48), _on_disconnect_network)
 	_refresh_network_status()
 
+func _build_selected_country_card(state: Dictionary, target: String):
+	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
+	var relation = float(state.get("diplomacy", {}).get("relations", {}).get(target, 50.0))
+	var card = _card("🎯 کشور انتخابی: %s" % _fa_country(target))
+	_row(card, "رابطه", "%s — %s" % [PersianFormatter.to_persian_digits("%.0f" % relation), _relation_word(relation)], _color_for(relation / 100.0))
+	_row(card, "تولید داخلی", PersianFormatter.format_money(float(profile.get("gdp", 0.0))))
+	_row(card, "قدرت نظامی", PersianFormatter.to_persian_digits("%.1f" % profile.get("military_power", 0.0)))
+	_bar(card, "سطح فناوری", float(profile.get("tech_level", 0.0)))
+	var wars: Dictionary = state.get("world", {}).get("wars", {})
+	if wars.has(target):
+		var war = wars[target]
+		var progress = float(war.get("progress", 0.0))
+		_row(card, "پیشروی جنگ", PersianFormatter.to_persian_digits("%+.1f" % progress), _color_for((progress + 100.0) / 200.0))
+		_row(card, "تلفات نیروهای شما", PersianFormatter.format_large(float(war.get("player_losses", 0))))
+		_row(card, "تلفات دشمن", PersianFormatter.format_large(float(war.get("enemy_losses", 0))))
+	var action_grid = GridContainer.new()
+	action_grid.columns = 3
+	card.add_child(action_grid)
+	var actions = [
+		["improve_relations", "بهبود روابط"], ["trade_agreement", "توافق تجاری"],
+		["form_alliance", "تشکیل اتحاد"], ["sanction", "اعمال تحریم"],
+		["lift_sanction", "لغو تحریم"], ["declare_war", "اعلام جنگ"],
+		["offer_peace", "پیشنهاد صلح"]
+	]
+	for action_def in actions:
+		var check = WorldManager.can_action(state, target, action_def[0])
+		var button = Button.new()
+		button.text = action_def[1]
+		button.custom_minimum_size = Vector2(180, 48)
+		button.disabled = not check.valid
+		button.tooltip_text = "" if check.valid else str(check.reason)
+		if action_def[0] == "declare_war":
+			button.modulate = Color(1.0, 0.55, 0.55)
+		button.pressed.connect(FeedbackManager.play_click)
+		button.pressed.connect(_on_world_action.bind(target, action_def[0], action_def[1]))
+		action_grid.add_child(button)
+
+func _on_country_start_selected():
+	if country_select_option == null or country_select_option.item_count == 0:
+		return
+	var country_id = str(country_select_option.get_item_metadata(country_select_option.selected))
+	var cmd = GameCommandClass.create_country_select(country_id)
+	if _run_tick_with([cmd]):
+		selected_world_country = ""
+		_toast("🏳️ بازی با کشور %s آغاز شد" % WorldManager.get_country_name(country_id))
+		_switch_tab("world")
+
 func _on_map_country_selected(code: String):
+	selected_world_country = code
 	var relation = GameState.state.get("diplomacy", {}).get("relations", {}).get(code, 0)
 	_toast("🗺️ %s — رابطه: %s (%s)" % [
-		_fa_country(code),
-		_relation_word(relation),
-		PersianFormatter.to_persian_digits(str(relation))
-	])
+		_fa_country(code), _relation_word(relation), PersianFormatter.to_persian_digits("%.0f" % relation)])
+	_switch_tab("world")
+
+func _on_world_action(country: String, action: String, action_title: String):
+	var cmd = GameCommandClass.create_diplomacy_action(country, action)
+	if _run_tick_with([cmd]):
+		_toast("🌍 «%s» درباره %s اجرا شد" % [action_title, _fa_country(country)])
+		_switch_tab("world")
 
 func _fa_country(code: String) -> String:
-	var m = {
-		"همسایه_شرقی": "همسایه‌ی شرقی", "همسایه_غربی": "همسایه‌ی غربی",
-		"ابرقدرت_۱": "ابرقدرت نخست", "ابرقدرت_۲": "ابرقدرت دوم"
-	}
-	return m.get(code, code)
+	return WorldManager.get_country_name(code)
 
 func _relation_word(v) -> String:
-	if v >= 70: return "متحد"
-	if v >= 50: return "دوستانه"
-	if v >= 30: return "خنثی"
-	if v >= 10: return "متشنج"
+	if v >= 75: return "متحد"
+	if v >= 55: return "دوستانه"
+	if v >= 35: return "خنثی"
+	if v >= 15: return "متشنج"
 	return "متخاصم"
-
-func _on_improve_relations(country: String):
-	var cmd = GameCommandClass.create_diplomacy_action(country, "improve_relations")
-	var ok = _run_tick_with([cmd])
-	if ok:
-		_toast("🤝 روابط با «%s» بهبود یافت" % _fa_country(country))
-		_switch_tab("world")
 
 func _on_host_network():
 	var result = P2PManager.host_game(int(network_port_spin.value))

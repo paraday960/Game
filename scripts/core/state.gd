@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 4,
+			"schema_version": 5,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -138,18 +138,14 @@ func init_default_state():
 			},
 			"deterrence": 60.0
 		},
-		"diplomacy": {
-			"relations": {
-				"همسایه_شرقی": 50,
-				"همسایه_غربی": 45,
-				"ابرقدرت_۱": 60,
-				"ابرقدرت_۲": 30
+			"diplomacy": {
+				"relations": {},
+				"influence": 40.0,
+				"soft_power": 35.0,
+				"action_points": 3.0,
+				"treaties": [],
+				"sanctions": []
 			},
-			"influence": 40.0,
-			"soft_power": 35.0,
-			"treaties": [],
-			"sanctions": []
-		},
 		"infrastructure": {
 			"quality": 0.55,
 			"capacity": 0.60,
@@ -247,22 +243,23 @@ func init_default_state():
 
 func _apply_initial_overrides():
 	var file = FileAccess.open("res://data/initial_state.json", FileAccess.READ)
-	if file == null:
-		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	file.close()
-	if parsed is Dictionary:
-		_deep_merge(state, parsed)
-		# JSON همه اعداد را اعشاری می‌خواند؛ کلیدهای تقویمی باید int بمانند.
-		state["clock"]["year"] = int(state["clock"].get("year", 2027))
-		state["clock"]["month"] = int(state["clock"].get("month", 1))
-		state["clock"]["day"] = int(state["clock"].get("day", 1))
-		state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-		state["schema_version"] = int(state.get("schema_version", 4))
-		# مقادیر بالانس، مرجع نرخ‌های قابل تنظیم‌اند و پس از داده آغازین اعمال می‌شوند.
-		state["economy"]["tax_rate"] = float(BalanceConfig.get_value("economy.tax_base", state["economy"]["tax_rate"]))
-		state["population"]["birth_rate"] = float(BalanceConfig.get_value("population.birth_base", state["population"]["birth_rate"]))
-		state["population"]["death_rate"] = float(BalanceConfig.get_value("population.death_base", state["population"]["death_rate"]))
+	if file != null:
+		var parsed = JSON.parse_string(file.get_as_text())
+		file.close()
+		if parsed is Dictionary:
+			_deep_merge(state, parsed)
+	# JSON همه اعداد را اعشاری می‌خواند؛ کلیدهای تقویمی باید int بمانند.
+	state["clock"]["year"] = int(state["clock"].get("year", 2027))
+	state["clock"]["month"] = int(state["clock"].get("month", 1))
+	state["clock"]["day"] = int(state["clock"].get("day", 1))
+	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
+	state["schema_version"] = int(state.get("schema_version", 5))
+	# کشور پیش‌فرض از داده جهان می‌آید و پیش از نخستین روز قابل تغییر است.
+	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
+	# مقادیر بالانس، مرجع نرخ‌های قابل تنظیم‌اند و پس از پروفایل کشور اعمال می‌شوند.
+	state["economy"]["tax_rate"] = float(BalanceConfig.get_value("economy.tax_base", state["economy"]["tax_rate"]))
+	state["population"]["birth_rate"] = float(BalanceConfig.get_value("population.birth_base", state["population"]["birth_rate"]))
+	state["population"]["death_rate"] = float(BalanceConfig.get_value("population.death_base", state["population"]["death_rate"]))
 
 func _deep_merge(target: Dictionary, source: Dictionary):
 	for key in source.keys():

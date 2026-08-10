@@ -59,6 +59,9 @@ static func create_research_start(tech_id: String):
 static func create_diplomacy_action(target: String, action: String):
 	return _self_script().new("diplomacy", {"target": target, "action": action})
 
+static func create_country_select(country_id: String):
+	return _self_script().new("country_select", {"country_id": country_id})
+
 static func create_decision_resolve(decision_id: String, choice_id: String):
 	return _self_script().new("decision_resolve", {"decision_id": decision_id, "choice_id": choice_id})
 

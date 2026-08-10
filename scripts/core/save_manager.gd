@@ -118,12 +118,15 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 			"streak":0, "best_streak":0, "combo":1, "previous_score":0.0,
 			"high_score":0.0, "legacy_score":0, "achievements":[], "last_unlocks":[], "stage":"دولت نوپا"
 		})
-		state_data["schema_version"] = 4
+		migrated = true
+	if int(state_data.get("schema_version", 1)) < 5 or not state_data.has("world"):
+		state_data = WorldManager.ensure_world(state_data)
+		state_data["schema_version"] = 5
 		migrated = true
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:
-	for key in ["economy", "population", "resources", "politics", "clock", "indicators"]:
+	for key in ["economy", "population", "resources", "politics", "clock", "indicators", "world"]:
 		if not candidate.has(key) or not candidate[key] is Dictionary:
 			return {"valid": false, "reason": "بخش حیاتی «%s» در ذخیره وجود ندارد" % key}
 	if int(candidate.get("tick", -1)) < 0 or int(candidate.get("version", -1)) < 0:

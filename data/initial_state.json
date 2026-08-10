@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "clock": {
     "year": 2027,
     "month": 1,
@@ -7,8 +7,9 @@
     "season": "بهار"
   },
   "country": {
-    "name": "کشور من",
-    "capital": "پایتخت",
+    "id": "IRN",
+    "name": "ایران",
+    "capital": "تهران",
     "currency": "ریال"
   },
   "economy": {

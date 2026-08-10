@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "notes": "مقادیر تقریبی و بالانس‌شده برای گیم‌پلی سال ۲۰۲۷؛ مرجع آماری رسمی محسوب نمی‌شوند",
+  "default_country": "IRN",
+  "countries": [
+    {"id":"IRN","name_fa":"ایران","capital_fa":"تهران","currency_fa":"ریال","population":88000000,"gdp":500000000000,"military_power":65,"tech_level":0.55,"lat":32.0,"lon":53.0,"bloc":"منطقه‌ای"},
+    {"id":"TUR","name_fa":"ترکیه","capital_fa":"آنکارا","currency_fa":"لیر","population":86000000,"gdp":1100000000000,"military_power":68,"tech_level":0.68,"lat":39.0,"lon":35.0,"bloc":"غربی"},
+    {"id":"SAU","name_fa":"عربستان سعودی","capital_fa":"ریاض","currency_fa":"ریال سعودی","population":37000000,"gdp":1100000000000,"military_power":70,"tech_level":0.63,"lat":24.0,"lon":45.0,"bloc":"غربی"},
+    {"id":"IRQ","name_fa":"عراق","capital_fa":"بغداد","currency_fa":"دینار","population":46000000,"gdp":260000000000,"military_power":43,"tech_level":0.42,"lat":33.0,"lon":44.0,"bloc":"منطقه‌ای"},
+    {"id":"PAK","name_fa":"پاکستان","capital_fa":"اسلام‌آباد","currency_fa":"روپیه","population":245000000,"gdp":380000000000,"military_power":72,"tech_level":0.48,"lat":30.0,"lon":70.0,"bloc":"منطقه‌ای"},
+    {"id":"IND","name_fa":"هند","capital_fa":"دهلی نو","currency_fa":"روپیه","population":1440000000,"gdp":3900000000000,"military_power":84,"tech_level":0.75,"lat":22.0,"lon":79.0,"bloc":"غیرمتعهد"},
+    {"id":"CHN","name_fa":"چین","capital_fa":"پکن","currency_fa":"یوان","population":1410000000,"gdp":18500000000000,"military_power":94,"tech_level":0.90,"lat":35.0,"lon":104.0,"bloc":"اوراسیا"},
+    {"id":"RUS","name_fa":"روسیه","capital_fa":"مسکو","currency_fa":"روبل","population":146000000,"gdp":2200000000000,"military_power":93,"tech_level":0.84,"lat":61.0,"lon":90.0,"bloc":"اوراسیا"},
+    {"id":"USA","name_fa":"ایالات متحده آمریکا","capital_fa":"واشینگتن","currency_fa":"دلار","population":340000000,"gdp":28000000000000,"military_power":100,"tech_level":0.98,"lat":38.0,"lon":-97.0,"bloc":"غربی"},
+    {"id":"DEU","name_fa":"آلمان","capital_fa":"برلین","currency_fa":"یورو","population":84000000,"gdp":4500000000000,"military_power":62,"tech_level":0.93,"lat":51.0,"lon":10.0,"bloc":"غربی"},
+    {"id":"FRA","name_fa":"فرانسه","capital_fa":"پاریس","currency_fa":"یورو","population":68000000,"gdp":3100000000000,"military_power":78,"tech_level":0.91,"lat":46.0,"lon":2.0,"bloc":"غربی"},
+    {"id":"GBR","name_fa":"بریتانیا","capital_fa":"لندن","currency_fa":"پوند","population":69000000,"gdp":3300000000000,"military_power":80,"tech_level":0.92,"lat":54.0,"lon":-2.0,"bloc":"غربی"},
+    {"id":"JPN","name_fa":"ژاپن","capital_fa":"توکیو","currency_fa":"ین","population":124000000,"gdp":4200000000000,"military_power":67,"tech_level":0.95,"lat":36.0,"lon":138.0,"bloc":"غربی"},
+    {"id":"BRA","name_fa":"برزیل","capital_fa":"برازیلیا","currency_fa":"رئال","population":216000000,"gdp":2200000000000,"military_power":63,"tech_level":0.68,"lat":-10.0,"lon":-52.0,"bloc":"غیرمتعهد"},
+    {"id":"EGY","name_fa":"مصر","capital_fa":"قاهره","currency_fa":"پوند مصر","population":114000000,"gdp":410000000000,"military_power":60,"tech_level":0.50,"lat":27.0,"lon":30.0,"bloc":"منطقه‌ای"},
+    {"id":"ZAF","name_fa":"آفریقای جنوبی","capital_fa":"پرتوریا","currency_fa":"رند","population":62000000,"gdp":390000000000,"military_power":49,"tech_level":0.60,"lat":-30.0,"lon":24.0,"bloc":"غیرمتعهد"}
+  ]
+}

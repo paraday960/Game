@@ -17,9 +17,15 @@ func decide(state: Dictionary, tick: int) -> Array:
 	if worst_key != "" and worst_val < 25:
 		cmds.append(GameCommand.create_diplomacy_action(worst_key, "improve_relations"))
 
-	# تحریم‌های زیاد → مذاکره
+	# تحریم‌های ورودی زیاد → مذاکره با یکی از تحریم‌کنندگان معتبر
 	if dip.get("sanctions", []).size() > 2:
-		cmds.append(GameCommand.create_diplomacy_action("ابرقدرت_۱", "negotiate_sanctions"))
+		var sanction_target = worst_key
+		for sanction in dip.get("sanctions", []):
+			if sanction is Dictionary and sanction.get("by", "foreign") != "player" and relations.has(sanction.get("target", "")):
+				sanction_target = sanction["target"]
+				break
+		if sanction_target != "":
+			cmds.append(GameCommand.create_diplomacy_action(sanction_target, "negotiate_sanctions"))
 
 	return cmds
 
