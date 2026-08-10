@@ -10,6 +10,10 @@ godot --headless --path . -s res://tests/test_ui.gd                 # تست د�
 # تست واقعی ENet در دو پردازش (میزبان را پس‌زمینه اجرا کنید، سپس کلاینت):
 godot --headless --path . -s res://tests/test_network_host.gd
 godot --headless --path . -s res://tests/test_network_client.gd
+
+# رقابتی دوکشوری روی پورت آزمایشی جداگانه:
+godot --headless --path . -s res://tests/test_competitive_host.gd
+godot --headless --path . -s res://tests/test_competitive_client.gd
 ```
 
 ## پوشش
@@ -18,7 +22,8 @@ godot --headless --path . -s res://tests/test_network_client.gd
 - قطعیت: دو اجرای هم‌سان = نتیجه‌ی کاملاً یکسان (قفل Lockstep - بخش ۳.۶)
 - اعتبارسنجی `balance.json` و بارگذاری داده‌محور `initial_state.json`
 - استریک، شتاب، XP، سطح و بازشدن دستاوردهای هفته/سال
-- داده ۱۶ کشور، انتخاب کشور/سناریو، دیپلماسی، تاریخچه جنگ و پیمان صلح
+- داده ۲۸ کشور اثرگذار، انتخاب کشور/سناریو، دیپلماسی، تاریخچه جنگ و پیمان صلح
+- کمپین رقابتی: دو State مستقل، فرمان مخصوص کشور و آشتی روابط/پیمان‌ها
 - AI مستقل جهان: ماتریس رابطه، تجارت، اتحاد، جنگ و اثر اقتصادی
 - توسعه نظامی: هزینه، زمان، پیش‌نیاز، تکمیل، دکترین و کاهش تلفات
 - پروژه ملی: هزینه، پیشرفت، فساد، هوای شدید، تأخیر، اضافه‌هزینه و بهره‌برداری

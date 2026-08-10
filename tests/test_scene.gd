@@ -36,8 +36,8 @@ func _ready():
 		failed.append("قوانین ملی داده‌محور نامعتبر هستند")
 	if not IntelligenceOperationManager.is_valid():
 		failed.append("عملیات اطلاعاتی داده‌محور نامعتبر هستند")
-	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
-		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
+	if not WorldManager.is_valid() or WorldManager.countries.size() != 28 or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 27:
+		failed.append("داده جهان یا روابط ۲۸ کشور کامل نیست")
 	else:
 		var country_result = GameEngine.tick(GameState.state, 0, 0, [GameCommand.create_country_select("JPN", "innovation_leader")])
 		if not country_result.success or country_result.state.get("country", {}).get("id", "") != "JPN":
@@ -66,6 +66,25 @@ func _ready():
 		failed.append("تحول مستقل جهان رویداد قابل گزارش نساخت")
 	else:
 		print("Autonomous world AI: relations + alliance/trade/war state OK")
+
+	# کمپین رقابتی چندکشوری: State و فرمان مستقل برای هر بازیکن
+	MultiplayerCampaignManager.reset()
+	var lobby_host=MultiplayerCampaignManager.create_lobby("peer_1","بازیکن ایران","IRN")
+	var lobby_join=MultiplayerCampaignManager.register_peer("peer_2","بازیکن ترکیه","TUR")
+	MultiplayerCampaignManager.set_ready("peer_1",true);MultiplayerCampaignManager.set_ready("peer_2",true)
+	var campaign_start=MultiplayerCampaignManager.start_campaign(GameState.state)
+	MultiplayerCampaignManager.enqueue_command("peer_1",GameCommand.create_tax_set(0.21));MultiplayerCampaignManager.enqueue_command("peer_2",GameCommand.create_tax_set(0.31))
+	var campaign_turn=MultiplayerCampaignManager.advance_month()
+	var iran_state=MultiplayerCampaignManager.get_state_for_peer("peer_1");var turkey_state=MultiplayerCampaignManager.get_state_for_peer("peer_2")
+	if not lobby_host.success or not lobby_join.success or not campaign_start.success or not campaign_turn.success:
+		failed.append("کمپین چندکشوری مستقل آغاز نشد")
+	elif iran_state.get("country",{}).get("id","")!="IRN" or turkey_state.get("country",{}).get("id","")!="TUR":
+		failed.append("کشور بازیکنان در کمپین جدا نشد")
+	elif abs(float(iran_state["economy"]["tax_rate"])-float(turkey_state["economy"]["tax_rate"]))<0.05:
+		failed.append("فرمان‌های دو بازیکن روی State مستقل اعمال نشد")
+	else:
+		print("Competitive multiplayer core: separate countries + commands + reconciliation OK")
+	MultiplayerCampaignManager.reset()
 
 	# اقلیم اجباری زمستان: نبود برف‌روب باید انسداد و اعتراض بسازد؛ آمادگی اثر را کاهش دهد.
 	var winter_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "RUS")

@@ -33,8 +33,10 @@ var tab_buttons: Dictionary = {}
 var event_list: VBoxContainer
 var toast_lbl: Label
 var network_address_edit: LineEdit
+var network_player_name_edit: LineEdit
 var network_port_spin: SpinBox
 var network_status_lbl: Label
+var campaign_lobby_lbl: Label
 
 # مقادیر میانی فرمان‌های تعاملی
 var tax_slider: HSlider
@@ -139,6 +141,7 @@ func _ready():
 	GameEngine.tick_completed.connect(_on_tick_completed)
 	GameEngine.tick_failed.connect(_on_tick_failed)
 	P2PManager.state_snapshot_received.connect(_on_network_state_snapshot)
+	P2PManager.campaign_lobby_received.connect(_on_campaign_lobby)
 	P2PManager.network_status_changed.connect(_on_network_status_changed)
 	P2PManager.network_error.connect(_on_network_error)
 	print("رابط کاربری اصلی لود شد - شبیه‌ساز کشور")
@@ -1556,6 +1559,8 @@ func _build_world():
 	network.add_child(hint)
 	network_status_lbl = Label.new()
 	network.add_child(network_status_lbl)
+	campaign_lobby_lbl = Label.new(); campaign_lobby_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; network.add_child(campaign_lobby_lbl)
+	network_player_name_edit = LineEdit.new(); network_player_name_edit.placeholder_text = "نام بازیکن"; network_player_name_edit.text = "رهبر %s" % str(st.get("country",{}).get("name","کشور")); network.add_child(network_player_name_edit)
 	var connection_row = HBoxContainer.new()
 	network.add_child(connection_row)
 	network_address_edit = LineEdit.new()
@@ -1576,7 +1581,13 @@ func _build_world():
 	_mk_btn(network_buttons, "اتصال به میزبان", Vector2(175, 48), _on_join_network)
 	_mk_btn(network_buttons, "بازکردن خودکار پورت", Vector2(190, 48), _on_enable_upnp)
 	_mk_btn(network_buttons, "قطع اتصال", Vector2(145, 48), _on_disconnect_network)
+	var competitive_buttons = HBoxContainer.new(); competitive_buttons.alignment = BoxContainer.ALIGNMENT_CENTER; network.add_child(competitive_buttons)
+	_mk_btn(competitive_buttons,"میزبانی رقابتی",Vector2(170,48),_on_host_competitive)
+	_mk_btn(competitive_buttons,"اتصال رقابتی",Vector2(170,48),_on_join_competitive)
+	_mk_btn(competitive_buttons,"آماده‌ام",Vector2(130,48),_on_campaign_ready)
+	_mk_btn(competitive_buttons,"شروع کمپین",Vector2(150,48),_on_start_campaign)
 	_refresh_network_status()
+	_on_campaign_lobby(MultiplayerCampaignManager.get_lobby_snapshot())
 
 func _build_selected_country_card(state: Dictionary, target: String):
 	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
@@ -1664,6 +1675,28 @@ func _relation_word(v) -> String:
 	if v >= 35: return "خنثی"
 	if v >= 15: return "متشنج"
 	return "متخاصم"
+
+func _on_host_competitive():
+	var country_id=str(GameState.state.get("country",{}).get("id",WorldManager.default_country))
+	var result=P2PManager.host_competitive(network_player_name_edit.text,country_id,int(network_port_spin.value))
+	_toast("🌐 لابی رقابتی ساخته شد" if result.success else "⚠️ "+str(result.reason));_refresh_network_status()
+
+func _on_join_competitive():
+	var country_id=str(GameState.state.get("country",{}).get("id",WorldManager.default_country))
+	var result=P2PManager.join_competitive(network_address_edit.text,int(network_port_spin.value),network_player_name_edit.text,country_id)
+	_toast("🌐 درخواست ورود رقابتی ارسال شد" if result.success else "⚠️ "+str(result.reason));_refresh_network_status()
+
+func _on_campaign_ready():
+	P2PManager.set_campaign_ready(true);_toast("✅ وضعیت آماده ثبت شد")
+
+func _on_start_campaign():
+	var result=P2PManager.start_competitive_campaign();_toast("🏁 کمپین چندکشوری آغاز شد" if result.success else "⚠️ "+str(result.reason));_refresh_network_status()
+
+func _on_campaign_lobby(lobby:Dictionary):
+	if campaign_lobby_lbl==null or not is_instance_valid(campaign_lobby_lbl):return
+	var names:Array=[]
+	for player in lobby.get("players",{}).values():names.append("%s: %s %s"%[player.get("name","بازیکن"),WorldManager.get_country_name(str(player.get("country_id",""))),"✅" if player.get("ready",false) else "⏳"])
+	campaign_lobby_lbl.text="لابی رقابتی: "+(" | ".join(names) if not names.is_empty() else "غیرفعال")
 
 func _on_host_network():
 	var result = P2PManager.host_game(int(network_port_spin.value))
@@ -1992,6 +2025,13 @@ func _run_tick_with(player_cmds: Array) -> bool:
 				return false
 		_toast("📡 تصمیم برای تأیید به میزبان ارسال شد")
 		return true
+
+	if P2PManager.competitive_mode and P2PManager.is_host and MultiplayerCampaignManager.started:
+		var campaign_result=P2PManager.advance_competitive_month(player_cmds)
+		if not campaign_result.success:_toast("⚠️ "+str(campaign_result.reason));return false
+		var campaign_state:Dictionary=campaign_result.state
+		GameState.set_state(campaign_state,int(campaign_state.get("version",0)),int(campaign_state.get("tick",0)))
+		SaveManager.maybe_autosave(GameState.tick);_refresh_header();_render_events();_engagement_pulse();FeedbackManager.play_success();return true
 
 	var cmds: Array = []
 	cmds.append_array(P2PManager.get_pending_commands())

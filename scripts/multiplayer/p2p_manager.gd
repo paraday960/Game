@@ -19,12 +19,16 @@ var current_port: int = 0
 var connected_address: String = ""
 var external_address: String = ""
 var upnp_mapped: bool = false
+var competitive_mode: bool = false
+var campaign_player_name: String = "بازیکن"
+var campaign_country_id: String = ""
 var _upnp: UPNP
 
 signal peer_connected(peer_id)
 signal peer_disconnected(peer_id)
 signal command_received(cmd)
 signal state_snapshot_received(state, version, tick)
+signal campaign_lobby_received(lobby)
 signal network_status_changed(status)
 signal network_error(message)
 
@@ -51,6 +55,9 @@ func start_local_mode():
 	connected_address = ""
 	external_address = ""
 	upnp_mapped = false
+	competitive_mode = false
+	campaign_country_id = ""
+	MultiplayerCampaignManager.reset()
 	emit_signal("network_status_changed", get_status())
 
 func host_game(port: int = DEFAULT_PORT, max_peers: int = MAX_PEERS) -> Dictionary:
@@ -91,6 +98,40 @@ func join_game(address: String, port: int = DEFAULT_PORT) -> Dictionary:
 	connected_address = clean_address
 	emit_signal("network_status_changed", get_status())
 	return {"success": true, "mode": "client", "address": clean_address, "port": port}
+
+func host_competitive(player_name:String,country_id:String,port:int=DEFAULT_PORT)->Dictionary:
+	var result=host_game(port,MAX_PEERS)
+	if not result.success:return result
+	competitive_mode=true;campaign_player_name=player_name;campaign_country_id=country_id
+	var lobby=MultiplayerCampaignManager.create_lobby(host_id,player_name,country_id)
+	emit_signal("campaign_lobby_received",MultiplayerCampaignManager.get_lobby_snapshot())
+	return lobby
+
+func join_competitive(address:String,port:int,player_name:String,country_id:String)->Dictionary:
+	competitive_mode=true;campaign_player_name=player_name;campaign_country_id=country_id
+	var result=join_game(address,port)
+	if not result.success:competitive_mode=false
+	return result
+
+func set_campaign_ready(value:bool):
+	if not competitive_mode:return
+	if is_host:
+		MultiplayerCampaignManager.set_ready(host_id,value);_broadcast_lobby()
+	else:rpc_id(1,"_receive_campaign_ready",value)
+
+func start_competitive_campaign()->Dictionary:
+	if not competitive_mode or not is_host:return _error("فقط میزبان رقابتی می‌تواند کمپین را آغاز کند")
+	var result=MultiplayerCampaignManager.start_campaign(GameState.state)
+	if result.success:_broadcast_lobby();_broadcast_campaign_states()
+	return result
+
+func advance_competitive_month(local_commands:Array)->Dictionary:
+	if not competitive_mode or not is_host or not MultiplayerCampaignManager.started:return {"success":false,"reason":"کمپین رقابتی آماده نیست"}
+	for command in local_commands:MultiplayerCampaignManager.enqueue_command(host_id,command)
+	var result=MultiplayerCampaignManager.advance_month()
+	if not result.success:return result
+	_broadcast_campaign_states()
+	return {"success":true,"state":MultiplayerCampaignManager.get_state_for_peer(host_id),"turn":result.turn}
 
 func disconnect_game():
 	start_local_mode()
@@ -139,6 +180,8 @@ func send_command(cmd: GameCommandClass) -> bool:
 		return true
 	if mode == NetworkMode.HOST:
 		cmd.player_id = host_id
+		if competitive_mode and MultiplayerCampaignManager.started:
+			return MultiplayerCampaignManager.enqueue_command(host_id,cmd).success
 		pending_commands.append(cmd)
 		emit_signal("command_received", cmd)
 		return true
@@ -187,8 +230,48 @@ func get_status() -> Dictionary:
 		"address": connected_address,
 		"external_address": external_address,
 		"upnp_mapped": upnp_mapped,
+		"competitive_mode": competitive_mode,
+		"campaign_started": MultiplayerCampaignManager.started,
+		"campaign_players": MultiplayerCampaignManager.peer_registry.size(),
 		"connection": connection
 	}
+
+@rpc("any_peer","call_remote","reliable")
+func _request_campaign_join(player_name:String,country_id:String):
+	if not is_host or not competitive_mode:return
+	var sender=str(multiplayer.get_remote_sender_id());var result=MultiplayerCampaignManager.register_peer(sender,player_name,country_id)
+	if not result.success:rpc_id(int(sender),"_campaign_join_rejected",str(result.reason))
+	_broadcast_lobby()
+
+@rpc("any_peer","call_remote","reliable")
+func _receive_campaign_ready(value:bool):
+	if is_host and competitive_mode:MultiplayerCampaignManager.set_ready(str(multiplayer.get_remote_sender_id()),value);_broadcast_lobby()
+
+@rpc("authority","call_remote","reliable")
+func _receive_campaign_lobby(lobby:Dictionary):
+	emit_signal("campaign_lobby_received",lobby)
+
+@rpc("authority","call_remote","reliable")
+func _campaign_join_rejected(reason:String):
+	_error("ورود به کمپین رد شد: "+reason)
+
+@rpc("authority","call_remote","reliable")
+func _receive_campaign_snapshot(payload:String,checksum:String,version:int,tick:int):
+	if payload.sha256_text()!=checksum:return _error("صحت Snapshot کشور تأیید نشد")
+	var state=JSON.parse_string(payload)
+	if not state is Dictionary:return _error("Snapshot کشور نامعتبر است")
+	emit_signal("state_snapshot_received",state,version,tick)
+
+func _broadcast_lobby():
+	var lobby=MultiplayerCampaignManager.get_lobby_snapshot();emit_signal("campaign_lobby_received",lobby)
+	if mode==NetworkMode.HOST and not peers.is_empty():rpc("_receive_campaign_lobby",lobby)
+
+func _broadcast_campaign_states():
+	if not is_host:return
+	for peer_id in MultiplayerCampaignManager.peer_registry.keys():
+		var state=MultiplayerCampaignManager.get_state_for_peer(str(peer_id));var payload=JSON.stringify(state);var checksum=payload.sha256_text()
+		if str(peer_id)==host_id:emit_signal("state_snapshot_received",state,int(state.get("version",0)),int(state.get("tick",0)))
+		elif int(peer_id)>0:rpc_id(int(peer_id),"_receive_campaign_snapshot",payload,checksum,int(state.get("version",0)),int(state.get("tick",0)))
 
 @rpc("any_peer", "call_remote", "reliable")
 func _receive_client_command(data: Dictionary):
@@ -206,7 +289,11 @@ func _receive_client_command(data: Dictionary):
 	cmd.player_id = str(sender)
 	cmd.tick = 0
 	cmd.version = 0
-	pending_commands.append(cmd)
+	if competitive_mode and MultiplayerCampaignManager.started:
+		var routed=MultiplayerCampaignManager.enqueue_command(str(sender),cmd)
+		if not routed.success:_error(str(routed.reason));return
+	else:
+		pending_commands.append(cmd)
 	received_per_peer[sender] = received + 1
 	emit_signal("command_received", cmd)
 
@@ -249,11 +336,13 @@ func _on_peer_connected(peer_id: int):
 func _on_peer_disconnected(peer_id: int):
 	peers.erase(peer_id)
 	received_per_peer.erase(peer_id)
+	if competitive_mode:MultiplayerCampaignManager.unregister_peer(str(peer_id));_broadcast_lobby()
 	emit_signal("peer_disconnected", peer_id)
 	emit_signal("network_status_changed", get_status())
 
 func _on_connected_to_server():
 	host_id = "1"
+	if competitive_mode:rpc_id(1,"_request_campaign_join",campaign_player_name,campaign_country_id)
 	emit_signal("network_status_changed", get_status())
 
 func _on_connection_failed():
