@@ -1,0 +1,112 @@
+{
+  "version": "1.0.0",
+  "policies": [
+    {
+      "id":"antitrust_enforcement","name_fa":"اجرای قانون ضدانحصار","category_fa":"اقتصاد","political_cost":1.0,
+      "description":"نظارت بر ادغام‌ها و شکستن تبانی برای افزایش رقابت بازار خرد.",
+      "effects":[
+        {"path":"retail.competition","op":"add","value":0.0010,"min":0,"max":1},
+        {"path":"politics.corruption","op":"add","value":-0.00005,"min":0,"max":1}
+      ]
+    },
+    {
+      "id":"universal_health","name_fa":"پوشش همگانی سلامت","category_fa":"اجتماعی","political_cost":2.0,
+      "description":"گسترش بیمه و دسترسی درمان با هزینه مالی روزانه.",
+      "effects":[
+        {"path":"health.coverage","op":"add","value":0.00025,"min":0,"max":1},
+        {"path":"health.quality","op":"add","value":0.00010,"min":0,"max":1},
+        {"path":"economy.national_debt","op":"add","value":8000000,"min":0}
+      ]
+    },
+    {
+      "id":"education_reform","name_fa":"اصلاح جامع آموزش","category_fa":"اجتماعی","political_cost":1.5,
+      "description":"بهبود کیفیت معلم، مهارت و پوشش آموزشی با سرمایه‌گذاری پایدار.",
+      "effects":[
+        {"path":"education.quality","op":"add","value":0.00022,"min":0,"max":1},
+        {"path":"education.skill_match","op":"add","value":0.00018,"min":0,"max":1},
+        {"path":"economy.national_debt","op":"add","value":6000000,"min":0}
+      ]
+    },
+    {
+      "id":"green_subsidies","name_fa":"یارانه گذار سبز","category_fa":"محیط‌زیست","political_cost":1.5,
+      "description":"حمایت از انرژی پاک و کاهش انتشار با هزینه بودجه‌ای.",
+      "effects":[
+        {"path":"environment.green_energy_share","op":"add","value":0.00030,"min":0,"max":1},
+        {"path":"environment.carbon_emission","op":"add","value":-0.00020,"min":0,"max":1},
+        {"path":"economy.national_debt","op":"add","value":7000000,"min":0}
+      ]
+    },
+    {
+      "id":"digital_state","name_fa":"دولت دیجیتال","category_fa":"حکمرانی","political_cost":1.2,
+      "description":"خدمات بدون کاغذ، شفافیت و کاهش فساد اداری.",
+      "effects":[
+        {"path":"administration.efficiency","op":"add","value":0.00022,"min":0,"max":1},
+        {"path":"statistics.digital","op":"add","value":0.00020,"min":0,"max":1},
+        {"path":"politics.corruption","op":"add","value":-0.00008,"min":0,"max":1}
+      ]
+    },
+    {
+      "id":"startup_relief","name_fa":"تسهیل کسب‌وکار نوپا","category_fa":"اقتصاد","political_cost":1.0,
+      "description":"کاهش بوروکراسی و بهبود فضای کسب‌وکار برای شرکت‌های کوچک.",
+      "effects":[
+        {"path":"private_sector.business_climate","op":"add","value":0.00025,"min":0,"max":1},
+        {"path":"private_sector.ease_of_doing","op":"add","value":0.00020,"min":0,"max":1},
+        {"path":"economy.growth_rate","op":"add","value":0.000002,"min":-0.05,"max":0.08}
+      ]
+    },
+    {
+      "id":"food_resilience","name_fa":"تاب‌آوری غذایی","category_fa":"کشاورزی","political_cost":1.2,
+      "description":"ذخیره راهبردی، کاهش ضایعات و پایداری تولید غذا.",
+      "effects":[
+        {"path":"agriculture.food_security","op":"add","value":0.00025,"min":0,"max":1},
+        {"path":"agriculture.waste","op":"add","value":-0.00012,"min":0,"max":1},
+        {"path":"economy.national_debt","op":"add","value":4000000,"min":0}
+      ]
+    },
+    {
+      "id":"cyber_shield","name_fa":"سپر سایبری ملی","category_fa":"امنیت","political_cost":1.5,
+      "description":"تقویت دفاع سایبری، ضدنفوذ و حفاظت از زیرساخت حیاتی.",
+      "effects":[
+        {"path":"intelligence.cyber_readiness","op":"add","value":0.00028,"min":0,"max":1},
+        {"path":"security.cyber","op":"add","value":0.00022,"min":0,"max":1},
+        {"path":"economy.national_debt","op":"add","value":5000000,"min":0}
+      ]
+    },
+    {
+      "id":"press_freedom","name_fa":"آزادی و مسئولیت رسانه","category_fa":"فرهنگ","political_cost":1.0,
+      "description":"افزایش آزادی رسانه همراه با سواد اطلاعاتی و پاسخ‌گویی عمومی.",
+      "effects":[
+        {"path":"culture.media_freedom","op":"add","value":0.00022,"min":0,"max":1},
+        {"path":"culture.media_trust","op":"add","value":0.00012,"min":0,"max":1},
+        {"path":"politics.trust","op":"add","value":0.00006,"min":0,"max":1}
+      ]
+    },
+    {
+      "id":"veterans_support","name_fa":"بسته حمایت ایثارگران","category_fa":"اجتماعی","political_cost":0.8,
+      "description":"بهبود سلامت، مسکن و اشتغال ایثارگران با هزینه مالی محدود.",
+      "effects":[
+        {"path":"veterans.health_care","op":"add","value":0.00020,"min":0,"max":1},
+        {"path":"veterans.employment","op":"add","value":0.00016,"min":0,"max":1},
+        {"path":"economy.national_debt","op":"add","value":3000000,"min":0}
+      ]
+    },
+    {
+      "id":"fiscal_austerity","name_fa":"انضباط مالی سخت","category_fa":"راهبرد اقتصادی","political_cost":1.5,"exclusive_group":"fiscal_strategy",
+      "description":"کاهش بدهی با محدودیت مخارج؛ فشار کوتاه‌مدت بر رضایت و رشد.",
+      "effects":[
+        {"path":"economy.national_debt","op":"add","value":-12000000,"min":0},
+        {"path":"population.happiness","op":"add","value":-0.00010,"min":0.05,"max":0.95},
+        {"path":"economy.growth_rate","op":"add","value":-0.000003,"min":-0.05,"max":0.08}
+      ]
+    },
+    {
+      "id":"public_investment","name_fa":"سرمایه‌گذاری عمومی شتاب‌دار","category_fa":"راهبرد اقتصادی","political_cost":1.5,"exclusive_group":"fiscal_strategy",
+      "description":"رشد زیرساخت و اشتغال با پذیرش بدهی بیشتر.",
+      "effects":[
+        {"path":"infrastructure.quality","op":"add","value":0.00022,"min":0,"max":1},
+        {"path":"economy.unemployment","op":"add","value":-0.00003,"min":0.02,"max":0.35},
+        {"path":"economy.national_debt","op":"add","value":15000000,"min":0}
+      ]
+    }
+  ]
+}

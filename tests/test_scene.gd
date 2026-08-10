@@ -16,6 +16,8 @@ func _ready():
 		failed.append("درخت فناوری داده‌محور نامعتبر است")
 	if not ScenarioManager.is_valid():
 		failed.append("سناریوهای داده‌محور نامعتبر هستند")
+	if not PolicyManager.is_valid():
+		failed.append("سیاست‌های عمومی داده‌محور نامعتبر هستند")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -161,6 +163,23 @@ func _ready():
 				failed.append("پیشنهاد شورای هوشمند نامعتبر بود: " + advisor_result.reason)
 			else:
 				print("AI advisor: 65 diagnoses + valid action OK")
+
+	# سیاست عمومی: فعال‌سازی اتمی، اثر روزانه و تعارض راهبردی
+	var policy_state = s.duplicate(true)
+	policy_state["retail"]["competition"] = 0.20
+	var competition_before = float(policy_state["retail"]["competition"])
+	var policy_result = GameEngine.tick(policy_state, v, t, [GameCommand.create_policy_change("antitrust_enforcement", true)])
+	if not policy_result.success or not policy_result.state.get("policies", {}).get("active", {}).has("antitrust_enforcement"):
+		failed.append("سیاست ضدانحصار فعال نشد")
+	elif float(policy_result.state["retail"]["competition"]) <= competition_before:
+		failed.append("اثر روزانه سیاست ضدانحصار اعمال نشد")
+	else:
+		var fiscal_state = PolicyManager.apply_change(s.duplicate(true), "fiscal_austerity", true, t).state
+		var conflict = PolicyManager.can_change(fiscal_state, "public_investment", true)
+		if conflict.valid:
+			failed.append("دو سیاست مالی متعارض هم‌زمان مجاز شدند")
+		else:
+			print("Public policy: atomic activation + daily effect + conflict OK")
 
 	# درخت فناوری: پیش‌نیاز، هزینه و اثر واقعی تکمیل
 	var research_state = s.duplicate(true)

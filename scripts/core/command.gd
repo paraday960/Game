@@ -62,6 +62,9 @@ static func create_diplomacy_action(target: String, action: String):
 static func create_country_select(country_id: String, scenario_id: String = "balanced"):
 	return _self_script().new("country_select", {"country_id": country_id, "scenario_id": scenario_id})
 
+static func create_policy_change(policy_id: String, enabled: bool):
+	return _self_script().new("policy_change", {"policy_id": policy_id, "enabled": enabled})
+
 static func create_decision_resolve(decision_id: String, choice_id: String):
 	return _self_script().new("decision_resolve", {"decision_id": decision_id, "choice_id": choice_id})
 

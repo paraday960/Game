@@ -9,7 +9,7 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy",
-	"country_select", "decision_resolve"
+	"country_select", "policy_change", "decision_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -355,6 +355,12 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var scenario_check = ScenarioManager.can_select(state, scenario_id)
 			if not scenario_check.valid:
 				return {"valid": false, "reason": scenario_check.reason}
+		elif cmd.type == "policy_change":
+			var policy_id = str(cmd.payload.get("policy_id", ""))
+			var enabled = bool(cmd.payload.get("enabled", false))
+			var policy_check = PolicyManager.can_change(state, policy_id, enabled)
+			if not policy_check.valid:
+				return {"valid": false, "reason": policy_check.reason}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -405,6 +411,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		var scenario_id = str(cmd.payload.get("scenario_id", ScenarioManager.default_scenario))
 		snapshot = WorldManager.apply_country_profile(snapshot, country_id)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
+		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
 		EventLog.log_event("country_selected", {
 			"message": "کشور %s و سناریوی «%s» برای آغاز بازی انتخاب شدند" % [
@@ -412,6 +419,13 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 			"country_id": country_id,
 			"scenario_id": scenario_id
 		}, cmd.tick, cmd.version)
+	elif cmd.type == "policy_change":
+		var policy_result = PolicyManager.apply_change(
+			snapshot, str(cmd.payload.get("policy_id", "")), bool(cmd.payload.get("enabled", false)), cmd.tick)
+		if policy_result.success:
+			snapshot = policy_result.state
+			for policy_event in policy_result.events:
+				EventLog.log_event("policy_event", policy_event, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
@@ -441,6 +455,13 @@ func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 					var wrapped = {"system": sys_name, "event": e.duplicate(true)}
 					generated_events.append(wrapped)
 					EventLog.log_event("system_event", wrapped, tick, snapshot.get("version", 0))
+
+	var policy_simulation = PolicyManager.simulate(snapshot, tick)
+	snapshot = policy_simulation.state
+	for policy_event in policy_simulation.events:
+		var wrapped_policy = {"system": "policies", "event": policy_event.duplicate(true)}
+		generated_events.append(wrapped_policy)
+		EventLog.log_event("policy_event", policy_event, tick, snapshot.get("version", 0))
 
 	# محاسبه شاخص‌های کلان و لایه پیشرفت در انتها
 	snapshot = _compute_indicators(snapshot)

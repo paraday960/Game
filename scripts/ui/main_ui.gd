@@ -731,6 +731,54 @@ func _build_economy():
 		_color_for(0.5 + sign(-econ.get("deficit", 0)) * 0.5))
 	_row(c3, "بدهی ملی", PersianFormatter.format_money(econ.get("national_debt", 0)))
 	_bar(c3, "نسبت بدهی به GDP", clamp(econ.get("debt_to_gdp", 0) / 2.0, 0, 1))
+	_build_policy_center()
+
+func _build_policy_center():
+	var policy_state: Dictionary = GameState.state.get("policies", {})
+	var active: Dictionary = policy_state.get("active", {})
+	var capital = float(policy_state.get("political_capital", 0.0))
+	var card = _card("📜 مرکز سیاست‌گذاری عمومی")
+	_bar(card, "سرمایه سیاسی", capital / max(float(BalanceConfig.get_value("politics.policy_capital_max", 5.0)), 1.0))
+	_row(card, "سیاست‌های فعال", PersianFormatter.to_persian_digits(str(active.size())))
+	var hint = Label.new()
+	hint.text = "سیاست‌ها هر روز اثر دارند، سرمایه سیاسی مصرف می‌کنند و با لغو متوقف می‌شوند. راهبردهای متعارض هم‌زمان فعال نمی‌شوند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.modulate = Color(0.76, 0.81, 0.90)
+	card.add_child(hint)
+	for policy_id in PolicyManager.get_policy_ids():
+		var definition = PolicyManager.get_policy(policy_id)
+		var enabled = active.has(policy_id)
+		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		card.add_child(row)
+		var info = VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		var title = Label.new()
+		title.text = "%s %s — %s" % ["✅" if enabled else "◻️", definition.get("name_fa", policy_id), definition.get("category_fa", "")]
+		title.add_theme_font_size_override("font_size", 16)
+		title.modulate = Color(0.45, 1.0, 0.6) if enabled else Color.WHITE
+		info.add_child(title)
+		var description = Label.new()
+		description.text = str(definition.get("description", ""))
+		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		description.modulate = Color(0.72, 0.77, 0.86)
+		info.add_child(description)
+		var check = PolicyManager.can_change(GameState.state, policy_id, not enabled)
+		var button = Button.new()
+		button.text = "لغو" if enabled else "فعال‌سازی (%s سرمایه)" % PersianFormatter.to_persian_digits("%.1f" % definition.get("political_cost", 1.0))
+		button.custom_minimum_size = Vector2(180, 48)
+		button.disabled = not check.valid
+		button.tooltip_text = "" if check.valid else str(check.reason)
+		button.pressed.connect(FeedbackManager.play_click)
+		button.pressed.connect(_on_policy_change.bind(policy_id, not enabled, str(definition.get("name_fa", "سیاست"))))
+		row.add_child(button)
+
+func _on_policy_change(policy_id: String, enabled: bool, policy_name: String):
+	var command = GameCommandClass.create_policy_change(policy_id, enabled)
+	if _run_tick_with([command]):
+		_toast("📜 سیاست «%s» %s" % [policy_name, "فعال شد" if enabled else "لغو شد"])
+		_switch_tab("economy")
 
 # ============================================================
 # تب فناوری — درخت پژوهش داده‌محور

@@ -232,7 +232,10 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if int(state_data.get("schema_version", 1)) < 8 or not state_data.has("analytics"):
 		state_data = AnalyticsManager.reset(state_data)
 		migrated = true
-	state_data["schema_version"] = 8
+	if int(state_data.get("schema_version", 1)) < 9 or not state_data.has("policies"):
+		state_data = PolicyManager.reset(state_data)
+		migrated = true
+	state_data["schema_version"] = 9
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:

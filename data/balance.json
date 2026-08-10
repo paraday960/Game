@@ -36,7 +36,9 @@
   "politics": {
     "stability_initial": 0.60,
     "riot_threshold": 0.80,
-    "corruption_initial": 0.30
+    "corruption_initial": 0.30,
+    "policy_capital_max": 5.0,
+    "policy_capital_regen": 0.01
   },
   "military": {
     "budget_share": 0.08,
