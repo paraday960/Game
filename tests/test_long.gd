@@ -32,6 +32,9 @@ func _ready():
 	if s["clock"]["year"] != 2028:
 		bad.append("سال به ۲۰۲۸ نرسید")
 	print("Events: %d" % EventLog.count())
+	var analytics_count = s.get("analytics", {}).get("history", []).size()
+	if analytics_count < 50 or analytics_count > 520:
+		bad.append("تعداد نمونه‌های تحلیل هفتگی نامعتبر است: %d" % analytics_count)
 	var achievement_ids: Array = []
 	for achievement in s.get("progression", {}).get("achievements", []):
 		achievement_ids.append(achievement.get("id", ""))

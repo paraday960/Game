@@ -4,6 +4,7 @@ extends Control
 
 const GameCommandClass = preload("res://scripts/core/command.gd")
 const WorldMapClass = preload("res://scripts/ui/world_map.gd")
+const TrendChartClass = preload("res://scripts/ui/trend_chart.gd")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 
 # ---------- وضعیت UI ----------
@@ -379,6 +380,7 @@ func _build_dashboard():
 			_add_pending_decision(decisions_card, pending_decisions[i])
 
 	_build_scenario_status_card(st)
+	_build_analytics_card(st)
 
 	# شورای هوش‌های تخصصی: مهم‌ترین مسئله‌ها را با دلیل و اقدام قابل اجرا پیشنهاد می‌دهد.
 	var recommendations = AIAdvisor.get_top_recommendations(st, st.get("tick", 0), 4)
@@ -439,6 +441,31 @@ func _build_dashboard():
 			c5.add_child(badge)
 
 	_build_save_slots_card()
+
+func _build_analytics_card(state: Dictionary):
+	var card = _card("📈 روند هفتگی کشور")
+	var history = AnalyticsManager.get_history(state, 52)
+	if history.size() < 2:
+		var hint = Label.new()
+		hint.text = "پس از هفت روز، تغییرات هفتگی و نمودار یک‌ساله در این بخش نمایش داده می‌شود."
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hint.modulate = Color(0.75, 0.8, 0.9)
+		card.add_child(hint)
+	else:
+		var gdp_change = AnalyticsManager.get_change(state, "gdp", true)
+		var happiness_change = AnalyticsManager.get_change(state, "happiness")
+		var stability_change = AnalyticsManager.get_change(state, "stability")
+		var inflation_change = AnalyticsManager.get_change(state, "inflation")
+		_row(card, "رشد تولید در آخرین هفته", _signed_percent(gdp_change), _color_for(0.75 if gdp_change >= 0.0 else 0.2))
+		_row(card, "تغییر شادی", _signed_percent(happiness_change), _color_for(0.75 if happiness_change >= 0.0 else 0.2))
+		_row(card, "تغییر ثبات", _signed_percent(stability_change), _color_for(0.75 if stability_change >= 0.0 else 0.2))
+		_row(card, "تغییر تورم", _signed_percent(inflation_change), _color_for(0.75 if inflation_change <= 0.0 else 0.2))
+	var chart = TrendChartClass.new()
+	chart.set_history(history)
+	card.add_child(chart)
+
+func _signed_percent(value: float) -> String:
+	return PersianFormatter.to_persian_digits("%+.2f٪" % (value * 100.0))
 
 func _build_scenario_status_card(state: Dictionary):
 	var scenario: Dictionary = state.get("scenario", {})
@@ -539,7 +566,8 @@ func _on_load_slot(slot: int):
 	if result.success:
 		_refresh_header()
 		_render_events()
-		_toast("📂 جایگاه %s بارگذاری شد" % PersianFormatter.to_persian_digits(str(slot)))
+		var recovery_note = " — از نسخه پشتیبان بازیابی شد" if result.get("recovered_from_backup", false) else ""
+		_toast("📂 جایگاه %s بارگذاری شد%s" % [PersianFormatter.to_persian_digits(str(slot)), recovery_note])
 		_switch_tab("dashboard")
 	else:
 		_toast("⚠️ " + str(result.get("reason", "بارگذاری ناموفق")))
@@ -1366,8 +1394,9 @@ func _on_load_pressed():
 		_toast("⚠️ " + str(result.get("reason", "بارگذاری ناموفق بود")))
 		return
 	var migration_note = " — ذخیره قدیمی ارتقا یافت" if result.get("migrated", false) else ""
-	_toast("📂 بازی بارگذاری شد — روز %s%s" % [
-		PersianFormatter.to_persian_digits(str(GameState.tick)), migration_note])
+	var recovery_note = " — از نسخه پشتیبان بازیابی شد" if result.get("recovered_from_backup", false) else ""
+	_toast("📂 بازی بارگذاری شد — روز %s%s%s" % [
+		PersianFormatter.to_persian_digits(str(GameState.tick)), migration_note, recovery_note])
 	_refresh_header()
 	_render_events()
 	_switch_tab(current_tab)

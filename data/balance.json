@@ -5,7 +5,9 @@
     "days_per_month": 30,
     "months_per_year": 12,
     "decision_lifetime_days": 30,
-    "autosave_interval_days": 30
+    "autosave_interval_days": 30,
+    "analytics_interval_days": 7,
+    "analytics_max_samples": 520
   },
   "resources": {
     "energy_crisis_factor": 0.5,

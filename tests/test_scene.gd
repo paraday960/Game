@@ -24,8 +24,10 @@ func _ready():
 			failed.append("انتخاب اتمی کشور آغازین شکست خورد")
 		elif country_result.state.get("scenario", {}).get("id", "") != "innovation_leader":
 			failed.append("سناریوی انتخابی همراه کشور اعمال نشد")
+		elif abs(float(country_result.state.get("analytics", {}).get("baseline_gdp", 0.0)) - float(WorldManager.get_country("JPN").get("gdp", 0.0))) > 1.0:
+			failed.append("خط پایه تحلیل پس از انتخاب کشور بازنشانی نشد")
 		else:
-			print("World + scenario data: country and victory condition selection OK")
+			print("World + scenario + analytics baseline selection OK")
 		var rich_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "USA")
 		var relation_before = float(rich_state["diplomacy"]["relations"]["TUR"])
 		var rich_tick = GameEngine.tick(rich_state, 0, 0, [])
@@ -80,6 +82,12 @@ func _ready():
 		failed.append("ساعت بازی پیش نرفت")
 
 	print("Events logged: %d" % EventLog.count())
+
+	var analytics_history: Array = s.get("analytics", {}).get("history", [])
+	if analytics_history.size() < 2 or int(analytics_history[-1].get("tick", 0)) < 7:
+		failed.append("تاریخچه تحلیلی هفتگی ثبت نشد")
+	else:
+		print("Weekly analytics history: OK")
 
 	var progression = s.get("progression", {})
 	if progression.get("achievements", []).size() < 2 or int(progression.get("best_streak", 0)) < 7:
@@ -220,6 +228,8 @@ func _ready():
 	if not save_result.success or not load_result.success or not is_equal_approx(GameState.state["economy"]["tax_rate"], original_tax):
 		failed.append("ذخیره/بارگذاری نسخه‌دار شکست خورد")
 	else:
+		# ذخیره دوم نسخه پشتیبان سالم می‌سازد؛ خرابی فایل اصلی باید خودکار بازیابی شود.
+		SaveManager.save_game(save_path)
 		var save_file = FileAccess.open(save_path, FileAccess.READ)
 		var wrapped = JSON.parse_string(save_file.get_as_text())
 		save_file.close()
@@ -228,10 +238,12 @@ func _ready():
 		tampered.store_string(JSON.stringify(wrapped))
 		tampered.close()
 		var tamper_result = SaveManager.load_game(save_path)
-		if tamper_result.success:
-			failed.append("فایل ذخیره دستکاری‌شده پذیرفته شد")
+		if not tamper_result.success or not tamper_result.get("recovered_from_backup", false):
+			failed.append("فایل خراب از نسخه پشتیبان سالم بازیابی نشد")
+		elif not is_equal_approx(GameState.state["economy"]["tax_rate"], original_tax):
+			failed.append("نسخه پشتیبان وضعیت درست را بازنگرداند")
 		else:
-			print("Versioned atomic save + checksum: OK")
+			print("Versioned atomic save + checksum + backup recovery: OK")
 	SaveManager.delete_save(save_path)
 
 	# جایگاه‌های چندگانه و فراداده بدون بارگذاری کامل

@@ -405,6 +405,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		var scenario_id = str(cmd.payload.get("scenario_id", ScenarioManager.default_scenario))
 		snapshot = WorldManager.apply_country_profile(snapshot, country_id)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
+		snapshot = AnalyticsManager.reset(snapshot)
 		EventLog.log_event("country_selected", {
 			"message": "کشور %s و سناریوی «%s» برای آغاز بازی انتخاب شدند" % [
 				WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)],
@@ -457,6 +458,8 @@ func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 		var wrapped_scenario = {"system": "scenario", "event": scenario_event.duplicate(true)}
 		generated_events.append(wrapped_scenario)
 		EventLog.log_event("scenario_event", scenario_event, tick, snapshot.get("version", 0))
+
+	snapshot = AnalyticsManager.update(snapshot, tick)
 
 	# بررسی ثبات کلی - هیچ عدد منفی غیرمجاز
 	var integrity = _check_integrity(snapshot)

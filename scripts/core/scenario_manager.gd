@@ -222,6 +222,8 @@ func _apply_reward(state: Dictionary, scenario: Dictionary):
 	if scenario.get("reward_claimed", false):
 		return
 	state["xp"] = float(state.get("xp", 0.0)) + float(scenario.get("reward_xp", 0))
+	var level_xp = max(float(BalanceConfig.get_value("progression.level_xp", 100.0)), 1.0)
+	state["level"] = int(float(state["xp"]) / level_xp) + 1
 	var progression: Dictionary = state.get("progression", {})
 	progression["legacy_score"] = int(progression.get("legacy_score", 0)) + int(scenario.get("reward_legacy", 0))
 	state["progression"] = progression

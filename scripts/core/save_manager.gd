@@ -38,38 +38,61 @@ func save_game(path: String = DEFAULT_PATH, metadata: Dictionary = {}) -> Dictio
 	return {"success": true, "path": path, "backup": path + ".bak"}
 
 func load_game(path: String = DEFAULT_PATH) -> Dictionary:
-	if not FileAccess.file_exists(path):
-		return _fail("فایل ذخیره‌ای یافت نشد")
-	var file = FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return _fail("فایل ذخیره قابل خواندن نیست")
-	var raw_text = file.get_as_text()
-	file.close()
-	var raw = JSON.parse_string(raw_text)
-	if not raw is Dictionary:
-		return _fail("ساختار فایل ذخیره خراب است")
+	var prepared = _prepare_load(path)
+	var recovered_from_backup = false
+	var primary_reason = str(prepared.get("reason", "فایل اصلی نامعتبر است"))
+	if not prepared.success:
+		var backup_path = path + ".bak"
+		var backup = _prepare_load(backup_path)
+		if backup.success:
+			prepared = backup
+			recovered_from_backup = true
+		else:
+			return _fail("%s؛ نسخه پشتیبان نیز قابل بازیابی نیست: %s" % [primary_reason, backup.get("reason", "یافت نشد")])
 
-	var decoded = _decode_and_migrate(raw)
-	if not decoded.success:
-		return _fail(decoded.reason)
-	var new_state: Dictionary = decoded.state
-	var new_events: Array = decoded.events
-	var validation = _validate_state(new_state)
-	if not validation.valid:
-		return _fail(validation.reason)
-	if not _validate_events(new_events):
-		return _fail("گزارش رویدادهای فایل ذخیره نامعتبر است")
-
+	var new_state: Dictionary = prepared.state
+	var new_events: Array = prepared.events
 	# Commit بارگذاری فقط پس از اعتبارسنجی کامل هر دو بخش انجام می‌شود.
 	GameState.set_state(new_state, int(new_state.get("version", 0)), int(new_state.get("tick", 0)))
 	EventLog.import_events(new_events)
-	EventLog.log_event("load", {"tick": GameState.tick, "path": path}, GameState.tick, GameState.version)
+	if recovered_from_backup:
+		# نسخه سالم پشتیبان جای فایل خراب را می‌گیرد تا بارگذاری بعدی نیز امن باشد.
+		_copy_file(path + ".bak", path)
+	EventLog.log_event("load", {
+		"tick": GameState.tick, "path": path, "recovered_from_backup": recovered_from_backup
+	}, GameState.tick, GameState.version)
 	emit_signal("load_completed", path)
 	return {
 		"success": true,
 		"path": path,
-		"migrated": decoded.get("migrated", false),
+		"migrated": prepared.get("migrated", false),
+		"recovered_from_backup": recovered_from_backup,
 		"format_version": FORMAT_VERSION
+	}
+
+func _prepare_load(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {"success": false, "reason": "فایل ذخیره‌ای یافت نشد"}
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"success": false, "reason": "فایل ذخیره قابل خواندن نیست"}
+	var raw = JSON.parse_string(file.get_as_text())
+	file.close()
+	if not raw is Dictionary:
+		return {"success": false, "reason": "ساختار فایل ذخیره خراب است"}
+	var decoded = _decode_and_migrate(raw)
+	if not decoded.success:
+		return decoded
+	var validation = _validate_state(decoded.state)
+	if not validation.valid:
+		return {"success": false, "reason": validation.reason}
+	if not _validate_events(decoded.events):
+		return {"success": false, "reason": "گزارش رویدادهای فایل ذخیره نامعتبر است"}
+	return {
+		"success": true,
+		"state": decoded.state,
+		"events": decoded.events,
+		"migrated": decoded.get("migrated", false)
 	}
 
 func save_slot(slot: int) -> Dictionary:
@@ -117,6 +140,19 @@ func delete_save(path: String = DEFAULT_PATH) -> bool:
 	return ok
 
 func _read_metadata(path: String) -> Dictionary:
+	var primary = _read_metadata_file(path)
+	if primary.get("valid", false):
+		return primary
+	var backup = _read_metadata_file(path + ".bak")
+	if backup.get("valid", false):
+		backup["exists"] = true
+		backup["valid"] = true
+		backup["recovery_available"] = true
+		backup["label"] = str(backup.get("label", "ذخیره")) + " — نسخه پشتیبان"
+		return backup
+	return primary
+
+func _read_metadata_file(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"exists": false, "valid": false, "label": "خالی"}
 	var file = FileAccess.open(path, FileAccess.READ)
@@ -193,7 +229,10 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 		state_data = ScenarioManager.apply_scenario(
 			state_data, ScenarioManager.default_scenario, int(state_data.get("tick", 0)))
 		migrated = true
-	state_data["schema_version"] = 7
+	if int(state_data.get("schema_version", 1)) < 8 or not state_data.has("analytics"):
+		state_data = AnalyticsManager.reset(state_data)
+		migrated = true
+	state_data["schema_version"] = 8
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:
@@ -232,10 +271,13 @@ func _atomic_write(path: String, content: String) -> Dictionary:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary))
 			return {"success": false, "reason": "ساخت نسخه پشتیبان ناموفق بود"}
 	var absolute_temp = ProjectSettings.globalize_path(temporary)
-	if FileAccess.file_exists(path):
+	var had_previous = FileAccess.file_exists(path)
+	if had_previous:
 		DirAccess.remove_absolute(absolute_target)
 	if DirAccess.rename_absolute(absolute_temp, absolute_target) != OK:
-		return {"success": false, "reason": "ثبت اتمی فایل ذخیره ناموفق بود"}
+		if had_previous and FileAccess.file_exists(path + ".bak"):
+			_copy_file(path + ".bak", path)
+		return {"success": false, "reason": "ثبت اتمی فایل ذخیره ناموفق بود؛ نسخه قبلی بازیابی شد"}
 	return {"success": true}
 
 func _copy_file(source: String, destination: String) -> bool:
