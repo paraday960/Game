@@ -212,7 +212,7 @@ static func update_pending(state: Dictionary, generated_events: Array, tick: int
 			"description": template["description"],
 			"choices": template["choices"].duplicate(true),
 			"created_tick": tick,
-			"expires_tick": tick + DECISION_LIFETIME
+			"expires_tick": tick + int(BalanceConfig.get_value("simulation.decision_lifetime_days", DECISION_LIFETIME))
 		})
 		known[decision_id] = true
 	state["pending_decisions"] = pending

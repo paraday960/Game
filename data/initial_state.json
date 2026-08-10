@@ -1,15 +1,25 @@
 {
-  "version": 0,
-  "tick": 0,
-  "year": 2027,
-  "message": "وضعیت اولیه شبیه‌ساز کشور",
+  "schema_version": 4,
+  "clock": {
+    "year": 2027,
+    "month": 1,
+    "day": 1,
+    "season": "بهار"
+  },
+  "country": {
+    "name": "کشور من",
+    "capital": "پایتخت",
+    "currency": "ریال"
+  },
   "economy": {
     "gdp": 500000000000,
-    "growth": 0.02,
-    "inflation": 0.08
+    "gdp_per_capita": 5000,
+    "growth_rate": 0.02
   },
   "population": {
     "total": 85000000,
-    "happiness": 0.60
-  }
+    "satisfaction": 0.62,
+    "urban_ratio": 0.75
+  },
+  "message": "وضعیت آغازین داده‌محور شبیه‌ساز کشور"
 }

@@ -14,6 +14,9 @@ func _ready():
 			bad.append("tick %d failed: %s" % [i, result.reason])
 			break
 		s = result.state; v = result.version; t = result.tick
+		if i == 120 and s["clock"]["season"] != "تابستان":
+			bad.append("فصل ماه پنجم باید تابستان باشد")
+			break
 		if i % 60 == 0 or i == 364:
 			var g = s["economy"]["gdp"]
 			if is_nan(g) or is_inf(g):
@@ -29,6 +32,11 @@ func _ready():
 	if s["clock"]["year"] != 2028:
 		bad.append("سال به ۲۰۲۸ نرسید")
 	print("Events: %d" % EventLog.count())
+	var achievement_ids: Array = []
+	for achievement in s.get("progression", {}).get("achievements", []):
+		achievement_ids.append(achievement.get("id", ""))
+	if not achievement_ids.has("first_year"):
+		bad.append("دستاورد یک سال پایداری باز نشد")
 	if bad.size() == 0:
 		print("=== ✅ LONG RUN PASSED ===")
 	else:

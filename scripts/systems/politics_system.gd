@@ -12,7 +12,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	# ثبات سیاسی = f(رضایت، فساد، نابرابری، امنیت، مشروعیت، رویدادها) - ۳.۱۲.۳
-	var base_stability = 0.6
+	var base_stability = float(BalanceConfig.get_value("politics.stability_initial", 0.6))
 	var happiness_effect = (pop["happiness"] - 0.5) * 0.5
 	var corruption_effect = -pol["corruption"] * 0.4
 	var inequality_effect = -welfare["gini"] * 0.3
@@ -60,7 +60,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	pol["legitimacy"] = clamp(legitimacy, 0.05, 0.95)
 
 	# رویدادهای سیاسی - ۳.۱۲.۵ - آستانه شورش تنش > 80٪
-	if pol["tension"] > 0.8 and Deterministic.chance(0.1):
+	if pol["tension"] > float(BalanceConfig.get_value("politics.riot_threshold", 0.8)) and Deterministic.chance(0.1):
 		events.append({"type": "protest", "tension": pol["tension"], "message": "اعتراضات گسترده خیابانی"})
 		pol["stability"] -= 0.05
 		pop["happiness"] -= 0.05

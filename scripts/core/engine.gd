@@ -5,6 +5,7 @@ extends Node
 const GameCommandClass = preload("res://scripts/core/command.gd")
 const VersioningClass = preload("res://scripts/core/versioning.gd")
 const DecisionManagerClass = preload("res://scripts/core/decision_manager.gd")
+const ProgressionManagerClass = preload("res://scripts/core/progression_manager.gd")
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy", "decision_resolve"
@@ -204,11 +205,13 @@ func _load_remaining_systems():
 # پیشروی ساعت بازی - هر تیک یک روز (ماه ۳۰ روز)
 func _advance_clock(state: Dictionary) -> Dictionary:
 	var clock = state.get("clock", {"year": 2027, "month": 1, "day": 1, "hour": 0, "season": "بهار"})
-	clock["day"] = clock.get("day", 1) + 1
-	if clock["day"] > 30:
+	var days_per_month = int(BalanceConfig.get_value("simulation.days_per_month", 30))
+	var months_per_year = int(BalanceConfig.get_value("simulation.months_per_year", 12))
+	clock["day"] = int(clock.get("day", 1)) + 1
+	if clock["day"] > days_per_month:
 		clock["day"] = 1
-		clock["month"] = clock.get("month", 1) + 1
-		if clock["month"] > 12:
+		clock["month"] = int(clock.get("month", 1)) + 1
+		if clock["month"] > months_per_year:
 			clock["month"] = 1
 			clock["year"] = clock.get("year", 2027) + 1
 	clock["season"] = SEASONS.get(clock["month"], "بهار")
@@ -419,8 +422,15 @@ func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 					generated_events.append(wrapped)
 					EventLog.log_event("system_event", wrapped, tick, snapshot.get("version", 0))
 
-	# محاسبه شاخص‌های کلان در انتها
+	# محاسبه شاخص‌های کلان و لایه پیشرفت در انتها
 	snapshot = _compute_indicators(snapshot)
+	var progression_result = ProgressionManagerClass.update(snapshot, tick)
+	snapshot = progression_result.state
+	for achievement in progression_result.unlocked:
+		EventLog.log_event("achievement_unlocked", {
+			"message": "دستاورد «%s» باز شد" % achievement.get("title", ""),
+			"achievement": achievement
+		}, tick, snapshot.get("version", 0))
 
 	# بررسی ثبات کلی - هیچ عدد منفی غیرمجاز
 	var integrity = _check_integrity(snapshot)
@@ -459,10 +469,6 @@ func _compute_indicators(state: Dictionary) -> Dictionary:
 	score += state["indicators"]["power_score"] * 0.5
 	score += state["economy"]["gdp_per_capita"] / 1000.0
 	state["score"] = score
-
-	# XP و سطح
-	state["xp"] += score * 0.01
-	state["level"] = int(state["xp"] / 100.0) + 1
 
 	return state
 

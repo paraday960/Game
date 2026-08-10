@@ -51,13 +51,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# د) کسری/مازاد و بدهی
 	var surplus = econ["government_revenue"] - econ["government_spending"]
 	econ["deficit"] = -surplus if surplus < 0 else 0
-	var interest = econ["national_debt"] * 0.03 / 365.0  # سود روزانه ۳٪ سالانه
+	var interest = econ["national_debt"] * float(BalanceConfig.get_value("economy.debt_interest", 0.03)) / 365.0
 	econ["national_debt"] += -surplus + interest if surplus < 0 else interest
 	econ["national_debt"] = max(econ["national_debt"], 0.0)
 	econ["debt_to_gdp"] = econ["national_debt"] / max(econ["gdp"], 1.0)
 
 	# قانون سقف بدهی - ۲۰۰٪ GDP
-	if econ["debt_to_gdp"] > 2.0:
+	if econ["debt_to_gdp"] > float(BalanceConfig.get_value("economy.debt_ceiling", 2.0)):
 		events.append({"type": "debt_crisis", "debt_ratio": econ["debt_to_gdp"]})
 		# بحران اعتباری
 		pol["stability"] -= 0.01

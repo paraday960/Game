@@ -61,10 +61,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var happiness = state.get("population",{}).get("happiness",0.6)
 	emergency["volunteers"] = int(emergency["volunteers"] * 0.999 + happiness * 100000.0 * 0.001 + emergency["preparedness"] * 50000.0 * 0.001)
 
-	# اثر هشدار زودهنگام: کاهش ۲۰-۵۰٪ تلفات (۳.۱۸۸)
-	if emergency["early_warning"] > 0.6:
-		# در زمان بلایا اعمال می‌شود
-		pass
+	# اثر هشدار زودهنگام: ضریب کاهش ۲۰ تا ۵۰ درصدی تلفات بلایا (۳.۱۸۸)
+	emergency["casualty_reduction"] = clamp(
+		0.20 + max(0.0, emergency["early_warning"] - 0.4) * 0.5,
+		0.20, 0.50)
 
 	# تاب‌آوری = f(آمادگی، زیرساخت، بودجه)
 	var resilience = emergency["preparedness"] * 0.5 + infra.get("quality",0.55) * 0.3 + emergency_budget_share * 5.0 * 0.2

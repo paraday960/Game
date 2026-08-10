@@ -20,14 +20,18 @@ func decide(state: Dictionary, tick: int) -> Array:
 				allocs[k] /= t
 			cmds.append(GameCommand.create_budget_allocate(allocs))
 
-	# قاچاق سوخت بالا → پایش (با بودجه امنیت در آینده)
-	if f.get("smuggling", 0.15) > 0.40:
-		pass
+	# قاچاق سوخت بالا → تقویت پایش امنیتی
+	if f.get("smuggling", 0.15) > 0.40 and cmds.is_empty():
+		var security_cmd = build_budget_command(state, "امنیت")
+		if security_cmd != null:
+			cmds.append(security_cmd)
 
-	# بحران برق قریبالوقوع - اگر هنوز فرمانی ندادیم
+	# بحران برق قریب‌الوقوع → تقویت فوری زیرساخت انرژی
 	var electricity = res.get("inventory", {}).get("برق", 100.0)
 	if electricity < 25.0 and cmds.is_empty():
-		pass  # آینده: فرمان سهمیه‌بندی برق
+		var infrastructure_cmd = build_budget_command(state, "زیرساخت")
+		if infrastructure_cmd != null:
+			cmds.append(infrastructure_cmd)
 
 	return cmds
 

@@ -16,8 +16,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	mil["budget_share"] = budget_share
 	var mil_budget = econ["government_spending"] * budget_share
 
-	# هزینه نگهداری - ۱۵٪ ارزش تجهیزات سالانه - ۳.۱۳.۴
-	var maintenance = mil["power"] * 10_000_000.0  # ساده‌سازی
+	# هزینه نگهداری ماهانه از نسبت سالانه داده‌محور - ۳.۱۳.۴
+	var maintenance_ratio = float(BalanceConfig.get_value("military.maintenance", 0.15))
+	var maintenance = mil["power"] * 10_000_000.0 * maintenance_ratio / 12.0
 	if mil_budget < maintenance:
 		mil["readiness"] -= 0.005
 		events.append({"type": "low_military_budget", "readiness": mil["readiness"]})

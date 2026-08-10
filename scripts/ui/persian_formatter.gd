@@ -46,7 +46,3 @@ func format_large(num: float) -> String:
 		return to_persian_digits("%.1f" % (num / 1000.0)) + " هزار"
 	else:
 		return format_number(int(num))
-
-# Singleton access
-func _ready():
-	pass

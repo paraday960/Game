@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 3,
+			"schema_version": 4,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -30,10 +30,10 @@ func init_default_state():
 		"economy": {
 			"gdp": 500_000_000_000.0,  # 500 میلیارد
 			"gdp_per_capita": 5000.0,
-			"growth_rate": 0.02,
-			"inflation": 0.08,
-			"unemployment": 0.08,
-			"tax_rate": 0.20,
+				"growth_rate": float(BalanceConfig.get_value("economy.growth_base", 0.02)),
+				"inflation": float(BalanceConfig.get_value("economy.inflation_initial", 0.08)),
+				"unemployment": float(BalanceConfig.get_value("economy.unemployment_initial", 0.08)),
+				"tax_rate": float(BalanceConfig.get_value("economy.tax_base", 0.20)),
 			"government_revenue": 100_000_000_000.0,
 			"government_spending": 95_000_000_000.0,
 			"deficit": -5_000_000_000.0,
@@ -99,14 +99,14 @@ func init_default_state():
 		},
 		"population": {
 			"total": 85_000_000,
-			"growth_rate": 0.012,
-			"birth_rate": 15.0,
-			"death_rate": 8.0,
-			"migration_net": 10000,
-			"happiness": 0.60,
-			"satisfaction": 0.62,
-			"workforce": 55_000_000,
-			"participation_rate": 0.65,
+				"growth_rate": 0.012,
+				"birth_rate": float(BalanceConfig.get_value("population.birth_base", 15.0)),
+				"death_rate": float(BalanceConfig.get_value("population.death_base", 8.0)),
+				"migration_net": 10000,
+				"happiness": float(BalanceConfig.get_value("population.happiness_initial", 0.60)),
+				"satisfaction": 0.62,
+				"workforce": 55_000_000,
+				"participation_rate": float(BalanceConfig.get_value("population.participation", 0.65)),
 			"dependency_ratio": 0.55,
 			"age_structure": {
 				"کودک": 0.25,
@@ -117,18 +117,18 @@ func init_default_state():
 			"urban_ratio": 0.75
 		},
 		"politics": {
-			"stability": 0.60,
-			"trust": 0.55,
-			"corruption": 0.30,
+				"stability": float(BalanceConfig.get_value("politics.stability_initial", 0.60)),
+				"trust": 0.55,
+				"corruption": float(BalanceConfig.get_value("politics.corruption_initial", 0.30)),
 			"legitimacy": 0.58,
 			"tension": 0.35,
 			"system": "جمهوری ریاستی",
 			"election_cycle": 4
 		},
 		"military": {
-			"power": 65.0,
-			"readiness": 0.70,
-			"budget_share": 0.08,
+				"power": 65.0,
+				"readiness": float(BalanceConfig.get_value("military.readiness_initial", 0.70)),
+				"budget_share": float(BalanceConfig.get_value("military.budget_share", 0.08)),
 			"personnel": 500_000,
 			"branches": {
 				"زمینی": 0.50,
@@ -226,12 +226,50 @@ func init_default_state():
 			"events_active": [],
 			"pending_decisions": [],
 			"decision_history": [],
+			"progression": {
+				"streak": 0,
+				"best_streak": 0,
+				"combo": 1,
+				"previous_score": 0.0,
+				"high_score": 0.0,
+				"legacy_score": 0,
+				"achievements": [],
+				"last_unlocks": [],
+				"stage": "دولت نوپا"
+			},
 			"score": 0.0,
-		"level": 1,
-		"xp": 0.0
-	}
+			"level": 1,
+			"xp": 0.0
+		}
+	_apply_initial_overrides()
 	version = 0
 	tick = 0
+
+func _apply_initial_overrides():
+	var file = FileAccess.open("res://data/initial_state.json", FileAccess.READ)
+	if file == null:
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Dictionary:
+		_deep_merge(state, parsed)
+		# JSON همه اعداد را اعشاری می‌خواند؛ کلیدهای تقویمی باید int بمانند.
+		state["clock"]["year"] = int(state["clock"].get("year", 2027))
+		state["clock"]["month"] = int(state["clock"].get("month", 1))
+		state["clock"]["day"] = int(state["clock"].get("day", 1))
+		state["clock"]["hour"] = int(state["clock"].get("hour", 0))
+		state["schema_version"] = int(state.get("schema_version", 4))
+		# مقادیر بالانس، مرجع نرخ‌های قابل تنظیم‌اند و پس از داده آغازین اعمال می‌شوند.
+		state["economy"]["tax_rate"] = float(BalanceConfig.get_value("economy.tax_base", state["economy"]["tax_rate"]))
+		state["population"]["birth_rate"] = float(BalanceConfig.get_value("population.birth_base", state["population"]["birth_rate"]))
+		state["population"]["death_rate"] = float(BalanceConfig.get_value("population.death_base", state["population"]["death_rate"]))
+
+func _deep_merge(target: Dictionary, source: Dictionary):
+	for key in source.keys():
+		if target.has(key) and target[key] is Dictionary and source[key] is Dictionary:
+			_deep_merge(target[key], source[key])
+		else:
+			target[key] = source[key]
 
 func get_state_copy() -> Dictionary:
 	return state.duplicate(true)

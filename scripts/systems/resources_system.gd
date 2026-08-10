@@ -15,8 +15,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		
 		# بازده تولید = f(انرژی تامین‌شده، زیرساخت، فناوری، نیروی کار)
 		var energy_factor = 1.0
-		if res["inventory"]["برق"] < 20:
-			energy_factor = 0.5  # ضریب بحران انرژی - ۳.۹.۴
+		if res["inventory"]["برق"] < float(BalanceConfig.get_value("resources.energy_crisis_threshold", 15.0)):
+			energy_factor = float(BalanceConfig.get_value("resources.energy_crisis_factor", 0.5))
 		
 		var infra_factor = 0.5 + infra["quality"] * 0.5
 		var tech_factor = 0.7 + tech["branches"]["صنعت"] * 0.3
@@ -43,14 +43,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		res["inventory"][resource_name] = new_inv
 		
 		# تشخیص بحران
-		if resource_name == "غذا" and new_inv < 30:
+		if resource_name == "غذا" and new_inv < float(BalanceConfig.get_value("resources.food_crisis_threshold", 30.0)):
 			res["food_crisis"] = true
-		elif resource_name == "غذا" and new_inv > 50:
+		elif resource_name == "غذا" and new_inv > float(BalanceConfig.get_value("resources.food_recovery_threshold", 50.0)):
 			res["food_crisis"] = false
-		
-		if resource_name == "برق" and new_inv < 15:
+
+		if resource_name == "برق" and new_inv < float(BalanceConfig.get_value("resources.energy_crisis_threshold", 15.0)):
 			res["energy_crisis"] = true
-		elif resource_name == "برق" and new_inv > 30:
+		elif resource_name == "برق" and new_inv > float(BalanceConfig.get_value("resources.energy_recovery_threshold", 30.0)):
 			res["energy_crisis"] = false
 
 	# بخش ه) خودکفایی

@@ -6,6 +6,13 @@ func _ready():
 	print("Systems loaded: %d" % GameEngine.systems.size())
 	var failed: Array = []
 
+	if not BalanceConfig.is_valid():
+		failed.append("فایل بالانس نامعتبر است: " + str(BalanceConfig.get_errors()))
+	elif not GameState.state.has("country"):
+		failed.append("وضعیت آغازین داده‌محور بارگذاری نشد")
+	else:
+		print("Balance config + initial state data: OK")
+
 	for n in GameEngine.system_order:
 		if not GameEngine.systems.has(n):
 			failed.append("در ترتیب اجراست ولی لود نشده: " + n)
@@ -51,6 +58,12 @@ func _ready():
 		failed.append("ساعت بازی پیش نرفت")
 
 	print("Events logged: %d" % EventLog.count())
+
+	var progression = s.get("progression", {})
+	if progression.get("achievements", []).size() < 2 or int(progression.get("best_streak", 0)) < 7:
+		failed.append("دستاورد یا استریک پیشرفت ثبت نشد")
+	else:
+		print("Progression: streak + combo + achievements OK")
 
 	# دترمینستیک؟
 	GameState.init_default_state()

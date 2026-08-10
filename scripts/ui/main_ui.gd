@@ -242,8 +242,12 @@ func _refresh_header():
 		PersianFormatter.to_persian_digits("%02d" % clock.get("day", 1)),
 		clock.get("season", "بهار")
 	]
-	engagement_lbl.text = "🔥 روز %s | ⭐ امتیاز %s | 🏆 سطح %s | 🧪 XP %s" % [
+	var progression = st.get("progression", {})
+	engagement_lbl.text = "🔥 روز %s | استریک %s | شتاب ×%s | %s\n⭐ امتیاز %s | 🏆 سطح %s | تجربه %s" % [
 		PersianFormatter.to_persian_digits(str(st.get("tick", 0))),
+		PersianFormatter.to_persian_digits(str(progression.get("streak", 0))),
+		PersianFormatter.to_persian_digits(str(progression.get("combo", 1))),
+		str(progression.get("stage", "دولت نوپا")),
 		PersianFormatter.format_number(int(st.get("score", 0))),
 		PersianFormatter.to_persian_digits(str(st.get("level", 1))),
 		PersianFormatter.to_persian_digits("%.0f" % st.get("xp", 0.0))
@@ -396,6 +400,29 @@ func _build_dashboard():
 	var c4 = _card("🏅 قدرت و اعتبار")
 	_row(c4, "شاخص قدرت", PersianFormatter.format_number(int(ind.get("power_score", 0))))
 	_row(c4, "سطح رهبری", PersianFormatter.to_persian_digits(str(st.get("level", 1))))
+
+	var progress = st.get("progression", {})
+	var c5 = _card("🏆 پیشرفت و دستاوردها")
+	_row(c5, "مرحله کشور", str(progress.get("stage", "دولت نوپا")))
+	_row(c5, "بهترین استریک", "%s روز" % PersianFormatter.to_persian_digits(str(progress.get("best_streak", 0))))
+	_row(c5, "امتیاز میراث", PersianFormatter.to_persian_digits(str(progress.get("legacy_score", 0))))
+	var achievements: Array = progress.get("achievements", [])
+	_row(c5, "دستاوردهای بازشده", "%s از %s" % [
+		PersianFormatter.to_persian_digits(str(achievements.size())),
+		PersianFormatter.to_persian_digits("10")])
+	if achievements.is_empty():
+		var first_hint = Label.new()
+		first_hint.text = "نخستین روز را کامل کنید تا اولین دستاورد باز شود."
+		first_hint.modulate = Color(0.75, 0.8, 0.9)
+		c5.add_child(first_hint)
+	else:
+		for i in range(max(0, achievements.size() - 3), achievements.size()):
+			var achievement = achievements[i]
+			var badge = Label.new()
+			badge.text = "🏅 %s — %s" % [achievement.get("title", "دستاورد"), achievement.get("description", "")]
+			badge.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			badge.modulate = Color(1.0, 0.83, 0.35)
+			c5.add_child(badge)
 
 func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
 	var panel = PanelContainer.new()
@@ -1068,8 +1095,8 @@ func _process(delta):
 			tick_timer = 0.0
 			_run_tick_with([])
 
-func _on_tick_completed(_new_state, _events):
-	pass
+func _on_tick_completed(new_state, _events):
+	current_state = new_state.duplicate(true)
 
 func _on_tick_failed(reason):
 	print("خطای تیک: %s" % reason)

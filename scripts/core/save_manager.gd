@@ -112,7 +112,13 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if int(state_data.get("schema_version", 1)) < 3:
 		state_data["pending_decisions"] = state_data.get("pending_decisions", [])
 		state_data["decision_history"] = state_data.get("decision_history", [])
-		state_data["schema_version"] = 3
+		migrated = true
+	if int(state_data.get("schema_version", 1)) < 4:
+		state_data["progression"] = state_data.get("progression", {
+			"streak":0, "best_streak":0, "combo":1, "previous_score":0.0,
+			"high_score":0.0, "legacy_score":0, "achievements":[], "last_unlocks":[], "stage":"دولت نوپا"
+		})
+		state_data["schema_version"] = 4
 		migrated = true
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
