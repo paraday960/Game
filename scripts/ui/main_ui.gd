@@ -115,6 +115,7 @@ const METRIC_WORD_FA = {
 const TABS := [
 	["dashboard", "🏠 داشبورد"],
 	["government", "👔 دولت"],
+	["laws", "⚖️ قوانین"],
 	["economy", "💰 اقتصاد"],
 	["projects", "🏗️ پروژه‌ها"],
 	["technology", "🔬 فناوری"],
@@ -193,7 +194,7 @@ func _build_chrome():
 		var key = tab_def[0]
 		var btn = Button.new()
 		btn.text = tab_def[1]
-		btn.custom_minimum_size = Vector2(105, 56)
+		btn.custom_minimum_size = Vector2(95, 56)
 		btn.add_theme_font_size_override("font_size", 17)
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_switch_tab.bind(key))
@@ -294,6 +295,7 @@ func _switch_tab(tab_key: String):
 	match tab_key:
 		"dashboard": _build_dashboard()
 		"government": _build_government()
+		"laws": _build_laws()
 		"economy": _build_economy()
 		"projects": _build_national_projects()
 		"technology": _build_technology()
@@ -922,6 +924,51 @@ func _active_crises(st: Dictionary) -> Array:
 	elif hazard == "flood":
 		out.append("سیلاب شهری — زهکشی و خدمات اضطراری زیر فشار هستند")
 	return out
+
+# ============================================================
+# تب قوانین — تصویب، اجرا، حمایت و نظارت قضایی
+# ============================================================
+func _build_laws():
+	var state = GameState.state
+	var legislation: Dictionary = state.get("legislation", {})
+	var enacted: Dictionary = legislation.get("enacted", {})
+	var summary = _card("⚖️ نظام قانون‌گذاری ملی")
+	_row(summary, "قوانین برقرار", PersianFormatter.to_persian_digits(str(enacted.size())))
+	_bar(summary, "حمایت متوسط عمومی", float(legislation.get("average_support", 0.60)))
+	_row(summary, "چالش‌های قضایی", PersianFormatter.to_persian_digits(str(legislation.get("legal_challenges", 0))))
+	_bar(summary, "سرمایه سیاسی", float(state.get("policies", {}).get("political_capital", 0.0)) / max(float(BalanceConfig.get_value("politics.policy_capital_max", 5.0)),1.0))
+	var hint = Label.new(); hint.text = "قانون پس از تصویب به‌تدریج توسط دولت و قوه قضاییه اجرا می‌شود. فساد، ضعف اداری، مخالفت عمومی و چالش قضایی سرعت اجرا را کاهش می‌دهند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75,0.82,0.92); summary.add_child(hint)
+
+	var active_card = _card("📜 قوانین در حال اجرا")
+	if enacted.is_empty():
+		var empty = Label.new(); empty.text = "هنوز قانون ملی جدیدی تصویب نشده است."; active_card.add_child(empty)
+	for law_id in enacted.keys():
+		var record: Dictionary = enacted[law_id]
+		var panel = PanelContainer.new(); active_card.add_child(panel)
+		var box = VBoxContainer.new(); panel.add_child(box)
+		var title = Label.new(); title.text = LawManager.get_law_name(law_id); title.add_theme_font_size_override("font_size",18); box.add_child(title)
+		_bar(box,"پیشرفت اجرا",float(record.get("implementation",0.0)))
+		_bar(box,"حمایت عمومی",float(record.get("support",0.5)))
+		_row(box,"چالش قضایی",PersianFormatter.to_persian_digits(str(record.get("challenges",0))))
+		var repeal = Button.new(); repeal.text = "لغو قانون"; repeal.modulate = Color(1.0,0.58,0.55)
+		repeal.pressed.connect(FeedbackManager.play_click); repeal.pressed.connect(_on_law_change.bind(str(law_id),"repeal")); box.add_child(repeal)
+
+	var available = _card("📚 لوایح قابل تصویب")
+	for law_id in LawManager.get_law_ids():
+		if enacted.has(law_id): continue
+		var definition = LawManager.get_law(law_id)
+		var row = HBoxContainer.new(); available.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(info)
+		var title = Label.new(); title.text = "%s — %s" % [definition.get("name_fa",law_id),definition.get("category_fa","")]; title.add_theme_font_size_override("font_size",17); info.add_child(title)
+		var desc = Label.new(); desc.text = PersianFormatter.to_persian_digits("%s\nحمایت پایه %.0f٪ | مناقشه‌برانگیزی %.0f٪ | هزینه سیاسی %.1f" % [definition.get("description",""),float(definition.get("public_support",0.5))*100.0,float(definition.get("controversy",0.5))*100.0,float(definition.get("political_cost",1.0))]); desc.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; desc.modulate=Color(0.72,0.78,0.88); info.add_child(desc)
+		var check = LawManager.can_enact(state,law_id)
+		var enact = Button.new(); enact.text="تصویب"; enact.disabled=not check.valid; enact.tooltip_text="" if check.valid else str(check.reason)
+		enact.pressed.connect(FeedbackManager.play_click); enact.pressed.connect(_on_law_change.bind(str(law_id),"enact")); row.add_child(enact)
+
+func _on_law_change(law_id: String, action: String):
+	if _run_tick_with([GameCommandClass.create_law_change(law_id,action)]):
+		_toast("⚖️ قانون «%s» %s" % [LawManager.get_law_name(law_id),"تصویب شد" if action=="enact" else "لغو شد"]); _switch_tab("laws")
 
 # ============================================================
 # تب دولت — وزیران، شایستگی، فساد و انسجام کابینه

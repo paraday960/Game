@@ -9,7 +9,7 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
-	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "decision_resolve"
+	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "decision_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -383,6 +383,16 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 					return {"valid": false, "reason": "وزیر فعالی برای برکناری وجود ندارد"}
 			else:
 				return {"valid": false, "reason": "اقدام کابینه نامعتبر است"}
+		elif cmd.type == "law_change":
+			var law_id = str(cmd.payload.get("law_id", ""))
+			var law_action = str(cmd.payload.get("action", "enact"))
+			if law_action == "enact":
+				var law_check = LawManager.can_enact(state, law_id)
+				if not law_check.valid: return {"valid":false,"reason":law_check.reason}
+			elif law_action == "repeal":
+				if not state.get("legislation", {}).get("enacted", {}).has(law_id): return {"valid":false,"reason":"این قانون برقرار نیست"}
+			else:
+				return {"valid":false,"reason":"اقدام قانون‌گذاری نامعتبر است"}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -448,6 +458,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		snapshot = MilitaryManager.reset(snapshot)
 		snapshot = NationalProjectManager.reset(snapshot)
 		snapshot = CabinetManager.reset(snapshot)
+		snapshot = LawManager.reset(snapshot)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
@@ -496,6 +507,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 			snapshot = cabinet_result.state
 			for cabinet_event in cabinet_result.events:
 				EventLog.log_event("cabinet_event", cabinet_event, cmd.tick, cmd.version)
+	elif cmd.type == "law_change":
+		var law_id = str(cmd.payload.get("law_id", ""))
+		var law_result = LawManager.enact(snapshot, law_id, cmd.tick) if str(cmd.payload.get("action", "enact")) == "enact" else LawManager.repeal(snapshot, law_id, cmd.tick)
+		if law_result.success:
+			snapshot = law_result.state
+			for law_event in law_result.events: EventLog.log_event("law_event", law_event, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
@@ -557,6 +574,13 @@ func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 		var wrapped_cabinet = {"system":"cabinet", "event":cabinet_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
 		generated_events.append(wrapped_cabinet)
 		EventLog.log_event("cabinet_event", cabinet_event, turn, snapshot.get("version", 0))
+
+	var law_result = LawManager.simulate_month(snapshot, turn)
+	snapshot = law_result.state
+	for law_event in law_result.events:
+		var wrapped_law = {"system":"legislation", "event":law_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_law)
+		EventLog.log_event("law_event", law_event, turn, snapshot.get("version", 0))
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
 	snapshot = _compute_indicators(snapshot)

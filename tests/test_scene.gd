@@ -32,6 +32,8 @@ func _ready():
 		failed.append("پروژه‌های ملی داده‌محور نامعتبر هستند")
 	if not CabinetManager.is_valid():
 		failed.append("داده وزیران و وزارتخانه‌ها نامعتبر است")
+	if not LawManager.is_valid():
+		failed.append("قوانین ملی داده‌محور نامعتبر هستند")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -301,6 +303,25 @@ func _ready():
 			failed.append("وزارتخانه خالی جریمه عملکرد ایجاد نکرد")
 		else:
 			print("Cabinet: appointment + political cost + performance + vacancy OK")
+
+	# قانون‌گذاری: تصویب، اجرای تدریجی، سرمایه سیاسی و تعارض حقوقی
+	var law_state = s.duplicate(true)
+	var law_capital_before = float(law_state["policies"]["political_capital"])
+	var law_result = GameEngine.tick(law_state,v,t,[GameCommand.create_law_change("anti_corruption_act","enact")])
+	if not law_result.success or not law_result.state["legislation"]["enacted"].has("anti_corruption_act"):
+		failed.append("قانون ملی اتمی تصویب نشد")
+	elif float(law_result.state["legislation"]["enacted"]["anti_corruption_act"].get("implementation",0.0)) <= 0.0:
+		failed.append("اجرای اداری قانون پیشرفت نکرد")
+	elif float(law_result.state["policies"]["political_capital"]) >= law_capital_before:
+		failed.append("هزینه سیاسی قانون ثبت نشد")
+	else:
+		var conflict_state = LawManager.enact(s.duplicate(true),"emergency_powers",t).state
+		var law_conflict = LawManager.can_enact(conflict_state,"civil_liberties")
+		var repeal_result = LawManager.repeal(law_result.state,"anti_corruption_act",t+1)
+		if law_conflict.valid or not repeal_result.success:
+			failed.append("تعارض یا لغو قانون درست عمل نکرد")
+		else:
+			print("Legislation: enactment + implementation + conflict + repeal OK")
 
 	# توسعه نظامی: شروع پروژه، پیشرفت ماهانه، تکمیل اثر و دکترین
 	var military_state = s.duplicate(true)

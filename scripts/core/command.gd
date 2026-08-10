@@ -92,6 +92,9 @@ static func create_cabinet_appointment(ministry_id: String, candidate_id: String
 static func create_cabinet_dismissal(ministry_id: String):
 	return _self_script().new("cabinet_change", {"ministry_id": ministry_id, "candidate_id": "", "action": "dismiss"})
 
+static func create_law_change(law_id: String, action: String):
+	return _self_script().new("law_change", {"law_id": law_id, "action": action})
+
 static func create_decision_resolve(decision_id: String, choice_id: String):
 	return _self_script().new("decision_resolve", {"decision_id": decision_id, "choice_id": choice_id})
 

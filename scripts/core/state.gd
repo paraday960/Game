@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 15,
+			"schema_version": 16,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -254,7 +254,7 @@ func _apply_initial_overrides():
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
 	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-	state["schema_version"] = int(state.get("schema_version", 15))
+	state["schema_version"] = int(state.get("schema_version", 16))
 	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
 	state = TimeManager.reset(state)
@@ -262,6 +262,7 @@ func _apply_initial_overrides():
 	state = MilitaryManager.reset(state)
 	state = NationalProjectManager.reset(state)
 	state = CabinetManager.reset(state)
+	state = LawManager.reset(state)
 	state = ScenarioManager.apply_scenario(state, ScenarioManager.default_scenario, 0)
 	state = TechnologyManager.migrate_state(state)
 	state = PolicyManager.reset(state)
