@@ -31,7 +31,10 @@ func _ready():
 		bad.append("۳۶ نوبت ماهانه باید تقویم را به ابتدای ۲۰۳۰ برساند")
 	if TimeManager.get_total_days(s) < 1090:
 		bad.append("روزهای داخلی سه سال کامل اجرا نشد")
-	print("Events: %d" % EventLog.count())
+	var serialized_size = JSON.stringify(s).to_utf8_buffer().size()
+	if serialized_size > 4_500_000:
+		bad.append("حجم State با Snapshotهای خط زمانی از سقف امن شبکه عبور کرد: %d" % serialized_size)
+	print("Events: %d | state bytes: %d" % [EventLog.count(), serialized_size])
 	var analytics_count = s.get("analytics", {}).get("history", []).size()
 	if analytics_count < 36 or analytics_count > 120:
 		bad.append("تعداد نمونه‌های تحلیل ماهانه نامعتبر است: %d" % analytics_count)

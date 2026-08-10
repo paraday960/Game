@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 14,
+			"schema_version": 15,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -254,7 +254,7 @@ func _apply_initial_overrides():
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
 	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-	state["schema_version"] = int(state.get("schema_version", 14))
+	state["schema_version"] = int(state.get("schema_version", 15))
 	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
 	state = TimeManager.reset(state)
@@ -270,6 +270,7 @@ func _apply_initial_overrides():
 	state["economy"]["tax_rate"] = float(BalanceConfig.get_value("economy.tax_base", state["economy"]["tax_rate"]))
 	state["population"]["birth_rate"] = float(BalanceConfig.get_value("population.birth_base", state["population"]["birth_rate"]))
 	state["population"]["death_rate"] = float(BalanceConfig.get_value("population.death_base", state["population"]["death_rate"]))
+	state = AuditManager.reset(state)
 
 func _deep_merge(target: Dictionary, source: Dictionary):
 	for key in source.keys():

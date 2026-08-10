@@ -245,12 +245,14 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 	snapshot["tick"] = snapshot_tick
 	snapshot["seed"] = Deterministic.get_state()
 	_record_command_receipts(snapshot, commands)
+	snapshot = AuditManager.record_turn(current_state, snapshot, commands)
 
 	# لاگ رویداد موفق و انتشار یک‌جای تمام رویدادهای تراکنش
 	EventLog.log_event("tick_success", {
 		"tick": snapshot_tick,
 		"version": snapshot["version"],
 		"commands_count": commands.size(),
+		"chain_hash": snapshot.get("audit", {}).get("chain_head", ""),
 		"gdp_change": snapshot["economy"]["gdp"] - current_state["economy"]["gdp"] if current_state.has("economy") else 0
 	}, snapshot_tick, snapshot["version"])
 	EventLog.commit_transaction()

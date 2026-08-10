@@ -13,6 +13,7 @@ var tick_timer: float = 0.0
 var toast_generation: int = 0
 var pending_delete_slot: int = 0
 var new_game_confirmation: bool = false
+var rewind_confirmation: bool = false
 var current_tab: String = "dashboard"
 var current_state: Dictionary = {}
 var selected_system: String = "economy"
@@ -379,6 +380,7 @@ func _build_dashboard():
 		_build_onboarding_card(st)
 	_build_weather_and_municipal_card(st)
 	_build_monthly_report_card(st)
+	_build_timeline_card(st)
 
 	# هشدار بحران‌ها
 	var crises = _active_crises(st)
@@ -487,6 +489,45 @@ func _build_onboarding_card(state: Dictionary):
 func _on_dismiss_tutorial():
 	SettingsManager.set_value("tutorial_dismissed", true)
 	_switch_tab("dashboard")
+
+func _build_timeline_card(state: Dictionary):
+	var audit: Dictionary = state.get("audit", {})
+	if audit.is_empty():
+		return
+	var check = AuditManager.verify_chain(state)
+	var card = _card("🧾 خط زمانی و حسابرسی")
+	_row(card, "سلامت زنجیره فرمان", "معتبر" if check.valid else "خراب", Color(0.4, 1.0, 0.55) if check.valid else Color(1.0, 0.45, 0.45))
+	_row(card, "نوبت‌های ثبت‌شده", PersianFormatter.to_persian_digits(str(audit.get("records", []).size())))
+	_row(card, "Snapshotهای قابل بازگشت", PersianFormatter.to_persian_digits(str(max(0, audit.get("snapshots", []).size() - 1))))
+	var hash_label = Label.new(); hash_label.text = "هش زنجیره: " + str(audit.get("chain_head", "")).left(16) + "…"; hash_label.modulate = Color(0.68, 0.75, 0.85); card.add_child(hash_label)
+	var rewind = Button.new(); rewind.text = "تأیید بازگشت یک ماه" if rewind_confirmation else "بازگشت به ماه قبل"
+	rewind.disabled = not AuditManager.can_rewind(state, 1)
+	rewind.tooltip_text = "وضعیت ماه فعلی کنار گذاشته می‌شود؛ Saveهای دیسک حذف نمی‌شوند."
+	rewind.pressed.connect(FeedbackManager.play_click); rewind.pressed.connect(_on_rewind_month); card.add_child(rewind)
+
+func _on_rewind_month():
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		_toast("⚠️ فقط میزبان می‌تواند خط زمانی را بازگرداند")
+		return
+	if not rewind_confirmation:
+		rewind_confirmation = true
+		_toast("⚠️ برای بازگشت یک ماه، دوباره دکمه خط زمانی را بزنید")
+		_switch_tab("dashboard")
+		return
+	rewind_confirmation = false
+	var current_version = GameState.version
+	var result = AuditManager.rewind(GameState.state, 1)
+	if not result.success:
+		_toast("⚠️ " + str(result.reason))
+		return
+	var restored: Dictionary = result.state
+	var target_turn = int(result.target_turn)
+	GameState.set_state(restored, current_version + 1, target_turn)
+	EventLog.truncate_after_tick(target_turn)
+	EventLog.log_event("timeline_rewind", {"message":"خط زمانی یک ماه به عقب بازگردانده شد","target_turn":target_turn}, target_turn, current_version + 1)
+	SaveManager.maybe_autosave(target_turn)
+	P2PManager.broadcast_state(GameState.state, GameState.version, GameState.tick)
+	_refresh_header(); _render_events(); _toast("⏪ بازی به ماه قبل بازگشت"); _switch_tab("dashboard")
 
 func _build_monthly_report_card(state: Dictionary):
 	var report: Dictionary = state.get("monthly_report", {})

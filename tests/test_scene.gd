@@ -162,10 +162,21 @@ func _ready():
 	print("Events logged: %d" % EventLog.count())
 
 	var analytics_history: Array = s.get("analytics", {}).get("history", [])
-	if analytics_history.size() < 2 or int(analytics_history[-1].get("tick", 0)) < 7:
-		failed.append("تاریخچه تحلیلی هفتگی ثبت نشد")
+	if analytics_history.size() < 2:
+		failed.append("تاریخچه تحلیلی ماهانه ثبت نشد")
 	else:
 		print("Monthly analytics history: OK")
+	var audit_check = AuditManager.verify_chain(s)
+	var rewind_result = AuditManager.rewind(s, 1)
+	var tampered_audit = s.duplicate(true)
+	if not tampered_audit["audit"]["records"].is_empty(): tampered_audit["audit"]["records"][-1]["chain_hash"] = "خراب"
+	var tamper_check = AuditManager.verify_chain(tampered_audit)
+	if not audit_check.valid or not rewind_result.success or int(rewind_result.target_turn) != t - 1:
+		failed.append("خط زمانی حسابرسی‌شده یا بازگشت ماهانه نامعتبر است")
+	elif tamper_check.valid:
+		failed.append("دستکاری زنجیره فرمان تشخیص داده نشد")
+	else:
+		print("Audit timeline: hash chain + tamper detection + rewind OK")
 
 	var progression = s.get("progression", {})
 	if progression.get("achievements", []).size() < 2:

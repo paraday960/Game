@@ -266,8 +266,11 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if source_schema < 14 or not state_data.has("cabinet"):
 		state_data = CabinetManager.reset(state_data)
 		migrated = true
+	if source_schema < 15 or not state_data.has("audit"):
+		state_data = AuditManager.reset(state_data)
+		migrated = true
 	state_data = WorldManager.ensure_world(state_data)
-	state_data["schema_version"] = 14
+	state_data["schema_version"] = 15
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:
@@ -280,6 +283,10 @@ func _validate_state(candidate: Dictionary) -> Dictionary:
 		return {"valid": false, "reason": "جمعیت ذخیره نامعتبر است"}
 	if float(candidate["economy"].get("gdp", -1.0)) < 0.0:
 		return {"valid": false, "reason": "اقتصاد ذخیره نامعتبر است"}
+	if candidate.has("audit"):
+		var audit_check = AuditManager.verify_chain(candidate)
+		if not audit_check.valid:
+			return {"valid": false, "reason": "زنجیره حسابرسی ذخیره نامعتبر است: %s" % audit_check.reason}
 	return {"valid": true, "reason": ""}
 
 func _validate_events(candidate: Array) -> bool:

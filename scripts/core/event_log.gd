@@ -109,6 +109,14 @@ func import_events(imported: Array) -> bool:
 	_trim_to_limit()
 	return true
 
+func truncate_after_tick(tick: int):
+	var kept: Array = []
+	for event in events:
+		if int(event.get("tick", -1)) <= tick:
+			kept.append(event)
+	events = kept
+	rollback_transaction()
+
 func clear():
 	events = []
 	rollback_transaction()
