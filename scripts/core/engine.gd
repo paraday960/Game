@@ -106,6 +106,12 @@ func _load_remaining_systems():
 		systems["public_services"] = load("res://scripts/systems/public_services_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/industry_sites_system.gd"):
 		systems["industry_sites"] = load("res://scripts/systems/industry_sites_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/public_religious_system.gd"):
+		systems["public_religious"] = load("res://scripts/systems/public_religious_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/government_buildings_system.gd"):
+		systems["government_buildings"] = load("res://scripts/systems/government_buildings_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/citizens_system.gd"):
+		systems["citizens_detail"] = load("res://scripts/systems/citizens_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/financial_services_system.gd"):
 		systems["financial_services"] = load("res://scripts/systems/financial_services_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/urban_facilities_system.gd"):
