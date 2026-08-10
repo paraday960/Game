@@ -211,6 +211,20 @@ func _ready():
 			print("Versioned atomic save + checksum: OK")
 	SaveManager.delete_save(save_path)
 
+	# جایگاه‌های چندگانه و فراداده بدون بارگذاری کامل
+	SaveManager.delete_save(SaveManager.slot_path(1))
+	var slot_result = SaveManager.save_slot(1)
+	var slot_metadata = SaveManager.list_slots()[0]
+	GameState.state["economy"]["tax_rate"] = 0.66
+	var slot_load = SaveManager.load_slot(1)
+	if not slot_result.success or not slot_metadata.get("valid", false) or not slot_load.success:
+		failed.append("جایگاه ذخیره یا فراداده آن نامعتبر است")
+	elif not is_equal_approx(GameState.state["economy"]["tax_rate"], original_tax):
+		failed.append("بارگذاری جایگاه وضعیت را بازیابی نکرد")
+	else:
+		print("Five save slots + metadata + load: OK")
+	SaveManager.delete_save(SaveManager.slot_path(1))
+
 	# اعتبارسنجی سخت‌گیرانه فرمان ناشناخته
 	var bad_cmd = GameCommand.new("unknown_command", {})
 	var before_bad_state = JSON.stringify(GameState.state)

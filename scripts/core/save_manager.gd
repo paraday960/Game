@@ -3,17 +3,25 @@ extends Node
 
 const FORMAT_VERSION = 2
 const DEFAULT_PATH = "user://savegame.json"
+const SAVES_DIR = "user://saves"
+const AUTOSAVE_PATH = "user://saves/autosave.json"
+const MAX_SLOTS = 5
 
 signal save_completed(path)
 signal load_completed(path)
 signal operation_failed(reason)
 
-func save_game(path: String = DEFAULT_PATH) -> Dictionary:
+func save_game(path: String = DEFAULT_PATH, metadata: Dictionary = {}) -> Dictionary:
+	var state_copy = GameState.get_state_copy()
 	var payload_data = {
 		"format_version": FORMAT_VERSION,
 		"saved_at": Time.get_unix_time_from_system(),
 		"game_version": ProjectSettings.get_setting("application/config/version", "1.0.0"),
-		"state": GameState.get_state_copy(),
+		"label": str(metadata.get("label", "ذخیره سریع")),
+		"slot": int(metadata.get("slot", 0)),
+		"country_name": str(state_copy.get("country", {}).get("name", "کشور شما")),
+		"tick": int(state_copy.get("tick", 0)),
+		"state": state_copy,
 		"events": EventLog.get_events()
 	}
 	var payload = JSON.stringify(payload_data)
@@ -64,6 +72,38 @@ func load_game(path: String = DEFAULT_PATH) -> Dictionary:
 		"format_version": FORMAT_VERSION
 	}
 
+func save_slot(slot: int) -> Dictionary:
+	if slot < 1 or slot > MAX_SLOTS:
+		return _fail("شماره جایگاه ذخیره نامعتبر است")
+	return save_game(slot_path(slot), {"label":"جایگاه %d" % slot, "slot":slot})
+
+func load_slot(slot: int) -> Dictionary:
+	if slot < 1 or slot > MAX_SLOTS:
+		return _fail("شماره جایگاه ذخیره نامعتبر است")
+	return load_game(slot_path(slot))
+
+func slot_path(slot: int) -> String:
+	return "%s/slot_%d.json" % [SAVES_DIR, slot]
+
+func list_slots() -> Array:
+	var slots: Array = []
+	for slot in range(1, MAX_SLOTS + 1):
+		var path = slot_path(slot)
+		var metadata = _read_metadata(path)
+		metadata["slot"] = slot
+		metadata["path"] = path
+		slots.append(metadata)
+	return slots
+
+func maybe_autosave(tick: int) -> Dictionary:
+	var interval = int(BalanceConfig.get_value("simulation.autosave_interval_days", 30))
+	if interval <= 0 or tick <= 0 or tick % interval != 0:
+		return {"success": false, "skipped": true}
+	return save_game(AUTOSAVE_PATH, {"label":"ذخیره خودکار", "slot":-1})
+
+func get_autosave_metadata() -> Dictionary:
+	return _read_metadata(AUTOSAVE_PATH)
+
 func has_save(path: String = DEFAULT_PATH) -> bool:
 	return FileAccess.file_exists(path)
 
@@ -75,6 +115,30 @@ func delete_save(path: String = DEFAULT_PATH) -> bool:
 			if DirAccess.remove_absolute(absolute) != OK:
 				ok = false
 	return ok
+
+func _read_metadata(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {"exists": false, "valid": false, "label": "خالی"}
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"exists": true, "valid": false, "label": "غیرقابل خواندن"}
+	var raw = JSON.parse_string(file.get_as_text())
+	file.close()
+	if not raw is Dictionary or not raw.has("payload") or not raw.has("checksum"):
+		return {"exists": true, "valid": false, "label": "ذخیره قدیمی"}
+	if not raw.payload is String or raw.payload.sha256_text() != str(raw.checksum):
+		return {"exists": true, "valid": false, "label": "خراب یا دستکاری‌شده"}
+	var payload = JSON.parse_string(raw.payload)
+	if not payload is Dictionary:
+		return {"exists": true, "valid": false, "label": "نامعتبر"}
+	return {
+		"exists": true, "valid": true,
+		"label": str(payload.get("label", "ذخیره")),
+		"country_name": str(payload.get("country_name", payload.get("state", {}).get("country", {}).get("name", ""))),
+		"tick": int(payload.get("tick", payload.get("state", {}).get("tick", 0))),
+		"saved_at": float(payload.get("saved_at", 0.0)),
+		"game_version": str(payload.get("game_version", ""))
+	}
 
 func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	var data: Dictionary
@@ -147,6 +211,10 @@ func _validate_events(candidate: Array) -> bool:
 	return true
 
 func _atomic_write(path: String, content: String) -> Dictionary:
+	var absolute_target = ProjectSettings.globalize_path(path)
+	var make_dir_result = DirAccess.make_dir_recursive_absolute(absolute_target.get_base_dir())
+	if make_dir_result != OK and make_dir_result != ERR_ALREADY_EXISTS:
+		return {"success": false, "reason": "پوشه ذخیره‌سازی ساخته نشد"}
 	var temporary = path + ".tmp"
 	var temp_file = FileAccess.open(temporary, FileAccess.WRITE)
 	if temp_file == null:
@@ -159,7 +227,6 @@ func _atomic_write(path: String, content: String) -> Dictionary:
 		if not _copy_file(path, path + ".bak"):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary))
 			return {"success": false, "reason": "ساخت نسخه پشتیبان ناموفق بود"}
-	var absolute_target = ProjectSettings.globalize_path(path)
 	var absolute_temp = ProjectSettings.globalize_path(temporary)
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(absolute_target)

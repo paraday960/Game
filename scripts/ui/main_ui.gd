@@ -434,6 +434,64 @@ func _build_dashboard():
 			badge.modulate = Color(1.0, 0.83, 0.35)
 			c5.add_child(badge)
 
+	_build_save_slots_card()
+
+func _build_save_slots_card():
+	var card = _card("💾 جایگاه‌های ذخیره")
+	var autosave = SaveManager.get_autosave_metadata()
+	var autosave_text = "هنوز ساخته نشده"
+	if autosave.get("valid", false):
+		autosave_text = "%s — روز %s" % [autosave.get("country_name", ""), PersianFormatter.to_persian_digits(str(autosave.get("tick", 0)))]
+	_row(card, "ذخیره خودکار هر ۳۰ روز", autosave_text)
+	for metadata in SaveManager.list_slots():
+		var row = HBoxContainer.new()
+		card.add_child(row)
+		var slot = int(metadata.get("slot", 0))
+		var info = Label.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if metadata.get("valid", false):
+			info.text = "جایگاه %s: %s — روز %s" % [
+				PersianFormatter.to_persian_digits(str(slot)), metadata.get("country_name", ""),
+				PersianFormatter.to_persian_digits(str(metadata.get("tick", 0)))]
+		else:
+			info.text = "جایگاه %s: خالی" % PersianFormatter.to_persian_digits(str(slot))
+		row.add_child(info)
+		var save_button = Button.new()
+		save_button.text = "ذخیره"
+		save_button.pressed.connect(FeedbackManager.play_click)
+		save_button.pressed.connect(_on_save_slot.bind(slot))
+		row.add_child(save_button)
+		var load_button = Button.new()
+		load_button.text = "بارگذاری"
+		load_button.disabled = not metadata.get("valid", false)
+		load_button.pressed.connect(FeedbackManager.play_click)
+		load_button.pressed.connect(_on_load_slot.bind(slot))
+		row.add_child(load_button)
+
+func _on_save_slot(slot: int):
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		_toast("⚠️ فقط میزبان می‌تواند ذخیره کند")
+		return
+	var result = SaveManager.save_slot(slot)
+	if result.success:
+		_toast("💾 بازی در جایگاه %s ذخیره شد" % PersianFormatter.to_persian_digits(str(slot)))
+		_switch_tab("dashboard")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "ذخیره ناموفق")))
+
+func _on_load_slot(slot: int):
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		_toast("⚠️ فقط میزبان می‌تواند بارگذاری کند")
+		return
+	var result = SaveManager.load_slot(slot)
+	if result.success:
+		_refresh_header()
+		_render_events()
+		_toast("📂 جایگاه %s بارگذاری شد" % PersianFormatter.to_persian_digits(str(slot)))
+		_switch_tab("dashboard")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "بارگذاری ناموفق")))
+
 func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
 	var panel = PanelContainer.new()
 	parent.add_child(panel)
@@ -1247,6 +1305,8 @@ func _run_tick_with(player_cmds: Array) -> bool:
 	var result = GameEngine.tick(GameState.state, GameState.version, GameState.tick, cmds)
 	if result.success:
 		GameState.set_state(result.state, result.version, result.tick)
+		if not P2PManager.is_network_active() or P2PManager.is_host:
+			SaveManager.maybe_autosave(result.tick)
 		P2PManager.broadcast_state(result.state, result.version, result.tick)
 		_refresh_header()
 		_render_events()

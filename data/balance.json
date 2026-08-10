@@ -4,7 +4,8 @@
   "simulation": {
     "days_per_month": 30,
     "months_per_year": 12,
-    "decision_lifetime_days": 30
+    "decision_lifetime_days": 30,
+    "autosave_interval_days": 30
   },
   "resources": {
     "energy_crisis_factor": 0.5,
