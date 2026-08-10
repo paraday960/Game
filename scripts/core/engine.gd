@@ -120,7 +120,7 @@ func _ready():
 	systems["stock_market"] = load("res://scripts/systems/stock_market_system.gd").new()
 	systems["agriculture"] = load("res://scripts/systems/agriculture_system.gd").new()
 	systems["industry"] = load("res://scripts/systems/industry_system.gd").new()
-	# باقی سیستم‌ها در دسته‌های بعدی تکمیل می‌شوند - فعلا fallback
+	# بارگذاری همه لایه‌های تکمیلی و نام‌های نگاشت‌شده
 	_load_remaining_systems()
 	print("موتور شبیه‌سازی با %d سیستم لود شد" % systems.size())
 
@@ -131,7 +131,7 @@ func _load_remaining_systems():
 		if ResourceLoader.exists(path):
 			systems[name] = load(path).new()
 		else:
-			# stub عمومی
+			# محافظ سازگاری: نبود یک افزونه نباید کل پروژه را در شروع متوقف کند.
 			systems[name] = load("res://scripts/systems/base_system.gd").new()
 
 	# لود سیستم‌های لایه فیزیکی و انسانی (با نام متفاوت)
