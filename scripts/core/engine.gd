@@ -135,6 +135,12 @@ func _load_remaining_systems():
 		systems["religious_leaders"] = load("res://scripts/systems/religious_leaders_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/households_system.gd"):
 		systems["households_detail_full"] = load("res://scripts/systems/households_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/interdependency_system.gd"):
+		systems["interdependency"] = load("res://scripts/systems/interdependency_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/quantitative_temporal_system.gd"):
+		systems["quantitative"] = load("res://scripts/systems/quantitative_temporal_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/human_states_system.gd"):
+		systems["human_states"] = load("res://scripts/systems/human_states_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
