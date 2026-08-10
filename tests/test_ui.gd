@@ -21,6 +21,20 @@ func _init():
 		if scene.content.get_child_count() == 0:
 			fails.append("تب %s خالی است" % tab)
 		print("  ✓ tab %s: %d cards" % [tab, scene.content.get_child_count()])
+	# بازکردن صفحه جزئیات تک‌تک ۶۵ سامانه
+	var engine = root.get_node("GameEngine")
+	var inspected = 0
+	for system_name in engine.system_order:
+		scene.selected_system = system_name
+		scene._switch_tab("systems")
+		await process_frame
+		if scene.content.get_child_count() < 3:
+			fails.append("جزئیات سامانه %s ساخته نشد" % system_name)
+			break
+		inspected += 1
+	print("System inspector: %d pages" % inspected)
+	scene._switch_tab("dashboard")
+	await process_frame
 	# تست اجرای تیک از UI
 	var t0 = Engine.get_main_loop().root.get_node("GameState").tick if root.has_node("GameState") else -1
 	var ok = scene._run_tick_with([])

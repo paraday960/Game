@@ -11,6 +11,7 @@ var auto_tick: bool = false
 var tick_timer: float = 0.0
 var current_tab: String = "dashboard"
 var current_state: Dictionary = {}
+var selected_system: String = "economy"
 
 # ---------- ارجاع‌های گره ----------
 var content: VBoxContainer
@@ -54,6 +55,46 @@ const SYSTEM_FA := {
 	"political_career": "مسیر شغلی سیاسی", "migration_detail": "مهاجرت",
 	"prison": "زندان", "human_states": "حالات انسانی", "international_orgs": "سازمان‌های بین‌المللی",
 	"foreign_affairs": "امور خارجی", "interdependency": "اثرگذاری متقابل", "quantitative": "دقیق‌سازی کمی"
+}
+
+const SYSTEM_STATE_ALIASES = {
+	"settlements": "settlements_detail", "transport_roads": "transport_detail",
+	"public_services": "public_services_detail", "industry_sites": "industry_sites_detail",
+	"citizens_detail": "citizens_detail", "workforce_detail": "workforce_detail",
+	"officials": "officials", "politicians_detail": "politicians_detail",
+	"elites_detail": "elites_detail", "security_forces_detail": "security_forces_detail",
+	"households_detail_full": "households_detail_full", "migration_detail": "migration_detail",
+	"quantitative": "quantitative"
+}
+const SYSTEM_AI_ALIASES = {
+	"citizens_detail": "citizens", "workforce_detail": "workforce_jobs",
+	"officials": "officials_managers", "politicians_detail": "politicians",
+	"elites_detail": "elites", "security_forces_detail": "security_forces",
+	"households_detail_full": "households", "migration_detail": "migration",
+	"quantitative": "quantitative_temporal", "retail": "retail",
+	"transport_roads": "transport_roads", "public_services": "public_services",
+	"industry_sites": "industry_sites"
+}
+const METRIC_WORD_FA = {
+	"total":"کل", "count":"تعداد", "rate":"نرخ", "quality":"کیفیت", "coverage":"پوشش",
+	"efficiency":"کارآمدی", "stability":"پایداری", "happiness":"شادی", "satisfaction":"رضایت",
+	"trust":"اعتماد", "power":"قدرت", "readiness":"آمادگی", "budget":"بودجه", "share":"سهم",
+	"growth":"رشد", "inflation":"تورم", "unemployment":"بیکاری", "debt":"بدهی", "gdp":"تولید داخلی",
+	"population":"جمعیت", "health":"سلامت", "education":"آموزش", "water":"آب", "air":"هوا",
+	"food":"غذا", "security":"امنیت", "public":"عمومی", "cyber":"سایبری", "pollution":"آلودگی",
+	"carbon":"کربن", "green":"سبز", "energy":"انرژی", "infrastructure":"زیرساخت",
+	"output":"خروجی", "production":"تولید", "productivity":"بهره‌وری", "capacity":"ظرفیت",
+	"index":"شاخص", "revenue":"درآمد", "exports":"صادرات", "imports":"واردات", "balance":"تراز",
+	"preparedness":"آمادگی", "response":"واکنش", "time":"زمان", "participation":"مشارکت",
+	"facilities":"تأسیسات", "preservation":"حفاظت", "level":"سطح", "tension":"تنش",
+	"diversity":"تنوع", "integration":"ادغام", "accuracy":"دقت", "digital":"دیجیتال",
+	"risk":"ریسک", "access":"دسترسی", "cost":"هزینه", "price":"قیمت", "employment":"اشتغال",
+	"income":"درآمد", "avg":"میانگین", "national":"ملی", "social":"اجتماعی", "military":"نظامی",
+	"research":"پژوهش", "technology":"فناوری", "industry":"صنعت", "trade":"تجارت",
+	"foreign":"خارجی", "local":"محلی", "government":"دولت", "market":"بازار", "human":"انسانی",
+	"life":"زندگی", "expectancy":"امید", "crime":"جرم", "poverty":"فقر", "welfare":"رفاه",
+	"spending":"هزینه‌کرد", "personnel":"پرسنل", "influence":"نفوذ", "soft":"نرم",
+	"score":"امتیاز", "ratio":"نسبت", "reserve":"ذخیره", "reserves":"ذخایر", "value":"مقدار"
 }
 
 const TABS := [
@@ -749,23 +790,120 @@ func _on_network_state_snapshot(state: Dictionary, version: int, tick: int):
 # تب سامانه‌ها — نمای کلی ۶۵ سیستم
 # ============================================================
 func _build_systems():
-	var c1 = _card("🏛️ سامانه‌های فعال کشور (%d سامانه)" % GameEngine.systems.size())
+	var c1 = _card("🏛️ مرکز پایش ۶۵ سامانه")
 	var ai_summary = AIAdvisor.get_health_summary(GameState.state, GameState.tick)
 	_row(c1, "هوش‌های تخصصی فعال", PersianFormatter.to_persian_digits(str(ai_summary.get("agents", 0))))
 	_bar(c1, "سلامت میانگین سامانه‌ها", ai_summary.get("health", 0.0))
 	_row(c1, "هشدارهای بحرانی", PersianFormatter.to_persian_digits(str(ai_summary.get("critical", 0))),
 		_color_for(1.0 - min(float(ai_summary.get("critical", 0)) / 10.0, 1.0)))
+
+	_build_system_detail(selected_system)
+
+	var directory = _card("📚 انتخاب سامانه برای مشاهده جزئیات")
+	var diagnoses: Array = AIAdvisor.analyze(GameState.state, GameState.tick)
+	var health_by_ai: Dictionary = {}
+	for diagnosis in diagnoses:
+		health_by_ai[str(diagnosis.get("system", ""))] = float(diagnosis.get("health", 0.5))
 	var grid = GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	c1.add_child(grid)
+	directory.add_child(grid)
 	for sys_name in GameEngine.system_order:
 		if not GameEngine.systems.has(sys_name):
 			continue
-		var l = Label.new()
-		l.text = "✅ " + SYSTEM_FA.get(sys_name, sys_name)
-		l.add_theme_font_size_override("font_size", 15)
-		grid.add_child(l)
+		var ai_key = SYSTEM_AI_ALIASES.get(sys_name, sys_name)
+		var health = float(health_by_ai.get(ai_key, 0.5))
+		var button = Button.new()
+		button.text = ("◀ " if sys_name == selected_system else "") + SYSTEM_FA.get(sys_name, "سامانه تخصصی")
+		button.custom_minimum_size = Vector2(0, 48)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.modulate = _color_for(health)
+		button.pressed.connect(_on_system_selected.bind(sys_name))
+		grid.add_child(button)
+
+func _on_system_selected(system_name: String):
+	selected_system = system_name
+	_switch_tab("systems")
+
+func _build_system_detail(system_name: String):
+	var title = SYSTEM_FA.get(system_name, "سامانه تخصصی")
+	var detail = _card("🔎 جزئیات «%s»" % title)
+	var ai_key = SYSTEM_AI_ALIASES.get(system_name, system_name)
+	var agent = AIAdvisor.agents.get(ai_key, null)
+	if agent != null and agent.has_method("diagnose"):
+		var diagnosis: Dictionary = agent.diagnose(GameState.state)
+		if not diagnosis.is_empty():
+			_bar(detail, "سلامت سامانه", diagnosis.get("health", 0.5))
+			var explanation = Label.new()
+			explanation.text = str(diagnosis.get("reason", ""))
+			explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			explanation.modulate = _color_for(1.0 - float(diagnosis.get("urgency", 0.0)))
+			detail.add_child(explanation)
+	var state_key = SYSTEM_STATE_ALIASES.get(system_name, system_name)
+	var data = GameState.state.get(state_key, {})
+	if not data is Dictionary or data.is_empty():
+		var unavailable = Label.new()
+		unavailable.text = "داده تفصیلی این سامانه پس از نخستین گام شبیه‌سازی آماده می‌شود."
+		detail.add_child(unavailable)
+		return
+	var shown = 0
+	for key in data.keys():
+		if shown >= 18:
+			break
+		var value = data[key]
+		if value is Dictionary:
+			var section = Label.new()
+			section.text = "▸ " + _metric_name_fa(str(key))
+			section.add_theme_font_size_override("font_size", 17)
+			section.modulate = Color(0.55, 0.82, 1.0)
+			detail.add_child(section)
+			for nested_key in value.keys():
+				if shown >= 18:
+					break
+				if not value[nested_key] is Dictionary:
+					_row(detail, _metric_name_fa(str(nested_key)), _format_metric_value(value[nested_key], str(nested_key)))
+					shown += 1
+		elif value is Array:
+			_row(detail, _metric_name_fa(str(key)), "%s مورد" % PersianFormatter.to_persian_digits(str(value.size())))
+			shown += 1
+		else:
+			_row(detail, _metric_name_fa(str(key)), _format_metric_value(value, str(key)))
+			shown += 1
+	if data.size() > shown:
+		var more = Label.new()
+		more.text = "و %s شاخص تکمیلی دیگر" % PersianFormatter.to_persian_digits(str(max(0, data.size() - shown)))
+		more.modulate = Color(0.7, 0.72, 0.8)
+		detail.add_child(more)
+
+func _metric_name_fa(key: String) -> String:
+	var clean = key.replace("_", " ")
+	# کلیدهایی که از ابتدا فارسی‌اند بدون تغییر نمایش داده می‌شوند.
+	for i in range(clean.length()):
+		if clean.unicode_at(i) > 127:
+			return clean
+	var translated: Array = []
+	for token in clean.split(" "):
+		translated.append(METRIC_WORD_FA.get(token.to_lower(), "شاخص"))
+	return " ".join(translated)
+
+func _format_metric_value(value, key: String) -> String:
+	if value is bool:
+		return "بله" if value else "خیر"
+	if value == null:
+		return "ثبت نشده"
+	if value is int or value is float:
+		var number = float(value)
+		var lower = key.to_lower()
+		var money_words = ["gdp", "revenue", "debt", "spending", "cost", "fund", "income", "balance", "exports", "imports"]
+		for word in money_words:
+			if lower.contains(word):
+				return PersianFormatter.format_money(number)
+		if number >= 0.0 and number <= 1.0:
+			return PersianFormatter.format_percent(number)
+		if abs(number) >= 10000.0:
+			return PersianFormatter.format_large(number)
+		return PersianFormatter.to_persian_digits("%.2f" % number)
+	return PersianFormatter.to_persian_digits(str(value).replace("_", " "))
 
 # ============================================================
 # رویدادها
