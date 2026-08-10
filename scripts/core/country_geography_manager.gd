@@ -46,7 +46,10 @@ func reload() -> bool:
 					var hole = _project_ring(raw_hole)
 					if hole.size() >= 3:
 						holes.append(hole)
-				polygons.append({"outer": outer, "holes": holes})
+				var fill_ring = outer.duplicate()
+				if fill_ring.size() > 2 and fill_ring[0].is_equal_approx(fill_ring[fill_ring.size() - 1]):
+					fill_ring.resize(fill_ring.size() - 1)
+				polygons.append({"outer": outer, "holes": holes, "fillable": not Geometry2D.triangulate_polygon(fill_ring).is_empty()})
 			if polygons.is_empty():
 				continue
 			var center_raw: Array = raw_unit.get("center", [0.0, 0.0])
@@ -130,18 +133,31 @@ func get_unit_metrics(code: String, unit_id: String, state: Dictionary) -> Dicti
 	var population_share = float(unit.get("population_share", 0.0))
 	var economy_share = float(unit.get("economy_share", 0.0))
 	var area_share = float(unit.get("area_weight", 0.0)) / max(area_total, 0.000001)
-	var population = float(state.get("population", {}).get("total", profile.get("population", 0.0))) * population_share
-	var gdp = float(state.get("economy", {}).get("gdp", profile.get("gdp", 0.0))) * economy_share
+	var is_player_country = str(state.get("country", {}).get("id", "")) == code
+	var profile_population = max(1.0, float(profile.get("population", 1.0)))
+	var profile_gdp = max(1.0, float(profile.get("gdp", 1.0)))
+	var wealth = clamp((log(max(500.0, profile_gdp / profile_population)) / log(10.0) - 2.7) / 2.0, 0.08, 0.95)
+	var national_population = float(state.get("population", {}).get("total", profile_population)) if is_player_country else profile_population
+	var national_gdp = float(state.get("economy", {}).get("gdp", profile_gdp)) if is_player_country else profile_gdp
+	var population = national_population * population_share
+	var gdp = national_gdp * economy_share
 	var variation = _stable_fraction(unit_id + "-local") - 0.5
-	var inequality = float(state.get("administration", {}).get("regional_inequality", 0.35))
-	var infrastructure = clamp(float(state.get("infrastructure", {}).get("quality", 0.55)) + variation * 0.30 - inequality * 0.08 + (0.08 if unit.get("capital", false) else 0.0), 0.05, 0.98)
-	var satisfaction = clamp(float(state.get("population", {}).get("happiness", state.get("population", {}).get("satisfaction", 0.60))) + variation * 0.24 - inequality * (0.14 + abs(variation) * 0.08), 0.05, 0.98)
-	var security = clamp(float(state.get("security", {}).get("public_security", 0.65)) + variation * 0.20 - float(state.get("politics", {}).get("tension", 0.35)) * 0.08, 0.05, 0.98)
-	var weather_risk = _weather_risk(profile, state, unit)
-	var resource_score = clamp(float(unit.get("resource_index", 0.5)) * 0.72 + float(state.get("resources", {}).get("self_sufficiency", 0.65)) * 0.28, 0.0, 1.0)
-	var national_military = clamp(float(state.get("military", {}).get("power", profile.get("military_power", 30.0))) / 100.0, 0.0, 1.0)
-	var military_score = clamp(float(unit.get("strategic_index", 0.5)) * 0.68 + national_military * 0.20 + float(state.get("military", {}).get("readiness", 0.55)) * 0.12, 0.0, 1.0)
-	var roads_total = float(state.get("transport_detail", {}).get("roads_km", max(100.0, total_area * 0.05)))
+	var inequality = float(state.get("administration", {}).get("regional_inequality", 0.35)) if is_player_country else clamp(0.48 - wealth * 0.22, 0.18, 0.55)
+	var infrastructure_base = float(state.get("infrastructure", {}).get("quality", 0.55)) if is_player_country else clamp(0.25 + wealth * 0.70, 0.20, 0.93)
+	var satisfaction_base = float(state.get("population", {}).get("happiness", state.get("population", {}).get("satisfaction", 0.60))) if is_player_country else clamp(0.42 + wealth * 0.30, 0.35, 0.78)
+	var security_base = float(state.get("security", {}).get("public_security", 0.65)) if is_player_country else clamp(0.44 + wealth * 0.32, 0.36, 0.82)
+	var tension = float(state.get("politics", {}).get("tension", 0.35)) if is_player_country else 0.35
+	var infrastructure = clamp(infrastructure_base + variation * 0.30 - inequality * 0.08 + (0.08 if unit.get("capital", false) else 0.0), 0.05, 0.98)
+	var satisfaction = clamp(satisfaction_base + variation * 0.24 - inequality * (0.14 + abs(variation) * 0.08), 0.05, 0.98)
+	var security = clamp(security_base + variation * 0.20 - tension * 0.08, 0.05, 0.98)
+	var weather_risk = _weather_risk(profile, state if is_player_country else {}, unit)
+	var self_sufficiency = float(state.get("resources", {}).get("self_sufficiency", 0.65)) if is_player_country else clamp(0.42 + float(profile.get("strategic_weight", 0.3)) * 0.40, 0.35, 0.82)
+	var resource_score = clamp(float(unit.get("resource_index", 0.5)) * 0.72 + self_sufficiency * 0.28, 0.0, 1.0)
+	var national_military = clamp((float(state.get("military", {}).get("power", profile.get("military_power", 30.0))) if is_player_country else float(profile.get("military_power", 30.0))) / 100.0, 0.0, 1.0)
+	var readiness = float(state.get("military", {}).get("readiness", 0.55)) if is_player_country else clamp(0.42 + national_military * 0.40, 0.42, 0.88)
+	var military_score = clamp(float(unit.get("strategic_index", 0.5)) * 0.68 + national_military * 0.20 + readiness * 0.12, 0.0, 1.0)
+	var roads_default = max(5.0, total_area * (0.035 + wealth * 0.045) + profile_population / (1400.0 - wealth * 550.0))
+	var roads_total = float(state.get("transport_detail", {}).get("roads_km", roads_default)) if is_player_country else roads_default
 	return {
 		"id": unit_id,
 		"name_fa": unit.get("name_fa", "ناحیه"),

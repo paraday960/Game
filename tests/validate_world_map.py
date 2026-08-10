@@ -37,6 +37,20 @@ for route in transport.get("routes", []):
         errors.append(f"route references unknown hub: {route}")
 if str(geometry.get("source", {}).get("license", "")).lower() != "public domain":
     errors.append("Natural Earth public-domain metadata missing")
+# نسخه ۶ فقط یک renderer نقشه دارد؛ نماهای جداگانه نباید دوباره وارد UI شوند.
+unified_path = root / "scripts/ui/unified_map.gd"
+if not unified_path.exists():
+    errors.append("unified semantic-zoom map renderer missing")
+else:
+    unified = unified_path.read_text(encoding="utf-8")
+    for marker in ["MIN_ZOOM", "MAX_ZOOM", "ADMIN_ZOOM", "CITY_ZOOM", "focus_country", "InputEventMagnifyGesture", "unit_selected", "route_selected"]:
+        if marker not in unified:
+            errors.append(f"unified map capability missing: {marker}")
+if (root / "scripts/ui/world_map.gd").exists() or (root / "scripts/ui/country_map.gd").exists():
+    errors.append("legacy separate map renderers still exist")
+main_ui = (root / "scripts/ui/main_ui.gd").read_text(encoding="utf-8")
+if 'preload("res://scripts/ui/unified_map.gd")' not in main_ui or '["map", "نقشه فرماندهی"]' not in main_ui:
+    errors.append("professional command UI is not wired to unified map")
 if errors:
     raise SystemExit("WORLD MAP INVALID\n" + "\n".join(errors[:100]))
-print(f"WORLD MAP OK: 195 selectable polygon countries, {points} points, {len(hubs)} hubs")
+print(f"WORLD MAP OK: one semantic-zoom map, 195 selectable countries, {points} points, {len(hubs)} hubs")

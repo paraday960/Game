@@ -15,12 +15,44 @@ func _init():
 	if scene.content.get_child_count() < 3:
 		fails.append("داشبورد خالی است: %d کارت" % scene.content.get_child_count())
 	# سوییچ به همه تب‌ها
-	for tab in ["government", "laws", "economy", "projects", "technology", "population", "military", "country_map", "world", "systems", "dashboard"]:
+	for tab in ["map", "government", "laws", "economy", "projects", "technology", "population", "military", "network", "systems", "dashboard"]:
 		scene._switch_tab(tab)
 		await process_frame
 		if scene.content.get_child_count() == 0:
 			fails.append("تب %s خالی است" % tab)
 		print("  ✓ tab %s: %d cards" % [tab, scene.content.get_child_count()])
+	# نقشه واحد باید از جهان تا کشور/استان زوم پیوسته و لایه‌های قابل تعویض داشته باشد.
+	scene._switch_tab("map")
+	await process_frame
+	await process_frame
+	var unified_map = scene.current_unified_map
+	if unified_map == null:
+		fails.append("نقشه فرماندهی یکپارچه ساخته نشد")
+	else:
+		var focus_count = 0
+		var world_manager = root.get_node("WorldManager")
+		for country_id in world_manager.get_country_ids():
+			unified_map.focus_country(str(country_id))
+			if not is_finite(unified_map.zoom_level) or unified_map.zoom_level < 1.0:
+				fails.append("فوکوس نقشه کشور %s نامعتبر است" % country_id); break
+			focus_count += 1
+		unified_map.focus_country("IRN")
+		await process_frame
+		if focus_count != 195: fails.append("فوکوس نقشه هر ۱۹۵ کشور کامل نشد")
+		if unified_map.zoom_level < unified_map.ADMIN_ZOOM:
+			fails.append("زوم کشور تقسیمات اداری را فعال نکرد")
+		if unified_map._unit_screen_records.is_empty():
+			fails.append("مرزهای Admin-1 در زوم کشور رسم نشد")
+		unified_map.focus_world(); await process_frame
+		var iran_profile = world_manager.get_country("IRN")
+		var iran_point = unified_map._geo_point(float(iran_profile.get("lon",0)),float(iran_profile.get("lat",0)))
+		if unified_map._country_at(iran_point) != "IRN": fails.append("انتخاب کشور روی نقشه واحد شکست خورد")
+		unified_map.focus_country("IRN"); await process_frame
+		for layer in ["political","relations","population","economy","infrastructure","satisfaction","security","weather","resources","military"]:
+			unified_map.set_base_layer(layer)
+			await process_frame
+		unified_map.focus_world(); unified_map.zoom_in(); unified_map.zoom_out()
+		print("  ✓ unified map: continuous world/country zoom + 10 lenses")
 	# بازکردن صفحه جزئیات تک‌تک ۶۵ سامانه
 	var engine = root.get_node("GameEngine")
 	var inspected = 0

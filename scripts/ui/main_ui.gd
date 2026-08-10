@@ -3,8 +3,8 @@ extends Control
 # همه‌ی اعداد با ارقام فارسی، همه‌ی فرمان‌ها از طریق موتور اتمی (۳.۶)
 
 const GameCommandClass = preload("res://scripts/core/command.gd")
-const WorldMapClass = preload("res://scripts/ui/world_map.gd")
-const CountryMapClass = preload("res://scripts/ui/country_map.gd")
+const UnifiedMapClass = preload("res://scripts/ui/unified_map.gd")
+const CommandBackgroundClass = preload("res://scripts/ui/command_background.gd")
 const TrendChartClass = preload("res://scripts/ui/trend_chart.gd")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 
@@ -15,21 +15,26 @@ var toast_generation: int = 0
 var pending_delete_slot: int = 0
 var new_game_confirmation: bool = false
 var rewind_confirmation: bool = false
-var current_tab: String = "dashboard"
+var current_tab: String = "map"
 var current_state: Dictionary = {}
 var selected_system: String = "economy"
 var selected_world_country: String = ""
-var world_region_filter: String = "all"
-var map_layers: Dictionary = {"relations":true,"wars":true,"alliances":true,"trade":true,"air":false,"sea":false,"land":false,"weather":false,"intelligence":false}
-var country_map_layer: String = "administrative"
-var country_map_show_cities: bool = true
-var country_map_show_transport: bool = true
+var map_base_layer: String = "political"
+var map_overlays: Dictionary = {"wars":true,"alliances":true,"trade":true,"air":false,"sea":false,"land":false,"cities":true,"transport":true,"intelligence":false}
+var map_camera_center := Vector2(0.5, 0.5)
+var map_zoom := 1.0
 var selected_country_unit: String = ""
+var selected_map_route: Dictionary = {}
+var current_unified_map: Control
 var country_select_option: OptionButton
 var scenario_select_option: OptionButton
 var scenario_description_lbl: Label
 var app_theme: Theme
-var background_rect: ColorRect
+var background_rect: Control
+var gdp_status_lbl: Label
+var approval_status_lbl: Label
+var stability_status_lbl: Label
+var alert_status_lbl: Label
 
 # ---------- ارجاع‌های گره ----------
 var content: VBoxContainer
@@ -122,29 +127,27 @@ const METRIC_WORD_FA = {
 }
 
 const TABS := [
-	["dashboard", "🏠 داشبورد"],
-	["government", "👔 دولت"],
-	["laws", "⚖️ قوانین"],
-	["economy", "💰 اقتصاد"],
-	["projects", "🏗️ پروژه‌ها"],
-	["technology", "🔬 فناوری"],
-	["population", "👥 جمعیت"],
-	["military", "🪖 ارتش"],
-	["country_map", "🗺️ کشور"],
-	["world", "🌍 جهان"],
-	["systems", "🏛️ سامانه‌ها"]
+	["map", "نقشه فرماندهی"],
+	["dashboard", "داشبورد"],
+	["government", "دولت"],
+	["laws", "قوانین"],
+	["economy", "اقتصاد"],
+	["projects", "توسعه"],
+	["technology", "فناوری"],
+	["population", "جامعه"],
+	["military", "دفاع"],
+	["network", "چندنفره"],
+	["systems", "سامانه‌ها"]
 ]
 
 func _ready():
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
-	app_theme = Theme.new()
-	app_theme.default_font = PersianFont
-	app_theme.default_font_size = int(18.0 * float(SettingsManager.get_value("text_scale", 1.0)))
+	app_theme = _build_professional_theme()
 	theme = app_theme
 	SettingsManager.settings_changed.connect(_on_setting_changed)
 	current_state = GameState.get_state_copy()
 	_build_chrome()
-	_switch_tab("dashboard")
+	_switch_tab("map")
 	_refresh_header()
 	GameEngine.tick_completed.connect(_on_tick_completed)
 	GameEngine.tick_failed.connect(_on_tick_failed)
@@ -158,100 +161,115 @@ func _ready():
 # قاب کلی: هدر + تب‌بار + محتوا + فوتر
 # ============================================================
 func _build_chrome():
-	background_rect = ColorRect.new()
-	background_rect.color = _background_color()
+	background_rect = CommandBackgroundClass.new()
 	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(background_rect)
 
 	var root = VBoxContainer.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.offset_left = 24
-	root.offset_right = -24
-	root.offset_top = 24
-	root.offset_bottom = -24
-	root.add_theme_constant_override("separation", 12)
+	root.offset_left = 16
+	root.offset_right = -16
+	root.offset_top = 12
+	root.offset_bottom = -12
+	root.add_theme_constant_override("separation", 8)
 	add_child(root)
 
-	# --- هدر ---
-	var header = VBoxContainer.new()
-	header.add_theme_constant_override("separation", 4)
-	root.add_child(header)
-
+	# نوار فرمان: هویت کشور، زمان و چهار شاخصی که همیشه باید دیده شوند.
+	var command_panel = PanelContainer.new()
+	command_panel.theme_type_variation = "CommandPanel"
+	root.add_child(command_panel)
+	var command_box = VBoxContainer.new(); command_box.add_theme_constant_override("separation", 7); command_panel.add_child(command_box)
+	var identity_row = HBoxContainer.new(); identity_row.add_theme_constant_override("separation", 12); command_box.add_child(identity_row)
+	var emblem = Label.new(); emblem.text = "◆"; emblem.add_theme_font_size_override("font_size", 30); emblem.modulate = Color(0.22,0.86,0.92); identity_row.add_child(emblem)
 	header_title = Label.new()
-	header_title.text = "🎮 شبیه‌ساز کشور — ۲۰۲۷"
-	header_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header_title.add_theme_font_size_override("font_size", 30)
-	header.add_child(header_title)
+	header_title.text = "مرکز فرماندهی ملی"
+	header_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_title.add_theme_font_size_override("font_size", 25)
+	identity_row.add_child(header_title)
+	date_lbl = Label.new(); date_lbl.add_theme_font_size_override("font_size", 16); date_lbl.modulate = Color(0.72,0.84,0.90); identity_row.add_child(date_lbl)
 
-	date_lbl = Label.new()
-	date_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	date_lbl.add_theme_font_size_override("font_size", 18)
-	date_lbl.modulate = Color(0.85, 0.85, 0.9)
-	header.add_child(date_lbl)
+	var status_grid = GridContainer.new(); status_grid.columns = 4; status_grid.add_theme_constant_override("h_separation", 8); command_box.add_child(status_grid)
+	gdp_status_lbl = _status_chip(status_grid, "اقتصاد", Color(0.24,0.88,0.54))
+	approval_status_lbl = _status_chip(status_grid, "رضایت", Color(0.25,0.78,1.0))
+	stability_status_lbl = _status_chip(status_grid, "ثبات", Color(1.0,0.73,0.24))
+	alert_status_lbl = _status_chip(status_grid, "هشدارها", Color(1.0,0.36,0.32))
+	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 13); engagement_lbl.modulate = Color(0.61,0.73,0.80); command_box.add_child(engagement_lbl)
 
-	engagement_lbl = Label.new()
-	engagement_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	engagement_lbl.add_theme_font_size_override("font_size", 16)
-	engagement_lbl.modulate = Color(1.0, 0.85, 0.4)
-	header.add_child(engagement_lbl)
-
-	# --- تب‌بار ---
-	var tabs_hbox = HBoxContainer.new()
-	tabs_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	tabs_hbox.add_theme_constant_override("separation", 8)
-	root.add_child(tabs_hbox)
-
+	# ناوبری افقی قابل اسکرول؛ در موبایل هیچ گزینه‌ای بریده نمی‌شود.
+	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavPanel"; root.add_child(nav_panel)
+	var nav_scroll = ScrollContainer.new(); nav_scroll.custom_minimum_size = Vector2(0,52); nav_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; nav_panel.add_child(nav_scroll)
+	var tabs_hbox = HBoxContainer.new(); tabs_hbox.add_theme_constant_override("separation", 6); nav_scroll.add_child(tabs_hbox)
 	for tab_def in TABS:
 		var key = tab_def[0]
-		var btn = Button.new()
-		btn.text = tab_def[1]
-		btn.custom_minimum_size = Vector2(86, 56)
-		btn.add_theme_font_size_override("font_size", 16)
-		btn.pressed.connect(FeedbackManager.play_click)
-		btn.pressed.connect(_switch_tab.bind(key))
-		tabs_hbox.add_child(btn)
-		tab_buttons[key] = btn
+		var btn = Button.new(); btn.text = tab_def[1]; btn.custom_minimum_size = Vector2(118,44); btn.add_theme_font_size_override("font_size",15)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_switch_tab.bind(key)); tabs_hbox.add_child(btn); tab_buttons[key] = btn
 
-	# --- محتوای تب (اسکرول) ---
-	var scroll = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(scroll)
+	# محتوای اصلی؛ نقشه و پنل‌های مدیریتی از همین فضای مشترک استفاده می‌کنند.
+	var scroll = ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(scroll)
+	content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; content.add_theme_constant_override("separation", 10); scroll.add_child(content)
 
-	content = VBoxContainer.new()
-	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.add_theme_constant_override("separation", 10)
-	scroll.add_child(content)
+	toast_lbl = Label.new(); toast_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; toast_lbl.add_theme_font_size_override("font_size",15); toast_lbl.modulate = Color(0.42,1.0,0.68); root.add_child(toast_lbl)
 
-	# --- اعلان لحظه‌ای (Toast) ---
-	toast_lbl = Label.new()
-	toast_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast_lbl.add_theme_font_size_override("font_size", 16)
-	toast_lbl.modulate = Color(0.5, 1.0, 0.6)
-	root.add_child(toast_lbl)
+	# تیکر رویداد فشرده به جای اشغال بخش بزرگی از صفحه.
+	var event_panel = PanelContainer.new(); event_panel.theme_type_variation = "TickerPanel"; root.add_child(event_panel)
+	var event_box = HBoxContainer.new(); event_box.add_theme_constant_override("separation",10); event_panel.add_child(event_box)
+	var ev_title = Label.new(); ev_title.text = "گزارش زنده"; ev_title.custom_minimum_size = Vector2(105,0); ev_title.modulate = Color(1.0,0.79,0.28); event_box.add_child(ev_title)
+	event_list = VBoxContainer.new(); event_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL; event_list.add_theme_constant_override("separation",1); event_box.add_child(event_list); _render_events()
 
-	# --- رویدادهای اخیر ---
-	var ev_title = Label.new()
-	ev_title.text = "📜 آخرین رویدادها"
-	ev_title.add_theme_font_size_override("font_size", 18)
-	root.add_child(ev_title)
+	# داک عملیات پرتکرار؛ تصمیم اصلی برجسته و بقیه ثانویه‌اند.
+	var footer_panel = PanelContainer.new(); footer_panel.theme_type_variation = "DockPanel"; root.add_child(footer_panel)
+	var footer_scroll = ScrollContainer.new(); footer_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; footer_scroll.custom_minimum_size = Vector2(0,58); footer_panel.add_child(footer_scroll)
+	var footer = HBoxContainer.new(); footer.add_theme_constant_override("separation",7); footer_scroll.add_child(footer)
+	_mk_btn(footer, "اجرای ماه بعد", Vector2(174,50), _on_next_tick_pressed, "PrimaryAction")
+	_mk_btn(footer, "خودکار: خاموش", Vector2(160,50), _on_auto_pressed, "AutoBtn")
+	_mk_btn(footer, SettingsManager.get_speed_label(), Vector2(105,50), _on_speed_pressed, "SpeedBtn")
+	_mk_btn(footer, "ذخیره", Vector2(105,50), _on_save_pressed)
+	_mk_btn(footer, "بارگذاری", Vector2(115,50), _on_load_pressed)
+	_mk_btn(footer, "صدا: خاموش" if FeedbackManager.muted else "صدا: روشن", Vector2(120,50), _on_sound_pressed, "SoundBtn")
 
-	event_list = VBoxContainer.new()
-	event_list.add_theme_constant_override("separation", 2)
-	root.add_child(event_list)
-	_render_events()
+func _build_professional_theme() -> Theme:
+	var result = Theme.new()
+	result.default_font = PersianFont
+	result.default_font_size = int(17.0 * float(SettingsManager.get_value("text_scale", 1.0)))
+	result.set_color("font_color", "Label", Color(0.88,0.93,0.96))
+	result.set_color("font_shadow_color", "Label", Color(0.0,0.0,0.0,0.42))
+	result.set_constant("shadow_offset_x", "Label", 1); result.set_constant("shadow_offset_y", "Label", 1)
+	result.set_stylebox("panel", "PanelContainer", _style_box(Color(0.035,0.074,0.105,0.94), Color(0.16,0.38,0.46,0.82), 10, 1, 14))
+	result.set_stylebox("panel", "CommandPanel", _style_box(Color(0.024,0.058,0.086,0.98), Color(0.22,0.67,0.74,0.68), 12, 1, 13))
+	result.set_stylebox("panel", "NavPanel", _style_box(Color(0.018,0.044,0.068,0.97), Color(0.12,0.34,0.42,0.76), 9, 1, 5))
+	result.set_stylebox("panel", "TickerPanel", _style_box(Color(0.020,0.046,0.067,0.97), Color(0.22,0.43,0.49,0.62), 8, 1, 8))
+	result.set_stylebox("panel", "DockPanel", _style_box(Color(0.015,0.037,0.058,0.99), Color(0.25,0.60,0.67,0.62), 10, 1, 5))
+	result.set_stylebox("panel", "StatusChip", _style_box(Color(0.046,0.094,0.119,0.96), Color(0.15,0.37,0.43,0.80), 8, 1, 7))
+	var button_normal = _style_box(Color(0.055,0.112,0.142,0.98), Color(0.18,0.44,0.51,0.85), 8, 1, 9)
+	var button_hover = _style_box(Color(0.073,0.172,0.197,0.99), Color(0.26,0.80,0.84,0.95), 8, 1, 9)
+	var button_pressed = _style_box(Color(0.035,0.222,0.235,1.0), Color(0.38,0.94,0.91,1.0), 8, 2, 9)
+	for kind in ["Button", "OptionButton"]:
+		result.set_stylebox("normal", kind, button_normal); result.set_stylebox("hover", kind, button_hover); result.set_stylebox("pressed", kind, button_pressed); result.set_stylebox("focus", kind, button_hover)
+		result.set_color("font_color", kind, Color(0.86,0.93,0.96)); result.set_color("font_hover_color", kind, Color.WHITE); result.set_color("font_pressed_color", kind, Color.WHITE)
+	result.set_stylebox("normal", "PrimaryButton", _style_box(Color(0.06,0.44,0.47,1.0), Color(0.42,0.96,0.87,1.0), 9, 2, 10))
+	result.set_stylebox("hover", "PrimaryButton", _style_box(Color(0.08,0.57,0.57,1.0), Color(0.72,1.0,0.91,1.0), 9, 2, 10))
+	result.set_stylebox("pressed", "PrimaryButton", _style_box(Color(0.04,0.33,0.36,1.0), Color.WHITE, 9, 2, 10))
+	result.set_color("font_color", "PrimaryButton", Color.WHITE)
+	result.set_stylebox("background", "ProgressBar", _style_box(Color(0.012,0.030,0.045,0.92), Color(0.11,0.27,0.32,0.85), 6, 1, 2))
+	result.set_stylebox("fill", "ProgressBar", _style_box(Color(0.12,0.68,0.66,0.98), Color(0.34,0.91,0.84,0.90), 6, 1, 2))
+	result.set_stylebox("normal", "LineEdit", _style_box(Color(0.012,0.034,0.052,0.98), Color(0.18,0.43,0.50,0.88), 7, 1, 9))
+	result.set_stylebox("focus", "LineEdit", _style_box(Color(0.018,0.054,0.073,1.0), Color(0.31,0.87,0.87,1.0), 7, 2, 9))
+	result.set_color("font_color", "LineEdit", Color(0.91,0.96,0.98)); result.set_color("font_placeholder_color", "LineEdit", Color(0.45,0.59,0.65))
+	return result
 
-	# --- فوتر: کنترل‌ها ---
-	var footer = HBoxContainer.new()
-	footer.alignment = BoxContainer.ALIGNMENT_CENTER
-	footer.add_theme_constant_override("separation", 10)
-	root.add_child(footer)
+func _style_box(background: Color, border: Color, radius: int, width: int, padding: int) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new(); style.bg_color = background; style.border_color = border
+	style.set_border_width_all(width); style.set_corner_radius_all(radius)
+	style.content_margin_left = padding; style.content_margin_right = padding; style.content_margin_top = padding; style.content_margin_bottom = padding
+	style.shadow_color = Color(0.0,0.0,0.0,0.30); style.shadow_size = 5; style.shadow_offset = Vector2(0,2)
+	return style
 
-	_mk_btn(footer, "▶️ ماه بعد", Vector2(180, 64), _on_next_tick_pressed)
-	_mk_btn(footer, "⏸️ خودکار: خاموش", Vector2(190, 64), _on_auto_pressed, "AutoBtn")
-	_mk_btn(footer, "⏩ %s" % SettingsManager.get_speed_label(), Vector2(120, 64), _on_speed_pressed, "SpeedBtn")
-	_mk_btn(footer, "💾 ذخیره", Vector2(120, 64), _on_save_pressed)
-	_mk_btn(footer, "📂 بارگذاری", Vector2(130, 64), _on_load_pressed)
-	_mk_btn(footer, "🔇 صدا" if FeedbackManager.muted else "🔊 صدا", Vector2(110, 64), _on_sound_pressed, "SoundBtn")
+func _status_chip(parent: Control, title_text: String, accent: Color) -> Label:
+	var panel = PanelContainer.new(); panel.theme_type_variation = "StatusChip"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL; parent.add_child(panel)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation",1); panel.add_child(box)
+	var title = Label.new(); title.text = title_text; title.add_theme_font_size_override("font_size",12); title.modulate = Color(0.58,0.71,0.77); box.add_child(title)
+	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",17); value.modulate = accent; box.add_child(value)
+	return value
 
 func _mk_btn(parent, text, minsize, handler, node_name = ""):
 	var btn = Button.new()
@@ -262,6 +280,8 @@ func _mk_btn(parent, text, minsize, handler, node_name = ""):
 	btn.pressed.connect(handler)
 	if node_name != "":
 		btn.name = node_name
+	if node_name == "PrimaryAction":
+		btn.theme_type_variation = "PrimaryButton"
 	parent.add_child(btn)
 	return btn
 
@@ -272,38 +292,41 @@ func _refresh_header():
 	var st = GameState.state
 	var clock = st.get("clock", {})
 	if header_title != null:
-		header_title.text = "🎮 شبیه‌ساز کشور — %s" % str(st.get("country", {}).get("name", "کشور شما"))
+		header_title.text = "فرماندهی %s" % str(st.get("country", {}).get("name", "کشور شما"))
 	var time = st.get("time", {})
-	date_lbl.text = "📅 %s %s — %s" % [
-		str(time.get("month_name", TimeManager.month_name(int(clock.get("month", 1))))),
-		PersianFormatter.to_persian_digits(str(clock.get("year", 2027))),
-		str(time.get("season", clock.get("season", "بهار")))
-	]
+	if date_lbl != null:
+		date_lbl.text = "%s %s · %s" % [str(time.get("month_name", TimeManager.month_name(int(clock.get("month", 1))))), PersianFormatter.to_persian_digits(str(clock.get("year", 2027))), str(time.get("season", clock.get("season", "بهار")))]
+	var economy = st.get("economy", {})
+	var population = st.get("population", {})
+	var politics = st.get("politics", {})
+	if gdp_status_lbl != null:
+		gdp_status_lbl.text = PersianFormatter.format_money(float(economy.get("gdp", 0.0))) + " · " + _signed_percent(float(economy.get("growth_rate", 0.0)))
+	if approval_status_lbl != null:
+		approval_status_lbl.text = _fmt_pct(float(population.get("happiness", population.get("satisfaction", 0.0))))
+	if stability_status_lbl != null:
+		stability_status_lbl.text = _fmt_pct(float(politics.get("stability", 0.0)))
+	if alert_status_lbl != null:
+		var alert_count = _active_crises(st).size() + st.get("pending_decisions", []).size()
+		alert_status_lbl.text = ("وضعیت پایدار" if alert_count == 0 else PersianFormatter.to_persian_digits(str(alert_count)) + " مورد فعال")
 	var progression = st.get("progression", {})
-	engagement_lbl.text = "🔥 نوبت ماهانه %s | استریک %s ماه | شتاب ×%s | %s\n⭐ امتیاز %s | 🏆 سطح %s | تجربه %s" % [
-		PersianFormatter.to_persian_digits(str(st.get("tick", 0))),
-		PersianFormatter.to_persian_digits(str(progression.get("streak", 0))),
-		PersianFormatter.to_persian_digits(str(progression.get("combo", 1))),
-		str(progression.get("stage", "دولت نوپا")),
-		PersianFormatter.format_number(int(st.get("score", 0))),
-		PersianFormatter.to_persian_digits(str(st.get("level", 1))),
-		PersianFormatter.to_persian_digits("%.0f" % st.get("xp", 0.0))
-	]
+	if engagement_lbl != null:
+		engagement_lbl.text = "نوبت %s  ·  %s  ·  سطح %s  ·  امتیاز %s  ·  استریک %s ماه" % [PersianFormatter.to_persian_digits(str(st.get("tick", 0))), str(progression.get("stage", "دولت نوپا")), PersianFormatter.to_persian_digits(str(st.get("level", 1))), PersianFormatter.format_number(int(st.get("score", 0))), PersianFormatter.to_persian_digits(str(progression.get("streak", 0)))]
 
 # ============================================================
 # سوییچ تب
 # ============================================================
 func _switch_tab(tab_key: String):
+	if tab_key in ["world", "country_map"]:
+		tab_key = "map"
 	current_tab = tab_key
 	for k in tab_buttons.keys():
-		if k == tab_key:
-			tab_buttons[k].modulate = Color(1.0, 0.9, 0.5)
-		else:
-			tab_buttons[k].modulate = Color(1, 1, 1)
+		tab_buttons[k].theme_type_variation = "PrimaryButton" if k == tab_key else ""
+		tab_buttons[k].modulate = Color.WHITE
 	for c in content.get_children():
 		c.queue_free()
 
 	match tab_key:
+		"map": _build_unified_map()
 		"dashboard": _build_dashboard()
 		"government": _build_government()
 		"laws": _build_laws()
@@ -312,22 +335,17 @@ func _switch_tab(tab_key: String):
 		"technology": _build_technology()
 		"population": _build_population()
 		"military": _build_military()
-		"country_map": _build_country_map()
-		"world": _build_world()
+		"network": _build_network_panel()
 		"systems": _build_systems()
 
 # ============================================================
 # ابزارهای ساخت سریع
 # ============================================================
 func _card(title: String) -> VBoxContainer:
-	var panel = PanelContainer.new()
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
-	panel.add_child(vbox)
-	var t = Label.new()
-	t.text = title
-	t.add_theme_font_size_override("font_size", 20)
-	vbox.add_child(t)
+	var panel = PanelContainer.new(); panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 7); panel.add_child(vbox)
+	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 19); t.modulate = Color(0.91,0.97,0.98); vbox.add_child(t)
+	var accent = ColorRect.new(); accent.color = Color(0.18,0.70,0.74,0.66); accent.custom_minimum_size = Vector2(0,2); accent.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(accent)
 	content.add_child(panel)
 	return vbox
 
@@ -481,7 +499,7 @@ func _build_dashboard():
 func _build_onboarding_card(state: Dictionary):
 	var card = _card("🧭 راهنمای شروع سریع")
 	var steps = [
-		["۱", "کشور و سناریوی پیروزی را در تب جهان انتخاب کنید.", int(state.get("tick", 0)) > 0],
+		["۱", "کشور و سناریوی پیروزی را در نقشه فرماندهی انتخاب کنید.", int(state.get("tick", 0)) > 0],
 		["۲", "مالیات، بودجه و سیاست‌های عمومی را در تب اقتصاد تنظیم کنید.", abs(float(state.get("economy", {}).get("tax_rate", 0.20)) - 0.20) > 0.001],
 		["۳", "یک پروژه را در درخت فناوری آغاز کنید.", state.get("technology", {}).get("in_progress", null) != null],
 		["۴", "داشبورد، هشدارها و اهداف سناریو را هر ماه بررسی کنید.", state.get("analytics", {}).get("history", []).size() >= 2]
@@ -495,7 +513,7 @@ func _build_onboarding_card(state: Dictionary):
 	var shortcuts = HBoxContainer.new()
 	shortcuts.alignment = BoxContainer.ALIGNMENT_CENTER
 	card.add_child(shortcuts)
-	_mk_btn(shortcuts, "رفتن به جهان", Vector2(145, 44), _switch_tab.bind("world"))
+	_mk_btn(shortcuts, "رفتن به نقشه", Vector2(145, 44), _switch_tab.bind("map"))
 	_mk_btn(shortcuts, "رفتن به اقتصاد", Vector2(155, 44), _switch_tab.bind("economy"))
 	_mk_btn(shortcuts, "رفتن به فناوری", Vector2(155, 44), _switch_tab.bind("technology"))
 	_mk_btn(shortcuts, "پنهان‌کردن راهنما", Vector2(180, 44), _on_dismiss_tutorial)
@@ -643,8 +661,9 @@ func _on_new_game_pressed():
 	current_state = GameState.get_state_copy()
 	_refresh_header()
 	_render_events()
-	_toast("🆕 بازی جدید آماده است؛ کشور و سناریو را انتخاب کنید")
-	_switch_tab("world")
+	map_camera_center = Vector2(0.5,0.5); map_zoom = 1.0
+	_toast("بازی جدید آماده است؛ کشور و سناریو را روی نقشه انتخاب کنید")
+	_switch_tab("map")
 
 func _on_speed_pressed():
 	SettingsManager.cycle_speed()
@@ -672,9 +691,10 @@ func _on_show_tutorial():
 
 func _on_setting_changed(key: String, value):
 	if key == "text_scale" and app_theme != null:
-		app_theme.default_font_size = int(18.0 * float(value))
+		app_theme.default_font_size = int(17.0 * float(value))
 	if key == "high_contrast" and background_rect != null:
-		background_rect.color = _background_color()
+		background_rect.modulate = Color(0.68,0.78,0.86) if bool(value) else Color.WHITE
+		background_rect.queue_redraw()
 
 func _background_color() -> Color:
 	return Color(0.005, 0.008, 0.015) if bool(SettingsManager.get_value("high_contrast", false)) else Color(0.05, 0.08, 0.15)
@@ -1428,84 +1448,179 @@ func _on_military_program(program_id: String, title: String):
 		_toast("🏗️ برنامه «%s» آغاز شد" % title); _switch_tab("military")
 
 # ============================================================
-# تب نقشه ملی — تقسیمات، شهرها و اطلاعات زنده کشور بازیکن
+# مرکز چندنفره — جدا از نقشه برای حفظ تمرکز و افشای تدریجی
 # ============================================================
-func _build_country_map():
+func _build_network_panel():
 	var state = GameState.state
-	var code = str(state.get("country", {}).get("id", WorldManager.default_country))
-	var profile = WorldManager.get_country(code)
-	var units = CountryGeographyManager.get_units(code)
-	var cities = CountryGeographyManager.get_cities(code)
-	if units.is_empty():
-		var missing = _card("🗺️ نقشه ملی")
-		var missing_label = Label.new(); missing_label.text = "داده نقشه ملی این کشور بارگذاری نشده است."; missing.add_child(missing_label)
-		return
-	if selected_country_unit == "" or CountryGeographyManager.get_unit(code, selected_country_unit).is_empty():
-		for unit in units:
-			if unit.get("capital", false):
-				selected_country_unit = str(unit.get("id", "")); break
-		if selected_country_unit == "": selected_country_unit = str(units[0].get("id", ""))
+	var overview = _card("مرکز عملیات چندنفره")
+	var hint = Label.new(); hint.text = "میزبان مرجع محاسبات است. حالت همکارانه یک کشور مشترک و حالت رقابتی برای هر بازیکن State و کشور مستقل نگه می‌دارد."; hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.70,0.81,0.87); overview.add_child(hint)
+	network_status_lbl = Label.new(); network_status_lbl.add_theme_font_size_override("font_size",17); network_status_lbl.modulate = Color(0.26,0.88,0.88); overview.add_child(network_status_lbl)
+	var identity_grid = GridContainer.new(); identity_grid.columns = 2; overview.add_child(identity_grid)
+	network_player_name_edit = LineEdit.new(); network_player_name_edit.placeholder_text = "نام بازیکن"; network_player_name_edit.text = "رهبر %s" % str(state.get("country",{}).get("name","کشور")); identity_grid.add_child(network_player_name_edit)
+	var address_row = HBoxContainer.new(); identity_grid.add_child(address_row)
+	network_address_edit = LineEdit.new(); network_address_edit.placeholder_text = "نشانی میزبان"; network_address_edit.text = "127.0.0.1"; network_address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL; address_row.add_child(network_address_edit)
+	network_port_spin = SpinBox.new(); network_port_spin.min_value = 1024; network_port_spin.max_value = 65535; network_port_spin.value = P2PManager.DEFAULT_PORT; network_port_spin.custom_minimum_size = Vector2(145,44); address_row.add_child(network_port_spin)
+	var direct = _card("اتصال مستقیم و همکارانه")
+	var direct_grid = GridContainer.new(); direct_grid.columns = 4; direct.add_child(direct_grid)
+	_mk_btn(direct_grid,"میزبانی",Vector2(150,48),_on_host_network,"PrimaryAction")
+	_mk_btn(direct_grid,"اتصال",Vector2(150,48),_on_join_network)
+	_mk_btn(direct_grid,"بازکردن پورت",Vector2(165,48),_on_enable_upnp)
+	_mk_btn(direct_grid,"قطع اتصال",Vector2(150,48),_on_disconnect_network)
+	var campaign = _card("کمپین رقابتی کشورهای مستقل")
+	campaign_lobby_lbl = Label.new(); campaign_lobby_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; campaign.add_child(campaign_lobby_lbl)
+	var campaign_grid = GridContainer.new(); campaign_grid.columns = 4; campaign.add_child(campaign_grid)
+	_mk_btn(campaign_grid,"میزبانی رقابتی",Vector2(170,48),_on_host_competitive,"PrimaryAction")
+	_mk_btn(campaign_grid,"اتصال رقابتی",Vector2(170,48),_on_join_competitive)
+	_mk_btn(campaign_grid,"آماده‌ام",Vector2(140,48),_on_campaign_ready)
+	_mk_btn(campaign_grid,"شروع کمپین",Vector2(150,48),_on_start_campaign)
+	var safety = _card("وضعیت شبکه و ایمنی")
+	_row(safety,"حداکثر بازیکن انسانی",PersianFormatter.to_persian_digits("۸ کشور"))
+	_row(safety,"مرجع State","میزبان")
+	_row(safety,"روش اتصال","LAN، IP مستقیم یا UPnP")
+	var safety_hint = Label.new(); safety_hint.text = "برای اینترنت عمومی هنوز سرویس کشف/سیگنال بیرونی لازم است؛ خود بازی هیچ سرویس پولی یا سرور اجباری ندارد."; safety_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; safety_hint.modulate = Color(0.64,0.75,0.82); safety.add_child(safety_hint)
+	_refresh_network_status(); _on_campaign_lobby(MultiplayerCampaignManager.get_lobby_snapshot())
 
-	var population = float(state.get("population", {}).get("total", profile.get("population", 0.0)))
-	var area = max(1.0, float(profile.get("area_km2", 1.0)))
-	var gdp = float(state.get("economy", {}).get("gdp", profile.get("gdp", 0.0)))
-	var identity = _card("🏛️ نمای ملی %s" % str(profile.get("name_fa", code)))
-	_row(identity, "پایتخت", str(profile.get("capital_fa", "")))
-	_row(identity, "تقسیمات اداری واقعی", PersianFormatter.to_persian_digits(str(units.size())))
-	_row(identity, "شهرهای شاخص روی نقشه", PersianFormatter.to_persian_digits(str(cities.size())))
-	_row(identity, "مساحت", PersianFormatter.format_large(area) + " کیلومتر مربع")
-	_row(identity, "تراکم جمعیت", PersianFormatter.format_number(int(population / area)) + " نفر در کیلومتر مربع")
-	_row(identity, "تولید داخلی سرانه", PersianFormatter.format_money(gdp / max(population, 1.0)))
+# ============================================================
+# نقشه فرماندهی یکپارچه — جهان، منطقه، کشور، استان و اقدام زمینه‌ای
+# ============================================================
+func _build_unified_map():
+	var state = GameState.state
+	var diplomacy = state.get("diplomacy", {})
+	var relations: Dictionary = diplomacy.get("relations", {})
+	var world: Dictionary = state.get("world", {})
+	var player_id = str(world.get("player_country", WorldManager.default_country))
+	if selected_world_country == "" or not WorldManager.countries.has(selected_world_country): selected_world_country = player_id
 
-	var controls = _card("🧭 لایه‌های اطلاعات ملی")
-	var hint = Label.new(); hint.text = "رنگ هر ناحیه از State زنده بازی محاسبه می‌شود. مرزها و شهرها جغرافیایی‌اند و توزیع منطقه‌ای شاخص‌ها برآورد مدل بازی است."; hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.76, 0.83, 0.92); controls.add_child(hint)
-	var control_row = HBoxContainer.new(); controls.add_child(control_row)
-	var layer_select = OptionButton.new(); layer_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var layer_defs = [["administrative","تقسیمات اداری"],["population","تراکم جمعیت"],["economy","فعالیت اقتصادی"],["infrastructure","کیفیت زیرساخت"],["satisfaction","رضایت منطقه‌ای"],["security","امنیت داخلی"],["weather","ریسک اقلیمی"],["resources","ظرفیت منابع"],["military","اهمیت نظامی"]]
-	for layer_def in layer_defs:
-		layer_select.add_item(layer_def[1]); layer_select.set_item_metadata(layer_select.item_count - 1, layer_def[0])
-		if layer_def[0] == country_map_layer: layer_select.select(layer_select.item_count - 1)
-	layer_select.item_selected.connect(_on_country_map_layer_selected.bind(layer_select)); control_row.add_child(layer_select)
-	var city_toggle = CheckButton.new(); city_toggle.text = "شهرها"; city_toggle.button_pressed = country_map_show_cities; city_toggle.toggled.connect(_on_country_map_overlay_toggled.bind("cities")); control_row.add_child(city_toggle)
-	var transport_toggle = CheckButton.new(); transport_toggle.text = "راه و ریل"; transport_toggle.button_pressed = country_map_show_transport; transport_toggle.toggled.connect(_on_country_map_overlay_toggled.bind("transport")); control_row.add_child(transport_toggle)
+	if int(state.get("tick", 0)) == 0:
+		var setup = _card("آغاز مأموریت ملی")
+		var setup_hint = Label.new(); setup_hint.text = "کشور و سناریوی خود را انتخاب کنید. پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; setup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; setup_hint.modulate = Color(0.70,0.82,0.88); setup.add_child(setup_hint)
+		var setup_grid = GridContainer.new(); setup_grid.columns = 2; setup.add_child(setup_grid)
+		country_select_option = OptionButton.new(); country_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var selected_index = 0
+		for country_id in WorldManager.get_country_ids():
+			var profile = WorldManager.get_country(country_id); country_select_option.add_item("%s · %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")]); country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
+			if country_id == player_id: selected_index = country_select_option.item_count - 1
+		country_select_option.select(selected_index); setup_grid.add_child(country_select_option)
+		scenario_select_option = OptionButton.new(); scenario_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var active_scenario = str(state.get("scenario", {}).get("id", ScenarioManager.default_scenario)); var scenario_index = 0
+		for scenario_id in ScenarioManager.get_scenario_ids():
+			var definition = ScenarioManager.get_scenario(scenario_id); scenario_select_option.add_item("%s · %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")]); scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
+			if scenario_id == active_scenario: scenario_index = scenario_select_option.item_count - 1
+		scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); setup_grid.add_child(scenario_select_option)
+		scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = Color(0.72,0.82,0.89); setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
+		var start_button = _mk_btn(setup, "شروع فرماندهی", Vector2(240,50), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
-	var map_card = _card("🗺️ نقشه کشور — %s" % str(profile.get("name_fa", code)))
-	var national_map = CountryMapClass.new(); national_map.selected_unit = selected_country_unit
-	national_map.set_country_data(code, state, country_map_layer, country_map_show_cities, country_map_show_transport)
-	national_map.unit_selected.connect(_on_country_unit_selected); map_card.add_child(national_map)
-	var accessibility = Label.new(); accessibility.text = "روی هر استان/ایالت بزنید تا برآورد جمعیت، اقتصاد، زیرساخت، امنیت و اقلیم آن نمایش داده شود. کلید تأیید نیز ناحیه بعدی را انتخاب می‌کند."; accessibility.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; accessibility.modulate = Color(0.72,0.80,0.90); map_card.add_child(accessibility)
+	var controls = _card("لنزهای نقشه و کنترل دوربین")
+	var main_row = HBoxContainer.new(); main_row.add_theme_constant_override("separation",7); controls.add_child(main_row)
+	var layer_select = OptionButton.new(); layer_select.custom_minimum_size = Vector2(230,46); layer_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var layer_defs = [["political","سیاسی"],["relations","روابط بین‌الملل"],["population","جمعیت"],["economy","اقتصاد"],["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],["resources","منابع"],["military","نظامی"]]
+	for definition in layer_defs:
+		layer_select.add_item(definition[1]); layer_select.set_item_metadata(layer_select.item_count-1, definition[0])
+		if definition[0] == map_base_layer: layer_select.select(layer_select.item_count-1)
+	layer_select.item_selected.connect(_on_unified_layer_selected.bind(layer_select)); main_row.add_child(layer_select)
+	_mk_btn(main_row, "+", Vector2(52,46), _on_map_camera_command.bind("in"))
+	_mk_btn(main_row, "−", Vector2(52,46), _on_map_camera_command.bind("out"))
+	_mk_btn(main_row, "کشور من", Vector2(108,46), _on_map_camera_command.bind("home"))
+	_mk_btn(main_row, "کشور انتخابی", Vector2(128,46), _on_map_camera_command.bind("selected"))
+	_mk_btn(main_row, "جهان", Vector2(82,46), _on_map_camera_command.bind("world"))
+	var overlay_grid = GridContainer.new(); overlay_grid.columns = 5; controls.add_child(overlay_grid)
+	var overlay_defs = [["wars","جنگ"],["alliances","اتحاد"],["trade","تجارت"],["air","پرواز"],["sea","دریا"],["land","زمین"],["cities","شهرها"],["transport","راه و ریل"],["intelligence","اطلاعاتی"]]
+	for definition in overlay_defs:
+		var toggle = CheckButton.new(); toggle.text = definition[1]; toggle.button_pressed = bool(map_overlays.get(definition[0],false)); toggle.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0]))); overlay_grid.add_child(toggle)
+	var usage = Label.new(); usage.text = "چرخ ماوس یا حرکت دو انگشتی: زوم · کشیدن: جابه‌جایی · لمس: انتخاب · دوبار لمس: ورود به کشور · با زوم بیشتر استان‌ها، شهرها و شبکه‌ها آشکار می‌شوند."; usage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; usage.modulate = Color(0.58,0.73,0.80); controls.add_child(usage)
 
-	_build_selected_national_unit(state, code, selected_country_unit)
+	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
+	for war_target in world.get("wars", {}).keys():
+		if map_countries.has(war_target): map_countries[war_target]["at_war"] = true
+	for npc_war in world.get("npc_wars", {}).values():
+		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
+			if map_countries.has(participant): map_countries[participant]["at_war"] = true
+	var map_card = _card("نقشه پیوسته جهان تا شهر")
+	current_unified_map = UnifiedMapClass.new(); current_unified_map.selected_country = selected_world_country; current_unified_map.selected_unit = selected_country_unit
+	current_unified_map.configure(map_countries, relations, player_id, world, state, map_base_layer, map_overlays, map_camera_center, map_zoom)
+	current_unified_map.country_selected.connect(_on_unified_country_selected); current_unified_map.unit_selected.connect(_on_unified_unit_selected); current_unified_map.route_selected.connect(_on_unified_route_selected); current_unified_map.view_changed.connect(_on_unified_view_changed)
+	map_card.add_child(current_unified_map)
 
-	var live = _card("📊 شاخص‌های زنده سراسری روی نقشه")
-	_bar(live, "رضایت عمومی", float(state.get("population", {}).get("happiness", state.get("population", {}).get("satisfaction", 0.60))))
-	_bar(live, "کیفیت زیرساخت", float(state.get("infrastructure", {}).get("quality", 0.55)))
-	_bar(live, "امنیت عمومی", float(state.get("security", {}).get("public_security", 0.65)))
-	_bar(live, "پوشش خدمات محلی", float(state.get("administration", {}).get("service_coverage", 0.70)))
-	_bar(live, "خودکفایی منابع", float(state.get("resources", {}).get("self_sufficiency", 0.65)))
-	_bar(live, "آمادگی نظامی", float(state.get("military", {}).get("readiness", 0.55)))
-	var current_weather = state.get("weather", {}).get("current", {})
-	_row(live, "وضعیت اقلیمی", str(current_weather.get("condition", state.get("weather", {}).get("climate", profile.get("climate_fa", "")))))
-	_row(live, "راه‌های مختل", _fmt_pct(float(state.get("municipal_services", {}).get("roads_blocked", 0.0))))
+	if not selected_map_route.is_empty():
+		var route_card = _card("کریدور انتخابی")
+		_row(route_card, "نوع", _map_overlay_name(str(selected_map_route.get("type", ""))))
+		_row(route_card, "مسیر", str(selected_map_route.get("label", "مسیر راهبردی")))
+		_bar(route_card, "ظرفیت نسبی", float(selected_map_route.get("volume", 0.5)))
+		var route_hint = Label.new(); route_hint.text = "جنگ و اختلال مسیر می‌تواند صادرات، واردات و اتصال ملی را کاهش دهد."; route_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; route_hint.modulate = Color(0.72,0.81,0.87); route_card.add_child(route_hint)
 
-	var infrastructure = _card("🚆 شبکه و تأسیسات ملی")
-	var transport = state.get("transport_detail", {})
-	var industry_sites = state.get("industry_sites_detail", {})
-	_row(infrastructure, "جاده", PersianFormatter.format_large(float(transport.get("roads_km", area * 0.05))) + " کیلومتر")
-	_row(infrastructure, "راه‌آهن", PersianFormatter.format_large(float(transport.get("rail_km", 0.0))) + " کیلومتر")
-	_row(infrastructure, "فرودگاه", PersianFormatter.to_persian_digits(str(int(transport.get("airports", max(1, cities.size() / 3))))))
-	_row(infrastructure, "بندر", PersianFormatter.to_persian_digits(str(int(transport.get("ports", 0 if profile.get("landlocked", false) else 1)))))
-	_row(infrastructure, "کارخانه", PersianFormatter.format_number(int(industry_sites.get("factories", max(1.0, gdp / 100000000.0)))))
-	_row(infrastructure, "معدن فعال", PersianFormatter.format_number(int(industry_sites.get("mines", max(0.0, area / 10000.0)))))
-	_bar(infrastructure, "کیفیت جاده", float(transport.get("roads_quality", state.get("infrastructure", {}).get("quality", 0.55))))
-	_bar(infrastructure, "کارآمدی لجستیک", float(transport.get("logistics_efficiency", 0.55)))
+	if selected_world_country == player_id:
+		_build_map_player_context(state, player_id)
+	else:
+		_build_selected_country_card(state, selected_world_country)
 
-	var city_card = _card("🏙️ شهرهای شاخص")
-	for city in cities:
-		var city_text = ("پایتخت — " if city.get("capital", false) else "شهر — ") + str(city.get("name_fa", ""))
-		if int(city.get("population", 0)) > 0: city_text += " | جمعیت جغرافیایی: " + PersianFormatter.format_large(float(city.get("population", 0)))
-		var city_label = Label.new(); city_label.text = "• " + city_text; city_label.modulate = Color(1.0,0.90,0.55) if city.get("capital", false) else Color(0.84,0.90,0.96); city_card.add_child(city_label)
+func _build_map_player_context(state: Dictionary, player_id: String):
+	var profile = WorldManager.get_country(player_id)
+	var national = _card("کشور شما · %s" % str(profile.get("name_fa", player_id)))
+	_row(national, "پایتخت", str(profile.get("capital_fa", "")))
+	_row(national, "جمعیت", PersianFormatter.format_large(float(state.get("population",{}).get("total",0))) + " نفر")
+	_row(national, "تولید داخلی", PersianFormatter.format_money(float(state.get("economy",{}).get("gdp",0))))
+	_row(national, "تقسیمات اداری", PersianFormatter.to_persian_digits(str(CountryGeographyManager.get_unit_count(player_id))))
+	_bar(national, "رضایت", float(state.get("population",{}).get("happiness",0.6)))
+	_bar(national, "زیرساخت", float(state.get("infrastructure",{}).get("quality",0.55)))
+	_bar(national, "امنیت", float(state.get("security",{}).get("public_security",0.65)))
+	if selected_country_unit != "" and not CountryGeographyManager.get_unit(player_id, selected_country_unit).is_empty():
+		_build_selected_national_unit(state, player_id, selected_country_unit)
+	var action_card = _card("اقدام زمینه‌ای از روی نقشه")
+	var action_hint = Label.new(); action_hint.text = "اقدام‌های پرتکرار همان‌جا که مسئله را می‌بینید اجرا می‌شوند؛ نتیجه همچنان از موتور اتمی عبور می‌کند."; action_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; action_hint.modulate = Color(0.67,0.79,0.85); action_card.add_child(action_hint)
+	var action_grid = GridContainer.new(); action_grid.columns = 3; action_card.add_child(action_grid)
+	var actions = [["road_maintenance","نگهداری راه‌ها"],["improve_drainage","تقویت زهکشی"],["buy_snowplows","خرید برف‌روب"],["stock_road_salt","ذخیره نمک جاده"],["winter_training","رزمایش زمستانی"],["cooling_centers","مراکز خنک‌کننده"]]
+	for action in actions:
+		var check = SeasonalManager.can_action(state, action[0]); var button = Button.new(); button.text = action[1]; button.custom_minimum_size = Vector2(190,46); button.disabled = not check.valid; button.tooltip_text = "" if check.valid else str(check.reason); button.pressed.connect(FeedbackManager.play_click); button.pressed.connect(_on_map_municipal_action.bind(str(action[0]),str(action[1]))); action_grid.add_child(button)
+	var open_row = HBoxContainer.new(); action_card.add_child(open_row)
+	_mk_btn(open_row, "مرکز پروژه‌های ملی", Vector2(220,46), _switch_tab.bind("projects"))
+	_mk_btn(open_row, "مدیریت دفاع", Vector2(180,46), _switch_tab.bind("military"))
+	_mk_btn(open_row, "اقتصاد و بودجه", Vector2(190,46), _switch_tab.bind("economy"))
 
+func _on_unified_layer_selected(index: int, selector: OptionButton):
+	if index < 0 or index >= selector.item_count: return
+	map_base_layer = str(selector.get_item_metadata(index))
+	if is_instance_valid(current_unified_map): current_unified_map.set_base_layer(map_base_layer)
+
+func _on_unified_overlay_toggled(pressed: bool, layer: String):
+	map_overlays[layer] = pressed
+	if is_instance_valid(current_unified_map): current_unified_map.set_overlay(layer, pressed)
+
+func _on_map_camera_command(command: String):
+	if not is_instance_valid(current_unified_map): return
+	match command:
+		"in": current_unified_map.zoom_in()
+		"out": current_unified_map.zoom_out()
+		"home": current_unified_map.focus_player()
+		"selected": current_unified_map.focus_selected()
+		"world": current_unified_map.focus_world()
+
+func _on_unified_view_changed(center: Vector2, zoom: float):
+	map_camera_center = center; map_zoom = zoom
+
+func _on_unified_country_selected(code: String):
+	selected_world_country = code; selected_country_unit = ""; selected_map_route = {}
+	_toast("کشور انتخابی · " + WorldManager.get_country_name(code)); call_deferred("_refresh_unified_map_context")
+
+func _on_unified_unit_selected(code: String, unit_id: String):
+	selected_world_country = code; selected_country_unit = unit_id; selected_map_route = {}
+	var unit = CountryGeographyManager.get_unit(code, unit_id); _toast("ناحیه انتخابی · " + str(unit.get("name_fa", ""))); call_deferred("_refresh_unified_map_context")
+
+func _on_unified_route_selected(route: Dictionary):
+	selected_map_route = route.duplicate(true); call_deferred("_refresh_unified_map_context")
+
+func _refresh_unified_map_context():
+	if current_tab == "map": _switch_tab("map")
+
+func _on_map_municipal_action(action: String, title: String):
+	if _run_tick_with([GameCommandClass.create_municipal_action(action)]):
+		_toast("اقدام نقشه اجرا شد · " + title); _switch_tab("map")
+
+func _map_overlay_name(layer: String) -> String:
+	return {"wars":"جنگ","alliances":"اتحاد","trade":"تجارت","air":"هوایی","sea":"دریایی","land":"زمینی"}.get(layer,"راهبردی")
+
+# ============================================================
+# نماهای قدیمی برای سازگاری ذخیره/کد؛ ناوبری اکنون فقط نقشه واحد را باز می‌کند.
+# ============================================================
 func _build_selected_national_unit(state: Dictionary, code: String, unit_id: String):
 	var metrics = CountryGeographyManager.get_unit_metrics(code, unit_id, state)
 	if metrics.is_empty(): return
@@ -1524,218 +1639,6 @@ func _build_selected_national_unit(state: Dictionary, code: String, unit_id: Str
 	_bar(card, "ظرفیت منابع", float(metrics.get("resource_score", 0.0)))
 	_bar(card, "اهمیت نظامی", float(metrics.get("military_score", 0.0)))
 	_bar(card, "ریسک اقلیمی", float(metrics.get("weather_risk", 0.0)))
-
-func _on_country_map_layer_selected(index: int, selector: OptionButton):
-	if index < 0 or index >= selector.item_count: return
-	country_map_layer = str(selector.get_item_metadata(index)); _switch_tab("country_map")
-
-func _on_country_map_overlay_toggled(pressed: bool, overlay: String):
-	if overlay == "cities": country_map_show_cities = pressed
-	elif overlay == "transport": country_map_show_transport = pressed
-	_switch_tab("country_map")
-
-func _on_country_unit_selected(unit_id: String):
-	selected_country_unit = unit_id
-	var unit = CountryGeographyManager.get_unit(str(GameState.state.get("country", {}).get("id", "")), unit_id)
-	_toast("📍 ناحیه انتخابی: %s" % str(unit.get("name_fa", "")))
-	_switch_tab("country_map")
-
-# ============================================================
-# تب جهان — دیپلماسی تعاملی
-# ============================================================
-func _build_world():
-	var st = GameState.state
-	var dip = st.get("diplomacy", {})
-	var rel: Dictionary = dip.get("relations", {})
-	var world: Dictionary = st.get("world", {})
-	var player_id = str(world.get("player_country", WorldManager.default_country))
-	if selected_world_country == "" or not rel.has(selected_world_country):
-		selected_world_country = str(rel.keys()[0]) if not rel.is_empty() else ""
-
-	if int(st.get("tick", 0)) == 0:
-		var setup = _card("🏳️ انتخاب کشور پیش از شروع")
-		var setup_hint = Label.new()
-		setup_hint.text = "کشور، جمعیت، اقتصاد، قدرت نظامی، فناوری و روابط آغازین را تعیین می‌کند. پس از نخستین روز قابل تغییر نیست."
-		setup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		setup.add_child(setup_hint)
-		country_select_option = OptionButton.new()
-		var selected_index = 0
-		for country_id in WorldManager.get_country_ids():
-			var profile = WorldManager.get_country(country_id)
-			country_select_option.add_item("%s — %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")])
-			country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
-			if country_id == player_id:
-				selected_index = country_select_option.item_count - 1
-		country_select_option.select(selected_index)
-		setup.add_child(country_select_option)
-		var scenario_title = Label.new()
-		scenario_title.text = "سناریو و شرط پیروزی"
-		scenario_title.add_theme_font_size_override("font_size", 18)
-		setup.add_child(scenario_title)
-		scenario_select_option = OptionButton.new()
-		var active_scenario = str(st.get("scenario", {}).get("id", ScenarioManager.default_scenario))
-		var selected_scenario_index = 0
-		for scenario_id in ScenarioManager.get_scenario_ids():
-			var definition = ScenarioManager.get_scenario(scenario_id)
-			scenario_select_option.add_item("%s — %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")])
-			scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
-			if scenario_id == active_scenario:
-				selected_scenario_index = scenario_select_option.item_count - 1
-		scenario_select_option.select(selected_scenario_index)
-		scenario_select_option.item_selected.connect(_on_scenario_option_changed)
-		setup.add_child(scenario_select_option)
-		scenario_description_lbl = Label.new()
-		scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		scenario_description_lbl.modulate = Color(0.78, 0.82, 0.92)
-		setup.add_child(scenario_description_lbl)
-		_on_scenario_option_changed(selected_scenario_index)
-		_mk_btn(setup, "شروع بازی با کشور و سناریو", Vector2(320, 52), _on_country_start_selected)
-
-	var player_profile = WorldManager.get_country(player_id)
-	var identity = _card("🏛️ کشور شما: %s" % str(player_profile.get("name_fa", "")))
-	_row(identity, "پایتخت", str(player_profile.get("capital_fa", "")))
-	_row(identity, "واحد پول", str(player_profile.get("currency_fa", "")))
-	_row(identity, "جمعیت پایه", PersianFormatter.format_large(float(player_profile.get("population", 0))) + " نفر")
-	_row(identity, "تولید داخلی پایه", PersianFormatter.format_money(float(player_profile.get("gdp", 0))))
-
-	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
-	for war_target in world.get("wars", {}).keys():
-		if map_countries.has(war_target): map_countries[war_target]["at_war"] = true
-	for npc_war in world.get("npc_wars", {}).values():
-		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
-			if map_countries.has(participant): map_countries[participant]["at_war"] = true
-
-	var layers_card = _card("🧭 لایه‌های اطلاعاتی نقشه")
-	var layer_help = Label.new(); layer_help.text = "هر لایه را مستقل روشن یا خاموش کنید؛ روی کشور یا مسیر نگه دارید تا جزئیات نمایش داده شود."; layer_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; layer_help.modulate = Color(0.75,0.82,0.92); layers_card.add_child(layer_help)
-	var layer_grid = GridContainer.new(); layer_grid.columns = 3; layers_card.add_child(layer_grid)
-	var layer_defs = [["relations","رنگ روابط"],["wars","جنگ‌ها"],["alliances","اتحادها"],["trade","کریدور تجاری"],["air","مسیرهای پروازی"],["sea","مسیرهای دریایی"],["land","مسیرهای زمینی"],["weather","اقلیم"],["intelligence","گزارش اطلاعاتی"]]
-	for layer_def in layer_defs:
-		var toggle = CheckButton.new(); toggle.text = layer_def[1]; toggle.button_pressed = bool(map_layers.get(layer_def[0],false)); toggle.toggled.connect(_on_map_layer_toggled.bind(str(layer_def[0]))); layer_grid.add_child(toggle)
-
-	var map_card = _card("🌐 نقشه راهبردی جهان — ۱۹۵ کشور")
-	var world_map = WorldMapClass.new(); world_map.selected_code = selected_world_country
-	world_map.set_map_data(map_countries,rel,player_id,world,st,map_layers,"global"); world_map.country_selected.connect(_on_map_country_selected); map_card.add_child(world_map)
-
-	var regional_title = "%s / %s" % [_fa_geo_name(str(player_profile.get("region",""))),_fa_geo_name(str(player_profile.get("subregion","")))]
-	var regional_card = _card("🔎 نمای نزدیک منطقه‌ای — %s" % regional_title)
-	var regional_hint = Label.new(); regional_hint.text = "کشور شما، همسایگان مرزی، کشورهای همان زیرمنطقه و مراکز حمل‌ونقل با جزئیات بیشتر نمایش داده می‌شوند."; regional_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; regional_hint.modulate = Color(0.75,0.82,0.92); regional_card.add_child(regional_hint)
-	var regional_map = WorldMapClass.new(); regional_map.selected_code = selected_world_country
-	regional_map.set_map_data(map_countries,rel,player_id,world,st,map_layers,"regional"); regional_map.country_selected.connect(_on_map_country_selected); regional_card.add_child(regional_map)
-
-	var overview = _card("🌍 موقعیت بین‌المللی")
-	_row(overview, "امتیاز اقدام دیپلماتیک", PersianFormatter.to_persian_digits("%.1f از 5" % dip.get("action_points", 0.0)))
-	_row(overview, "نفوذ جهانی", PersianFormatter.format_number(int(dip.get("influence", 0))))
-	_bar(overview, "قدرت نرم", dip.get("soft_power", 35) / 100.0)
-	_row(overview, "جنگ‌های فعال شما", PersianFormatter.to_persian_digits(str(world.get("wars", {}).size())))
-	_row(overview, "جنگ‌های دیگر جهان", PersianFormatter.to_persian_digits(str(world.get("npc_wars", {}).size())))
-	var network_metrics: Dictionary = st.get("map_network", {})
-	_bar(overview, "اتصال هوایی جهانی", float(network_metrics.get("air_connectivity",0.0)))
-	_bar(overview, "اتصال دریایی جهانی", float(network_metrics.get("sea_connectivity",0.0)))
-	_bar(overview, "اتصال زمینی منطقه", float(network_metrics.get("land_connectivity",0.0)))
-
-	var global_card = _card("🌐 تحولات کشورهای غیر‌بازیکن")
-	_row(global_card, "اتحادهای مستقل", PersianFormatter.to_persian_digits(str(world.get("npc_alliances", []).size())))
-	_row(global_card, "توافق‌های تجاری مستقل", PersianFormatter.to_persian_digits(str(world.get("npc_trade_agreements", []).size())))
-	var recent_global: Array = world.get("recent_global_events", [])
-	if recent_global.is_empty():
-		var quiet = Label.new(); quiet.text = "هنوز تحول راهبردی بزرگی میان کشورهای دیگر ثبت نشده است."
-		quiet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; quiet.modulate = Color(0.75, 0.8, 0.9)
-		global_card.add_child(quiet)
-	else:
-		for i in range(max(0, recent_global.size() - 6), recent_global.size()):
-			var label = Label.new(); label.text = "• " + str(recent_global[i].get("message", ""))
-			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			global_card.add_child(label)
-
-	if selected_world_country != "":
-		_build_selected_country_card(st, selected_world_country)
-
-	var directory = _card("🤝 فهرست روابط ۱۹۵ کشور")
-	var region_select = OptionButton.new()
-	var region_defs = [["all","همه مناطق"],["Asia","آسیا"],["Europe","اروپا"],["Africa","آفریقا"],["Americas","قاره آمریکا"],["Oceania","اقیانوسیه"]]
-	for region_def in region_defs:
-		region_select.add_item(region_def[1]); region_select.set_item_metadata(region_select.item_count-1,region_def[0])
-		if region_def[0] == world_region_filter: region_select.select(region_select.item_count-1)
-	region_select.item_selected.connect(_on_world_region_selected.bind(region_select)); directory.add_child(region_select)
-	var relation_grid = GridContainer.new()
-	relation_grid.columns = 2
-	directory.add_child(relation_grid)
-	var visible_countries = 0
-	for country in rel.keys():
-		var profile = WorldManager.get_country(str(country))
-		if world_region_filter != "all" and str(profile.get("region","")) != world_region_filter: continue
-		visible_countries += 1
-		var rv = float(rel[country])
-		var relation_button = Button.new()
-		relation_button.text = "%s — %s (%s)" % [
-			_fa_country(country), PersianFormatter.to_persian_digits("%.0f" % rv), _relation_word(rv)]
-		relation_button.modulate = _color_for(rv / 100.0)
-		relation_button.pressed.connect(FeedbackManager.play_click)
-		relation_button.pressed.connect(_on_map_country_selected.bind(country))
-		relation_grid.add_child(relation_button)
-	var count_label = Label.new(); count_label.text = "%s کشور در این فیلتر" % PersianFormatter.to_persian_digits(str(visible_countries)); count_label.modulate = Color(0.72,0.78,0.88); directory.add_child(count_label)
-
-	var sanctions = dip.get("sanctions", [])
-	var treaties = dip.get("treaties", [])
-	var records = _card("📜 پیمان‌ها و تحریم‌ها")
-	if sanctions.is_empty() and treaties.is_empty():
-		var none = Label.new()
-		none.text = "هنوز پیمان یا تحریمی ثبت نشده است."
-		records.add_child(none)
-	for sanction in sanctions:
-		var sanction_label = Label.new()
-		if sanction is Dictionary:
-			var direction = "اعمال‌شده توسط شما" if sanction.get("by", "") == "player" else "اعمال‌شده علیه شما"
-			sanction_label.text = "🚫 %s — %s" % [_fa_country(str(sanction.get("target", ""))), direction]
-		else:
-			sanction_label.text = "🚫 تحریم خارجی"
-		sanction_label.modulate = Color(1.0, 0.5, 0.5)
-		records.add_child(sanction_label)
-	for treaty in treaties:
-		var treaty_label = Label.new()
-		if treaty is Dictionary:
-			treaty_label.text = "🤝 اتحاد با %s" % _fa_country(str(treaty.get("target", "")))
-		else:
-			treaty_label.text = "🤝 " + str(treaty)
-		records.add_child(treaty_label)
-
-	var network = _card("🌐 چندنفره مستقیم و رایگان")
-	var hint = Label.new()
-	hint.text = "یک بازیکن میزبان می‌شود؛ دیگران با IP مستقیم یا IP شبکه محلی متصل می‌شوند. پردازش مرجع روی میزبان است."
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.modulate = Color(0.78, 0.82, 0.9)
-	network.add_child(hint)
-	network_status_lbl = Label.new()
-	network.add_child(network_status_lbl)
-	campaign_lobby_lbl = Label.new(); campaign_lobby_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; network.add_child(campaign_lobby_lbl)
-	network_player_name_edit = LineEdit.new(); network_player_name_edit.placeholder_text = "نام بازیکن"; network_player_name_edit.text = "رهبر %s" % str(st.get("country",{}).get("name","کشور")); network.add_child(network_player_name_edit)
-	var connection_row = HBoxContainer.new()
-	network.add_child(connection_row)
-	network_address_edit = LineEdit.new()
-	network_address_edit.placeholder_text = "نشانی میزبان؛ نمونه: ۱۹۲.۱۶۸.۱.۱۰"
-	network_address_edit.text = "127.0.0.1"
-	network_address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	connection_row.add_child(network_address_edit)
-	network_port_spin = SpinBox.new()
-	network_port_spin.min_value = 1024
-	network_port_spin.max_value = 65535
-	network_port_spin.value = P2PManager.DEFAULT_PORT
-	network_port_spin.custom_minimum_size = Vector2(150, 0)
-	connection_row.add_child(network_port_spin)
-	var network_buttons = HBoxContainer.new()
-	network_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	network.add_child(network_buttons)
-	_mk_btn(network_buttons, "میزبانی بازی", Vector2(155, 48), _on_host_network)
-	_mk_btn(network_buttons, "اتصال به میزبان", Vector2(175, 48), _on_join_network)
-	_mk_btn(network_buttons, "بازکردن خودکار پورت", Vector2(190, 48), _on_enable_upnp)
-	_mk_btn(network_buttons, "قطع اتصال", Vector2(145, 48), _on_disconnect_network)
-	var competitive_buttons = HBoxContainer.new(); competitive_buttons.alignment = BoxContainer.ALIGNMENT_CENTER; network.add_child(competitive_buttons)
-	_mk_btn(competitive_buttons,"میزبانی رقابتی",Vector2(170,48),_on_host_competitive)
-	_mk_btn(competitive_buttons,"اتصال رقابتی",Vector2(170,48),_on_join_competitive)
-	_mk_btn(competitive_buttons,"آماده‌ام",Vector2(130,48),_on_campaign_ready)
-	_mk_btn(competitive_buttons,"شروع کمپین",Vector2(150,48),_on_start_campaign)
-	_refresh_network_status()
-	_on_campaign_lobby(MultiplayerCampaignManager.get_lobby_snapshot())
 
 func _build_selected_country_card(state: Dictionary, target: String):
 	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
@@ -1808,26 +1711,11 @@ func _on_country_start_selected():
 		scenario_id = str(scenario_select_option.get_item_metadata(scenario_select_option.selected))
 	var cmd = GameCommandClass.create_country_select(country_id, scenario_id)
 	if _run_tick_with([cmd]):
-		selected_world_country = ""
+		selected_world_country = country_id
 		selected_country_unit = ""
-		_toast("🏳️ بازی با %s و سناریوی «%s» آغاز شد" % [
-			WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)])
-		_switch_tab("world")
-
-func _on_world_region_selected(index:int,selector:OptionButton):
-	if index<0 or index>=selector.item_count:return
-	world_region_filter=str(selector.get_item_metadata(index));_switch_tab("world")
-
-func _on_map_layer_toggled(pressed:bool,layer:String):
-	map_layers[layer]=pressed
-	_switch_tab("world")
-
-func _on_map_country_selected(code: String):
-	selected_world_country = code
-	var relation = GameState.state.get("diplomacy", {}).get("relations", {}).get(code, 0)
-	_toast("🗺️ %s — رابطه: %s (%s)" % [
-		_fa_country(code), _relation_word(relation), PersianFormatter.to_persian_digits("%.0f" % relation)])
-	_switch_tab("world")
+		var profile = WorldManager.get_country(country_id); map_camera_center = GeographyManager.normalized_point(float(profile.get("lon",0.0)),float(profile.get("lat",0.0))); map_zoom = 2.2
+		_toast("فرماندهی %s با سناریوی «%s» آغاز شد" % [WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)])
+		_switch_tab("map")
 
 func _on_world_action(country: String, action: String, action_title: String):
 	var cmd = GameCommandClass.create_diplomacy_action(country, action)
@@ -2059,7 +1947,7 @@ func _format_metric_value(value, key: String) -> String:
 func _render_events():
 	for c in event_list.get_children():
 		c.queue_free()
-	var last = EventLog.get_last(6)
+	var last = EventLog.get_last(2)
 	last.reverse()
 	for e in last:
 		var l = Label.new()

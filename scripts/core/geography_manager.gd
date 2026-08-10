@@ -42,7 +42,10 @@ func reload() -> bool:
 			for point in outer:
 				minp.x = min(minp.x, point.x); minp.y = min(minp.y, point.y)
 				maxp.x = max(maxp.x, point.x); maxp.y = max(maxp.y, point.y)
-			country_polygons.append({"outer": outer, "holes": holes})
+			var fill_ring = outer.duplicate()
+			if fill_ring.size() > 2 and fill_ring[0].is_equal_approx(fill_ring[fill_ring.size() - 1]):
+				fill_ring.resize(fill_ring.size() - 1)
+			country_polygons.append({"outer": outer, "holes": holes, "fillable": not Geometry2D.triangulate_polygon(fill_ring).is_empty()})
 		if country_polygons.is_empty():
 			load_errors.append("چندضلعی کشور %s خالی است" % code)
 			continue
