@@ -80,6 +80,12 @@ static func create_military_program(program_id: String):
 static func create_military_doctrine(doctrine: String):
 	return _self_script().new("military_doctrine", {"doctrine": doctrine})
 
+static func create_national_project(project_id: String):
+	return _self_script().new("national_project", {"project_id": project_id, "action": "start"})
+
+static func create_project_cancel(project_id: String):
+	return _self_script().new("national_project", {"project_id": project_id, "action": "cancel"})
+
 static func create_decision_resolve(decision_id: String, choice_id: String):
 	return _self_script().new("decision_resolve", {"decision_id": decision_id, "choice_id": choice_id})
 

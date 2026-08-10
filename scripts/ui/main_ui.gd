@@ -112,6 +112,7 @@ const METRIC_WORD_FA = {
 const TABS := [
 	["dashboard", "🏠 داشبورد"],
 	["economy", "💰 اقتصاد"],
+	["projects", "🏗️ پروژه‌ها"],
 	["technology", "🔬 فناوری"],
 	["population", "👥 جمعیت"],
 	["military", "🪖 ارتش"],
@@ -188,7 +189,7 @@ func _build_chrome():
 		var key = tab_def[0]
 		var btn = Button.new()
 		btn.text = tab_def[1]
-		btn.custom_minimum_size = Vector2(135, 56)
+		btn.custom_minimum_size = Vector2(115, 56)
 		btn.add_theme_font_size_override("font_size", 17)
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_switch_tab.bind(key))
@@ -289,6 +290,7 @@ func _switch_tab(tab_key: String):
 	match tab_key:
 		"dashboard": _build_dashboard()
 		"economy": _build_economy()
+		"projects": _build_national_projects()
 		"technology": _build_technology()
 		"population": _build_population()
 		"military": _build_military()
@@ -976,6 +978,58 @@ func _on_policy_change(policy_id: String, enabled: bool, policy_name: String):
 	if _run_tick_with([command]):
 		_toast("📜 سیاست «%s» %s" % [policy_name, "فعال شد" if enabled else "لغو شد"])
 		_switch_tab("economy")
+
+# ============================================================
+# تب پروژه‌های ملی — ساخت، تأخیر، هزینه و بهره‌برداری
+# ============================================================
+func _build_national_projects():
+	var state = GameState.state
+	var project_state: Dictionary = state.get("national_projects", {})
+	var summary = _card("🏗️ سبد پروژه‌های ملی")
+	_row(summary, "پروژه‌های فعال", PersianFormatter.to_persian_digits(str(project_state.get("active", {}).size())))
+	_row(summary, "پروژه‌های تکمیل‌شده", PersianFormatter.to_persian_digits(str(project_state.get("completed", []).size())))
+	_row(summary, "کل هزینه انجام‌شده", PersianFormatter.format_money(float(project_state.get("total_spent", 0.0))))
+	_row(summary, "اضافه‌هزینه ناشی از فساد/بحران", PersianFormatter.format_money(float(project_state.get("total_overrun", 0.0))), _color_for(0.25))
+	var note = Label.new(); note.text = "کارآمدی دولت، فساد، جنگ و آب‌وهوای شدید سرعت و هزینه ساخت را تغییر می‌دهند. حداکثر سه پروژه هم‌زمان مجاز است."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; note.modulate = Color(0.75, 0.82, 0.92); summary.add_child(note)
+
+	var active_card = _card("🚧 کارگاه‌های فعال")
+	var active: Dictionary = project_state.get("active", {})
+	if active.is_empty():
+		var empty = Label.new(); empty.text = "پروژه‌ای در حال ساخت نیست."; active_card.add_child(empty)
+	for project_id in active.keys():
+		var record: Dictionary = active[project_id]
+		var panel = PanelContainer.new(); active_card.add_child(panel)
+		var box = VBoxContainer.new(); panel.add_child(box)
+		var title = Label.new(); title.text = NationalProjectManager.get_project_name(project_id); title.add_theme_font_size_override("font_size", 18); box.add_child(title)
+		_bar(box, "پیشرفت", float(record.get("progress", 0.0)))
+		_row(box, "زمان سپری‌شده", "%s ماه" % PersianFormatter.to_persian_digits(str(record.get("elapsed_months", 0))))
+		_row(box, "تأخیر ثبت‌شده", "%s ماه" % PersianFormatter.to_persian_digits(str(record.get("delay_months", 0))))
+		_row(box, "هزینه تا امروز", PersianFormatter.format_money(float(record.get("spent", 0.0))))
+		_row(box, "اضافه‌هزینه", PersianFormatter.format_money(float(record.get("overrun", 0.0))), _color_for(0.25))
+		var cancel = Button.new(); cancel.text = "لغو پروژه"; cancel.modulate = Color(1.0, 0.58, 0.55)
+		cancel.pressed.connect(FeedbackManager.play_click); cancel.pressed.connect(_on_cancel_national_project.bind(str(project_id))); box.add_child(cancel)
+
+	var available_card = _card("📋 طرح‌های قابل آغاز")
+	for project_id in NationalProjectManager.get_project_ids():
+		if project_state.get("active", {}).has(project_id) or project_state.get("completed", []).has(project_id):
+			continue
+		var definition = NationalProjectManager.get_project(project_id)
+		var row = HBoxContainer.new(); available_card.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(info)
+		var title = Label.new(); title.text = "%s — %s" % [definition.get("name_fa", project_id), definition.get("category_fa", "")]; title.add_theme_font_size_override("font_size", 17); info.add_child(title)
+		var desc = Label.new(); desc.text = PersianFormatter.to_persian_digits("%s\nمدت پایه: %s ماه | بودجه پایه: %.1f٪ تولید داخلی" % [definition.get("description", ""), str(definition.get("duration_months", 1)), float(definition.get("cost_gdp_ratio", 0.0)) * 100.0]); desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; desc.modulate = Color(0.72, 0.78, 0.88); info.add_child(desc)
+		var check = NationalProjectManager.can_start(state, project_id)
+		var start = Button.new(); start.text = "آغاز ساخت"; start.custom_minimum_size = Vector2(125, 48); start.disabled = not check.valid; start.tooltip_text = "" if check.valid else str(check.reason)
+		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_start_national_project.bind(str(project_id), str(definition.get("name_fa", "پروژه")))); row.add_child(start)
+
+func _on_start_national_project(project_id: String, title: String):
+	if _run_tick_with([GameCommandClass.create_national_project(project_id)]):
+		_toast("🏗️ پروژه «%s» آغاز شد" % title); _switch_tab("projects")
+
+func _on_cancel_national_project(project_id: String):
+	if _run_tick_with([GameCommandClass.create_project_cancel(project_id)]):
+		_toast("⛔ پروژه «%s» لغو شد" % NationalProjectManager.get_project_name(project_id)); _switch_tab("projects")
 
 # ============================================================
 # تب فناوری — درخت پژوهش داده‌محور

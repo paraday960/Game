@@ -9,7 +9,7 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
-	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "decision_resolve"
+	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "decision_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -361,6 +361,14 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				return {"valid": false, "reason": "دکترین نظامی معتبر نیست"}
 			if str(state.get("military_development", {}).get("doctrine", "balanced")) == doctrine:
 				return {"valid": false, "reason": "این دکترین از قبل فعال است"}
+		elif cmd.type == "national_project":
+			var project_id = str(cmd.payload.get("project_id", ""))
+			var project_action = str(cmd.payload.get("action", "start"))
+			if not ["start", "cancel"].has(project_action):
+				return {"valid": false, "reason": "اقدام پروژه ملی نامعتبر است"}
+			var project_check = NationalProjectManager.can_start(state, project_id) if project_action == "start" else NationalProjectManager.can_cancel(state, project_id)
+			if not project_check.valid:
+				return {"valid": false, "reason": project_check.reason}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -424,6 +432,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		snapshot = TimeManager.reset(snapshot)
 		snapshot = SeasonalManager.reset_for_country(snapshot, country_id)
 		snapshot = MilitaryManager.reset(snapshot)
+		snapshot = NationalProjectManager.reset(snapshot)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
@@ -458,6 +467,13 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 			snapshot = doctrine_result.state
 			for doctrine_event in doctrine_result.events:
 				EventLog.log_event("military_event", doctrine_event, cmd.tick, cmd.version)
+	elif cmd.type == "national_project":
+		var project_id = str(cmd.payload.get("project_id", ""))
+		var project_result = NationalProjectManager.start_project(snapshot, project_id, cmd.tick) if str(cmd.payload.get("action", "start")) == "start" else NationalProjectManager.cancel_project(snapshot, project_id, cmd.tick)
+		if project_result.success:
+			snapshot = project_result.state
+			for project_event in project_result.events:
+				EventLog.log_event("national_project_event", project_event, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
@@ -505,6 +521,13 @@ func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 		var wrapped_military = {"system":"military_development", "event":military_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
 		generated_events.append(wrapped_military)
 		EventLog.log_event("military_event", military_event, turn, snapshot.get("version", 0))
+
+	var national_result = NationalProjectManager.simulate_month(snapshot, turn)
+	snapshot = national_result.state
+	for national_event in national_result.events:
+		var wrapped_project = {"system":"national_projects", "event":national_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_project)
+		EventLog.log_event("national_project_event", national_event, turn, snapshot.get("version", 0))
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
 	snapshot = _compute_indicators(snapshot)

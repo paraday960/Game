@@ -28,6 +28,8 @@ func _ready():
 		failed.append("سیاست‌های عمومی داده‌محور نامعتبر هستند")
 	if not MilitaryManager.is_valid():
 		failed.append("برنامه‌های توسعه نظامی داده‌محور نامعتبر هستند")
+	if not NationalProjectManager.is_valid():
+		failed.append("پروژه‌های ملی داده‌محور نامعتبر هستند")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -289,6 +291,34 @@ func _ready():
 				failed.append("دکترین نظامی اثر واقعی ایجاد نکرد")
 			else:
 				print("Military development: program + cost + completion + doctrine OK")
+
+	# پروژه ملی: شروع، هزینه، تأخیر فساد/هوا، تکمیل و اثر واقعی
+	var national_state = s.duplicate(true)
+	var water_capacity_before = float(national_state["resources"]["capacity"]["آب"])
+	var national_result = GameEngine.tick(national_state, v, t, [GameCommand.create_national_project("water_security")])
+	if not national_result.success or not national_result.state.get("national_projects", {}).get("active", {}).has("water_security"):
+		failed.append("پروژه ملی آغاز نشد")
+	else:
+		var completion_state = national_result.state
+		completion_state["national_projects"]["active"]["water_security"]["progress"] = 0.99
+		completion_state["administration"]["efficiency"] = 0.90
+		completion_state["politics"]["corruption"] = 0.10
+		completion_state["weather"]["current"] = {"hazard":"none", "severity":0.0}
+		var completion = NationalProjectManager.simulate_month(completion_state, t + 2)
+		if not completion.state["national_projects"]["completed"].has("water_security") or float(completion.state["resources"]["capacity"]["آب"]) <= water_capacity_before:
+			failed.append("پروژه ملی تکمیل یا اثر آن اعمال نشد")
+		else:
+			var delay_state = s.duplicate(true)
+			var delayed_start = NationalProjectManager.start_project(delay_state, "wastewater_recycling", t)
+			delay_state = delayed_start.state
+			delay_state["administration"]["efficiency"] = 0.10
+			delay_state["politics"]["corruption"] = 0.90
+			delay_state["weather"]["current"] = {"hazard":"flood", "severity":0.90}
+			var delayed = NationalProjectManager.simulate_month(delay_state, t + 1)
+			if int(delayed.state["national_projects"]["active"]["wastewater_recycling"].get("delay_months", 0)) < 1:
+				failed.append("فساد و هوای شدید تأخیر پروژه ایجاد نکرد")
+			else:
+				print("National projects: cost + delay + overrun + completion effects OK")
 
 	# درخت فناوری: پیش‌نیاز، هزینه و اثر واقعی تکمیل
 	var research_state = s.duplicate(true)
