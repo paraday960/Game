@@ -35,6 +35,9 @@ func _init():
 	print("System inspector: %d pages" % inspected)
 	scene._switch_tab("dashboard")
 	await process_frame
+	# کنترل قطع/وصل افکت صوتی باید در حالت headless نیز امن باشد.
+	scene._on_sound_pressed()
+	scene._on_sound_pressed()
 	# تست اجرای تیک از UI
 	var t0 = Engine.get_main_loop().root.get_node("GameState").tick if root.has_node("GameState") else -1
 	var ok = scene._run_tick_with([])

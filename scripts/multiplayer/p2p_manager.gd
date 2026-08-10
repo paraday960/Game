@@ -17,6 +17,9 @@ var received_per_peer: Dictionary = {}
 var tick_rate: int = 1
 var current_port: int = 0
 var connected_address: String = ""
+var external_address: String = ""
+var upnp_mapped: bool = false
+var _upnp: UPNP
 
 signal peer_connected(peer_id)
 signal peer_disconnected(peer_id)
@@ -34,6 +37,7 @@ func _ready():
 	start_local_mode()
 
 func start_local_mode():
+	_remove_upnp_mapping()
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = null
@@ -45,6 +49,8 @@ func start_local_mode():
 	received_per_peer.clear()
 	current_port = 0
 	connected_address = ""
+	external_address = ""
+	upnp_mapped = false
 	emit_signal("network_status_changed", get_status())
 
 func host_game(port: int = DEFAULT_PORT, max_peers: int = MAX_PEERS) -> Dictionary:
@@ -88,6 +94,34 @@ func join_game(address: String, port: int = DEFAULT_PORT) -> Dictionary:
 
 func disconnect_game():
 	start_local_mode()
+
+func try_upnp_port_mapping() -> Dictionary:
+	if mode != NetworkMode.HOST or current_port <= 0:
+		return _error("ابتدا بازی را میزبانی کنید")
+	_remove_upnp_mapping()
+	_upnp = UPNP.new()
+	var discover_result = _upnp.discover(2000, 2, "InternetGatewayDevice")
+	if discover_result != UPNP.UPNP_RESULT_SUCCESS:
+		_upnp = null
+		return _error("روتر سازگار با UPnP پیدا نشد؛ اتصال LAN همچنان فعال است")
+	var gateway = _upnp.get_gateway()
+	if gateway == null or not gateway.is_valid_gateway():
+		_upnp = null
+		return _error("درگاه اینترنتی معتبر برای UPnP یافت نشد")
+	var map_result = _upnp.add_port_mapping(current_port, current_port, "Country Simulator ENet", "UDP", 0)
+	if map_result != UPNP.UPNP_RESULT_SUCCESS:
+		_upnp = null
+		return _error("بازکردن خودکار پورت روی روتر ناموفق بود")
+	upnp_mapped = true
+	external_address = _upnp.query_external_address()
+	emit_signal("network_status_changed", get_status())
+	return {"success": true, "external_address": external_address, "port": current_port}
+
+func _remove_upnp_mapping():
+	if upnp_mapped and _upnp != null and current_port > 0:
+		_upnp.delete_port_mapping(current_port, "UDP")
+	upnp_mapped = false
+	_upnp = null
 
 func is_network_active() -> bool:
 	return mode != NetworkMode.LOCAL and multiplayer.multiplayer_peer != null
@@ -151,6 +185,8 @@ func get_status() -> Dictionary:
 		"peers": get_peers_count(),
 		"port": current_port,
 		"address": connected_address,
+		"external_address": external_address,
+		"upnp_mapped": upnp_mapped,
 		"connection": connection
 	}
 
@@ -229,6 +265,7 @@ func _on_server_disconnected():
 	start_local_mode()
 
 func _disconnect_transport():
+	_remove_upnp_mapping()
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = null

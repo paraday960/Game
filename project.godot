@@ -26,6 +26,7 @@ SaveManager="*res://scripts/core/save_manager.gd"
 Deterministic="*res://scripts/core/deterministic.gd"
 AIAdvisor="*res://scripts/ai/ai_advisor.gd"
 PersianFormatter="*res://scripts/ui/persian_formatter.gd"
+FeedbackManager="*res://scripts/ui/feedback_manager.gd"
 P2PManager="*res://scripts/multiplayer/p2p_manager.gd"
 
 [display]

@@ -176,6 +176,7 @@ func _build_chrome():
 		btn.text = tab_def[1]
 		btn.custom_minimum_size = Vector2(150, 56)
 		btn.add_theme_font_size_override("font_size", 17)
+		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_switch_tab.bind(key))
 		tabs_hbox.add_child(btn)
 		tab_buttons[key] = btn
@@ -218,12 +219,14 @@ func _build_chrome():
 	_mk_btn(footer, "⏸️ خودکار: خاموش", Vector2(190, 64), _on_auto_pressed, "AutoBtn")
 	_mk_btn(footer, "💾 ذخیره", Vector2(120, 64), _on_save_pressed)
 	_mk_btn(footer, "📂 بارگذاری", Vector2(130, 64), _on_load_pressed)
+	_mk_btn(footer, "🔊 صدا", Vector2(110, 64), _on_sound_pressed, "SoundBtn")
 
 func _mk_btn(parent, text, minsize, handler, node_name = ""):
 	var btn = Button.new()
 	btn.text = text
 	btn.custom_minimum_size = minsize
 	btn.add_theme_font_size_override("font_size", 17)
+	btn.pressed.connect(FeedbackManager.play_click)
 	btn.pressed.connect(handler)
 	if node_name != "":
 		btn.name = node_name
@@ -729,6 +732,7 @@ func _build_world():
 	network.add_child(network_buttons)
 	_mk_btn(network_buttons, "میزبانی بازی", Vector2(155, 48), _on_host_network)
 	_mk_btn(network_buttons, "اتصال به میزبان", Vector2(175, 48), _on_join_network)
+	_mk_btn(network_buttons, "بازکردن خودکار پورت", Vector2(190, 48), _on_enable_upnp)
 	_mk_btn(network_buttons, "قطع اتصال", Vector2(145, 48), _on_disconnect_network)
 	_refresh_network_status()
 
@@ -777,6 +781,16 @@ func _on_join_network():
 		_toast("⚠️ " + str(result.reason))
 	_refresh_network_status()
 
+func _on_enable_upnp():
+	_toast("در حال بررسی روتر برای بازکردن خودکار پورت…")
+	var result = P2PManager.try_upnp_port_mapping()
+	if result.success:
+		_toast("✅ پورت خودکار باز شد: %s:%s" % [
+			str(result.external_address), PersianFormatter.to_persian_digits(str(result.port))])
+	else:
+		_toast("⚠️ " + str(result.reason))
+	_refresh_network_status()
+
 func _on_disconnect_network():
 	P2PManager.disconnect_game()
 	_toast("اتصال بسته شد؛ بازی در حالت تک‌نفره است")
@@ -796,6 +810,8 @@ func _refresh_network_status():
 		PersianFormatter.to_persian_digits(str(status.peers)),
 		PersianFormatter.to_persian_digits(str(status.port if status.port > 0 else P2PManager.DEFAULT_PORT))
 	]
+	if status.get("upnp_mapped", false):
+		network_status_lbl.text += " | نشانی عمومی: %s" % str(status.get("external_address", ""))
 
 func _on_network_status_changed(_status: Dictionary):
 	_refresh_network_status()
@@ -1025,6 +1041,14 @@ func _on_auto_pressed():
 	if btn:
 		btn.text = "▶️ خودکار: روشن" if auto_tick else "⏸️ خودکار: خاموش"
 
+func _on_sound_pressed():
+	var is_muted = FeedbackManager.toggle_mute()
+	var btn = find_child("SoundBtn", true, false)
+	if btn:
+		btn.text = "🔇 صدا" if is_muted else "🔊 صدا"
+	if not is_muted:
+		FeedbackManager.play_success()
+
 func _on_save_pressed():
 	if P2PManager.is_network_active() and not P2PManager.is_host:
 		_toast("⚠️ فقط میزبان می‌تواند بازی چندنفره را ذخیره کند")
@@ -1076,10 +1100,12 @@ func _run_tick_with(player_cmds: Array) -> bool:
 		P2PManager.broadcast_state(result.state, result.version, result.tick)
 		_refresh_header()
 		_render_events()
-		# بازخورد خوشایند (۳.۲۳۴)
+		# بازخورد دیداری و صوتی رویه‌ای (۳.۲۳۴)
 		_engagement_pulse()
+		FeedbackManager.play_success()
 		return true
 	else:
+		FeedbackManager.play_alert()
 		_toast("⚠️ " + str(result.get("reason", "خطا")))
 		return false
 
@@ -1095,8 +1121,12 @@ func _process(delta):
 			tick_timer = 0.0
 			_run_tick_with([])
 
-func _on_tick_completed(new_state, _events):
+func _on_tick_completed(new_state, events):
 	current_state = new_state.duplicate(true)
+	for event in events:
+		if str(event.get("type", "")) == "achievement_unlocked":
+			FeedbackManager.play_achievement()
+			break
 
 func _on_tick_failed(reason):
 	print("خطای تیک: %s" % reason)
