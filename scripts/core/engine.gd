@@ -147,6 +147,12 @@ func _load_remaining_systems():
 		systems["international_orgs"] = load("res://scripts/systems/international_orgs_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/migration_system.gd"):
 		systems["migration_detail"] = load("res://scripts/systems/migration_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/public_transport_system.gd"):
+		systems["public_transport"] = load("res://scripts/systems/public_transport_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/foreign_affairs_system.gd"):
+		systems["foreign_affairs"] = load("res://scripts/systems/foreign_affairs_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/political_career_system.gd"):
+		systems["political_career"] = load("res://scripts/systems/political_career_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
