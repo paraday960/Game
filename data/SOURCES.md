@@ -1,0 +1,34 @@
+# منابع آزاد داده کشورها
+
+فایل `countries.json` برای اجرای آفلاین بازی ساخته شده و در زمان اجرا هیچ API خارجی فراخوانی نمی‌شود.
+
+## منابع
+
+1. **countries.dev / GeoNames** — جمعیت، پایتخت، مختصات، منطقه، ارز و کدهای ISO 3166
+   - https://countries.dev/
+   - داده جغرافیایی GeoNames تحت مجوز CC BY 4.0
+
+2. **umpirsky/country-list** — نام فارسی کشورهای ISO 3166
+   - https://github.com/umpirsky/country-list
+   - مجوز MIT
+
+3. **umpirsky/currency-list** — نام فارسی ارزها
+   - https://github.com/umpirsky/currency-list
+   - مجوز MIT
+
+4. **World Bank Open Data** — GDP جاری؛ جدیدترین مقدار موجود بین سال‌های ۲۰۲۳ تا ۲۰۲۵
+   - https://api.worldbank.org/
+   - مجوز CC BY 4.0
+
+5. **mledoze/countries** — تشخیص عضویت سازمان ملل و دولت‌های ناظر
+   - https://github.com/mledoze/countries
+   - Open Database License
+
+## دامنه
+
+- ۱۹۳ عضو سازمان ملل
+- فلسطین، دولت ناظر
+- واتیکان، دولت ناظر
+- مجموع: ۱۹۵ کشور
+
+۲۸ کشور قبلی بالانس دست‌ساز خود را حفظ کرده‌اند. برای سایر کشورها شاخص فناوری، قدرت نظامی، اقلیم و ظرفیت شهری با فرمول گیم‌پلی از جمعیت، GDP سرانه، جغرافیا و منطقه محاسبه شده و ادعای رتبه‌بندی رسمی ندارد.

@@ -44,12 +44,12 @@ func _draw():
 		var point = _country_point(code)
 		var relation = float(relations.get(code, 50.0))
 		var color = _relation_color(relation)
-		var radius = 9.0
+		var radius = 4.0 + float(countries[code].get("strategic_weight",0.3)) * 4.0
 		if code == hovered_code:
-			radius = 15.0
-		if code == selected_code:
-			draw_circle(point, 20.0, Color(1.0, 0.86, 0.3, 0.32))
 			radius = 12.0
+		if code == selected_code:
+			draw_circle(point, 17.0, Color(1.0, 0.86, 0.3, 0.32))
+			radius = 10.0
 		draw_circle(point, radius + 3.0, Color(0.02, 0.05, 0.10, 0.92))
 		draw_circle(point, radius, color)
 		draw_arc(point, radius + 2.0, 0, TAU, 24, Color(1, 1, 1, 0.75), 1.5)
@@ -98,7 +98,7 @@ func _gui_input(event):
 
 func _nearest_country(position: Vector2) -> String:
 	var best = ""
-	var best_distance = 28.0
+	var best_distance = 18.0
 	for code in countries.keys():
 		if code == player_country:
 			continue

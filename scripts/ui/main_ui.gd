@@ -18,6 +18,7 @@ var current_tab: String = "dashboard"
 var current_state: Dictionary = {}
 var selected_system: String = "economy"
 var selected_world_country: String = ""
+var world_region_filter: String = "all"
 var country_select_option: OptionButton
 var scenario_select_option: OptionButton
 var scenario_description_lbl: Label
@@ -1475,7 +1476,7 @@ func _build_world():
 	_row(identity, "جمعیت پایه", PersianFormatter.format_large(float(player_profile.get("population", 0))) + " نفر")
 	_row(identity, "تولید داخلی پایه", PersianFormatter.format_money(float(player_profile.get("gdp", 0))))
 
-	var map_card = _card("🗺️ نقشه تعاملی ۱۶ کشور")
+	var map_card = _card("🗺️ نقشه تعاملی ۱۹۵ کشور")
 	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
 	for war_target in world.get("wars", {}).keys():
 		if map_countries.has(war_target):
@@ -1513,11 +1514,21 @@ func _build_world():
 	if selected_world_country != "":
 		_build_selected_country_card(st, selected_world_country)
 
-	var directory = _card("🤝 فهرست روابط")
+	var directory = _card("🤝 فهرست روابط ۱۹۵ کشور")
+	var region_select = OptionButton.new()
+	var region_defs = [["all","همه مناطق"],["Asia","آسیا"],["Europe","اروپا"],["Africa","آفریقا"],["Americas","قاره آمریکا"],["Oceania","اقیانوسیه"]]
+	for region_def in region_defs:
+		region_select.add_item(region_def[1]); region_select.set_item_metadata(region_select.item_count-1,region_def[0])
+		if region_def[0] == world_region_filter: region_select.select(region_select.item_count-1)
+	region_select.item_selected.connect(_on_world_region_selected.bind(region_select)); directory.add_child(region_select)
 	var relation_grid = GridContainer.new()
 	relation_grid.columns = 2
 	directory.add_child(relation_grid)
+	var visible_countries = 0
 	for country in rel.keys():
+		var profile = WorldManager.get_country(str(country))
+		if world_region_filter != "all" and str(profile.get("region","")) != world_region_filter: continue
+		visible_countries += 1
 		var rv = float(rel[country])
 		var relation_button = Button.new()
 		relation_button.text = "%s — %s (%s)" % [
@@ -1526,6 +1537,7 @@ func _build_world():
 		relation_button.pressed.connect(FeedbackManager.play_click)
 		relation_button.pressed.connect(_on_map_country_selected.bind(country))
 		relation_grid.add_child(relation_button)
+	var count_label = Label.new(); count_label.text = "%s کشور در این فیلتر" % PersianFormatter.to_persian_digits(str(visible_countries)); count_label.modulate = Color(0.72,0.78,0.88); directory.add_child(count_label)
 
 	var sanctions = dip.get("sanctions", [])
 	var treaties = dip.get("treaties", [])
@@ -1652,6 +1664,10 @@ func _on_country_start_selected():
 		_toast("🏳️ بازی با %s و سناریوی «%s» آغاز شد" % [
 			WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)])
 		_switch_tab("world")
+
+func _on_world_region_selected(index:int,selector:OptionButton):
+	if index<0 or index>=selector.item_count:return
+	world_region_filter=str(selector.get_item_metadata(index));_switch_tab("world")
 
 func _on_map_country_selected(code: String):
 	selected_world_country = code

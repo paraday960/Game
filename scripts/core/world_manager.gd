@@ -45,7 +45,12 @@ func reload() -> bool:
 	return load_errors.is_empty()
 
 func is_valid() -> bool:
-	return countries.size() >= 8 and load_errors.is_empty()
+	if countries.size() != 195 or not load_errors.is_empty():
+		return false
+	for country in countries.values():
+		for key in ["id","name_fa","capital_fa","currency_fa","population","gdp","lat","lon","climate_fa"]:
+			if not country.has(key): return false
+	return true
 
 func get_country_ids() -> Array:
 	var ids = countries.keys()
@@ -420,9 +425,30 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 	state["world"] = world
 	return {"state":state, "events":events}
 
+func get_strategic_country_ids(player_id: String = "", limit: int = 40) -> Array:
+	var ids = countries.keys()
+	ids.sort_custom(func(a,b): return float(countries[a].get("strategic_weight",0.0)) > float(countries[b].get("strategic_weight",0.0)))
+	var selected: Array = ids.slice(0,min(limit,ids.size()))
+	if countries.has(player_id):
+		var player = countries[player_id]
+		var nearby: Array = []
+		for id in countries.keys():
+			if id == player_id: continue
+			var other = countries[id]
+			var distance = Vector2(float(player.get("lon",0.0)),float(player.get("lat",0.0))).distance_to(Vector2(float(other.get("lon",0.0)),float(other.get("lat",0.0))))
+			nearby.append({"id":id,"distance":distance})
+		nearby.sort_custom(func(a,b): return float(a.distance) < float(b.distance))
+		for item in nearby.slice(0,min(8,nearby.size())):
+			if not selected.has(item.id): selected.append(item.id)
+	return selected
+
 func _build_npc_relations(player_id: String) -> Dictionary:
 	var matrix: Dictionary = {}
-	var ids = countries.keys(); ids.sort()
+	# ماتریس کامل ۱۹۵×۱۹۵ برای هر بازیکن حجیم است؛ AI راهبردی روی ۴۰ قدرت اصلی
+	# و نزدیک‌ترین همسایگان کشور بازیکن اجرا می‌شود. همه ۱۹۵ کشور همچنان قابل‌بازی‌اند.
+	var ids = get_strategic_country_ids(player_id, 40)
+	ids.sort()
+
 	for i in range(ids.size()):
 		var a = str(ids[i])
 		if a == player_id: continue

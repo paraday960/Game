@@ -36,9 +36,12 @@ func _ready():
 		failed.append("قوانین ملی داده‌محور نامعتبر هستند")
 	if not IntelligenceOperationManager.is_valid():
 		failed.append("عملیات اطلاعاتی داده‌محور نامعتبر هستند")
-	if not WorldManager.is_valid() or WorldManager.countries.size() != 28 or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 27:
-		failed.append("داده جهان یا روابط ۲۸ کشور کامل نیست")
+	if not WorldManager.is_valid() or WorldManager.countries.size() != 195 or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 194:
+		failed.append("داده جهان یا روابط ۱۹۵ کشور کامل نیست")
 	else:
+		var matrix_size = GameState.state.get("world", {}).get("npc_relations", {}).size()
+		if matrix_size < 500 or matrix_size > 1500:
+			failed.append("ماتریس راهبردی AI برای ۱۹۵ کشور خارج از سقف عملکرد است: %d" % matrix_size)
 		var country_result = GameEngine.tick(GameState.state, 0, 0, [GameCommand.create_country_select("JPN", "innovation_leader")])
 		if not country_result.success or country_result.state.get("country", {}).get("id", "") != "JPN":
 			failed.append("انتخاب اتمی کشور آغازین شکست خورد")
@@ -47,7 +50,11 @@ func _ready():
 		elif abs(float(country_result.state.get("analytics", {}).get("baseline_gdp", 0.0)) - float(WorldManager.get_country("JPN").get("gdp", 0.0))) > 1.0:
 			failed.append("خط پایه تحلیل پس از انتخاب کشور بازنشانی نشد")
 		else:
-			print("World + scenario + analytics baseline selection OK")
+			var micro_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "VAT")
+			if micro_state.get("country", {}).get("id", "") != "VAT" or float(micro_state.get("population", {}).get("total", 0)) <= 0:
+				failed.append("کشور کوچک واتیکان قابل انتخاب و شبیه‌سازی نیست")
+			else:
+				print("World + scenario + analytics baseline + microstate selection OK")
 		var rich_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "USA")
 		var relation_before = float(rich_state["diplomacy"]["relations"]["TUR"])
 		var rich_tick = GameEngine.tick(rich_state, 0, 0, [])

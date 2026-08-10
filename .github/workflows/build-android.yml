@@ -74,6 +74,7 @@ jobs:
       - name: Run simulation and UI tests
         run: |
           set -euo pipefail
+          python3 tests/validate_country_data.py
           godot --headless --path . res://tests/test_scene.tscn
           godot --headless --path . res://tests/test_long.tscn
           godot --headless --path . -s res://tests/test_ui.gd
