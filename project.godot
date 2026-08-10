@@ -50,5 +50,6 @@ ui_select={
 
 [rendering]
 
+textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.05, 0.08, 0.15, 1)
