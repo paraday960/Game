@@ -108,6 +108,11 @@ func load_slot(slot: int) -> Dictionary:
 		return _fail("شماره جایگاه ذخیره نامعتبر است")
 	return load_game(slot_path(slot))
 
+func delete_slot(slot: int) -> bool:
+	if slot < 1 or slot > MAX_SLOTS:
+		return false
+	return delete_save(slot_path(slot))
+
 func slot_path(slot: int) -> String:
 	return "%s/slot_%d.json" % [SAVES_DIR, slot]
 

@@ -11,6 +11,8 @@ const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 var auto_tick: bool = false
 var tick_timer: float = 0.0
 var toast_generation: int = 0
+var pending_delete_slot: int = 0
+var new_game_confirmation: bool = false
 var current_tab: String = "dashboard"
 var current_state: Dictionary = {}
 var selected_system: String = "economy"
@@ -565,6 +567,26 @@ func _build_settings_card():
 	_mk_btn(grid, "کنتراست بالا: %s" % ("روشن" if SettingsManager.get_value("high_contrast", false) else "خاموش"), Vector2(220, 48), _on_contrast_pressed)
 	_mk_btn(grid, "کاهش حرکت: %s" % ("روشن" if SettingsManager.get_value("reduce_motion", false) else "خاموش"), Vector2(220, 48), _on_reduce_motion_pressed)
 	_mk_btn(grid, "نمایش دوباره راهنما", Vector2(220, 48), _on_show_tutorial)
+	_mk_btn(grid, "تأیید بازی جدید" if new_game_confirmation else "آغاز بازی جدید", Vector2(220, 48), _on_new_game_pressed)
+
+func _on_new_game_pressed():
+	if not new_game_confirmation:
+		new_game_confirmation = true
+		_toast("⚠️ بازی ذخیره‌نشده از بین می‌رود؛ برای تأیید دوباره «بازی جدید» را بزنید")
+		_switch_tab("dashboard")
+		return
+	new_game_confirmation = false
+	auto_tick = false
+	P2PManager.disconnect_game()
+	EventLog.clear()
+	GameState.init_default_state()
+	selected_world_country = ""
+	selected_system = "economy"
+	current_state = GameState.get_state_copy()
+	_refresh_header()
+	_render_events()
+	_toast("🆕 بازی جدید آماده است؛ کشور و سناریو را انتخاب کنید")
+	_switch_tab("world")
 
 func _on_speed_pressed():
 	SettingsManager.cycle_speed()
@@ -704,6 +726,13 @@ func _build_save_slots_card():
 		load_button.pressed.connect(FeedbackManager.play_click)
 		load_button.pressed.connect(_on_load_slot.bind(slot))
 		row.add_child(load_button)
+		var delete_button = Button.new()
+		delete_button.text = "تأیید حذف" if pending_delete_slot == slot else "حذف"
+		delete_button.disabled = not metadata.get("exists", false)
+		delete_button.modulate = Color(1.0, 0.58, 0.55)
+		delete_button.pressed.connect(FeedbackManager.play_click)
+		delete_button.pressed.connect(_on_delete_slot.bind(slot))
+		row.add_child(delete_button)
 
 func _on_save_slot(slot: int):
 	if P2PManager.is_network_active() and not P2PManager.is_host:
@@ -729,6 +758,22 @@ func _on_load_slot(slot: int):
 		_switch_tab("dashboard")
 	else:
 		_toast("⚠️ " + str(result.get("reason", "بارگذاری ناموفق")))
+
+func _on_delete_slot(slot: int):
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		_toast("⚠️ فقط میزبان می‌تواند ذخیره را حذف کند")
+		return
+	if pending_delete_slot != slot:
+		pending_delete_slot = slot
+		_toast("⚠️ برای حذف دائمی جایگاه %s دوباره دکمه حذف را بزنید" % PersianFormatter.to_persian_digits(str(slot)))
+		_switch_tab("dashboard")
+		return
+	if SaveManager.delete_slot(slot):
+		pending_delete_slot = 0
+		_toast("🗑️ جایگاه %s حذف شد" % PersianFormatter.to_persian_digits(str(slot)))
+		_switch_tab("dashboard")
+	else:
+		_toast("⚠️ حذف جایگاه ناموفق بود")
 
 func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
 	var panel = PanelContainer.new()
