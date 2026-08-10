@@ -1,6 +1,9 @@
 extends Node
 # موتور شبیه‌سازی اتمی - بخش ۳.۶ و ۳.۷ - مهم‌ترین اصل معماری
 
+# preload مستقیم - بدون وابستگی به کش کلاس سراسری (سازگار با import سرد و CI)
+const GameCommandClass = preload("res://scripts/core/command.gd")
+
 signal tick_completed(new_state, events)
 signal tick_failed(reason)
 
@@ -42,10 +45,44 @@ var system_order = [
 	"settlements",    # 3.42 تفصیلی
 	"transport_roads",# 3.43 تفصیلی
 	"hospitality",    # 3.44
-	"retail",         # 3.45 بعدی
+	"retail",         # 3.45
 	"fuel_stations",  # 3.46
-	"urban_facilities"# 3.47
+	"urban_facilities", # 3.47
+	"physical",       # 3.42-3.52 لایه تجمیعی فیزیکی
+	"public_services",   # 3.48
+	"industry_sites",    # 3.49
+	"financial_services",# 3.50
+	"public_religious",  # 3.51
+	"government_buildings", # 3.52
+	"public_transport",  # 3.70
+	"people",            # 3.53-3.62 لایه تجمیعی انسانی
+	"citizens_detail",   # 3.53
+	"workforce_detail",  # 3.54
+	"officials",         # 3.55
+	"politicians_detail",# 3.56
+	"public_employees",  # 3.57
+	"private_sector",    # 3.58
+	"elites_detail",     # 3.59
+	"security_forces_detail", # 3.60
+	"religious_leaders", # 3.61
+	"households_detail_full", # 3.62
+	"political_career",  # 3.72
+	"migration_detail",  # 3.69
+	"prison",            # 3.67
+	"human_states",      # 3.66
+	"international_orgs",# 3.68
+	"foreign_affairs",   # 3.71
+	"interdependency",   # 3.63 مدل اثرگذاری متقابل
+	"quantitative"       # 3.64 دقیق‌سازی کمّی و زمانی
 ]
+
+# نام فصل‌ها بر اساس ماه
+const SEASONS = {
+	1: "بهار", 2: "بهار", 3: "بهار",
+	4: "تابستان", 5: "تابستان", 6: "تابستان",
+	7: "پاییز", 8: "پاییز", 9: "پاییز",
+	10: "زمستان", 11: "زمستان", 12: "زمستان"
+}
 
 # سیستم‌های لود شده
 var systems: Dictionary = {}
@@ -156,6 +193,20 @@ func _load_remaining_systems():
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
+# پیشروی ساعت بازی - هر تیک یک روز (ماه ۳۰ روز)
+func _advance_clock(state: Dictionary) -> Dictionary:
+	var clock = state.get("clock", {"year": 2027, "month": 1, "day": 1, "hour": 0, "season": "بهار"})
+	clock["day"] = clock.get("day", 1) + 1
+	if clock["day"] > 30:
+		clock["day"] = 1
+		clock["month"] = clock.get("month", 1) + 1
+		if clock["month"] > 12:
+			clock["month"] = 1
+			clock["year"] = clock.get("year", 2027) + 1
+	clock["season"] = SEASONS.get(clock["month"], "بهار")
+	state["clock"] = clock
+	return state
+
 # تابع اصلی تیک - اجرای اتمی
 func tick(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:
 	# ۱. اعتبارسنجی ورودی‌ها
@@ -178,6 +229,9 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 	# اعمال فرمان‌ها روی snapshot
 	for cmd in commands:
 		_apply_command_to_snapshot(snapshot, cmd)
+
+	# پیشروی ساعت - هر تیک یک روز
+	snapshot = _advance_clock(snapshot)
 
 	# ۳. اجرای همه معادلات و هوش سیستم‌ها به‌صورت اتمی
 	var compute_result = _compute_all_systems(snapshot, snapshot_tick)
@@ -214,7 +268,7 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 func _validate_commands(commands: Array, state: Dictionary) -> Dictionary:
 	# هر فرمان باید معتبر باشد
 	for cmd in commands:
-		if cmd is GameCommand:
+		if cmd is GameCommandClass:
 			if cmd.type == "tax_set":
 				var rate = cmd.payload.get("rate", 0.2)
 				if rate < 0.0 or rate > 0.9:
@@ -230,7 +284,7 @@ func _validate_commands(commands: Array, state: Dictionary) -> Dictionary:
 	return {"valid": true, "reason": ""}
 
 func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
-	if cmd is GameCommand:
+	if cmd is GameCommandClass:
 		if cmd.type == "budget_allocate":
 			var allocs = cmd.payload.get("allocations", {})
 			for k in allocs.keys():
@@ -241,6 +295,14 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		elif cmd.type == "research_start":
 			var tech_id = cmd.payload.get("tech_id", "")
 			snapshot["technology"]["in_progress"] = tech_id
+		elif cmd.type == "diplomacy":
+			var target = cmd.payload.get("target", "")
+			var action = cmd.payload.get("action", "")
+			if snapshot["diplomacy"]["relations"].has(target):
+				if action == "improve_relations":
+					snapshot["diplomacy"]["relations"][target] = clamp(snapshot["diplomacy"]["relations"][target] + 5, -100, 100)
+				elif action == "negotiate_sanctions" and snapshot["diplomacy"]["sanctions"].size() > 0:
+					snapshot["diplomacy"]["sanctions"].pop_back()
 		# لاگ فرمان
 		EventLog.log_event("command_applied", cmd.to_dict(), snapshot.get("tick", 0), snapshot.get("version", 0))
 

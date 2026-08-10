@@ -1,11 +1,12 @@
 extends RefCounted
 class_name CommandBus
+const GameCommandClass = preload("res://scripts/core/command.gd")
 # گذرگاه فرمان - بخش ۳.۷ لایه ۶ - فرمان‌محور
 
 var queue: Array = []
 var processed_ids: Dictionary = {} # برای ایدمپوتنسی
 
-func enqueue(cmd: GameCommand):
+func enqueue(cmd: GameCommandClass):
     var key = Versioning.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id)
     if processed_ids.has(key):
         # قبلا پردازش شده - ایدمپوتنت

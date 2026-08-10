@@ -98,7 +98,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	people["emotions"] = emotions
 
 	# نخبگان - فرار مغزها
-	var brain_drain_risk = (1.0 - happiness) * 0.3 + (economy.get("gdp_per_capita",5000.0) < 3000.0) * 0.2 + (state.get("politics",{}).get("stability",0.6) < 0.4) * 0.2
+	var brain_drain_risk = (1.0 - happiness) * 0.3
+	brain_drain_risk += 0.2 if economy.get("gdp_per_capita", 5000.0) < 3000.0 else 0.0
+	brain_drain_risk += 0.2 if state.get("politics", {}).get("stability", 0.6) < 0.4 else 0.0
 	if brain_drain_risk > 0.5 and Deterministic.chance(0.01):
 		events.append({"type": "brain_drain", "message": "فرار مغزها - مهاجرت نخبگان علمی و کارآفرینان", "risk": brain_drain_risk})
 		people["elites"]["نخبه_علمی"] -= 100

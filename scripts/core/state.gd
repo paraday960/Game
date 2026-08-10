@@ -206,6 +206,14 @@ func init_default_state():
 			"households": 25_000_000,
 			"leaders": 100
 		},
+		# سیستم‌های فیزیکی تفصیلی - 3.45 تا 3.47 (کلیدهای یکسان با سیستم‌ها)
+		"retail": {"shops": 200000, "chain_stores": 5000, "bazaars": 5000, "supermarkets": 3000,
+			"coverage": 0.85, "competition": 0.60, "price_level": 1.0, "e_commerce_share": 0.15, "employment": 1500000},
+		"fuel_stations": {"gas_stations": 4000, "ev_charging": 500, "gasoline_price": 15000.0,
+			"coverage": 0.75, "renewable_share": 0.05, "storage_days": 15.0, "smuggling": 0.15},
+		"urban_facilities": {"water_network": 0.75, "electricity_grid": 0.70, "telecom_coverage": 0.80,
+			"waste_collection": 0.70, "waste_recycling": 0.15, "sewage_coverage": 0.65,
+			"street_lighting": 0.60, "maintenance_cost": 2_000_000_000.0},
 		# شاخص‌های کلان
 		"indicators": {
 			"hdi": 0.75,

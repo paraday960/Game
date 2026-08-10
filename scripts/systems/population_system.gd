@@ -76,7 +76,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# رضایت - ۳.۱۱.۳
 	# رضایت = f(رفاه، بیکاری، تورم، امنیت، آزادی، بهداشت)
-	var happiness = 0.5
+	# مبنای ۰.۰۵ - تعادل در شرایط متوسط ≈ ۰.۶۷ (بدون مدیریت به سقف نمی‌رسد)
+	var happiness = 0.05
 	happiness += (1.0 - econ["unemployment"]) * 0.2
 	happiness += (1.0 - econ["inflation"]) * 0.15
 	happiness += health["quality"] * 0.15

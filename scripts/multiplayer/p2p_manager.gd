@@ -1,5 +1,6 @@
 extends Node
 # مدیریت P2P - بخش ۳.۸ - بدون سرور مرکزی، پردازش روی گوشی
+const GameCommandClass = preload("res://scripts/core/command.gd")
 
 var is_host: bool = false
 var host_id: String = ""
@@ -27,7 +28,7 @@ func join_game(join_host_id: String):
     host_id = join_host_id
     print("اتصال به میزبان: %s" % join_host_id)
 
-func send_command(cmd: GameCommand):
+func send_command(cmd: GameCommandClass):
     # در نسخه تک‌نفره مستقیم اعمال می‌شود
     # در نسخه P2P از طریق WebSocket ارسال می‌شود
     pending_commands.append(cmd)

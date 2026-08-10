@@ -1,5 +1,5 @@
 extends BaseSystem
-# ۳.۵۵ دولتمردان و مدیران
+# ۳.۵۵ دولتمردان و مدیران - وزرا، استانداران، مدیران ارشد
 func compute(state: Dictionary, tick: int) -> Dictionary:
     var officials=state.get("officials",{})
     officials["ministers"]=officials.get("ministers",20)
@@ -16,6 +16,6 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
     officials["corruption"]=corruption
     officials["turnover"]=clamp(0.15 + (1.0-stability)*0.2,0.05,0.50)
     if corruption>0.6 and Deterministic.chance(0.01):
-        events.append({"type":"manager_corruption","message":"افشای فساد مدیران ارشد"})
+        events.append({"type":"manager_corruption","message":"افشای فساد مدیران ارشد - برکناری وزیر"})
     state["officials"]=officials
     return {"success":true,"state":state,"events":events}

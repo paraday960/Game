@@ -1,5 +1,5 @@
 extends BaseSystem
-# ۳.۵۶ سیاست‌مداران
+# ۳.۵۶ سیاست‌مداران - احزاب، جناح‌ها، ایدئولوژی
 func compute(state: Dictionary, tick: int) -> Dictionary:
     var pols=state.get("politicians_detail",{})
     pols["parties"]=pols.get("parties",5)
@@ -14,6 +14,6 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
     pols["trust_politicians"]=clamp(pols["trust_politicians"]*0.99 + politics.get("trust",0.55)*0.01,0.1,0.85)
     pols["populism"]=clamp(pols["populism"] + (1.0-state.get("population",{}).get("happiness",0.6))*0.001,0.05,0.80)
     if pols["polarization"]>0.7 and Deterministic.chance(0.012):
-        events.append({"type":"polarization_crisis","message":"قطبی‌شدن شدید سیاسی"})
+        events.append({"type":"polarization_crisis","message":"قطبی‌شدن شدید سیاسی - بن‌بست در پارلمان"})
     state["politicians_detail"]=pols
     return {"success":true,"state":state,"events":events}

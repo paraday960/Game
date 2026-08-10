@@ -1,6 +1,8 @@
 extends Control
 # UI اصلی بازی - فارسی ۱۰۰٪ - قانون ۶
 
+const GameCommandClass = preload("res://scripts/core/command.gd")
+
 var current_state: Dictionary
 var tick_timer: float = 0.0
 var auto_tick: bool = false
@@ -140,6 +142,12 @@ func _create_ui():
 	save_btn.pressed.connect(_on_save_pressed)
 	btn_container.add_child(save_btn)
 
+	var load_btn = Button.new()
+	load_btn.text = "📂 بارگذاری"
+	load_btn.custom_minimum_size = Vector2(120, 60)
+	load_btn.pressed.connect(_on_load_pressed)
+	btn_container.add_child(load_btn)
+
 	# لاگ رویدادها
 	var event_label = Label.new()
 	event_label.text = "\n📜 رویدادها"
@@ -230,10 +238,16 @@ func _update_ui():
 	var engagement = find_child("Engagement", true, false)
 	if engagement and current_state.has("tick"):
 		var days = current_state.get("tick",0)
-		engagement.text = "📅 روز %s | سال %s | 🔥 استریک: %s روز | ⭐ امتیاز: %s | 🏆 سطح: %s" % [
+		var clock = current_state.get("clock", {})
+		var date_str = "%s/%s/%s (%s)" % [
+			PersianFormatter.to_persian_digits(str(clock.get("year", 2027))),
+			PersianFormatter.to_persian_digits("%02d" % clock.get("month", 1)),
+			PersianFormatter.to_persian_digits("%02d" % clock.get("day", 1)),
+			clock.get("season", "بهار")
+		]
+		engagement.text = "📅 %s | 🔥 استریک: %s روز | ⭐ امتیاز: %s | 🏆 سطح: %s" % [
+			date_str,
 			PersianFormatter.to_persian_digits(str(days)) if PersianFormatter else str(days),
-			PersianFormatter.to_persian_digits(str(current_state.get("clock",{}).get("year",2027))) if PersianFormatter else str(2027),
-			PersianFormatter.to_persian_digits(str(int(days/1))) if PersianFormatter else str(days),
 			PersianFormatter.format_number(int(current_state.get("score",0))) if PersianFormatter else str(current_state.get("score",0)),
 			PersianFormatter.to_persian_digits(str(current_state.get("level",1))) if PersianFormatter else str(current_state.get("level",1))
 		]
@@ -270,7 +284,7 @@ func _do_tick():
 		cmds = P2PManager.get_pending_commands()
 
 	# فرمان تیک بعدی
-	cmds.append(GameCommand.create_next_tick())
+	cmds.append(GameCommandClass.create_next_tick())
 
 	var result = GameEngine.tick(GameState.state, GameState.version, GameState.tick, cmds)
 	if result.success:
@@ -299,3 +313,23 @@ func _process(delta):
 		if tick_timer > 1.0:  # هر ثانیه یک تیک
 			tick_timer = 0.0
 			_do_tick()
+
+
+func _on_load_pressed():
+	# بارگذاری بازی ذخیره‌شده
+	if not FileAccess.file_exists("user://savegame.json"):
+		print("فایل ذخیره‌ای یافت نشد")
+		return
+	var file = FileAccess.open("user://savegame.json", FileAccess.READ)
+	if not file:
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Dictionary and parsed.has("economy") and parsed.has("population"):
+		GameState.set_state(parsed, parsed.get("version", 0), parsed.get("tick", 0))
+		_update_ui()
+		print("بازی بارگذاری شد - روز %d" % parsed.get("tick", 0))
+		if EventLog:
+			EventLog.log_event("load", {"tick": parsed.get("tick", 0)}, parsed.get("tick", 0), parsed.get("version", 0))
+	else:
+		print("فایل ذخیره خراب است")

@@ -1,0 +1,107 @@
+extends Node
+# تست خودکار موتور در حالت بازی واقعی - با autoloadهای واقعی
+
+func _ready():
+	print("=== TEST START ===")
+	print("Systems loaded: %d" % GameEngine.systems.size())
+	var failed: Array = []
+
+	for n in GameEngine.system_order:
+		if not GameEngine.systems.has(n):
+			failed.append("در ترتیب اجراست ولی لود نشده: " + n)
+	for n in GameEngine.systems.keys():
+		if not GameEngine.system_order.has(n):
+			failed.append("لود شده ولی در ترتیب اجرا نیست: " + n)
+
+	var s = GameState.state
+	var v = GameState.version
+	var t = GameState.tick
+
+	for i in range(10):
+		var cmds: Array = []
+		if i == 2:
+			cmds.append(GameCommand.create_tax_set(0.25))
+		if i == 5:
+			cmds.append(GameCommand.create_budget_allocate({"آموزش":0.1,"بهداشت":0.1,"ارتش":0.1,"زیرساخت":0.15,"رفاه":0.15,"فناوری":0.05,"امنیت":0.05,"اداره":0.05,"محیط":0.05,"ذخیره":0.2}))
+		if i == 7:
+			cmds.append(GameCommand.create_diplomacy_action("همسایه_شرقی", "improve_relations"))
+		var result = GameEngine.tick(s, v, t, cmds)
+		if result.success:
+			s = result.state
+			v = result.version
+			t = result.tick
+			print("tick %2d OK | GDP=%.0f | pop=%d | happy=%.3f | stab=%.3f | score=%.1f | %d/%02d/%02d" % [
+				t, s["economy"]["gdp"], s["population"]["total"], s["population"]["happiness"],
+				s["politics"]["stability"], s.get("score", 0),
+				s["clock"]["year"], s["clock"]["month"], s["clock"]["day"]])
+			for key in ["economy","population","politics","military","resources","indicators","clock"]:
+				if not s.has(key):
+					failed.append("کلید گمشده پس از تیک: " + key)
+			var g = s["economy"]["gdp"]
+			if is_nan(g) or is_inf(g):
+				failed.append("GDP نامعتبر در تیک %d" % t)
+				break
+		else:
+			failed.append("تیک %d شکست: %s" % [i, result.reason])
+			break
+
+	var clock_ok = (s["clock"]["day"] == 11)  # ۱۰ تیک از روز ۱ → روز ۱۱
+	print("Clock advanced: %s (day=%d season=%s)" % ["YES" if clock_ok else "NO", s["clock"]["day"], s["clock"]["season"]])
+	if not clock_ok:
+		failed.append("ساعت بازی پیش نرفت")
+
+	print("Events logged: %d" % EventLog.count())
+
+	# دترمینستیک؟
+	GameState.init_default_state()
+	var r1 = GameEngine.tick(GameState.state, 0, 0, [])
+	GameState.init_default_state()
+	var r2 = GameEngine.tick(GameState.state, 0, 0, [])
+	var det_ok = JSON.stringify(r1.get("state", {})) == JSON.stringify(r2.get("state", {}))
+	print("Deterministic: %s" % ("OK" if det_ok else "MISMATCH"))
+	if not det_ok:
+		failed.append("تیک غیرقطعی")
+
+	# ذخیره/بارگذاری
+	var json = JSON.stringify(s)
+	var parsed = JSON.parse_string(json)
+	print("Save/Load JSON: %s" % ("OK" if parsed != null and parsed.has("economy") else "FAIL"))
+	if parsed == null:
+		failed.append("ذخیره JSON خراب")
+
+	# سیستم‌های فیزیکی جدید ۳.۴۵-۳.۴۷
+	for newkey in ["retail", "fuel_stations", "urban_facilities"]:
+		if not s.has(newkey):
+			failed.append("state سیستم جدید گمشده: " + newkey)
+		else:
+			print("  ✓ state: %s" % newkey)
+
+	# تست همه AIها - هر کدام decide قابل اجرا بدون خطا
+	var ai_dir = DirAccess.open("res://scripts/ai/")
+	var ai_ok = 0
+	var ai_fail = 0
+	if ai_dir:
+		for fname in ai_dir.get_files():
+			if fname.ends_with("_ai.gd") and fname != "base_ai.gd":
+				var ai = load("res://scripts/ai/" + fname).new()
+				if ai.has_method("decide"):
+					var d = ai.decide(s, t)
+					if d is Array:
+						ai_ok += 1
+					else:
+						ai_fail += 1
+						failed.append("AI خروجی نامعتبر: " + fname)
+	print("AI check: %d OK, %d failed" % [ai_ok, ai_fail])
+
+	print("")
+	if failed.size() == 0:
+		print("=== ✅ ALL TESTS PASSED (%d systems) ===" % GameEngine.systems.size())
+	else:
+		print("=== ❌ ISSUES FOUND: %d ===" % failed.size())
+		var seen = {}
+		for f in failed:
+			if not seen.has(f):
+				print("  ✗ " + f)
+				seen[f] = true
+
+	get_tree().quit()
