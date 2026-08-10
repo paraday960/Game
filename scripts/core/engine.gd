@@ -9,7 +9,7 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy",
-	"country_select", "policy_change", "decision_resolve"
+	"country_select", "policy_change", "municipal_action", "decision_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -84,14 +84,6 @@ var system_order = [
 	"interdependency",   # 3.63 مدل اثرگذاری متقابل
 	"quantitative"       # 3.64 دقیق‌سازی کمّی و زمانی
 ]
-
-# نام فصل‌ها بر اساس ماه
-const SEASONS = {
-	1: "بهار", 2: "بهار", 3: "بهار",
-	4: "تابستان", 5: "تابستان", 6: "تابستان",
-	7: "پاییز", 8: "پاییز", 9: "پاییز",
-	10: "زمستان", 11: "زمستان", 12: "زمستان"
-}
 
 # سیستم‌های لود شده
 var systems: Dictionary = {}
@@ -202,22 +194,6 @@ func _load_remaining_systems():
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
-# پیشروی ساعت بازی - هر تیک یک روز (ماه ۳۰ روز)
-func _advance_clock(state: Dictionary) -> Dictionary:
-	var clock = state.get("clock", {"year": 2027, "month": 1, "day": 1, "hour": 0, "season": "بهار"})
-	var days_per_month = int(BalanceConfig.get_value("simulation.days_per_month", 30))
-	var months_per_year = int(BalanceConfig.get_value("simulation.months_per_year", 12))
-	clock["day"] = int(clock.get("day", 1)) + 1
-	if clock["day"] > days_per_month:
-		clock["day"] = 1
-		clock["month"] = int(clock.get("month", 1)) + 1
-		if clock["month"] > months_per_year:
-			clock["month"] = 1
-			clock["year"] = clock.get("year", 2027) + 1
-	clock["season"] = SEASONS.get(clock["month"], "بهار")
-	state["clock"] = clock
-	return state
-
 # تابع اصلی تیک - اجرای اتمی
 func tick(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:
 	# ۱. تکمیل فراداده و اعتبارسنجی ورودی‌ها
@@ -248,10 +224,10 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 	for cmd in commands:
 		_apply_command_to_snapshot(snapshot, cmd)
 
-	# پیشروی ساعت - هر تیک یک روز
-	snapshot = _advance_clock(snapshot)
+	# نوبت ماهانه آغاز می‌شود و روزهای داخلی آن در موتور اجرا خواهند شد.
+	snapshot = TimeManager.begin_turn(snapshot, snapshot_tick)
 
-	# ۳. اجرای همه معادلات و هوش سیستم‌ها به‌صورت اتمی
+	# ۳. اجرای همه معادلات و هوش سیستم‌ها به‌صورت اتمی در یک ماه کامل
 	var compute_result = _compute_all_systems(snapshot, snapshot_tick)
 	if not compute_result.success:
 		# ۴. Rollback - نه وضعیت و نه رویدادهای میانی اعمال نمی‌شوند.
@@ -361,6 +337,10 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var policy_check = PolicyManager.can_change(state, policy_id, enabled)
 			if not policy_check.valid:
 				return {"valid": false, "reason": policy_check.reason}
+		elif cmd.type == "municipal_action":
+			var municipal_check = SeasonalManager.can_action(state, str(cmd.payload.get("action", "")))
+			if not municipal_check.valid:
+				return {"valid": false, "reason": municipal_check.reason}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -410,6 +390,8 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		var country_id = str(cmd.payload.get("country_id", ""))
 		var scenario_id = str(cmd.payload.get("scenario_id", ScenarioManager.default_scenario))
 		snapshot = WorldManager.apply_country_profile(snapshot, country_id)
+		snapshot = TimeManager.reset(snapshot)
+		snapshot = SeasonalManager.reset_for_country(snapshot, country_id)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
@@ -426,6 +408,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 			snapshot = policy_result.state
 			for policy_event in policy_result.events:
 				EventLog.log_event("policy_event", policy_event, cmd.tick, cmd.version)
+	elif cmd.type == "municipal_action":
+		var municipal_result = SeasonalManager.apply_action(snapshot, str(cmd.payload.get("action", "")), cmd.tick)
+		if municipal_result.success:
+			snapshot = municipal_result.state
+			for municipal_event in municipal_result.events:
+				EventLog.log_event("municipal_event", municipal_event, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
@@ -439,54 +427,79 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 	# تمام انواع فرمان در همان تراکنش و با فراداده نسخه مقصد ثبت می‌شوند.
 	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 
-func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
-	# ترتیب دترمینستیک بسیار مهم است برای عدم Desync در چندنفره
+func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
+	# هر فرمان بازیکن یک ماه است؛ معادلات قدیمی و عمیق در روزهای داخلی ماه اجرا می‌شوند.
 	var generated_events: Array = []
-	for sys_name in system_order:
-		if systems.has(sys_name):
-			var sys = systems[sys_name]
-			var result = sys.compute(snapshot, tick)
-			if not result.success:
-				return {"success": false, "reason": "خطا در سیستم %s: %s" % [sys_name, result.reason], "state": snapshot}
-			snapshot = result.state
-			# هر سیستم می‌تواند رویداد تولید کند
-			if result.has("events"):
-				for e in result.events:
-					var wrapped = {"system": sys_name, "event": e.duplicate(true)}
-					generated_events.append(wrapped)
-					EventLog.log_event("system_event", wrapped, tick, snapshot.get("version", 0))
+	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
+	snapshot = seasonal_result.state
+	for seasonal_event in seasonal_result.events:
+		var wrapped_seasonal = {"system":"seasonal", "event":seasonal_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_seasonal)
+		EventLog.log_event("seasonal_event", seasonal_event, turn, snapshot.get("version", 0))
 
-	var policy_simulation = PolicyManager.simulate(snapshot, tick)
-	snapshot = policy_simulation.state
-	for policy_event in policy_simulation.events:
-		var wrapped_policy = {"system": "policies", "event": policy_event.duplicate(true)}
-		generated_events.append(wrapped_policy)
-		EventLog.log_event("policy_event", policy_event, tick, snapshot.get("version", 0))
+	var days = int(snapshot.get("time", {}).get("days_in_month", 30))
+	for day in range(1, days + 1):
+		snapshot = TimeManager.set_simulation_day(snapshot, day)
+		var simulation_day = TimeManager.get_total_days(snapshot) + 1
+		var daily_result = _compute_daily_systems(snapshot, turn, simulation_day)
+		if not daily_result.success:
+			return daily_result
+		snapshot = daily_result.state
+		generated_events.append_array(daily_result.events)
 
-	# محاسبه شاخص‌های کلان و لایه پیشرفت در انتها
+		var policy_simulation = PolicyManager.simulate(snapshot, simulation_day)
+		snapshot = policy_simulation.state
+		for policy_event in policy_simulation.events:
+			var wrapped_policy = {"system":"policies", "event":policy_event.duplicate(true), "simulation_day":simulation_day}
+			generated_events.append(wrapped_policy)
+			EventLog.log_event("policy_event", policy_event, turn, snapshot.get("version", 0))
+		snapshot = TimeManager.finish_simulation_day(snapshot)
+
+	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
 	snapshot = _compute_indicators(snapshot)
-	var progression_result = ProgressionManagerClass.update(snapshot, tick)
+	var progression_result = ProgressionManagerClass.update(snapshot, turn)
 	snapshot = progression_result.state
 	for achievement in progression_result.unlocked:
 		EventLog.log_event("achievement_unlocked", {
 			"message": "دستاورد «%s» باز شد" % achievement.get("title", ""),
 			"achievement": achievement
-		}, tick, snapshot.get("version", 0))
+		}, turn, snapshot.get("version", 0))
 
-	var scenario_result = ScenarioManager.update(snapshot, tick)
+	var scenario_result = ScenarioManager.update(snapshot, turn)
 	snapshot = scenario_result.state
 	for scenario_event in scenario_result.events:
-		var wrapped_scenario = {"system": "scenario", "event": scenario_event.duplicate(true)}
+		var wrapped_scenario = {"system":"scenario", "event":scenario_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
 		generated_events.append(wrapped_scenario)
-		EventLog.log_event("scenario_event", scenario_event, tick, snapshot.get("version", 0))
+		EventLog.log_event("scenario_event", scenario_event, turn, snapshot.get("version", 0))
 
-	snapshot = AnalyticsManager.update(snapshot, tick)
+	snapshot = AnalyticsManager.update(snapshot, turn)
+	snapshot = ReportManager.build(snapshot, generated_events, turn)
+	EventLog.log_event("monthly_summary", {
+		"message": ReportManager.summary_message(snapshot["monthly_report"]),
+		"report": snapshot["monthly_report"].duplicate(true)
+	}, turn, snapshot.get("version", 0))
+	snapshot = TimeManager.finish_turn(snapshot)
 
-	# بررسی ثبات کلی - هیچ عدد منفی غیرمجاز
 	var integrity = _check_integrity(snapshot)
 	if not integrity.valid:
 		return {"success": false, "reason": integrity.reason, "state": snapshot}
+	return {"success": true, "state": snapshot, "events": generated_events}
 
+func _compute_daily_systems(snapshot: Dictionary, turn: int, simulation_day: int) -> Dictionary:
+	var generated_events: Array = []
+	for sys_name in system_order:
+		if not systems.has(sys_name):
+			continue
+		var sys = systems[sys_name]
+		var result = sys.compute(snapshot, simulation_day)
+		if not result.success:
+			return {"success": false, "reason": "خطا در سیستم %s در روز %d: %s" % [sys_name, simulation_day, result.reason], "state": snapshot, "events": generated_events}
+		snapshot = result.state
+		if result.has("events"):
+			for e in result.events:
+				var wrapped = {"system":sys_name, "event":e.duplicate(true), "simulation_day":simulation_day}
+				generated_events.append(wrapped)
+				EventLog.log_event("system_event", wrapped, turn, snapshot.get("version", 0))
 	return {"success": true, "state": snapshot, "events": generated_events}
 
 func _compute_indicators(state: Dictionary) -> Dictionary:

@@ -21,6 +21,9 @@ func save_game(path: String = DEFAULT_PATH, metadata: Dictionary = {}) -> Dictio
 		"slot": int(metadata.get("slot", 0)),
 		"country_name": str(state_copy.get("country", {}).get("name", "کشور شما")),
 		"tick": int(state_copy.get("tick", 0)),
+		"total_days": TimeManager.get_total_days(state_copy),
+		"year": int(state_copy.get("clock", {}).get("year", 2027)),
+		"month": int(state_copy.get("clock", {}).get("month", 1)),
 		"state": state_copy,
 		"events": EventLog.get_events()
 	}
@@ -119,7 +122,7 @@ func list_slots() -> Array:
 	return slots
 
 func maybe_autosave(tick: int) -> Dictionary:
-	var interval = int(BalanceConfig.get_value("simulation.autosave_interval_days", 30))
+	var interval = int(BalanceConfig.get_value("simulation.autosave_interval_turns", 1))
 	if interval <= 0 or tick <= 0 or tick % interval != 0:
 		return {"success": false, "skipped": true}
 	return save_game(AUTOSAVE_PATH, {"label":"ذخیره خودکار", "slot":-1})
@@ -172,6 +175,9 @@ func _read_metadata_file(path: String) -> Dictionary:
 		"label": str(payload.get("label", "ذخیره")),
 		"country_name": str(payload.get("country_name", payload.get("state", {}).get("country", {}).get("name", ""))),
 		"tick": int(payload.get("tick", payload.get("state", {}).get("tick", 0))),
+		"total_days": int(payload.get("total_days", TimeManager.get_total_days(payload.get("state", {})))),
+		"year": int(payload.get("year", payload.get("state", {}).get("clock", {}).get("year", 2027))),
+		"month": int(payload.get("month", payload.get("state", {}).get("clock", {}).get("month", 1))),
 		"saved_at": float(payload.get("saved_at", 0.0)),
 		"game_version": str(payload.get("game_version", ""))
 	}
@@ -225,17 +231,28 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if int(state_data.get("schema_version", 1)) < 6 or not state_data.get("technology", {}).has("tree_version"):
 		state_data = TechnologyManager.migrate_state(state_data)
 		migrated = true
-	if int(state_data.get("schema_version", 1)) < 7 or not state_data.has("scenario"):
+	var source_schema = int(state_data.get("schema_version", 1))
+	if source_schema < 10 or not state_data.has("time"):
+		state_data = TimeManager.migrate_legacy_state(state_data)
+		migrated = true
+	if source_schema < 7 or not state_data.has("scenario"):
 		state_data = ScenarioManager.apply_scenario(
 			state_data, ScenarioManager.default_scenario, int(state_data.get("tick", 0)))
 		migrated = true
-	if int(state_data.get("schema_version", 1)) < 8 or not state_data.has("analytics"):
+	else:
+		state_data = ScenarioManager.ensure_scenario(state_data)
+	if source_schema < 10 or not state_data.has("analytics"):
+		# تاریخچه روزانه قدیمی با خط پایه ماهانه قابل قیاس نیست.
 		state_data = AnalyticsManager.reset(state_data)
 		migrated = true
-	if int(state_data.get("schema_version", 1)) < 9 or not state_data.has("policies"):
+	if source_schema < 9 or not state_data.has("policies"):
 		state_data = PolicyManager.reset(state_data)
 		migrated = true
-	state_data["schema_version"] = 9
+	if source_schema < 11 or not state_data.has("municipal_services") or not state_data.has("weather"):
+		state_data = SeasonalManager.reset_for_country(
+			state_data, str(state_data.get("country", {}).get("id", WorldManager.default_country)))
+		migrated = true
+	state_data["schema_version"] = 11
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:

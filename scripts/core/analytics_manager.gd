@@ -1,18 +1,20 @@
 extends Node
-# تاریخچه هفتگی فشرده برای تحلیل روند، نمودار و تصمیم‌گیری بازیکن
+# تاریخچه ماهانه فشرده برای تحلیل روند، نمودار و تصمیم‌گیری بازیکن
 
-const DEFAULT_INTERVAL = 7
-const DEFAULT_MAX_SAMPLES = 520
+const DEFAULT_INTERVAL = 1
+const DEFAULT_MAX_SAMPLES = 120
 
 func ensure_analytics(state: Dictionary) -> Dictionary:
 	if state.has("analytics") and state["analytics"] is Dictionary:
 		var analytics: Dictionary = state["analytics"]
 		analytics["history"] = analytics.get("history", [])
-		analytics["interval_days"] = int(analytics.get("interval_days", _interval()))
+		analytics["interval_turns"] = int(analytics.get("interval_turns", _interval()))
+		analytics.erase("interval_days")
 		analytics["max_samples"] = int(analytics.get("max_samples", _max_samples()))
 		if analytics["history"].is_empty():
 			analytics["history"].append(_sample(state, int(state.get("tick", 0)), float(state.get("economy", {}).get("gdp", 1.0))))
-		analytics["last_sample_tick"] = int(analytics.get("last_sample_tick", state.get("tick", 0)))
+		analytics["last_sample_turn"] = int(analytics.get("last_sample_turn", analytics.get("last_sample_tick", state.get("tick", 0))))
+		analytics.erase("last_sample_tick")
 		state["analytics"] = analytics
 		return state
 	return reset(state)
@@ -22,10 +24,10 @@ func reset(state: Dictionary) -> Dictionary:
 	var tick = int(state.get("tick", 0))
 	state["analytics"] = {
 		"version": 1,
-		"interval_days": _interval(),
+		"interval_turns": _interval(),
 		"max_samples": _max_samples(),
 		"baseline_gdp": baseline_gdp,
-		"last_sample_tick": tick,
+		"last_sample_turn": tick,
 		"history": [_sample(state, tick, baseline_gdp)]
 	}
 	return state
@@ -33,8 +35,8 @@ func reset(state: Dictionary) -> Dictionary:
 func update(state: Dictionary, tick: int) -> Dictionary:
 	state = ensure_analytics(state)
 	var analytics: Dictionary = state["analytics"]
-	var interval = max(1, int(analytics.get("interval_days", _interval())))
-	var last_tick = int(analytics.get("last_sample_tick", -interval))
+	var interval = max(1, int(analytics.get("interval_turns", _interval())))
+	var last_tick = int(analytics.get("last_sample_turn", -interval))
 	if tick - last_tick < interval:
 		return state
 	var history: Array = analytics.get("history", [])
@@ -42,7 +44,7 @@ func update(state: Dictionary, tick: int) -> Dictionary:
 	while history.size() > int(analytics.get("max_samples", _max_samples())):
 		history.pop_front()
 	analytics["history"] = history
-	analytics["last_sample_tick"] = tick
+	analytics["last_sample_turn"] = tick
 	state["analytics"] = analytics
 	return state
 
@@ -86,7 +88,7 @@ func _sample(state: Dictionary, tick: int, baseline_gdp: float) -> Dictionary:
 	}
 
 func _interval() -> int:
-	return int(BalanceConfig.get_value("simulation.analytics_interval_days", DEFAULT_INTERVAL))
+	return int(BalanceConfig.get_value("simulation.analytics_interval_turns", DEFAULT_INTERVAL))
 
 func _max_samples() -> int:
 	return int(BalanceConfig.get_value("simulation.analytics_max_samples", DEFAULT_MAX_SAMPLES))

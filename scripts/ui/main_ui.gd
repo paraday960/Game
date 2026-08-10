@@ -226,7 +226,7 @@ func _build_chrome():
 	footer.add_theme_constant_override("separation", 10)
 	root.add_child(footer)
 
-	_mk_btn(footer, "▶️ گام بعدی (۱ روز)", Vector2(220, 64), _on_next_tick_pressed)
+	_mk_btn(footer, "▶️ ماه بعد", Vector2(180, 64), _on_next_tick_pressed)
 	_mk_btn(footer, "⏸️ خودکار: خاموش", Vector2(190, 64), _on_auto_pressed, "AutoBtn")
 	_mk_btn(footer, "⏩ %s" % SettingsManager.get_speed_label(), Vector2(120, 64), _on_speed_pressed, "SpeedBtn")
 	_mk_btn(footer, "💾 ذخیره", Vector2(120, 64), _on_save_pressed)
@@ -253,14 +253,14 @@ func _refresh_header():
 	var clock = st.get("clock", {})
 	if header_title != null:
 		header_title.text = "🎮 شبیه‌ساز کشور — %s" % str(st.get("country", {}).get("name", "کشور شما"))
-	date_lbl.text = "📅 %s/%s/%s — %s" % [
+	var time = st.get("time", {})
+	date_lbl.text = "📅 %s %s — %s" % [
+		str(time.get("month_name", TimeManager.month_name(int(clock.get("month", 1))))),
 		PersianFormatter.to_persian_digits(str(clock.get("year", 2027))),
-		PersianFormatter.to_persian_digits("%02d" % clock.get("month", 1)),
-		PersianFormatter.to_persian_digits("%02d" % clock.get("day", 1)),
-		clock.get("season", "بهار")
+		str(time.get("season", clock.get("season", "بهار")))
 	]
 	var progression = st.get("progression", {})
-	engagement_lbl.text = "🔥 روز %s | استریک %s | شتاب ×%s | %s\n⭐ امتیاز %s | 🏆 سطح %s | تجربه %s" % [
+	engagement_lbl.text = "🔥 نوبت ماهانه %s | استریک %s ماه | شتاب ×%s | %s\n⭐ امتیاز %s | 🏆 سطح %s | تجربه %s" % [
 		PersianFormatter.to_persian_digits(str(st.get("tick", 0))),
 		PersianFormatter.to_persian_digits(str(progression.get("streak", 0))),
 		PersianFormatter.to_persian_digits(str(progression.get("combo", 1))),
@@ -368,6 +368,8 @@ func _build_dashboard():
 
 	if not bool(SettingsManager.get_value("tutorial_dismissed", false)) and int(st.get("tick", 0)) < 7:
 		_build_onboarding_card(st)
+	_build_weather_and_municipal_card(st)
+	_build_monthly_report_card(st)
 
 	# هشدار بحران‌ها
 	var crises = _active_crises(st)
@@ -457,7 +459,7 @@ func _build_onboarding_card(state: Dictionary):
 		["۱", "کشور و سناریوی پیروزی را در تب جهان انتخاب کنید.", int(state.get("tick", 0)) > 0],
 		["۲", "مالیات، بودجه و سیاست‌های عمومی را در تب اقتصاد تنظیم کنید.", abs(float(state.get("economy", {}).get("tax_rate", 0.20)) - 0.20) > 0.001],
 		["۳", "یک پروژه را در درخت فناوری آغاز کنید.", state.get("technology", {}).get("in_progress", null) != null],
-		["۴", "داشبورد، هشدارها و اهداف سناریو را هر هفته بررسی کنید.", state.get("analytics", {}).get("history", []).size() >= 2]
+		["۴", "داشبورد، هشدارها و اهداف سناریو را هر ماه بررسی کنید.", state.get("analytics", {}).get("history", []).size() >= 2]
 	]
 	for step in steps:
 		var label = Label.new()
@@ -476,6 +478,77 @@ func _build_onboarding_card(state: Dictionary):
 func _on_dismiss_tutorial():
 	SettingsManager.set_value("tutorial_dismissed", true)
 	_switch_tab("dashboard")
+
+func _build_monthly_report_card(state: Dictionary):
+	var report: Dictionary = state.get("monthly_report", {})
+	if report.is_empty():
+		return
+	var card = _card("📰 گزارش مدیریتی %s" % str(report.get("month_name", "ماه گذشته")))
+	_row(card, "رویدادهای پردازش‌شده", PersianFormatter.to_persian_digits(str(report.get("total_events", 0))))
+	_row(card, "تغییر GDP", _signed_percent(float(report.get("gdp_change", 0.0))), _color_for(0.75 if float(report.get("gdp_change", 0.0)) >= 0.0 else 0.2))
+	_row(card, "تغییر شادی", _signed_percent(float(report.get("happiness_change", 0.0))), _color_for(0.75 if float(report.get("happiness_change", 0.0)) >= 0.0 else 0.2))
+	_row(card, "تغییر ثبات", _signed_percent(float(report.get("stability_change", 0.0))), _color_for(0.75 if float(report.get("stability_change", 0.0)) >= 0.0 else 0.2))
+	var shown = 0
+	for item in report.get("important", []):
+		if shown >= 6:
+			break
+		var label = Label.new()
+		var repeat_text = " (×%s)" % PersianFormatter.to_persian_digits(str(item.get("count", 1))) if int(item.get("count", 1)) > 1 else ""
+		label.text = "• %s%s" % [PersianFormatter.to_persian_digits(str(item.get("message", ""))), repeat_text]
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.modulate = Color(1.0, 0.55, 0.50) if int(item.get("priority", 0)) >= 3 else Color(0.82, 0.87, 0.95)
+		card.add_child(label)
+		shown += 1
+
+func _build_weather_and_municipal_card(state: Dictionary):
+	var weather: Dictionary = state.get("weather", {})
+	var current: Dictionary = weather.get("current", {})
+	var municipal: Dictionary = state.get("municipal_services", {})
+	var season = str(state.get("time", {}).get("season", "بهار"))
+	var card = _card("🌦️ اقلیم و آمادگی شهرداری — %s" % season)
+	_row(card, "اقلیم کشور", str(weather.get("climate", "ثبت نشده")))
+	if current.is_empty():
+		var forecast = Label.new()
+		forecast.text = "گزارش آب‌وهوا پس از پایان نخستین ماه منتشر می‌شود؛ اکنون زمان آماده‌سازی است."
+		forecast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		forecast.modulate = Color(0.75, 0.82, 0.92)
+		card.add_child(forecast)
+	else:
+		_row(card, "وضعیت ماه گذشته", str(current.get("condition", "پایدار")))
+		_row(card, "میانگین دما", "%s درجه" % PersianFormatter.to_persian_digits("%.1f" % current.get("temperature_c", 0.0)))
+		_row(card, "بارش", "%s میلی‌متر" % PersianFormatter.to_persian_digits("%.0f" % current.get("precipitation_mm", 0.0)))
+		_bar(card, "راه‌های قابل عبور", 1.0 - float(current.get("roads_blocked", 0.0)))
+	var target_plows = max(1.0, float(municipal.get("target_snowplows", 1)))
+	_bar(card, "پوشش ناوگان برف‌روبی", float(municipal.get("snowplows", 0)) / target_plows)
+	_bar(card, "آمادگی عملیات زمستانی", float(municipal.get("snowplow_readiness", 0.5)))
+	_bar(card, "ذخیره نمک جاده", float(municipal.get("road_salt_days", 0.0)) / 30.0)
+	_bar(card, "ظرفیت زهکشی", float(municipal.get("drainage", 0.5)))
+	_bar(card, "آمادگی موج گرما", float(municipal.get("heat_readiness", 0.5)))
+	_bar(card, "ظرفیت سرمایه‌گذاری شهرداری", float(municipal.get("investment_capacity", 0.0)) / 3.0)
+	var actions = [
+		["buy_snowplows", "خرید برف‌روب"], ["stock_road_salt", "ذخیره نمک جاده"],
+		["winter_training", "رزمایش زمستانی"], ["improve_drainage", "تقویت زهکشی"],
+		["cooling_centers", "مراکز خنک‌کننده"], ["road_maintenance", "نگهداری راه‌ها"]
+	]
+	var grid = GridContainer.new()
+	grid.columns = 3
+	card.add_child(grid)
+	for action_def in actions:
+		var check = SeasonalManager.can_action(state, action_def[0])
+		var button = Button.new()
+		button.text = action_def[1]
+		button.custom_minimum_size = Vector2(190, 46)
+		button.disabled = not check.valid
+		button.tooltip_text = "" if check.valid else str(check.reason)
+		button.pressed.connect(FeedbackManager.play_click)
+		button.pressed.connect(_on_municipal_action.bind(str(action_def[0]), str(action_def[1])))
+		grid.add_child(button)
+
+func _on_municipal_action(action: String, title: String):
+	var command = GameCommandClass.create_municipal_action(action)
+	if _run_tick_with([command]):
+		_toast("🏙️ اقدام شهرداری «%s» اجرا شد" % title)
+		_switch_tab("dashboard")
 
 func _build_settings_card():
 	var card = _card("⚙️ تنظیمات و دسترس‌پذیری")
@@ -522,11 +595,11 @@ func _background_color() -> Color:
 	return Color(0.005, 0.008, 0.015) if bool(SettingsManager.get_value("high_contrast", false)) else Color(0.05, 0.08, 0.15)
 
 func _build_analytics_card(state: Dictionary):
-	var card = _card("📈 روند هفتگی کشور")
-	var history = AnalyticsManager.get_history(state, 52)
+	var card = _card("📈 روند ماهانه کشور")
+	var history = AnalyticsManager.get_history(state, 12)
 	if history.size() < 2:
 		var hint = Label.new()
-		hint.text = "پس از هفت روز، تغییرات هفتگی و نمودار یک‌ساله در این بخش نمایش داده می‌شود."
+		hint.text = "پس از نخستین نوبت، تغییرات ماهانه و نمودار یک‌ساله در این بخش نمایش داده می‌شود."
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		hint.modulate = Color(0.75, 0.8, 0.9)
 		card.add_child(hint)
@@ -535,7 +608,7 @@ func _build_analytics_card(state: Dictionary):
 		var happiness_change = AnalyticsManager.get_change(state, "happiness")
 		var stability_change = AnalyticsManager.get_change(state, "stability")
 		var inflation_change = AnalyticsManager.get_change(state, "inflation")
-		_row(card, "رشد تولید در آخرین هفته", _signed_percent(gdp_change), _color_for(0.75 if gdp_change >= 0.0 else 0.2))
+		_row(card, "رشد تولید در ماه گذشته", _signed_percent(gdp_change), _color_for(0.75 if gdp_change >= 0.0 else 0.2))
 		_row(card, "تغییر شادی", _signed_percent(happiness_change), _color_for(0.75 if happiness_change >= 0.0 else 0.2))
 		_row(card, "تغییر ثبات", _signed_percent(stability_change), _color_for(0.75 if stability_change >= 0.0 else 0.2))
 		_row(card, "تغییر تورم", _signed_percent(inflation_change), _color_for(0.75 if inflation_change <= 0.0 else 0.2))
@@ -599,8 +672,8 @@ func _build_save_slots_card():
 	var autosave = SaveManager.get_autosave_metadata()
 	var autosave_text = "هنوز ساخته نشده"
 	if autosave.get("valid", false):
-		autosave_text = "%s — روز %s" % [autosave.get("country_name", ""), PersianFormatter.to_persian_digits(str(autosave.get("tick", 0)))]
-	_row(card, "ذخیره خودکار هر ۳۰ روز", autosave_text)
+		autosave_text = "%s — %s %s" % [autosave.get("country_name", ""), TimeManager.month_name(int(autosave.get("month", 1))), PersianFormatter.to_persian_digits(str(autosave.get("year", 2027)))]
+	_row(card, "ذخیره خودکار پایان هر ماه", autosave_text)
 	for metadata in SaveManager.list_slots():
 		var row = HBoxContainer.new()
 		card.add_child(row)
@@ -608,9 +681,10 @@ func _build_save_slots_card():
 		var info = Label.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if metadata.get("valid", false):
-			info.text = "جایگاه %s: %s — روز %s" % [
+			info.text = "جایگاه %s: %s — %s %s" % [
 				PersianFormatter.to_persian_digits(str(slot)), metadata.get("country_name", ""),
-				PersianFormatter.to_persian_digits(str(metadata.get("tick", 0)))]
+				TimeManager.month_name(int(metadata.get("month", 1))),
+				PersianFormatter.to_persian_digits(str(metadata.get("year", 2027)))]
 		else:
 			info.text = "جایگاه %s: خالی" % PersianFormatter.to_persian_digits(str(slot))
 		row.add_child(info)
@@ -666,7 +740,7 @@ func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
 	description.text = str(decision.get("description", ""))
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(description)
-	var remaining = max(0, int(decision.get("expires_tick", GameState.tick)) - GameState.tick)
+	var remaining = max(0, int(decision.get("expires_day", TimeManager.get_total_days(GameState.state))) - TimeManager.get_total_days(GameState.state))
 	var deadline = Label.new()
 	deadline.text = "مهلت تصمیم: %s روز" % PersianFormatter.to_persian_digits(str(remaining))
 	deadline.modulate = Color(1.0, 0.65, 0.45)
@@ -746,6 +820,14 @@ func _active_crises(st: Dictionary) -> Array:
 		out.append("نارضایتی عمومی — خطر اعتراض")
 	if pol.get("tension", 0) > 0.7:
 		out.append("تنش سیاسی شدید — ثبات در خطر است")
+	var blocked = float(st.get("municipal_services", {}).get("roads_blocked", 0.0))
+	if blocked > 0.20:
+		out.append("انسداد راه‌ها — %s٪ مسیرها به‌دلیل شرایط جوی مختل‌اند" % PersianFormatter.to_persian_digits(str(int(blocked * 100.0))))
+	var hazard = str(st.get("weather", {}).get("current", {}).get("hazard", "none"))
+	if hazard == "heatwave":
+		out.append("موج گرما — مصرف آب و برق و خطر سلامت افزایش یافته است")
+	elif hazard == "flood":
+		out.append("سیلاب شهری — زهکشی و خدمات اضطراری زیر فشار هستند")
 	return out
 
 # ============================================================
@@ -771,7 +853,7 @@ func _build_economy():
 	tax_value_lbl.text = _fmt_pct(econ.get("tax_rate", 0.2))
 	tax_value_lbl.custom_minimum_size = Vector2(80, 0)
 	h.add_child(tax_value_lbl)
-	var apply_tax = _mk_btn(c1, "✅ اعمال مالیات جدید (۱ روز می‌گذرد)", Vector2(280, 52), _on_apply_tax)
+	var apply_tax = _mk_btn(c1, "✅ اعمال مالیات جدید (یک ماه می‌گذرد)", Vector2(280, 52), _on_apply_tax)
 	apply_tax.add_theme_font_size_override("font_size", 16)
 
 	# --- بودجه ---
@@ -800,7 +882,7 @@ func _build_economy():
 		vl.name = "BudgetVal_" + str(k)
 		row.add_child(vl)
 		budget_sliders[k] = s
-	_mk_btn(c2, "✅ اعمال بودجه (۱ روز می‌گذرد)", Vector2(280, 52), _on_apply_budget)
+	_mk_btn(c2, "✅ اعمال بودجه (یک ماه می‌گذرد)", Vector2(280, 52), _on_apply_budget)
 
 	# --- آمار مالی ---
 	var c3 = _card("📈 آمار مالی")
@@ -941,7 +1023,8 @@ func _build_population():
 
 	var c1 = _card("👥 جمعیت")
 	_row(c1, "جمعیت کل", PersianFormatter.format_large(pop.get("total", 0)) + " نفر")
-	_row(c1, "نرخ رشد روزانه", PersianFormatter.to_persian_digits("%.4f٪" % (pop.get("growth_rate", 0) * 100)))
+	var monthly_growth = pow(1.0 + float(pop.get("growth_rate", 0.0)), float(GameState.state.get("time", {}).get("days_in_month", 30))) - 1.0
+	_row(c1, "نرخ رشد ماهانه", PersianFormatter.to_persian_digits("%.3f٪" % (monthly_growth * 100.0)))
 	_row(c1, "تولد (سالانه در هزار)", PersianFormatter.to_persian_digits("%.1f" % pop.get("birth_rate", 0)))
 	_row(c1, "مرگ (سالانه در هزار)", PersianFormatter.to_persian_digits("%.1f" % pop.get("death_rate", 0)))
 	_row(c1, "مهاجرت خالص", PersianFormatter.to_persian_digits(str(int(pop.get("migration_net", 0)))))
@@ -1280,7 +1363,7 @@ func _on_network_state_snapshot(state: Dictionary, version: int, tick: int):
 	_refresh_header()
 	_render_events()
 	_switch_tab(current_tab)
-	_toast("🌐 وضعیت روز %s از میزبان همگام شد" % PersianFormatter.to_persian_digits(str(tick)))
+	_toast("🌐 وضعیت نوبت ماهانه %s از میزبان همگام شد" % PersianFormatter.to_persian_digits(str(tick)))
 
 # ============================================================
 # تب سامانه‌ها — نمای کلی ۶۵ سیستم
@@ -1411,7 +1494,7 @@ func _render_events():
 	last.reverse()
 	for e in last:
 		var l = Label.new()
-		l.text = "• " + _event_text_fa(e)
+		l.text = "• " + PersianFormatter.to_persian_digits(_event_text_fa(e))
 		l.add_theme_font_size_override("font_size", 14)
 		l.modulate = Color(0.85, 0.88, 0.95)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1525,7 +1608,7 @@ func _on_load_pressed():
 		return
 	var migration_note = " — ذخیره قدیمی ارتقا یافت" if result.get("migrated", false) else ""
 	var recovery_note = " — از نسخه پشتیبان بازیابی شد" if result.get("recovered_from_backup", false) else ""
-	_toast("📂 بازی بارگذاری شد — روز %s%s%s" % [
+	_toast("📂 بازی بارگذاری شد — نوبت ماهانه %s%s%s" % [
 		PersianFormatter.to_persian_digits(str(GameState.tick)), migration_note, recovery_note])
 	_refresh_header()
 	_render_events()

@@ -3,10 +3,10 @@ class_name ProgressionManager
 # پیشرفت واقعی: استریک، شتاب، دستاورد، رکورد و مرحله توسعه
 
 const ACHIEVEMENTS = {
-	"first_step": {"title":"نخستین فرمان", "description":"نخستین روز مدیریت کشور را کامل کنید.", "xp":25},
-	"first_week": {"title":"یک هفته در قدرت", "description":"هفت روز کشور را اداره کنید.", "xp":40},
+	"first_step": {"title":"نخستین ماه", "description":"نخستین ماه مدیریت کشور را کامل کنید.", "xp":25},
+	"first_week": {"title":"شش ماه در قدرت", "description":"شش ماه کشور را اداره کنید.", "xp":40},
 	"first_year": {"title":"یک سال پایداری", "description":"یک سال کامل شبیه‌سازی را پشت سر بگذارید.", "xp":150},
-	"stable_30": {"title":"ماه طلایی", "description":"سی روز پیاپی شادی و ثبات بالای پنجاه درصد داشته باشید.", "xp":100},
+	"stable_30": {"title":"سال طلایی", "description":"دوازده ماه پیاپی شادی و ثبات بالای پنجاه درصد داشته باشید.", "xp":100},
 	"happy_nation": {"title":"ملت خشنود", "description":"شادی جمعیت را به هفتاد و پنج درصد برسانید.", "xp":120},
 	"economic_power": {"title":"قدرت اقتصادی", "description":"تولید ناخالص داخلی را از ششصد میلیارد عبور دهید.", "xp":140},
 	"low_debt": {"title":"خزانه منضبط", "description":"نسبت بدهی به تولید داخلی را زیر سی درصد نگه دارید.", "xp":90},
@@ -61,6 +61,7 @@ static func update(state: Dictionary, tick: int) -> Dictionary:
 			"title": definition["title"],
 			"description": definition["description"],
 			"unlocked_tick": tick,
+			"unlocked_day": TimeManager.get_total_days(state),
 			"xp": definition["xp"]
 		}
 		progression["achievements"].append(record)
@@ -76,11 +77,12 @@ static func update(state: Dictionary, tick: int) -> Dictionary:
 	return {"state": state, "unlocked": unlocked}
 
 static func _condition_met(id: String, state: Dictionary, tick: int, progression: Dictionary) -> bool:
+	var total_days = TimeManager.get_total_days(state)
 	match id:
 		"first_step": return tick >= 1
-		"first_week": return tick >= 7
-		"first_year": return tick >= 360
-		"stable_30": return int(progression.get("best_streak", 0)) >= 30
+		"first_week": return total_days >= 180
+		"first_year": return total_days >= 360
+		"stable_30": return int(progression.get("best_streak", 0)) >= 12
 		"happy_nation": return float(state.get("population", {}).get("happiness", 0.0)) >= 0.75
 		"economic_power": return float(state.get("economy", {}).get("gdp", 0.0)) >= 600_000_000_000.0
 		"low_debt": return float(state.get("economy", {}).get("debt_to_gdp", 1.0)) <= 0.30

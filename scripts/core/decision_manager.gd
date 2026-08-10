@@ -158,6 +158,46 @@ const TEMPLATES = {
 				{"path":"settlements_detail.sprawl","op":"add","value":0.04,"min":0.0,"max":1.0}]}
 		]
 	},
+	"snow_transport_crisis": {
+		"title":"بحران برف و انسداد راه‌ها",
+		"description":"برف سنگین از ظرفیت شهرداری عبور کرده و رفت‌وآمد، امداد و زنجیره تأمین مختل شده است.",
+		"choices":[
+			{"id":"emergency_clearance","text":"قرارداد اضطراری برف‌روبی","consequence":"راه‌ها سریع‌تر باز می‌شوند اما بدهی افزایش می‌یابد.","effects":[
+				{"path":"municipal_services.roads_blocked","op":"add","value":-0.45,"min":0,"max":1},
+				{"path":"economy.national_debt","op":"add","value":3000000000}]},
+			{"id":"mobilize","text":"بسیج ارتش و نیروهای امدادی","consequence":"انسداد کاهش می‌یابد اما آمادگی نظامی افت می‌کند.","effects":[
+				{"path":"municipal_services.roads_blocked","op":"add","value":-0.30,"min":0,"max":1},
+				{"path":"military.readiness","op":"add","value":-0.03,"min":0.1,"max":1},
+				{"path":"politics.trust","op":"add","value":0.01,"min":0,"max":1}]},
+			{"id":"wait","text":"انتظار برای بهبود هوا","consequence":"هزینه فوری ندارد ولی اعتراض و نارضایتی تشدید می‌شود.","effects":[
+				{"path":"population.happiness","op":"add","value":-0.03,"min":0.05,"max":0.95},
+				{"path":"politics.tension","op":"add","value":0.05,"min":0,"max":1}]}
+		]
+	},
+	"urban_flood": {
+		"title":"سیلاب و آب‌گرفتگی شهری","description":"بارش شدید، ضعف زهکشی و انسداد مسیرها به خانه‌ها و کسب‌وکارها آسیب زده است.",
+		"choices":[
+			{"id":"pump","text":"تخلیه اضطراری و پمپ سیار","consequence":"راه‌ها باز می‌شوند و هزینه مالی ایجاد می‌شود.","effects":[{"path":"municipal_services.roads_blocked","op":"add","value":-0.35,"min":0,"max":1},{"path":"economy.national_debt","op":"add","value":2200000000}]},
+			{"id":"rebuild","text":"بازسازی زهکشی","consequence":"راه‌حل پایدارتر ولی گران‌تر است.","effects":[{"path":"municipal_services.drainage","op":"add","value":0.08,"min":0,"max":1},{"path":"economy.national_debt","op":"add","value":4500000000}]},
+			{"id":"local","text":"واگذاری به شهرداری‌های محلی","consequence":"هزینه کمتر، اما اعتماد عمومی اندکی افت می‌کند.","effects":[{"path":"administration.decentralization","op":"add","value":0.03,"min":0,"max":1},{"path":"politics.trust","op":"add","value":-0.01,"min":0,"max":1}]}
+		]
+	},
+	"heatwave_crisis": {
+		"title":"موج گرمای شدید","description":"تقاضای آب و برق افزایش یافته و سلامت سالمندان و کارگران فضای باز در خطر است.",
+		"choices":[
+			{"id":"cooling","text":"مراکز خنک‌کننده اضطراری","consequence":"تلفات و نارضایتی کم می‌شود و دولت هزینه می‌کند.","effects":[{"path":"municipal_services.heat_readiness","op":"add","value":0.10,"min":0,"max":1},{"path":"health.quality","op":"add","value":0.02,"min":0,"max":1},{"path":"economy.national_debt","op":"add","value":1800000000}]},
+			{"id":"ration","text":"مدیریت مصرف آب و برق","consequence":"ذخایر حفظ و رضایت کمی کاهش می‌یابد.","effects":[{"path":"resources.inventory.آب","op":"add","value":8,"min":0,"max":150},{"path":"resources.inventory.برق","op":"add","value":6,"min":0,"max":200},{"path":"population.happiness","op":"add","value":-0.01,"min":0.05,"max":0.95}]},
+			{"id":"ignore","text":"ادامه روال عادی","consequence":"هزینه ندارد ولی سلامت و اعتماد آسیب می‌بیند.","effects":[{"path":"health.quality","op":"add","value":-0.03,"min":0,"max":1},{"path":"politics.trust","op":"add","value":-0.02,"min":0,"max":1}]}
+		]
+	},
+	"heating_crisis": {
+		"title":"کمبود گرمایش زمستانی","description":"کمبود برق و گاز، خانه‌ها و مراکز درمانی را در سرمای شدید تحت فشار قرار داده است.",
+		"choices":[
+			{"id":"import_energy","text":"واردات اضطراری انرژی","consequence":"گرمایش تأمین و بدهی افزایش می‌یابد.","effects":[{"path":"resources.inventory.برق","op":"add","value":15,"min":0,"max":200},{"path":"resources.inventory.گاز","op":"add","value":15,"min":0,"max":150},{"path":"economy.national_debt","op":"add","value":2800000000}]},
+			{"id":"priority","text":"اولویت بیمارستان‌ها و خانه‌ها","consequence":"سلامت حفظ ولی صنعت با افت تولید روبه‌رو می‌شود.","effects":[{"path":"health.quality","op":"add","value":0.015,"min":0,"max":1},{"path":"industry.output","op":"mul","value":0.98,"min":0}]},
+			{"id":"ration_heat","text":"سهمیه‌بندی گرمایش","consequence":"ذخایر حفظ ولی شادی مردم کاهش می‌یابد.","effects":[{"path":"resources.inventory.گاز","op":"add","value":7,"min":0,"max":150},{"path":"population.happiness","op":"add","value":-0.025,"min":0.05,"max":0.95}]}
+		]
+	},
 	"brain_drain": {
 		"title": "موج مهاجرت نخبگان",
 		"description": "پژوهشگران و متخصصان بیشتری در حال خروج‌اند و ظرفیت فناوری و مدیریت کشور تهدید می‌شود.",
@@ -188,6 +228,8 @@ const ALIASES = {
 
 static func update_pending(state: Dictionary, generated_events: Array, tick: int) -> Dictionary:
 	state = _expire_old(state, tick)
+	var current_day = TimeManager.get_total_days(state)
+	var lifetime_days = int(BalanceConfig.get_value("simulation.decision_lifetime_days", DECISION_LIFETIME))
 	var pending: Array = state.get("pending_decisions", []).duplicate(true)
 	var known: Dictionary = {}
 	for item in pending:
@@ -212,7 +254,9 @@ static func update_pending(state: Dictionary, generated_events: Array, tick: int
 			"description": template["description"],
 			"choices": template["choices"].duplicate(true),
 			"created_tick": tick,
-			"expires_tick": tick + int(BalanceConfig.get_value("simulation.decision_lifetime_days", DECISION_LIFETIME))
+			"created_day": current_day,
+			"expires_tick": tick + int(ceil(float(lifetime_days) / 30.0)),
+			"expires_day": current_day + lifetime_days
 		})
 		known[decision_id] = true
 	state["pending_decisions"] = pending
@@ -248,6 +292,7 @@ static func resolve_decision(state: Dictionary, decision_id: String, choice_id: 
 		"choice_text": choice.get("text", ""),
 		"consequence": choice.get("consequence", ""),
 		"resolved_tick": state.get("tick", 0),
+		"resolved_day": TimeManager.get_total_days(state),
 		"status": status
 	})
 	while history.size() > MAX_HISTORY:
@@ -266,8 +311,13 @@ static func validate_choice(state: Dictionary, decision_id: String, choice_id: S
 
 static func _expire_old(state: Dictionary, tick: int) -> Dictionary:
 	var expired_ids: Array = []
+	var current_day = TimeManager.get_total_days(state)
 	for decision in state.get("pending_decisions", []):
-		if int(decision.get("expires_tick", tick + 1)) <= tick:
+		if not decision.has("expires_day"):
+			# schema قدیمی، expires_tick را روز مطلق نگه می‌داشت.
+			decision["expires_day"] = int(decision.get("expires_tick", current_day + DECISION_LIFETIME))
+			decision["expires_tick"] = tick + int(ceil(float(max(0, int(decision["expires_day"]) - current_day)) / 30.0))
+		if int(decision.get("expires_day", current_day + 1)) <= current_day:
 			expired_ids.append(str(decision.get("id", "")))
 	for decision_id in expired_ids:
 		var pending: Array = state.get("pending_decisions", [])

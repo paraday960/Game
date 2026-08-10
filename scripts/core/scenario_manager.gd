@@ -65,6 +65,8 @@ func can_select(state: Dictionary, id: String) -> Dictionary:
 func apply_scenario(state: Dictionary, id: String, start_tick: int = 0) -> Dictionary:
 	if not scenarios.has(id):
 		id = default_scenario
+	state = TimeManager.ensure_time(state)
+	var start_day = TimeManager.get_total_days(state)
 	var definition: Dictionary = scenarios[id]
 	var objectives: Array = []
 	for raw_objective in definition.get("objectives", []):
@@ -85,7 +87,9 @@ func apply_scenario(state: Dictionary, id: String, start_tick: int = 0) -> Dicti
 		"description": definition.get("description", ""),
 		"completion_rule": definition.get("completion_rule", "all"),
 		"started_tick": start_tick,
-		"deadline_tick": start_tick + int(definition.get("deadline_days", 1080)),
+		"started_day": start_day,
+		"deadline_tick": start_tick + int(ceil(float(definition.get("deadline_days", 1080)) / 30.0)),
+		"deadline_day": start_day + int(definition.get("deadline_days", 1080)),
 		"reward_xp": int(definition.get("reward_xp", 0)),
 		"reward_legacy": int(definition.get("reward_legacy", 0)),
 		"status": "active",
@@ -99,6 +103,13 @@ func ensure_scenario(state: Dictionary) -> Dictionary:
 	var scenario = state.get("scenario", null)
 	if not scenario is Dictionary or not scenarios.has(str(scenario.get("id", ""))):
 		return apply_scenario(state, default_scenario, int(state.get("tick", 0)))
+	if not scenario.has("deadline_day"):
+		# schemaهای قدیمی، tick را روز می‌دانستند.
+		scenario["started_day"] = int(scenario.get("started_tick", 0))
+		scenario["deadline_day"] = int(scenario.get("deadline_tick", TimeManager.get_total_days(state) + 1080))
+		scenario["started_tick"] = int(floor(float(scenario["started_day"]) / 30.0))
+		scenario["deadline_tick"] = int(ceil(float(scenario["deadline_day"]) / 30.0))
+		state["scenario"] = scenario
 	return state
 
 func update(state: Dictionary, tick: int) -> Dictionary:
@@ -133,7 +144,8 @@ func update(state: Dictionary, tick: int) -> Dictionary:
 		objectives[i] = objective
 	scenario["objectives"] = objectives
 	scenario["progress"] = float(completed_count) / max(objectives.size(), 1)
-	var deadline_reached = tick >= int(scenario.get("deadline_tick", tick + 1))
+	var total_days = TimeManager.get_total_days(state)
+	var deadline_reached = total_days >= int(scenario.get("deadline_day", total_days + 1))
 	var won = false
 	if completion_rule == "deadline":
 		won = deadline_reached and completed_count == objectives.size()
@@ -142,6 +154,7 @@ func update(state: Dictionary, tick: int) -> Dictionary:
 	if won:
 		scenario["status"] = "won"
 		scenario["completed_tick"] = tick
+		scenario["completed_day"] = total_days
 		_apply_reward(state, scenario)
 		events.append({
 			"type": "scenario_won",
@@ -151,6 +164,7 @@ func update(state: Dictionary, tick: int) -> Dictionary:
 	elif deadline_reached:
 		scenario["status"] = "expired"
 		scenario["completed_tick"] = tick
+		scenario["completed_day"] = total_days
 		events.append({
 			"type": "scenario_expired",
 			"message": "مهلت سناریوی «%s» پایان یافت؛ بازی همچنان ادامه دارد" % scenario.get("name", ""),
@@ -161,7 +175,7 @@ func update(state: Dictionary, tick: int) -> Dictionary:
 
 func days_remaining(state: Dictionary) -> int:
 	var scenario: Dictionary = state.get("scenario", {})
-	return max(0, int(scenario.get("deadline_tick", 0)) - int(state.get("tick", 0)))
+	return max(0, int(scenario.get("deadline_day", 0)) - TimeManager.get_total_days(state))
 
 func _resolve_target(objective: Dictionary, start_value):
 	var mode = str(objective.get("mode", "gte"))

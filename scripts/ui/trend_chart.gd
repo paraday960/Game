@@ -1,5 +1,5 @@
 extends Control
-# نمودار آفلاین روند هفتگی شاخص‌های اصلی
+# نمودار آفلاین روند ماهانه شاخص‌های اصلی
 
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 const SERIES = [
@@ -29,7 +29,7 @@ func _draw():
 		draw_string(PersianFont, Vector2(8, y + 5), label, HORIZONTAL_ALIGNMENT_LEFT, 42, 13, Color(0.65, 0.72, 0.82))
 	draw_rect(plot, Color(0.35, 0.62, 0.82, 0.65), false, 1.5)
 	if history.size() < 2:
-		draw_string(PersianFont, plot.get_center() + Vector2(-135, 4), "نمودار پس از هفت روز شکل می‌گیرد", HORIZONTAL_ALIGNMENT_CENTER, 270, 16, Color(0.78, 0.82, 0.9))
+		draw_string(PersianFont, plot.get_center() + Vector2(-135, 4), "نمودار پس از نخستین ماه شکل می‌گیرد", HORIZONTAL_ALIGNMENT_CENTER, 270, 16, Color(0.78, 0.82, 0.9))
 	else:
 		for definition in SERIES:
 			var points := PackedVector2Array()

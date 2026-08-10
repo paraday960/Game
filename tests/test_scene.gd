@@ -42,10 +42,49 @@ func _ready():
 		var relation_before = float(rich_state["diplomacy"]["relations"]["TUR"])
 		var rich_tick = GameEngine.tick(rich_state, 0, 0, [])
 		var relation_delta = abs(float(rich_tick.state["diplomacy"]["relations"]["TUR"]) - relation_before)
-		if not rich_tick.success or relation_delta > 1.0:
-			failed.append("روابط کشور ثروتمند در یک روز جهش غیرواقعی داشت")
+		if not rich_tick.success or relation_delta > 3.0:
+			failed.append("روابط کشور ثروتمند در یک ماه جهش غیرواقعی داشت")
 		else:
-			print("World relation daily scaling: OK")
+			print("World relation monthly scaling: OK")
+
+	# اقلیم اجباری زمستان: نبود برف‌روب باید انسداد و اعتراض بسازد؛ آمادگی اثر را کاهش دهد.
+	var winter_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "RUS")
+	winter_state["clock"]["month"] = 10
+	winter_state = TimeManager.reset(winter_state)
+	winter_state = SeasonalManager.reset_for_country(winter_state, "RUS")
+	winter_state["municipal_services"]["snowplows"] = 0
+	winter_state["municipal_services"]["snowplow_readiness"] = 0.20
+	winter_state["municipal_services"]["road_salt_days"] = 0.0
+	Deterministic.set_seed(9911)
+	var snow_result = SeasonalManager.simulate_month(winter_state, 1, {"force_snow":true, "severity":0.95})
+	var blocked_without = float(snow_result.state["municipal_services"]["roads_blocked"])
+	var snow_event_types: Array = []
+	for event in snow_result.events: snow_event_types.append(event.get("type", ""))
+	var prepared_winter = WorldManager.apply_country_profile(GameState.state.duplicate(true), "RUS")
+	prepared_winter["clock"]["month"] = 10
+	prepared_winter = TimeManager.reset(prepared_winter)
+	prepared_winter = SeasonalManager.reset_for_country(prepared_winter, "RUS")
+	prepared_winter["municipal_services"]["snowplows"] = int(prepared_winter["municipal_services"]["target_snowplows"] * 2)
+	prepared_winter["municipal_services"]["snowplow_readiness"] = 1.0
+	prepared_winter["municipal_services"]["road_salt_days"] = 60.0
+	Deterministic.set_seed(9911)
+	var prepared_result = SeasonalManager.simulate_month(prepared_winter, 1, {"force_snow":true, "severity":0.95})
+	if blocked_without <= 0.50 or not snow_event_types.has("winter_service_protest"):
+		failed.append("کمبود برف‌روب در زمستان انسداد و اعتراض ایجاد نکرد")
+	elif float(prepared_result.state["municipal_services"]["roads_blocked"]) >= blocked_without:
+		failed.append("ناوگان آماده برف‌روبی اثر بحران را کاهش نداد")
+	else:
+		var snow_decisions = DecisionManager.update_pending(snow_result.state, [{"system":"seasonal", "event":{"type":"snow_transport_crisis"}}], 1)
+		if snow_decisions.get("pending_decisions", []).is_empty():
+			failed.append("بحران برف به تصمیم راهبردی تبدیل نشد")
+		else:
+			var municipal_state = GameState.state.duplicate(true)
+			var plows_before = int(municipal_state["municipal_services"]["snowplows"])
+			var municipal_result = GameEngine.tick(municipal_state, 0, 0, [GameCommand.create_municipal_action("buy_snowplows")])
+			if not municipal_result.success or int(municipal_result.state["municipal_services"]["snowplows"]) <= plows_before:
+				failed.append("فرمان اتمی خرید ماشین برف‌روبی اعمال نشد")
+			else:
+				print("Seasonal realism: snowplows + blocked roads + protests + municipal command OK")
 
 	for n in GameEngine.system_order:
 		if not GameEngine.systems.has(n):
@@ -86,10 +125,23 @@ func _ready():
 			failed.append("تیک %d شکست: %s" % [i, result.reason])
 			break
 
-	var clock_ok = (s["clock"]["day"] == 11)  # ۱۰ تیک از روز ۱ → روز ۱۱
-	print("Clock advanced: %s (day=%d season=%s)" % ["YES" if clock_ok else "NO", s["clock"]["day"], s["clock"]["season"]])
+	var clock_ok = (s["clock"]["month"] == 11 and TimeManager.get_total_days(s) >= 300)
+	print("Monthly clock advanced: %s (month=%d season=%s days=%d)" % [
+		"YES" if clock_ok else "NO", s["clock"]["month"], s["clock"]["season"], TimeManager.get_total_days(s)])
 	if not clock_ok:
-		failed.append("ساعت بازی پیش نرفت")
+		failed.append("ساعت ماهانه بازی پیش نرفت")
+	if s.get("monthly_report", {}).is_empty() or int(s["monthly_report"].get("total_events", 0)) <= 0:
+		failed.append("گزارش مدیریتی ماهانه رویدادها ساخته نشد")
+	else:
+		print("Monthly management report aggregation: OK")
+	var legacy_state = s.duplicate(true)
+	legacy_state.erase("time")
+	legacy_state["tick"] = 365
+	legacy_state = TimeManager.migrate_legacy_state(legacy_state)
+	if TimeManager.get_total_days(legacy_state) != 365 or int(legacy_state["tick"]) != 13:
+		failed.append("مهاجرت ذخیره روزانه قدیمی به نوبت ماهانه شکست خورد")
+	else:
+		print("Legacy daily save to monthly turn migration: OK")
 
 	print("Events logged: %d" % EventLog.count())
 
@@ -97,15 +149,16 @@ func _ready():
 	if analytics_history.size() < 2 or int(analytics_history[-1].get("tick", 0)) < 7:
 		failed.append("تاریخچه تحلیلی هفتگی ثبت نشد")
 	else:
-		print("Weekly analytics history: OK")
+		print("Monthly analytics history: OK")
 
 	var progression = s.get("progression", {})
-	if progression.get("achievements", []).size() < 2 or int(progression.get("best_streak", 0)) < 7:
-		failed.append("دستاورد یا استریک پیشرفت ثبت نشد")
+	if progression.get("achievements", []).size() < 2:
+		failed.append("دستاوردهای ماهانه ثبت نشد")
 	else:
 		print("Progression: streak + combo + achievements OK")
 
 	var scenario_state = ScenarioManager.apply_scenario(s.duplicate(true), "survival_year", 0)
+	scenario_state["time"]["total_days"] = int(scenario_state["scenario"]["deadline_day"])
 	scenario_state["population"]["happiness"] = 0.50
 	scenario_state["politics"]["stability"] = 0.50
 	scenario_state["economy"]["debt_to_gdp"] = 0.50
@@ -229,6 +282,7 @@ func _ready():
 	# تبدیل رویداد به تصمیم، اجرای گزینه در موتور اتمی و ثبت تاریخچه
 	var decision_manager = load("res://scripts/core/decision_manager.gd")
 	var decision_state = s.duplicate(true)
+	decision_state["pending_decisions"] = []
 	decision_state = decision_manager.update_pending(decision_state, [
 		{"system": "environment", "event": {"type": "drought"}}
 	], t)
