@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 5,
+			"schema_version": 6,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -155,9 +155,10 @@ func init_default_state():
 		},
 		"technology": {
 			"research_points": 0.0,
-			"research_rate": 10.0,
-			"unlocked": ["کشاورزی_پایه", "صنعت_پایه"],
-			"in_progress": null,
+				"research_rate": 10.0,
+				"tree_version": "1.0.0",
+				"unlocked": ["industry_basic", "agriculture_basic"],
+				"in_progress": null,
 			"branches": {
 				"صنعت": 0.20,
 				"انرژی_پاک": 0.15,
@@ -253,9 +254,10 @@ func _apply_initial_overrides():
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
 	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-	state["schema_version"] = int(state.get("schema_version", 5))
-	# کشور پیش‌فرض از داده جهان می‌آید و پیش از نخستین روز قابل تغییر است.
+	state["schema_version"] = int(state.get("schema_version", 6))
+	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
+	state = TechnologyManager.migrate_state(state)
 	# مقادیر بالانس، مرجع نرخ‌های قابل تنظیم‌اند و پس از پروفایل کشور اعمال می‌شوند.
 	state["economy"]["tax_rate"] = float(BalanceConfig.get_value("economy.tax_base", state["economy"]["tax_rate"]))
 	state["population"]["birth_rate"] = float(BalanceConfig.get_value("population.birth_base", state["population"]["birth_rate"]))

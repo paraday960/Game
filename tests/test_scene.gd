@@ -12,6 +12,8 @@ func _ready():
 		failed.append("وضعیت آغازین داده‌محور بارگذاری نشد")
 	else:
 		print("Balance config + initial state data: OK")
+	if not TechnologyManager.is_valid():
+		failed.append("درخت فناوری داده‌محور نامعتبر است")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -128,6 +130,23 @@ func _ready():
 				failed.append("پیشنهاد شورای هوشمند نامعتبر بود: " + advisor_result.reason)
 			else:
 				print("AI advisor: 65 diagnoses + valid action OK")
+
+	# درخت فناوری: پیش‌نیاز، هزینه و اثر واقعی تکمیل
+	var research_state = s.duplicate(true)
+	var research_id = "advanced_manufacturing"
+	research_state["technology"]["research_points"] = TechnologyManager.get_cost(research_id)
+	var productivity_before = float(research_state.get("industry", {}).get("productivity", 0.0))
+	var research_result = GameEngine.tick(research_state, v, t, [GameCommand.create_research_start(research_id)])
+	if not research_result.success or not research_result.state["technology"]["unlocked"].has(research_id):
+		failed.append("فناوری انتخابی تکمیل و باز نشد")
+	elif float(research_result.state.get("industry", {}).get("productivity", 0.0)) <= productivity_before:
+		failed.append("اثر چندسیستمی فناوری اعمال نشد")
+	else:
+		var locked_result = GameEngine.tick(s, v, t, [GameCommand.create_research_start("quantum_radar")])
+		if locked_result.success:
+			failed.append("فناوری بدون پیش‌نیاز پذیرفته شد")
+		else:
+			print("Technology tree: prerequisites + cost + effects OK")
 
 	# دیپلماسی حرفه‌ای: توافق تجاری، جنگ روزانه و صلح
 	var trade_cmd = GameCommand.create_diplomacy_action("TUR", "trade_agreement")

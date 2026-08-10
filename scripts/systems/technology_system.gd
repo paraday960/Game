@@ -21,32 +21,25 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tech["research_rate"] = base_rate * budget_factor * edu_factor * infra_factor
 	tech["research_points"] += tech["research_rate"] / 365.0
 
-	# پیشرفت فناوری
+	# پیشرفت فناوری انتخاب‌شده توسط بازیکن/AI
 	if tech["in_progress"] != null:
-		var cost = 100.0  # هزینه هر فناوری
+		var current_id = str(tech["in_progress"])
+		var cost = TechnologyManager.get_cost(current_id)
 		if tech["research_points"] >= cost:
 			tech["research_points"] -= cost
-			if not tech["unlocked"].has(tech["in_progress"]):
-				tech["unlocked"].append(tech["in_progress"])
-				events.append({"type": "tech_unlocked", "tech": tech["in_progress"], "message": "فناوری %s باز شد!" % tech["in_progress"]})
-				# افزایش شاخه مربوطه
-				for branch in tech["branches"].keys():
-					if tech["in_progress"].contains(branch) or branch in tech["in_progress"]:
-						tech["branches"][branch] = clamp(tech["branches"][branch] + 0.05, 0.0, 1.0)
+			state["technology"] = tech
+			state = TechnologyManager.apply_unlock(state, current_id)
+			tech = state["technology"]
+			events.append({
+				"type": "tech_unlocked", "tech": current_id,
+				"message": "فناوری «%s» تکمیل شد و اثرهای آن اعمال گردید" % TechnologyManager.get_technology_name(current_id)
+			})
 			tech["in_progress"] = null
-		# پیشرفت جزئی
-		elif Deterministic.chance(0.01):
-			events.append({"type": "research_progress", "points": tech["research_points"], "tech": tech["in_progress"]})
-
-	# اگر تحقیقی در جریان نیست، یکی انتخاب کن
-	if tech["in_progress"] == null and Deterministic.chance(0.02):
-		var options = ["صنعت_پیشرفته", "انرژی_خورشیدی", "هوش_مصنوعی", "پزشکی_نوین", "موشکی", "دیجیتال", "فضا"]
-		var available = []
-		for opt in options:
-			if not tech["unlocked"].has(opt):
-				available.append(opt)
-		if available.size() > 0:
-			tech["in_progress"] = Deterministic.shuffle_array(available)[0]
+		elif tick % 30 == 0:
+			events.append({
+				"type": "research_progress", "points": tech["research_points"], "tech": current_id,
+				"message": "گزارش پیشرفت پژوهش «%s» منتشر شد" % TechnologyManager.get_technology_name(current_id)
+			})
 
 	# بلوغ و اشاعه - فناوری با گذر زمان سرایت می‌کند ۳.۱۶.۶
 	for branch in tech["branches"].keys():

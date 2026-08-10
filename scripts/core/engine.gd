@@ -336,9 +336,10 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			if abs(total - 1.0) > 0.001:
 				return {"valid": false, "reason": "مجموع بودجه باید دقیقاً ۱۰۰٪ باشد، اکنون %.1f٪ است" % (total * 100.0)}
 		elif cmd.type == "research_start":
-			var tech_id = cmd.payload.get("tech_id", "")
-			if not tech_id is String or tech_id.strip_edges().is_empty():
-				return {"valid": false, "reason": "فناوری پژوهشی مشخص نشده است"}
+			var tech_id = str(cmd.payload.get("tech_id", ""))
+			var technology_check = TechnologyManager.can_start(state, tech_id)
+			if not technology_check.valid:
+				return {"valid": false, "reason": technology_check.reason}
 		elif cmd.type == "diplomacy":
 			var target = str(cmd.payload.get("target", ""))
 			var action = str(cmd.payload.get("action", ""))

@@ -103,6 +103,7 @@ const METRIC_WORD_FA = {
 const TABS := [
 	["dashboard", "🏠 داشبورد"],
 	["economy", "💰 اقتصاد"],
+	["technology", "🔬 فناوری"],
 	["population", "👥 جمعیت"],
 	["military", "🪖 ارتش"],
 	["world", "🌍 جهان"],
@@ -177,7 +178,7 @@ func _build_chrome():
 		var key = tab_def[0]
 		var btn = Button.new()
 		btn.text = tab_def[1]
-		btn.custom_minimum_size = Vector2(150, 56)
+		btn.custom_minimum_size = Vector2(135, 56)
 		btn.add_theme_font_size_override("font_size", 17)
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_switch_tab.bind(key))
@@ -277,6 +278,7 @@ func _switch_tab(tab_key: String):
 	match tab_key:
 		"dashboard": _build_dashboard()
 		"economy": _build_economy()
+		"technology": _build_technology()
 		"population": _build_population()
 		"military": _build_military()
 		"world": _build_world()
@@ -591,6 +593,79 @@ func _build_economy():
 		_color_for(0.5 + sign(-econ.get("deficit", 0)) * 0.5))
 	_row(c3, "بدهی ملی", PersianFormatter.format_money(econ.get("national_debt", 0)))
 	_bar(c3, "نسبت بدهی به GDP", clamp(econ.get("debt_to_gdp", 0) / 2.0, 0, 1))
+
+# ============================================================
+# تب فناوری — درخت پژوهش داده‌محور
+# ============================================================
+func _build_technology():
+	var state = GameState.state
+	var tech: Dictionary = state.get("technology", {})
+	var current = tech.get("in_progress", null)
+	var status = _card("🔬 مرکز پژوهش ملی")
+	_row(status, "امتیاز پژوهش ذخیره", PersianFormatter.to_persian_digits("%.2f" % tech.get("research_points", 0.0)))
+	_row(status, "سرعت پژوهش سالانه", PersianFormatter.to_persian_digits("%.2f" % tech.get("research_rate", 0.0)))
+	if current == null:
+		var idle = Label.new()
+		idle.text = "هیچ فناوری در حال پژوهش نیست؛ یک پروژه از فهرست زیر انتخاب کنید."
+		idle.modulate = Color(1.0, 0.78, 0.35)
+		status.add_child(idle)
+	else:
+		var current_id = str(current)
+		var cost = TechnologyManager.get_cost(current_id)
+		_row(status, "پروژه فعال", TechnologyManager.get_technology_name(current_id))
+		_bar(status, "پیشرفت", TechnologyManager.progress_ratio(state))
+		var remaining = max(0.0, cost - float(tech.get("research_points", 0.0)))
+		var days = int(remaining / max(float(tech.get("research_rate", 0.01)), 0.01) * 365.0)
+		_row(status, "زمان تقریبی باقی‌مانده", "%s روز" % PersianFormatter.to_persian_digits(str(days)))
+
+	var branches = _card("🧬 بلوغ شاخه‌های فناوری")
+	for branch in tech.get("branches", {}).keys():
+		_bar(branches, str(branch).replace("_", " "), float(tech["branches"][branch]))
+
+	var available = TechnologyManager.get_available(state)
+	var projects = _card("🧪 پروژه‌های در دسترس")
+	if available.is_empty():
+		var done = Label.new()
+		done.text = "همه فناوری‌های در دسترس تکمیل شده‌اند یا پژوهشی در حال اجراست."
+		projects.add_child(done)
+	for technology in available:
+		var panel = PanelContainer.new()
+		projects.add_child(panel)
+		var body = VBoxContainer.new()
+		panel.add_child(body)
+		var name_label = Label.new()
+		name_label.text = "◈ %s — شاخه %s" % [technology.get("name_fa", ""), str(technology.get("branch", "")).replace("_", " ")]
+		name_label.add_theme_font_size_override("font_size", 17)
+		name_label.modulate = Color(0.55, 0.85, 1.0)
+		body.add_child(name_label)
+		var description = Label.new()
+		description.text = str(technology.get("description", ""))
+		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		body.add_child(description)
+		_row(body, "هزینه پژوهش", PersianFormatter.to_persian_digits(str(technology.get("cost", 0))))
+		var prerequisite_names: Array = []
+		for prerequisite in technology.get("prerequisites", []):
+			prerequisite_names.append(TechnologyManager.get_technology_name(str(prerequisite)))
+		if not prerequisite_names.is_empty():
+			_row(body, "پیش‌نیاز", "، ".join(prerequisite_names))
+		var start_button = _mk_btn(body, "آغاز پژوهش", Vector2(180, 46),
+			_on_start_research.bind(str(technology.get("id", "")), str(technology.get("name_fa", ""))))
+		start_button.disabled = current != null
+
+	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
+	var unlocked_names: Array = []
+	for id in tech.get("unlocked", []):
+		unlocked_names.append(TechnologyManager.get_technology_name(str(id)))
+	var unlocked_label = Label.new()
+	unlocked_label.text = " • ".join(unlocked_names)
+	unlocked_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	unlocked_card.add_child(unlocked_label)
+
+func _on_start_research(technology_id: String, technology_name: String):
+	var cmd = GameCommandClass.create_research_start(technology_id)
+	if _run_tick_with([cmd]):
+		_toast("🔬 پژوهش «%s» آغاز شد" % technology_name)
+		_switch_tab("technology")
 
 # ============================================================
 # تب جمعیت

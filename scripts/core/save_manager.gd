@@ -121,7 +121,10 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 		migrated = true
 	if int(state_data.get("schema_version", 1)) < 5 or not state_data.has("world"):
 		state_data = WorldManager.ensure_world(state_data)
-		state_data["schema_version"] = 5
+		migrated = true
+	if int(state_data.get("schema_version", 1)) < 6 or not state_data.get("technology", {}).has("tree_version"):
+		state_data = TechnologyManager.migrate_state(state_data)
+		state_data["schema_version"] = 6
 		migrated = true
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
