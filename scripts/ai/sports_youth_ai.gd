@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی sports_youth؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var s = state.get("sports_youth", {})
-    if s.get("youth_unemployment",0.15) > 0.25:
-        pass
-    return []
+	return super.decide(state, tick)

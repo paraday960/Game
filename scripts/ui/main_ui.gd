@@ -61,6 +61,7 @@ const TABS := [
 ]
 
 func _ready():
+	layout_direction = Control.LAYOUT_DIRECTION_RTL
 	current_state = GameState.get_state_copy()
 	_build_chrome()
 	_switch_tab("dashboard")
@@ -302,6 +303,18 @@ func _build_dashboard():
 			l.modulate = Color(1.0, 0.5, 0.5)
 			warn.add_child(l)
 
+	# شورای هوش‌های تخصصی: مهم‌ترین مسئله‌ها را با دلیل و اقدام قابل اجرا پیشنهاد می‌دهد.
+	var recommendations = AIAdvisor.get_top_recommendations(st, st.get("tick", 0), 4)
+	var advisor_card = _card("🧠 شورای هوشمند کشور")
+	if recommendations.is_empty():
+		var calm = Label.new()
+		calm.text = "در حال حاضر هشدار مهمی از سوی سامانه‌های تخصصی ثبت نشده است."
+		calm.modulate = Color(0.5, 1.0, 0.65)
+		advisor_card.add_child(calm)
+	else:
+		for recommendation in recommendations:
+			_add_ai_recommendation(advisor_card, recommendation)
+
 	var c1 = _card("📊 شاخص‌های کلان")
 	_bar(c1, "شادی مردم", ind.get("happiness", 0.6))
 	_bar(c1, "ثبات کشور", ind.get("stability", 0.6))
@@ -324,6 +337,41 @@ func _build_dashboard():
 	var c4 = _card("🏅 قدرت و اعتبار")
 	_row(c4, "شاخص قدرت", PersianFormatter.format_number(int(ind.get("power_score", 0))))
 	_row(c4, "سطح رهبری", PersianFormatter.to_persian_digits(str(st.get("level", 1))))
+
+func _add_ai_recommendation(parent: VBoxContainer, recommendation: Dictionary):
+	var box = HBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	parent.add_child(box)
+	var urgency = float(recommendation.get("urgency", 0.0))
+	var text_box = VBoxContainer.new()
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(text_box)
+	var title = Label.new()
+	title.text = "⚠️ " + str(recommendation.get("title", "پیشنهاد تخصصی"))
+	title.add_theme_font_size_override("font_size", 16)
+	title.modulate = _color_for(1.0 - urgency)
+	text_box.add_child(title)
+	var reason = Label.new()
+	reason.text = str(recommendation.get("reason", ""))
+	reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	reason.modulate = Color(0.82, 0.85, 0.92)
+	text_box.add_child(reason)
+	if recommendation.has("command"):
+		var apply = Button.new()
+		apply.text = "اجرای پیشنهاد"
+		apply.custom_minimum_size = Vector2(145, 48)
+		apply.pressed.connect(_on_apply_ai_recommendation.bind(
+			recommendation["command"], str(recommendation.get("title", "پیشنهاد"))))
+		box.add_child(apply)
+
+func _on_apply_ai_recommendation(command_data: Dictionary, title: String):
+	var cmd = GameCommandClass.from_dict(command_data)
+	# فراداده در زمان اجرا و مطابق نسخه جاری توسط موتور تکمیل می‌شود.
+	cmd.tick = 0
+	cmd.version = 0
+	if _run_tick_with([cmd]):
+		_toast("🧠 پیشنهاد «%s» اجرا شد" % title)
+		_switch_tab("dashboard")
 
 func _active_crises(st: Dictionary) -> Array:
 	var out = []
@@ -547,6 +595,11 @@ func _on_improve_relations(country: String):
 # ============================================================
 func _build_systems():
 	var c1 = _card("🏛️ سامانه‌های فعال کشور (%d سامانه)" % GameEngine.systems.size())
+	var ai_summary = AIAdvisor.get_health_summary(GameState.state, GameState.tick)
+	_row(c1, "هوش‌های تخصصی فعال", PersianFormatter.to_persian_digits(str(ai_summary.get("agents", 0))))
+	_bar(c1, "سلامت میانگین سامانه‌ها", ai_summary.get("health", 0.0))
+	_row(c1, "هشدارهای بحرانی", PersianFormatter.to_persian_digits(str(ai_summary.get("critical", 0))),
+		_color_for(1.0 - min(float(ai_summary.get("critical", 0)) / 10.0, 1.0)))
 	var grid = GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -569,13 +622,34 @@ func _render_events():
 	last.reverse()
 	for e in last:
 		var l = Label.new()
-		var data = e.get("data", {})
-		var txt = str(data.get("message", data.get("reason", e.get("type", ""))))
-		l.text = "• " + txt
+		l.text = "• " + _event_text_fa(e)
 		l.add_theme_font_size_override("font_size", 14)
 		l.modulate = Color(0.85, 0.88, 0.95)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		event_list.add_child(l)
+
+func _event_text_fa(event: Dictionary) -> String:
+	var event_type = str(event.get("type", ""))
+	var data: Dictionary = event.get("data", {})
+	if event_type == "system_event":
+		var detail: Dictionary = data.get("event", {})
+		if detail.has("message"):
+			return str(detail["message"])
+		var system_name = SYSTEM_FA.get(str(data.get("system", "")), "یکی از سامانه‌ها")
+		return "رویداد تازه در سامانه «%s» ثبت شد" % system_name
+	if data.has("message"):
+		return str(data["message"])
+	if data.has("reason"):
+		return str(data["reason"])
+	var translations = {
+		"tick_success": "محاسبات روز با موفقیت انجام شد",
+		"tick_rollback": "محاسبات روز بازگردانی شد",
+		"tick_failed_validation": "یک فرمان نامعتبر رد شد",
+		"command_applied": "تصمیم جدید دولت اعمال شد",
+		"save": "بازی ذخیره شد",
+		"load": "بازی بارگذاری شد"
+	}
+	return translations.get(event_type, "یک رویداد جدید ثبت شد")
 
 func _toast(msg: String):
 	toast_lbl.text = msg

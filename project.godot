@@ -22,6 +22,7 @@ GameState="*res://scripts/core/state.gd"
 GameEngine="*res://scripts/core/engine.gd"
 EventLog="*res://scripts/core/event_log.gd"
 Deterministic="*res://scripts/core/deterministic.gd"
+AIAdvisor="*res://scripts/ai/ai_advisor.gd"
 PersianFormatter="*res://scripts/ui/persian_formatter.gd"
 P2PManager="*res://scripts/multiplayer/p2p_manager.gd"
 

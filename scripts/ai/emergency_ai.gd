@@ -1,8 +1,5 @@
 extends BaseAI
+# هوش تخصصی emergency؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var emerg = state.get("emergency", {})
-    if emerg.get("preparedness",0.5) < 0.3:
-        pass
-    if emerg.get("response_time",10.0) > 20.0:
-        pass
-    return []
+	return super.decide(state, tick)

@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی heritage؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var h = state.get("heritage", {})
-    if h.get("preservation",0.65) < 0.4:
-        pass
-    return []
+	return super.decide(state, tick)

@@ -1,3 +1,5 @@
 extends BaseAI
+# هوش تخصصی political_career؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    return []
+	return super.decide(state, tick)

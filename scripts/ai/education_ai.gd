@@ -1,9 +1,5 @@
 extends BaseAI
-# هوش آموزش - ۳.۲۰.۷
+# هوش تخصصی education؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var edu = state.get("education", {})
-    # اگر نسبت شاگرد/معلم بالا، پیشنهاد جذب معلم
-    # اگر مهارت کم، پیشنهاد فنی‌حرفه‌ای
-    if edu.get("student_teacher_ratio",25.0) > 35.0:
-        pass
-    return []
+	return super.decide(state, tick)

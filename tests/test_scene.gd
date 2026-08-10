@@ -93,6 +93,21 @@ func _ready():
 						failed.append("AI خروجی نامعتبر: " + fname)
 	print("AI check: %d OK, %d failed" % [ai_ok, ai_fail])
 
+	# هماهنگ‌کننده باید همه هوش‌ها را تحلیل و یک پیشنهاد معتبر تولید کند.
+	var diagnoses = AIAdvisor.analyze(s, t)
+	if AIAdvisor.agents.size() != 65 or diagnoses.size() != 65:
+		failed.append("شورای هوشمند همه ۶۵ سامانه را تحلیل نکرد")
+	else:
+		var advisor_cmds = AIAdvisor.build_autonomous_commands(s, t, 1)
+		if advisor_cmds.is_empty():
+			failed.append("شورای هوشمند هیچ پیشنهاد اجرایی نساخت")
+		else:
+			var advisor_result = GameEngine.tick(s, v, t, advisor_cmds)
+			if not advisor_result.success:
+				failed.append("پیشنهاد شورای هوشمند نامعتبر بود: " + advisor_result.reason)
+			else:
+				print("AI advisor: 65 diagnoses + valid action OK")
+
 	# اعتبارسنجی سخت‌گیرانه فرمان ناشناخته
 	var bad_cmd = GameCommand.new("unknown_command", {})
 	var before_bad_state = JSON.stringify(GameState.state)

@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی physical؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var p = state.get("physical", {})
-    if p.get("housing_shortage",0.1) > 0.2:
-        pass
-    return []
+	return super.decide(state, tick)

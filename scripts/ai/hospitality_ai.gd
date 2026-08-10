@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی hospitality؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var h = state.get("hospitality", {})
-    if h.get("hotels_capacity",0.65) > 1.0:
-        pass
-    return []
+	return super.decide(state, tick)

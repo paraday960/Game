@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی statistics؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var stats = state.get("statistics", {})
-    if stats.get("accuracy",0.75) < 0.5:
-        pass
-    return []
+	return super.decide(state, tick)

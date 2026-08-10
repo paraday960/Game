@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی administration؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var admin = state.get("administration", {})
-    if admin.get("regional_inequality",0.35) > 0.6:
-        pass
-    return []
+	return super.decide(state, tick)

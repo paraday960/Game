@@ -1,9 +1,5 @@
 extends BaseAI
-# هوش اطلاعات - ۳.۲۳.۷
+# هوش تخصصی intelligence؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var intel = state.get("intelligence", {})
-    if intel.get("infiltration_risk",0.2) > 0.6:
-        pass # پیشنهاد افزایش ضدجاسوسی
-    if intel.get("cyber_readiness",0.5) < 0.4:
-        pass # پیشنهاد بودجه سایبری
-    return []
+	return super.decide(state, tick)

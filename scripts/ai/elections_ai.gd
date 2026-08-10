@@ -1,8 +1,5 @@
 extends BaseAI
+# هوش تخصصی elections؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var e = state.get("elections", {})
-    if e.get("participation",0.6) < 0.35:
-        pass
-    if e.get("fraud_risk",0.15) > 0.4:
-        pass
-    return []
+	return super.decide(state, tick)

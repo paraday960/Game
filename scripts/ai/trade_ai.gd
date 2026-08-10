@@ -1,6 +1,5 @@
 extends BaseAI
+# هوش تخصصی trade؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+
 func decide(state: Dictionary, tick: int) -> Array:
-    var trade = state.get("trade", {})
-    if trade.get("balance",0) < -20000000000.0:
-        pass
-    return []
+	return super.decide(state, tick)
