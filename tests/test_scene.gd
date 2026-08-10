@@ -26,6 +26,8 @@ func _ready():
 		failed.append("سناریوهای داده‌محور نامعتبر هستند")
 	if not PolicyManager.is_valid():
 		failed.append("سیاست‌های عمومی داده‌محور نامعتبر هستند")
+	if not MilitaryManager.is_valid():
+		failed.append("برنامه‌های توسعه نظامی داده‌محور نامعتبر هستند")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -46,6 +48,16 @@ func _ready():
 			failed.append("روابط کشور ثروتمند در یک ماه جهش غیرواقعی داشت")
 		else:
 			print("World relation monthly scaling: OK")
+	var npc_state = WorldManager.ensure_world(GameState.state.duplicate(true))
+	Deterministic.set_seed(4401)
+	var npc_result = WorldManager.simulate_npc_month(npc_state, 1, {"force_war":["USA", "CHN"]})
+	var npc_key = "CHN|USA"
+	if not npc_result.state.get("world", {}).get("npc_wars", {}).has(npc_key):
+		failed.append("AI کشورهای غیر‌بازیکن جنگ مستقل را آغاز نکرد")
+	elif npc_result.events.is_empty():
+		failed.append("تحول مستقل جهان رویداد قابل گزارش نساخت")
+	else:
+		print("Autonomous world AI: relations + alliance/trade/war state OK")
 
 	# اقلیم اجباری زمستان: نبود برف‌روب باید انسداد و اعتراض بسازد؛ آمادگی اثر را کاهش دهد.
 	var winter_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "RUS")
@@ -242,6 +254,42 @@ func _ready():
 		else:
 			print("Public policy: atomic activation + daily effect + conflict OK")
 
+	var monetary_state = s.duplicate(true)
+	var independence_before = float(monetary_state["central_bank"].get("independence", 0.7))
+	var monetary_result = GameEngine.tick(monetary_state, v, t, [GameCommand.create_monetary_policy("manual_rate", 0.25)])
+	if not monetary_result.success or monetary_result.state["central_bank"].get("policy_mode", "") != "manual_rate":
+		failed.append("سیاست پولی دستوری اعمال نشد")
+	elif float(monetary_result.state["central_bank"].get("independence", 1.0)) >= independence_before:
+		failed.append("هزینه استقلال بانک مرکزی برای مداخله ثبت نشد")
+	else:
+		var tariff_result = GameEngine.tick(s, v, t, [GameCommand.create_tariff_set(0.30)])
+		if not tariff_result.success or abs(float(tariff_result.state["trade"]["tariff_rate"]) - 0.30) > 0.03:
+			failed.append("تعرفه گمرکی اتمی اعمال نشد")
+		else:
+			print("Macro instruments: interest + inflation framework + tariff OK")
+
+	# توسعه نظامی: شروع پروژه، پیشرفت ماهانه، تکمیل اثر و دکترین
+	var military_state = s.duplicate(true)
+	var debt_before_program = float(military_state["economy"]["national_debt"])
+	var program_result = GameEngine.tick(military_state, v, t, [GameCommand.create_military_program("reserve_training")])
+	if not program_result.success or not program_result.state.get("military_development", {}).get("active", {}).has("reserve_training"):
+		failed.append("برنامه توسعه نظامی آغاز نشد")
+	elif float(program_result.state["economy"]["national_debt"]) <= debt_before_program:
+		failed.append("هزینه برنامه نظامی ثبت نشد")
+	else:
+		var program_state = program_result.state
+		program_state = MilitaryManager.simulate_month(program_state, t + 2).state
+		program_state = MilitaryManager.simulate_month(program_state, t + 3).state
+		if not program_state["military_development"]["completed"].has("reserve_training"):
+			failed.append("برنامه نظامی پس از مدت مقرر تکمیل نشد")
+		else:
+			var doctrine_result = MilitaryManager.set_doctrine(program_state, "expeditionary", t + 3)
+			var modifiers = MilitaryManager.get_effective_modifiers(doctrine_result.state)
+			if not doctrine_result.success or float(modifiers.get("power_multiplier", 1.0)) <= 1.0:
+				failed.append("دکترین نظامی اثر واقعی ایجاد نکرد")
+			else:
+				print("Military development: program + cost + completion + doctrine OK")
+
 	# درخت فناوری: پیش‌نیاز، هزینه و اثر واقعی تکمیل
 	var research_state = s.duplicate(true)
 	var research_id = "advanced_manufacturing"
@@ -268,16 +316,24 @@ func _ready():
 		var war_state = s.duplicate(true)
 		war_state["diplomacy"]["relations"]["USA"] = 20.0
 		war_state["diplomacy"]["action_points"] = 5.0
+		war_state["military"]["readiness"] = 0.90
 		var war_result = GameEngine.tick(war_state, v, t, [GameCommand.create_diplomacy_action("USA", "declare_war")])
-		if not war_result.success or not war_result.state.get("world", {}).get("wars", {}).has("USA"):
-			failed.append("اعلام جنگ یا شبیه‌سازی نبرد فعال نشد")
-		else:
+		var active_war = war_result.state.get("world", {}).get("wars", {}).has("USA") if war_result.success else false
+		var war_recorded = false
+		if war_result.success:
+			for record in war_result.state.get("world", {}).get("war_history", []):
+				if record.get("target", "") == "USA": war_recorded = true
+		if not war_result.success or (not active_war and not war_recorded):
+			failed.append("اعلام جنگ یا ثبت نتیجه نبرد فعال نشد")
+		elif active_war:
 			war_result.state["diplomacy"]["action_points"] = 5.0
 			var peace_result = GameEngine.tick(war_result.state, war_result.version, war_result.tick, [GameCommand.create_diplomacy_action("USA", "offer_peace")])
 			if not peace_result.success or peace_result.state.get("world", {}).get("wars", {}).has("USA"):
 				failed.append("پیمان صلح جنگ را پایان نداد")
 			else:
-				print("World diplomacy: trade + war simulation + peace OK")
+				print("World diplomacy: trade + war simulation + peace/history OK")
+		else:
+			print("World diplomacy: war resolved within month and history recorded OK")
 
 	# تبدیل رویداد به تصمیم، اجرای گزینه در موتور اتمی و ثبت تاریخچه
 	var decision_manager = load("res://scripts/core/decision_manager.gd")

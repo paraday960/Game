@@ -36,6 +36,9 @@ var network_status_lbl: Label
 # مقادیر میانی فرمان‌های تعاملی
 var tax_slider: HSlider
 var tax_value_lbl: Label
+var interest_slider: HSlider
+var inflation_target_slider: HSlider
+var tariff_slider: HSlider
 var budget_sliders: Dictionary = {}
 
 # نام‌های فارسی سیستم‌ها
@@ -892,7 +895,40 @@ func _build_economy():
 		_color_for(0.5 + sign(-econ.get("deficit", 0)) * 0.5))
 	_row(c3, "بدهی ملی", PersianFormatter.format_money(econ.get("national_debt", 0)))
 	_bar(c3, "نسبت بدهی به GDP", clamp(econ.get("debt_to_gdp", 0) / 2.0, 0, 1))
+
+	var cb: Dictionary = st.get("central_bank", {})
+	var trade: Dictionary = st.get("trade", {})
+	var macro = _card("🏦 سیاست پولی و تجاری")
+	_row(macro, "حالت بانک مرکزی", {"independent":"مستقل/قاعده تیلور", "manual_rate":"نرخ دستوری", "inflation_target":"هدف‌گذاری تورم"}.get(str(cb.get("policy_mode", "independent")), "مستقل"))
+	_row(macro, "نرخ بهره فعلی", PersianFormatter.format_percent(float(cb.get("interest_rate", 0.15))))
+	interest_slider = HSlider.new(); interest_slider.min_value = 0; interest_slider.max_value = 40; interest_slider.step = 0.5; interest_slider.value = float(cb.get("manual_rate", cb.get("interest_rate", 0.15))) * 100.0; macro.add_child(interest_slider)
+	_mk_btn(macro, "اعمال نرخ بهره دستوری", Vector2(250, 46), _on_apply_manual_rate)
+	inflation_target_slider = HSlider.new(); inflation_target_slider.min_value = 0; inflation_target_slider.max_value = 20; inflation_target_slider.step = 0.5; inflation_target_slider.value = float(cb.get("inflation_target", 0.05)) * 100.0; macro.add_child(inflation_target_slider)
+	_mk_btn(macro, "اعمال هدف تورم", Vector2(220, 46), _on_apply_inflation_target)
+	_mk_btn(macro, "بازگرداندن استقلال بانک مرکزی", Vector2(280, 46), _on_restore_central_bank_independence)
+	_row(macro, "تعرفه فعلی", PersianFormatter.format_percent(float(trade.get("tariff_rate", 0.15))))
+	tariff_slider = HSlider.new(); tariff_slider.min_value = 0; tariff_slider.max_value = 60; tariff_slider.step = 1; tariff_slider.value = float(trade.get("tariff_rate", 0.15)) * 100.0; macro.add_child(tariff_slider)
+	_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff)
 	_build_policy_center()
+
+func _on_apply_manual_rate():
+	var rate = float(interest_slider.value) / 100.0
+	if _run_tick_with([GameCommandClass.create_monetary_policy("manual_rate", rate)]):
+		_toast("🏦 نرخ بهره دستوری %s اعمال شد" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
+
+func _on_apply_inflation_target():
+	var target = float(inflation_target_slider.value) / 100.0
+	if _run_tick_with([GameCommandClass.create_monetary_policy("inflation_target", target)]):
+		_toast("🎯 هدف تورم %s ثبت شد" % PersianFormatter.format_percent(target)); _switch_tab("economy")
+
+func _on_restore_central_bank_independence():
+	if _run_tick_with([GameCommandClass.create_monetary_policy("independent", 0.0)]):
+		_toast("🏦 بانک مرکزی به قاعده مستقل بازگشت"); _switch_tab("economy")
+
+func _on_apply_tariff():
+	var rate = float(tariff_slider.value) / 100.0
+	if _run_tick_with([GameCommandClass.create_tariff_set(rate)]):
+		_toast("🚢 تعرفه گمرکی %s اعمال شد" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
 
 func _build_policy_center():
 	var policy_state: Dictionary = GameState.state.get("policies", {})
@@ -1068,6 +1104,41 @@ func _build_military():
 	_bar(c3, "قدرت اطلاعاتی", intel.get("power", 50) / 100.0)
 	_bar(c3, "آمادگی سایبری", intel.get("cyber_readiness", 0.5))
 
+	var development: Dictionary = st.get("military_development", {})
+	var doctrine_card = _card("🧭 دکترین نظامی")
+	_row(doctrine_card, "دکترین فعال", MilitaryManager.get_doctrine_name(str(development.get("doctrine", "balanced"))))
+	var doctrine_grid = GridContainer.new(); doctrine_grid.columns = 3; doctrine_card.add_child(doctrine_grid)
+	for doctrine_id in MilitaryManager.DOCTRINES.keys():
+		var doctrine_button = Button.new(); doctrine_button.text = MilitaryManager.get_doctrine_name(doctrine_id)
+		doctrine_button.disabled = str(development.get("doctrine", "balanced")) == doctrine_id
+		doctrine_button.pressed.connect(FeedbackManager.play_click)
+		doctrine_button.pressed.connect(_on_military_doctrine.bind(str(doctrine_id)))
+		doctrine_grid.add_child(doctrine_button)
+
+	var programs_card = _card("🏗️ برنامه‌های توسعه دفاعی")
+	var active_programs: Dictionary = development.get("active", {})
+	for active_id in active_programs.keys():
+		_row(programs_card, "در حال اجرا: %s" % MilitaryManager.get_program_name(active_id), "%s ماه باقی‌مانده" % PersianFormatter.to_persian_digits(str(active_programs[active_id].get("remaining_months", 0))))
+	for program_id in MilitaryManager.get_program_ids():
+		var definition = MilitaryManager.get_program(program_id)
+		var row = HBoxContainer.new(); programs_card.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(info)
+		var title = Label.new(); title.text = str(definition.get("name_fa", program_id)); title.add_theme_font_size_override("font_size", 16); info.add_child(title)
+		var desc = Label.new(); desc.text = PersianFormatter.to_persian_digits("%s — مدت %s ماه، هزینه %.2f٪ تولید داخلی" % [definition.get("description", ""), str(definition.get("duration_months", 1)), float(definition.get("cost_gdp_ratio", 0.0)) * 100.0])
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; desc.modulate = Color(0.72, 0.78, 0.88); info.add_child(desc)
+		var check = MilitaryManager.can_start(st, program_id)
+		var start = Button.new(); start.text = "آغاز"; start.custom_minimum_size = Vector2(100, 44); start.disabled = not check.valid; start.tooltip_text = "" if check.valid else str(check.reason)
+		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_military_program.bind(str(program_id), str(definition.get("name_fa", "برنامه"))))
+		row.add_child(start)
+
+func _on_military_doctrine(doctrine_id: String):
+	if _run_tick_with([GameCommandClass.create_military_doctrine(doctrine_id)]):
+		_toast("🪖 دکترین «%s» فعال شد" % MilitaryManager.get_doctrine_name(doctrine_id)); _switch_tab("military")
+
+func _on_military_program(program_id: String, title: String):
+	if _run_tick_with([GameCommandClass.create_military_program(program_id)]):
+		_toast("🏗️ برنامه «%s» آغاز شد" % title); _switch_tab("military")
+
 # ============================================================
 # تب جهان — دیپلماسی تعاملی
 # ============================================================
@@ -1131,6 +1202,9 @@ func _build_world():
 	for war_target in world.get("wars", {}).keys():
 		if map_countries.has(war_target):
 			map_countries[war_target]["at_war"] = true
+	for npc_war in world.get("npc_wars", {}).values():
+		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
+			if map_countries.has(participant): map_countries[participant]["at_war"] = true
 	var world_map = WorldMapClass.new()
 	world_map.selected_code = selected_world_country
 	world_map.set_world(map_countries, rel, player_id)
@@ -1141,7 +1215,22 @@ func _build_world():
 	_row(overview, "امتیاز اقدام دیپلماتیک", PersianFormatter.to_persian_digits("%.1f از 5" % dip.get("action_points", 0.0)))
 	_row(overview, "نفوذ جهانی", PersianFormatter.format_number(int(dip.get("influence", 0))))
 	_bar(overview, "قدرت نرم", dip.get("soft_power", 35) / 100.0)
-	_row(overview, "جنگ‌های فعال", PersianFormatter.to_persian_digits(str(world.get("wars", {}).size())))
+	_row(overview, "جنگ‌های فعال شما", PersianFormatter.to_persian_digits(str(world.get("wars", {}).size())))
+	_row(overview, "جنگ‌های دیگر جهان", PersianFormatter.to_persian_digits(str(world.get("npc_wars", {}).size())))
+
+	var global_card = _card("🌐 تحولات کشورهای غیر‌بازیکن")
+	_row(global_card, "اتحادهای مستقل", PersianFormatter.to_persian_digits(str(world.get("npc_alliances", []).size())))
+	_row(global_card, "توافق‌های تجاری مستقل", PersianFormatter.to_persian_digits(str(world.get("npc_trade_agreements", []).size())))
+	var recent_global: Array = world.get("recent_global_events", [])
+	if recent_global.is_empty():
+		var quiet = Label.new(); quiet.text = "هنوز تحول راهبردی بزرگی میان کشورهای دیگر ثبت نشده است."
+		quiet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; quiet.modulate = Color(0.75, 0.8, 0.9)
+		global_card.add_child(quiet)
+	else:
+		for i in range(max(0, recent_global.size() - 6), recent_global.size()):
+			var label = Label.new(); label.text = "• " + str(recent_global[i].get("message", ""))
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			global_card.add_child(label)
 
 	if selected_world_country != "":
 		_build_selected_country_card(st, selected_world_country)

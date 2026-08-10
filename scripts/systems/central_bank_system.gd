@@ -36,8 +36,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if politics.get("stability",0.6) < 0.4:
 		political_pressure -= 0.01  # دولت می‌خواهد نرخ کم برای رشد
 
-	# حرکت نرم به سمت تیلور
-	cb["interest_rate"] = clamp(cb["interest_rate"] * 0.995 + (taylor_rate + political_pressure) * 0.005, 0.01, 0.35)
+	# حالت مستقل از قاعده تیلور پیروی می‌کند؛ مداخله مستقیم سریع‌تر اما استقلال را فرسوده می‌کند.
+	cb["policy_mode"] = cb.get("policy_mode", "independent")
+	cb["manual_rate"] = cb.get("manual_rate", cb["interest_rate"])
+	if cb["policy_mode"] == "manual_rate":
+		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.98 + float(cb["manual_rate"]) * 0.02, 0.0, 0.50)
+		cb["independence"] = clamp(float(cb["independence"]) - 0.0002, 0.1, 0.95)
+	else:
+		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.995 + (taylor_rate + political_pressure) * 0.005, 0.01, 0.35)
 
 	# عرضه پول و نقدینگی
 	# نرخ بهره بالا → عرضه کم، رشد کم؛ پایین → رشد اما ریسک تورم

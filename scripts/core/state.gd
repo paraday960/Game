@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 11,
+			"schema_version": 12,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -178,7 +178,7 @@ func init_default_state():
 		"judicial": {"rule_of_law": 0.60, "crime_rate": 50.0, "efficiency": 0.60},
 		"security": {"public_security": 0.70, "police_presence": 0.5},
 		"administration": {"efficiency": 0.60, "decentralization": 0.4},
-		"central_bank": {"interest_rate": 0.15, "money_supply": 1.0, "exchange_rate": 1.0},
+		"central_bank": {"interest_rate": 0.15, "money_supply": 1.0, "exchange_rate": 1.0, "policy_mode":"independent", "manual_rate":0.15, "inflation_target":0.05},
 		"trade": {"exports": 80_000_000_000.0, "imports": 70_000_000_000.0, "balance": 10_000_000_000.0},
 		"tourism": {"visitors": 5_000_000, "revenue": 5_000_000_000.0},
 		"stock_market": {"index": 1000.0, "growth": 0.05},
@@ -254,11 +254,12 @@ func _apply_initial_overrides():
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
 	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-	state["schema_version"] = int(state.get("schema_version", 11))
+	state["schema_version"] = int(state.get("schema_version", 12))
 	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
 	state = TimeManager.reset(state)
 	state = SeasonalManager.reset_for_country(state, WorldManager.default_country)
+	state = MilitaryManager.reset(state)
 	state = ScenarioManager.apply_scenario(state, ScenarioManager.default_scenario, 0)
 	state = TechnologyManager.migrate_state(state)
 	state = PolicyManager.reset(state)

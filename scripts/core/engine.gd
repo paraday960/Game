@@ -8,8 +8,8 @@ const DecisionManagerClass = preload("res://scripts/core/decision_manager.gd")
 const ProgressionManagerClass = preload("res://scripts/core/progression_manager.gd")
 
 const SUPPORTED_COMMANDS = [
-	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy",
-	"country_select", "policy_change", "municipal_action", "decision_resolve"
+	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
+	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "decision_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -294,6 +294,16 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var rate = cmd.payload.get("rate", null)
 			if not _is_finite_number(rate) or float(rate) < 0.0 or float(rate) > 0.9:
 				return {"valid": false, "reason": "نرخ مالیات باید عددی بین صفر تا نود درصد باشد"}
+		elif cmd.type == "monetary_policy":
+			var mode = str(cmd.payload.get("mode", "")); var value = cmd.payload.get("value", 0.0)
+			if not ["independent", "manual_rate", "inflation_target"].has(mode):
+				return {"valid": false, "reason": "حالت سیاست پولی نامعتبر است"}
+			if not _is_finite_number(value) or (mode == "manual_rate" and (float(value) < 0.0 or float(value) > 0.50)) or (mode == "inflation_target" and (float(value) < 0.0 or float(value) > 0.30)):
+				return {"valid": false, "reason": "مقدار سیاست پولی خارج از محدوده است"}
+		elif cmd.type == "tariff_set":
+			var tariff = cmd.payload.get("rate", null)
+			if not _is_finite_number(tariff) or float(tariff) < 0.0 or float(tariff) > 0.60:
+				return {"valid": false, "reason": "تعرفه باید بین صفر تا شصت درصد باشد"}
 		elif cmd.type == "budget_allocate":
 			var allocs = cmd.payload.get("allocations", null)
 			if not allocs is Dictionary or allocs.is_empty():
@@ -341,6 +351,16 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var municipal_check = SeasonalManager.can_action(state, str(cmd.payload.get("action", "")))
 			if not municipal_check.valid:
 				return {"valid": false, "reason": municipal_check.reason}
+		elif cmd.type == "military_program":
+			var program_check = MilitaryManager.can_start(state, str(cmd.payload.get("program_id", "")))
+			if not program_check.valid:
+				return {"valid": false, "reason": program_check.reason}
+		elif cmd.type == "military_doctrine":
+			var doctrine = str(cmd.payload.get("doctrine", ""))
+			if not MilitaryManager.DOCTRINES.has(doctrine):
+				return {"valid": false, "reason": "دکترین نظامی معتبر نیست"}
+			if str(state.get("military_development", {}).get("doctrine", "balanced")) == doctrine:
+				return {"valid": false, "reason": "این دکترین از قبل فعال است"}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -376,6 +396,17 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 				snapshot["economy"]["budget_allocations"][k] = allocs[k]
 	elif cmd.type == "tax_set":
 		snapshot["economy"]["tax_rate"] = cmd.payload.get("rate", 0.2)
+	elif cmd.type == "monetary_policy":
+		var mode = str(cmd.payload.get("mode", "independent")); var value = float(cmd.payload.get("value", 0.0))
+		snapshot["central_bank"]["policy_mode"] = mode
+		if mode == "manual_rate":
+			snapshot["central_bank"]["manual_rate"] = value
+			snapshot["central_bank"]["independence"] = clamp(float(snapshot["central_bank"].get("independence", 0.7)) - 0.03, 0.1, 0.95)
+			snapshot["politics"]["trust"] = clamp(float(snapshot["politics"].get("trust", 0.5)) - 0.005, 0.0, 1.0)
+		elif mode == "inflation_target": snapshot["central_bank"]["inflation_target"] = value
+	elif cmd.type == "tariff_set":
+		snapshot["trade"]["tariff_rate"] = float(cmd.payload.get("rate", 0.15))
+		snapshot["diplomacy"]["influence"] = clamp(float(snapshot["diplomacy"].get("influence", 40.0)) - abs(float(snapshot["trade"]["tariff_rate"]) - 0.15) * 2.0, 0.0, 100.0)
 	elif cmd.type == "research_start":
 		var tech_id = cmd.payload.get("tech_id", "")
 		snapshot["technology"]["in_progress"] = tech_id
@@ -392,6 +423,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		snapshot = WorldManager.apply_country_profile(snapshot, country_id)
 		snapshot = TimeManager.reset(snapshot)
 		snapshot = SeasonalManager.reset_for_country(snapshot, country_id)
+		snapshot = MilitaryManager.reset(snapshot)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
@@ -414,6 +446,18 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 			snapshot = municipal_result.state
 			for municipal_event in municipal_result.events:
 				EventLog.log_event("municipal_event", municipal_event, cmd.tick, cmd.version)
+	elif cmd.type == "military_program":
+		var program_result = MilitaryManager.start_program(snapshot, str(cmd.payload.get("program_id", "")), cmd.tick)
+		if program_result.success:
+			snapshot = program_result.state
+			for program_event in program_result.events:
+				EventLog.log_event("military_event", program_event, cmd.tick, cmd.version)
+	elif cmd.type == "military_doctrine":
+		var doctrine_result = MilitaryManager.set_doctrine(snapshot, str(cmd.payload.get("doctrine", "")), cmd.tick)
+		if doctrine_result.success:
+			snapshot = doctrine_result.state
+			for doctrine_event in doctrine_result.events:
+				EventLog.log_event("military_event", doctrine_event, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
@@ -454,6 +498,13 @@ func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 			generated_events.append(wrapped_policy)
 			EventLog.log_event("policy_event", policy_event, turn, snapshot.get("version", 0))
 		snapshot = TimeManager.finish_simulation_day(snapshot)
+
+	var military_result = MilitaryManager.simulate_month(snapshot, turn)
+	snapshot = military_result.state
+	for military_event in military_result.events:
+		var wrapped_military = {"system":"military_development", "event":military_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_military)
+		EventLog.log_event("military_event", military_event, turn, snapshot.get("version", 0))
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
 	snapshot = _compute_indicators(snapshot)

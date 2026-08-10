@@ -53,6 +53,12 @@ static func create_budget_allocate(allocations: Dictionary):
 static func create_tax_set(rate: float):
 	return _self_script().new("tax_set", {"rate": rate})
 
+static func create_monetary_policy(mode: String, value: float = 0.0):
+	return _self_script().new("monetary_policy", {"mode": mode, "value": value})
+
+static func create_tariff_set(rate: float):
+	return _self_script().new("tariff_set", {"rate": rate})
+
 static func create_research_start(tech_id: String):
 	return _self_script().new("research_start", {"tech_id": tech_id})
 
@@ -67,6 +73,12 @@ static func create_policy_change(policy_id: String, enabled: bool):
 
 static func create_municipal_action(action: String):
 	return _self_script().new("municipal_action", {"action": action})
+
+static func create_military_program(program_id: String):
+	return _self_script().new("military_program", {"program_id": program_id})
+
+static func create_military_doctrine(doctrine: String):
+	return _self_script().new("military_doctrine", {"doctrine": doctrine})
 
 static func create_decision_resolve(decision_id: String, choice_id: String):
 	return _self_script().new("decision_resolve", {"decision_id": decision_id, "choice_id": choice_id})

@@ -8,6 +8,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var pol = state["politics"]
 	var tech = state["technology"]
 	var infra = state["infrastructure"]
+	var development_modifiers = MilitaryManager.get_effective_modifiers(state)
 
 	var events = []
 
@@ -30,8 +31,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# قدرت نظامی = f(نیروی انسانی، تجهیزات، آموزش، فناوری، لجستیک، بودجه)
 	var personnel_factor = mil["personnel"] / 500_000.0
 	var tech_factor = tech["branches"]["نظامی"] * 1.5
-	var readiness_factor = mil["readiness"]
-	var logistics_factor = infra["quality"] * 0.5 + 0.5
+	var readiness_factor = clamp(float(mil["readiness"]) + float(development_modifiers.get("readiness_bonus", 0.0)), 0.1, 1.0)
+	mil["effective_readiness"] = readiness_factor
+	var logistics_factor = clamp(infra["quality"] * 0.5 + 0.5 + float(development_modifiers.get("logistics_bonus", 0.0)), 0.4, 1.4)
 	var budget_factor = (mil_budget / max(econ["government_spending"] * 0.08, 1.0))
 
 	var power = 50.0
@@ -40,6 +42,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	power *= (0.5 + readiness_factor * 0.5)
 	power *= logistics_factor
 	power *= (0.8 + budget_factor * 0.2)
+	power *= float(development_modifiers.get("power_multiplier", 1.0))
 	mil["power"] = clamp(power, 5.0, 200.0)
 
 	# روحیه
@@ -48,7 +51,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	mil["readiness"] = mil["readiness"] * 0.8 + morale * 0.2
 
 	# بازدارندگی = f(قدرت، آمادگی، توان هسته‌ای)
-	var deterrence = mil["power"] * 0.6 + mil["readiness"] * 30.0
+	var deterrence = mil["power"] * 0.6 + readiness_factor * 30.0 + float(development_modifiers.get("deterrence_bonus", 0.0))
 	if state["space"]["level"] > 0.5: # توان موشکی
 		deterrence += 10.0
 	mil["deterrence"] = clamp(deterrence, 0.0, 100.0)

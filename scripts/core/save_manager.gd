@@ -252,7 +252,11 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 		state_data = SeasonalManager.reset_for_country(
 			state_data, str(state_data.get("country", {}).get("id", WorldManager.default_country)))
 		migrated = true
-	state_data["schema_version"] = 11
+	if source_schema < 12 or not state_data.has("military_development"):
+		state_data = MilitaryManager.reset(state_data)
+		migrated = true
+	state_data = WorldManager.ensure_world(state_data)
+	state_data["schema_version"] = 12
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:
