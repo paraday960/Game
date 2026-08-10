@@ -45,11 +45,11 @@ jobs:
           echo "Keystore created at: $PWD/debug.keystore"
           mkdir -p build
 
-      - name: Configure Godot editor settings (SDK + keystore)
+      - name: Configure Godot export settings (SDK + keystore)
         run: |
-          # تنظیمات export در EditorSettings: keystore و SDK path به‌صورت مطلق
+          # ۱) Editor Settings - فایل صحیح Godot 4.x: editor_settings-4.tres
           mkdir -p ~/.config/godot
-          cat > ~/.config/godot/editor_settings-4.2.tres << EOF
+          cat > ~/.config/godot/editor_settings-4.tres << EOF
           [gd_resource type="EditorSettings" format=3]
 
           [resource]
@@ -60,8 +60,12 @@ jobs:
           export/android/force_system_user = false
           export/android/shutdown_adb_on_exit = true
           EOF
-          echo "Editor settings written:"
-          cat ~/.config/godot/editor_settings-4.2.tres
+          echo "Editor settings written to editor_settings-4.tres"
+
+          # ۲) تزریق keystore مستقیم به preset (مسیر مطلق) - اطمینان مضاعف
+          sed -i "s|keystore/debug=\"\"|keystore/debug=\"$PWD/debug.keystore\"|" export_presets.cfg
+          grep -q 'keystore/debug_user' export_presets.cfg || sed -i 's|keystore/debug=.*|&\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"|' export_presets.cfg
+          grep 'keystore' export_presets.cfg
 
       - name: Godot Import
         run: |
