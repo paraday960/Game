@@ -86,6 +86,12 @@ static func create_national_project(project_id: String):
 static func create_project_cancel(project_id: String):
 	return _self_script().new("national_project", {"project_id": project_id, "action": "cancel"})
 
+static func create_cabinet_appointment(ministry_id: String, candidate_id: String):
+	return _self_script().new("cabinet_change", {"ministry_id": ministry_id, "candidate_id": candidate_id, "action": "appoint"})
+
+static func create_cabinet_dismissal(ministry_id: String):
+	return _self_script().new("cabinet_change", {"ministry_id": ministry_id, "candidate_id": "", "action": "dismiss"})
+
 static func create_decision_resolve(decision_id: String, choice_id: String):
 	return _self_script().new("decision_resolve", {"decision_id": decision_id, "choice_id": choice_id})
 

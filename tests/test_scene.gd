@@ -30,6 +30,8 @@ func _ready():
 		failed.append("برنامه‌های توسعه نظامی داده‌محور نامعتبر هستند")
 	if not NationalProjectManager.is_valid():
 		failed.append("پروژه‌های ملی داده‌محور نامعتبر هستند")
+	if not CabinetManager.is_valid():
+		failed.append("داده وزیران و وزارتخانه‌ها نامعتبر است")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -269,6 +271,25 @@ func _ready():
 			failed.append("تعرفه گمرکی اتمی اعمال نشد")
 		else:
 			print("Macro instruments: interest + inflation framework + tariff OK")
+
+	# کابینه: انتصاب اتمی، هزینه سیاسی، عملکرد و جریمه وزارتخانه خالی
+	var cabinet_state = s.duplicate(true)
+	var capital_before = float(cabinet_state["policies"]["political_capital"])
+	var cabinet_result = GameEngine.tick(cabinet_state, v, t, [GameCommand.create_cabinet_appointment("economy", "econ_naderi")])
+	if not cabinet_result.success or cabinet_result.state["cabinet"]["active"]["economy"].get("candidate_id", "") != "econ_naderi":
+		failed.append("انتصاب وزیر اتمی انجام نشد")
+	elif float(cabinet_result.state["policies"]["political_capital"]) >= capital_before:
+		failed.append("هزینه سرمایه سیاسی انتصاب وزیر ثبت نشد")
+	elif not cabinet_result.state["cabinet"]["performance"].has("economy"):
+		failed.append("عملکرد ماهانه وزیر محاسبه نشد")
+	else:
+		var vacancy_state = CabinetManager.dismiss(s.duplicate(true), "health", t).state
+		var health_before = float(vacancy_state["health"]["quality"])
+		vacancy_state = CabinetManager.simulate_month(vacancy_state, t + 1).state
+		if float(vacancy_state["health"]["quality"]) >= health_before:
+			failed.append("وزارتخانه خالی جریمه عملکرد ایجاد نکرد")
+		else:
+			print("Cabinet: appointment + political cost + performance + vacancy OK")
 
 	# توسعه نظامی: شروع پروژه، پیشرفت ماهانه، تکمیل اثر و دکترین
 	var military_state = s.duplicate(true)

@@ -9,7 +9,7 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
-	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "decision_resolve"
+	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "decision_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -369,6 +369,18 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var project_check = NationalProjectManager.can_start(state, project_id) if project_action == "start" else NationalProjectManager.can_cancel(state, project_id)
 			if not project_check.valid:
 				return {"valid": false, "reason": project_check.reason}
+		elif cmd.type == "cabinet_change":
+			var ministry_id = str(cmd.payload.get("ministry_id", ""))
+			var cabinet_action = str(cmd.payload.get("action", "appoint"))
+			if cabinet_action == "appoint":
+				var cabinet_check = CabinetManager.can_appoint(state, ministry_id, str(cmd.payload.get("candidate_id", "")))
+				if not cabinet_check.valid:
+					return {"valid": false, "reason": cabinet_check.reason}
+			elif cabinet_action == "dismiss":
+				if not state.get("cabinet", {}).get("active", {}).has(ministry_id):
+					return {"valid": false, "reason": "وزیر فعالی برای برکناری وجود ندارد"}
+			else:
+				return {"valid": false, "reason": "اقدام کابینه نامعتبر است"}
 		elif cmd.type == "decision_resolve":
 			var decision_id = cmd.payload.get("decision_id", "")
 			var choice_id = cmd.payload.get("choice_id", "")
@@ -433,6 +445,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		snapshot = SeasonalManager.reset_for_country(snapshot, country_id)
 		snapshot = MilitaryManager.reset(snapshot)
 		snapshot = NationalProjectManager.reset(snapshot)
+		snapshot = CabinetManager.reset(snapshot)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
@@ -474,6 +487,13 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 			snapshot = project_result.state
 			for project_event in project_result.events:
 				EventLog.log_event("national_project_event", project_event, cmd.tick, cmd.version)
+	elif cmd.type == "cabinet_change":
+		var ministry_id = str(cmd.payload.get("ministry_id", ""))
+		var cabinet_result = CabinetManager.appoint(snapshot, ministry_id, str(cmd.payload.get("candidate_id", "")), cmd.tick) if str(cmd.payload.get("action", "appoint")) == "appoint" else CabinetManager.dismiss(snapshot, ministry_id, cmd.tick)
+		if cabinet_result.success:
+			snapshot = cabinet_result.state
+			for cabinet_event in cabinet_result.events:
+				EventLog.log_event("cabinet_event", cabinet_event, cmd.tick, cmd.version)
 	elif cmd.type == "decision_resolve":
 		var decision_result = DecisionManagerClass.resolve_decision(
 			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
@@ -528,6 +548,13 @@ func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 		var wrapped_project = {"system":"national_projects", "event":national_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
 		generated_events.append(wrapped_project)
 		EventLog.log_event("national_project_event", national_event, turn, snapshot.get("version", 0))
+
+	var cabinet_result = CabinetManager.simulate_month(snapshot, turn)
+	snapshot = cabinet_result.state
+	for cabinet_event in cabinet_result.events:
+		var wrapped_cabinet = {"system":"cabinet", "event":cabinet_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_cabinet)
+		EventLog.log_event("cabinet_event", cabinet_event, turn, snapshot.get("version", 0))
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
 	snapshot = _compute_indicators(snapshot)

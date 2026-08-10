@@ -113,6 +113,7 @@ const METRIC_WORD_FA = {
 
 const TABS := [
 	["dashboard", "🏠 داشبورد"],
+	["government", "👔 دولت"],
 	["economy", "💰 اقتصاد"],
 	["projects", "🏗️ پروژه‌ها"],
 	["technology", "🔬 فناوری"],
@@ -191,7 +192,7 @@ func _build_chrome():
 		var key = tab_def[0]
 		var btn = Button.new()
 		btn.text = tab_def[1]
-		btn.custom_minimum_size = Vector2(115, 56)
+		btn.custom_minimum_size = Vector2(105, 56)
 		btn.add_theme_font_size_override("font_size", 17)
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_switch_tab.bind(key))
@@ -291,6 +292,7 @@ func _switch_tab(tab_key: String):
 
 	match tab_key:
 		"dashboard": _build_dashboard()
+		"government": _build_government()
 		"economy": _build_economy()
 		"projects": _build_national_projects()
 		"technology": _build_technology()
@@ -879,6 +881,54 @@ func _active_crises(st: Dictionary) -> Array:
 	elif hazard == "flood":
 		out.append("سیلاب شهری — زهکشی و خدمات اضطراری زیر فشار هستند")
 	return out
+
+# ============================================================
+# تب دولت — وزیران، شایستگی، فساد و انسجام کابینه
+# ============================================================
+func _build_government():
+	var state = GameState.state
+	var cabinet: Dictionary = state.get("cabinet", {})
+	var active: Dictionary = cabinet.get("active", {})
+	var performance: Dictionary = cabinet.get("performance", {})
+	var summary = _card("👔 هیئت دولت")
+	_bar(summary, "انسجام کابینه", float(cabinet.get("cohesion", 0.65)))
+	_bar(summary, "سرمایه سیاسی انتصاب", float(state.get("policies", {}).get("political_capital", 0.0)) / max(float(BalanceConfig.get_value("politics.policy_capital_max", 5.0)), 1.0))
+	_row(summary, "رسوایی‌های ثبت‌شده", PersianFormatter.to_persian_digits(str(cabinet.get("scandal_count", 0))), _color_for(0.75 if int(cabinet.get("scandal_count", 0)) == 0 else 0.25))
+	var hint = Label.new(); hint.text = "وزیر کارآمد خروجی وزارتخانه را بهتر می‌کند؛ پاکدستی پایین خطر رسوایی دارد و وفاداری بیشتر انسجام کابینه را حفظ می‌کند. هر انتصاب سرمایه سیاسی مصرف می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75, 0.82, 0.92); summary.add_child(hint)
+
+	for ministry_id in CabinetManager.get_ministry_ids():
+		var ministry = CabinetManager.get_ministry(ministry_id)
+		var card = _card("🏛️ %s" % str(ministry.get("name_fa", ministry_id)))
+		var current_id = str(active.get(ministry_id, {}).get("candidate_id", ""))
+		if current_id.is_empty():
+			var vacant = Label.new(); vacant.text = "⚠️ این وزارتخانه بدون وزیر است و جریمه عملکرد دارد."; vacant.modulate = Color(1.0, 0.55, 0.5); card.add_child(vacant)
+		else:
+			var current = CabinetManager.get_candidate(current_id)
+			_row(card, "وزیر فعلی", str(current.get("name_fa", current_id)))
+			_bar(card, "عملکرد این ماه", float(performance.get(ministry_id, 0.50)))
+			_bar(card, "شایستگی", float(current.get("competence", 0.5)))
+			_bar(card, "پاکدستی", float(current.get("integrity", 0.5)))
+			_bar(card, "وفاداری", float(current.get("loyalty", 0.5)))
+			var dismiss = Button.new(); dismiss.text = "برکناری وزیر"; dismiss.modulate = Color(1.0, 0.58, 0.55)
+			dismiss.pressed.connect(FeedbackManager.play_click); dismiss.pressed.connect(_on_cabinet_dismiss.bind(str(ministry_id))); card.add_child(dismiss)
+		var candidates_title = Label.new(); candidates_title.text = "نامزدهای معرفی‌شده"; candidates_title.add_theme_font_size_override("font_size", 16); card.add_child(candidates_title)
+		for candidate in ministry.get("candidates", []):
+			var candidate_id = str(candidate.get("id", ""))
+			var row = HBoxContainer.new(); card.add_child(row)
+			var info = Label.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			info.text = PersianFormatter.to_persian_digits("%s | شایستگی %.0f٪ | پاکدستی %.0f٪ | وفاداری %.0f٪" % [candidate.get("name_fa", ""), float(candidate.get("competence", 0.0)) * 100.0, float(candidate.get("integrity", 0.0)) * 100.0, float(candidate.get("loyalty", 0.0)) * 100.0]); row.add_child(info)
+			var check = CabinetManager.can_appoint(state, ministry_id, candidate_id)
+			var appoint = Button.new(); appoint.text = "انتصاب"; appoint.disabled = not check.valid; appoint.tooltip_text = "" if check.valid else str(check.reason)
+			appoint.pressed.connect(FeedbackManager.play_click); appoint.pressed.connect(_on_cabinet_appoint.bind(str(ministry_id), candidate_id, str(candidate.get("name_fa", "نامزد")))); row.add_child(appoint)
+
+func _on_cabinet_appoint(ministry_id: String, candidate_id: String, candidate_name: String):
+	if _run_tick_with([GameCommandClass.create_cabinet_appointment(ministry_id, candidate_id)]):
+		_toast("👔 %s به کابینه منصوب شد" % candidate_name); _switch_tab("government")
+
+func _on_cabinet_dismiss(ministry_id: String):
+	if _run_tick_with([GameCommandClass.create_cabinet_dismissal(ministry_id)]):
+		_toast("⛔ وزیر برکنار شد؛ وزارتخانه تا انتصاب بعدی جریمه عملکرد دارد"); _switch_tab("government")
 
 # ============================================================
 # تب اقتصاد — تعاملی (مالیات + بودجه)
