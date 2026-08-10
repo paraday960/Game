@@ -272,8 +272,11 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if source_schema < 16 or not state_data.has("legislation"):
 		state_data = LawManager.reset(state_data)
 		migrated = true
+	if source_schema < 17 or not state_data.has("intelligence_operations"):
+		state_data = IntelligenceOperationManager.reset(state_data)
+		migrated = true
 	state_data = WorldManager.ensure_world(state_data)
-	state_data["schema_version"] = 16
+	state_data["schema_version"] = 17
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:

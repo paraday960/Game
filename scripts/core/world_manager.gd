@@ -261,7 +261,8 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			continue
 		var war: Dictionary = world["wars"][target]
 		var enemy: Dictionary = world["countries"][target]
-		var player_force = float(state["military"].get("power", 50.0)) * float(state["military"].get("readiness", 0.6))
+		var recon_bonus = IntelligenceOperationManager.get_recon_bonus(state,target)
+		var player_force = float(state["military"].get("power", 50.0)) * float(state["military"].get("readiness", 0.6)) * (1.0 + recon_bonus)
 		var enemy_force = float(enemy.get("military_power", 50.0)) * 0.68
 		var advantage = (player_force - enemy_force) / max(player_force + enemy_force, 1.0)
 		var daily_progress = clamp(advantage * 4.0 + Deterministic.next_range(-1.2, 1.2), -3.5, 3.5)

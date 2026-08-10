@@ -1,0 +1,14 @@
+{
+  "version":"1.0.0",
+  "operations":[
+    {"id":"counterintelligence_sweep","name_fa":"پاک‌سازی ضدجاسوسی","scope":"domestic","duration_months":3,"cost_gdp_ratio":0.0010,"base_success":0.78,"detection_risk":0.05,"description":"شناسایی شبکه نفوذ و حفاظت از نهادهای حیاتی.","effects":[{"path":"intelligence.infiltration_risk","value":-0.12,"min":0,"max":1},{"path":"intelligence.counter_intel","value":0.08,"min":0,"max":1}]},
+    {"id":"national_cyber_audit","name_fa":"ممیزی سایبری ملی","scope":"domestic","duration_months":4,"cost_gdp_ratio":0.0015,"base_success":0.82,"detection_risk":0.02,"prerequisites":["cyber_defense"],"description":"آزمون نفوذ هماهنگ بانک، انرژی و دولت دیجیتال.","effects":[{"path":"intelligence.cyber_readiness","value":0.10,"min":0,"max":1},{"path":"security.cyber","value":0.08,"min":0,"max":1}]},
+    {"id":"anti_corruption_probe","name_fa":"تحقیق محرمانه فساد","scope":"domestic","duration_months":3,"cost_gdp_ratio":0.0008,"base_success":0.68,"detection_risk":0.12,"description":"ردیابی دارایی و شبکه قراردادهای مشکوک در دستگاه دولت.","effects":[{"path":"politics.corruption","value":-0.035,"min":0,"max":0.95},{"path":"judicial.corruption_judicial","value":-0.025,"min":0,"max":1}]},
+    {"id":"foreign_intelligence","name_fa":"جمع‌آوری اطلاعات خارجی","scope":"foreign","duration_months":3,"cost_gdp_ratio":0.0010,"base_success":0.70,"detection_risk":0.18,"description":"ارزیابی اقتصاد، سیاست و توان نظامی کشور هدف.","effects":[]},
+    {"id":"military_recon","name_fa":"شناسایی راهبردی نظامی","scope":"foreign","duration_months":3,"cost_gdp_ratio":0.0013,"base_success":0.66,"detection_risk":0.22,"description":"شناخت آرایش، آمادگی و ضعف‌های دفاعی کشور هدف.","effects":[]},
+    {"id":"influence_campaign","name_fa":"کارزار نفوذ نرم","scope":"foreign","duration_months":4,"cost_gdp_ratio":0.0015,"base_success":0.58,"detection_risk":0.30,"description":"تقویت تصویر کشور و شبکه ارتباطی در افکار عمومی هدف.","effects":[{"path":"diplomacy.soft_power","value":3.0,"min":0,"max":100}]},
+    {"id":"technology_acquisition","name_fa":"اکتساب فناوری خارجی","scope":"foreign","duration_months":6,"cost_gdp_ratio":0.0020,"base_success":0.48,"detection_risk":0.38,"prerequisites":["national_ai"],"description":"دستیابی محرمانه به دانش فنی و کاهش زمان پژوهش.","effects":[{"path":"technology.research_points","value":8.0,"min":0}]},
+    {"id":"sanctions_network","name_fa":"شبکه مقابله با تحریم","scope":"foreign","duration_months":5,"cost_gdp_ratio":0.0018,"base_success":0.55,"detection_risk":0.34,"description":"یافتن مسیرهای قانونی و واسطه‌ای برای کاهش فشار تحریم خارجی.","effects":[{"path":"trade.export_diversity","value":0.04,"min":0,"max":1}]},
+    {"id":"covert_diplomacy","name_fa":"دیپلماسی محرمانه","scope":"foreign","duration_months":3,"cost_gdp_ratio":0.0008,"base_success":0.72,"detection_risk":0.12,"description":"کانال غیررسمی برای کاهش تنش و آماده‌سازی مذاکره.","effects":[]}
+  ]
+}

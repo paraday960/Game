@@ -34,6 +34,8 @@ func _ready():
 		failed.append("داده وزیران و وزارتخانه‌ها نامعتبر است")
 	if not LawManager.is_valid():
 		failed.append("قوانین ملی داده‌محور نامعتبر هستند")
+	if not IntelligenceOperationManager.is_valid():
+		failed.append("عملیات اطلاعاتی داده‌محور نامعتبر هستند")
 	if not WorldManager.is_valid() or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 15:
 		failed.append("داده جهان یا روابط ۱۶ کشور کامل نیست")
 	else:
@@ -322,6 +324,31 @@ func _ready():
 			failed.append("تعارض یا لغو قانون درست عمل نکرد")
 		else:
 			print("Legislation: enactment + implementation + conflict + repeal OK")
+
+	# عملیات اطلاعاتی: زمان، موفقیت، گزارش، افشا و پیامد خارجی
+	var intelligence_state = s.duplicate(true)
+	var intelligence_start = GameEngine.tick(intelligence_state, v, t, [GameCommand.create_intelligence_operation("counterintelligence_sweep", "")])
+	if not intelligence_start.success or intelligence_start.state["intelligence_operations"]["active"].is_empty():
+		failed.append("عملیات اطلاعاتی اتمی آغاز نشد")
+	else:
+		var foreign_state = s.duplicate(true)
+		var foreign_start = IntelligenceOperationManager.start(foreign_state, "foreign_intelligence", "TUR", t)
+		var operation_key = str(foreign_start.state["intelligence_operations"]["active"].keys()[0])
+		foreign_start.state["intelligence_operations"]["active"][operation_key]["remaining_months"] = 1
+		var foreign_finish = IntelligenceOperationManager.simulate_month(foreign_start.state, t + 1, {"force_success":true, "force_detected":false})
+		if foreign_finish.state["intelligence_operations"]["reports"].is_empty():
+			failed.append("عملیات خارجی موفق گزارش اطلاعاتی تولید نکرد")
+		else:
+			var exposed_state = s.duplicate(true)
+			var exposed_start = IntelligenceOperationManager.start(exposed_state, "influence_campaign", "TUR", t)
+			var exposed_key = str(exposed_start.state["intelligence_operations"]["active"].keys()[0])
+			exposed_start.state["intelligence_operations"]["active"][exposed_key]["remaining_months"] = 1
+			var relation_before_exposure = float(exposed_start.state["diplomacy"]["relations"]["TUR"])
+			var exposed_finish = IntelligenceOperationManager.simulate_month(exposed_start.state, t + 1, {"force_success":true, "force_detected":true})
+			if float(exposed_finish.state["diplomacy"]["relations"]["TUR"]) >= relation_before_exposure:
+				failed.append("افشای عملیات اطلاعاتی پیامد دیپلماتیک نداشت")
+			else:
+				print("Intelligence operations: duration + success + report + exposure OK")
 
 	# توسعه نظامی: شروع پروژه، پیشرفت ماهانه، تکمیل اثر و دکترین
 	var military_state = s.duplicate(true)

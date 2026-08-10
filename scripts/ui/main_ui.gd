@@ -1368,6 +1368,44 @@ func _build_military():
 		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_military_program.bind(str(program_id), str(definition.get("name_fa", "برنامه"))))
 		row.add_child(start)
 
+	var operations_state: Dictionary = st.get("intelligence_operations", {})
+	var operations_card = _card("🕶️ عملیات اطلاعاتی")
+	_bar(operations_card, "ریسک افشای انباشته", float(operations_state.get("heat", 0.0)))
+	_row(operations_card, "ظرفیت عملیاتی", "%s از %s" % [PersianFormatter.to_persian_digits(str(operations_state.get("active", {}).size())), PersianFormatter.to_persian_digits(str(operations_state.get("capacity", 2)))])
+	var target = selected_world_country
+	if target.is_empty() or target == st.get("country", {}).get("id", ""):
+		var relation_keys = st.get("diplomacy", {}).get("relations", {}).keys()
+		target = str(relation_keys[0]) if not relation_keys.is_empty() else ""
+	_row(operations_card, "هدف خارجی فعلی", WorldManager.get_country_name(target) if not target.is_empty() else "انتخاب نشده")
+	for operation_key in operations_state.get("active", {}).keys():
+		var record: Dictionary = operations_state["active"][operation_key]
+		var active_row = HBoxContainer.new(); operations_card.add_child(active_row)
+		var active_label = Label.new(); active_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		active_label.text = "در حال اجرا: %s — %s ماه" % [IntelligenceOperationManager.get_operation_name(str(record.get("operation_id", ""))), PersianFormatter.to_persian_digits(str(record.get("remaining_months", 0)))]
+		active_row.add_child(active_label)
+		var cancel = Button.new(); cancel.text = "لغو"; cancel.pressed.connect(FeedbackManager.play_click); cancel.pressed.connect(_on_intelligence_cancel.bind(str(operation_key))); active_row.add_child(cancel)
+	for operation_id in IntelligenceOperationManager.get_operation_ids():
+		var operation = IntelligenceOperationManager.get_operation(operation_id)
+		var operation_target = target if operation.get("scope", "domestic") == "foreign" else ""
+		var op_row = HBoxContainer.new(); operations_card.add_child(op_row)
+		var op_info = VBoxContainer.new(); op_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; op_row.add_child(op_info)
+		var op_title = Label.new(); op_title.text = "%s — %s" % [operation.get("name_fa", operation_id), "خارجی" if operation.get("scope", "domestic") == "foreign" else "داخلی"]; op_title.add_theme_font_size_override("font_size", 16); op_info.add_child(op_title)
+		var op_desc = Label.new(); op_desc.text = PersianFormatter.to_persian_digits("%s | مدت %s ماه | خطر افشا %.0f٪" % [operation.get("description", ""), str(operation.get("duration_months", 1)), float(operation.get("detection_risk", 0.0)) * 100.0]); op_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; op_desc.modulate = Color(0.72, 0.78, 0.88); op_info.add_child(op_desc)
+		var op_check = IntelligenceOperationManager.can_start(st, operation_id, operation_target)
+		var op_start = Button.new(); op_start.text = "آغاز"; op_start.disabled = not op_check.valid; op_start.tooltip_text = "" if op_check.valid else str(op_check.reason); op_start.pressed.connect(FeedbackManager.play_click); op_start.pressed.connect(_on_intelligence_start.bind(str(operation_id), operation_target)); op_row.add_child(op_start)
+	var reports: Array = operations_state.get("reports", [])
+	for i in range(max(0, reports.size() - 4), reports.size()):
+		var report = reports[i]
+		_row(operations_card, "گزارش: %s" % WorldManager.get_country_name(str(report.get("target", ""))), "کیفیت %s٪" % PersianFormatter.to_persian_digits(str(int(float(report.get("quality", 0.0)) * 100.0))))
+
+func _on_intelligence_start(operation_id: String, target: String):
+	if _run_tick_with([GameCommandClass.create_intelligence_operation(operation_id, target)]):
+		_toast("🕶️ عملیات «%s» آغاز شد" % IntelligenceOperationManager.get_operation_name(operation_id)); _switch_tab("military")
+
+func _on_intelligence_cancel(operation_key: String):
+	if _run_tick_with([GameCommandClass.create_intelligence_cancel(operation_key)]):
+		_toast("⛔ عملیات اطلاعاتی لغو شد"); _switch_tab("military")
+
 func _on_military_doctrine(doctrine_id: String):
 	if _run_tick_with([GameCommandClass.create_military_doctrine(doctrine_id)]):
 		_toast("🪖 دکترین «%s» فعال شد" % MilitaryManager.get_doctrine_name(doctrine_id)); _switch_tab("military")
