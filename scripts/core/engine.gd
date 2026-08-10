@@ -141,6 +141,12 @@ func _load_remaining_systems():
 		systems["quantitative"] = load("res://scripts/systems/quantitative_temporal_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/human_states_system.gd"):
 		systems["human_states"] = load("res://scripts/systems/human_states_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/prison_system.gd"):
+		systems["prison"] = load("res://scripts/systems/prison_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/international_orgs_system.gd"):
+		systems["international_orgs"] = load("res://scripts/systems/international_orgs_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/migration_system.gd"):
+		systems["migration_detail"] = load("res://scripts/systems/migration_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
