@@ -1,9 +1,11 @@
-# نقشه جهان
+# موتور نقشه اورجینال بازی
 
-`world_natural_earth.svg` از مجموعه **Natural Earth** و در مالکیت عمومی (Public Domain) است.
+نقشه بازی دیگر یک تصویر یا SVG ثابت نیست. فایل `data/world_polygons.json` شامل چندضلعی‌های ساده‌شده ۱۹۵ کشور است و `GeographyManager` و `world_map.gd` آن‌ها را مستقیماً رسم، رنگ‌گذاری و Hit-test می‌کنند.
 
-- صفحه منبع: https://commons.wikimedia.org/wiki/Category:Natural_Earth
-- فایل: `PUBLIC_DOMAIN_NaturalEarth_z4_World_pseudo_mercator.svg`
-- استفاده در بازی: پس‌زمینه آفلاین نقشه تعاملی روابط بین‌الملل
+هندسه پایه از **Natural Earth 1:50m Admin-0 Countries**، داده عمومی (Public Domain)، گرفته شده و با `tools/build_world_map.py` به فرمت اختصاصی بازی تبدیل شده است:
 
-هیچ CDN، API یا سرویس پولی برای نمایش نقشه لازم نیست.
+- منبع: https://github.com/nvkelso/natural-earth-vector
+- شرایط استفاده: https://www.naturalearthdata.com/about/terms-of-use/
+- خروجی اختصاصی: چندضلعی، حفره، ISO3، ساده‌سازی چندمقیاسی و Web Mercator زمان اجرا
+
+سبک بصری، رنگ لایه‌ها، موتور انتخاب کشور، زوم منطقه‌ای، مسیرها، گلوگاه‌ها و رندر کاملاً متعلق به پروژه است. هیچ CDN، Tile Server یا API نقشه در زمان اجرا لازم نیست.

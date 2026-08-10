@@ -38,6 +38,11 @@ func _ready():
 		failed.append("عملیات اطلاعاتی داده‌محور نامعتبر هستند")
 	if not MapLayerManager.is_valid():
 		failed.append("داده مراکز و مسیرهای نقشه نامعتبر است")
+	if not GeographyManager.is_valid():
+		failed.append("هندسه اورجینال نقشه ۱۹۵ کشور نامعتبر است")
+	else:
+		var iran_hit=GeographyManager.country_at_normalized(GeographyManager.normalized_point(53.0,32.0))
+		if iran_hit!="IRN":failed.append("انتخاب مستقیم چندضلعی ایران شکست خورد: "+iran_hit)
 	if not WorldManager.is_valid() or WorldManager.countries.size() != 195 or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 194:
 		failed.append("داده جهان یا روابط ۱۹۵ کشور کامل نیست")
 	else:

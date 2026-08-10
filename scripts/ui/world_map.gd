@@ -3,7 +3,6 @@ extends Control
 
 signal country_selected(code)
 
-const WORLD_TEXTURE = preload("res://assets/maps/world_natural_earth.svg")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 const LAYER_COLORS = {
 	"wars":Color(1.0,0.22,0.20,0.95), "alliances":Color(0.22,0.60,1.0,0.85),
@@ -27,7 +26,7 @@ var _view_bounds:=Rect2(0,0,1,1)
 var _drawn_routes:Array=[]
 
 func _ready():
-	custom_minimum_size=Vector2(0,500 if map_mode=="regional" else 440);mouse_filter=Control.MOUSE_FILTER_STOP;focus_mode=Control.FOCUS_ALL;resized.connect(queue_redraw);queue_redraw()
+	custom_minimum_size=Vector2(0,500 if map_mode=="regional" else 440);mouse_filter=Control.MOUSE_FILTER_STOP;focus_mode=Control.FOCUS_ALL;clip_contents=true;resized.connect(queue_redraw);queue_redraw()
 
 func set_map_data(new_countries:Dictionary,new_relations:Dictionary,new_player:String,new_world:Dictionary,state:Dictionary,layers:Dictionary,mode:String):
 	countries=new_countries.duplicate(true);relations=new_relations.duplicate(true);player_country=new_player;world_state=new_world.duplicate(true);full_state=state;active_layers=layers.duplicate(true);map_mode=mode
@@ -41,12 +40,59 @@ func set_world(new_countries:Dictionary,new_relations:Dictionary,new_player_coun
 func set_relations(new_relations:Dictionary):relations=new_relations.duplicate(true);queue_redraw()
 
 func _draw():
-	draw_rect(Rect2(Vector2.ZERO,size),Color(0.018,0.042,0.085),true)
-	var source=Rect2(_view_bounds.position*Vector2(WORLD_TEXTURE.get_width(),WORLD_TEXTURE.get_height()),_view_bounds.size*Vector2(WORLD_TEXTURE.get_width(),WORLD_TEXTURE.get_height()))
-	_map_rect=_fit_rect(source.size,size-Vector2(20,46));_map_rect.position+=Vector2(10,10)
-	draw_texture_rect_region(WORLD_TEXTURE,_map_rect,source,Color(0.58,0.72,0.82,0.72));draw_rect(_map_rect,Color(0.25,0.55,0.75,0.8),false,2.0)
+	draw_rect(Rect2(Vector2.ZERO,size),Color(0.012,0.032,0.065),true)
+	var logical_size=Vector2(max(0.05,_view_bounds.size.x*2.0),max(0.05,_view_bounds.size.y))
+	_map_rect=_fit_rect(logical_size,size-Vector2(20,46));_map_rect.position+=Vector2(10,10)
+	_draw_ocean_grid();_draw_country_shapes()
 	_drawn_routes.clear();_draw_routes();_draw_hubs_and_chokepoints();_draw_countries();_draw_legend()
 	if not hovered_route.is_empty():_draw_route_tooltip()
+
+func _draw_ocean_grid():
+	draw_rect(_map_rect,Color(0.025,0.105,0.165),true)
+	for lon in range(-180,181,30):
+		var a=_geo_point(float(lon),-78.0);var b=_geo_point(float(lon),78.0)
+		if _map_rect.has_point(a) or _map_rect.has_point(b):draw_line(a,b,Color(0.30,0.58,0.72,0.13),1.0)
+	for lat in range(-60,61,30):
+		var a=_geo_point(-179.0,float(lat));var b=_geo_point(179.0,float(lat))
+		draw_line(a,b,Color(0.30,0.58,0.72,0.13),1.0)
+	draw_rect(_map_rect,Color(0.25,0.58,0.78,0.85),false,2.0)
+
+func _draw_country_shapes():
+	for code in allowed_countries:
+		if not countries.has(code):continue
+		var fill=_country_fill(str(code));var border=Color(0.48,0.68,0.76,0.72)
+		if code==selected_code:border=Color(1.0,0.88,0.28);fill=fill.lightened(0.18)
+		elif code==hovered_code:border=Color.WHITE;fill=fill.lightened(0.12)
+		elif code==player_country:border=Color(0.35,0.85,1.0);fill=Color(0.08,0.42,0.66,0.95)
+		for polygon in GeographyManager.get_polygons(str(code)):
+			var outer=_screen_ring(polygon.outer)
+			if outer.size()<3:continue
+			var triangles=Geometry2D.triangulate_polygon(outer)
+			if not triangles.is_empty():draw_colored_polygon(outer,fill)
+			for hole in polygon.holes:
+				var screen_hole=_screen_ring(hole)
+				if screen_hole.size()>=3 and not Geometry2D.triangulate_polygon(screen_hole).is_empty():draw_colored_polygon(screen_hole,Color(0.025,0.105,0.165))
+			var border_ring=outer.duplicate();border_ring.append(outer[0]);draw_polyline(border_ring,border,1.25 if map_mode=="regional" else 0.65,true)
+
+func _country_fill(code:String)->Color:
+	var profile=countries.get(code,{})
+	if active_layers.get("wars",false) and profile.get("at_war",false):return Color(0.62,0.10,0.10,0.95)
+	if active_layers.get("alliances",false) and world_state.get("alliances",[]).has(code):return Color(0.12,0.34,0.70,0.95)
+	if active_layers.get("intelligence",false) and _has_intelligence_report(code):return Color(0.43,0.18,0.62,0.94)
+	if active_layers.get("weather",false):
+		var heat=float(profile.get("heat_factor",0.5));var snow=float(profile.get("snow_factor",0.2));return Color(0.20+heat*0.42,0.38+snow*0.28,0.28+snow*0.40,0.92)
+	if active_layers.get("relations",true):
+		var rel=float(relations.get(code,50.0));var relation_color=_relation_color(rel);return Color(relation_color.r*0.58,relation_color.g*0.58,relation_color.b*0.58,0.94)
+	return {"Asia":Color(0.24,0.38,0.44),"Europe":Color(0.29,0.38,0.52),"Africa":Color(0.42,0.34,0.24),"Americas":Color(0.22,0.43,0.35),"Oceania":Color(0.38,0.30,0.48)}.get(str(profile.get("region","")),Color(0.33,0.38,0.40))
+
+func _screen_ring(ring:PackedVector2Array)->PackedVector2Array:
+	var result:=PackedVector2Array();var count=ring.size()
+	if count>2 and ring[0].is_equal_approx(ring[count-1]):count-=1
+	for i in range(count):result.append(_normalized_to_screen(ring[i]))
+	return result
+
+func _normalized_to_screen(point:Vector2)->Vector2:
+	return _map_rect.position+Vector2((point.x-_view_bounds.position.x)/_view_bounds.size.x,(point.y-_view_bounds.position.y)/_view_bounds.size.y)*_map_rect.size
 
 func _draw_routes():
 	for layer in ["trade","alliances","wars","land","air","sea"]:
@@ -79,7 +125,9 @@ func _draw_countries():
 		if code==player_country or not countries.has(code):continue
 		var point=_country_point(code);if not _map_rect.has_point(point):continue
 		var relation=float(relations.get(code,50.0));var color=_relation_color(relation) if active_layers.get("relations",true) else Color(0.62,0.68,0.74)
-		var radius=(3.0 if map_mode=="global" else 5.0)+float(countries[code].get("strategic_weight",0.3))*3.0
+		var is_tiny=GeographyManager.get_bounds(str(code)).size.x*GeographyManager.get_bounds(str(code)).size.y<0.000018
+		if map_mode=="global" and not is_tiny and code!=hovered_code and code!=selected_code:continue
+		var radius=(2.5 if map_mode=="global" else 3.5)+float(countries[code].get("strategic_weight",0.3))*2.0
 		if code==hovered_code:radius+=4.0
 		if code==selected_code:draw_circle(point,radius+7.0,Color(1.0,0.86,0.3,0.32))
 		if active_layers.get("wars",false) and countries[code].get("at_war",false):draw_arc(point,radius+5,0,TAU,20,LAYER_COLORS["wars"],2.5)
@@ -119,7 +167,12 @@ func _gui_input(event):
 		selected_code=str(codes[0]) if selected_code=="" else str(codes[(codes.find(selected_code)+1)%codes.size()]);queue_redraw();emit_signal("country_selected",selected_code)
 
 func _nearest_country(position:Vector2)->String:
-	var best="";var best_distance=18.0
+	if _map_rect.has_point(position):
+		var local=(position-_map_rect.position)/_map_rect.size
+		var normalized=_view_bounds.position+local*_view_bounds.size
+		var polygon_country=GeographyManager.country_at_normalized(normalized,allowed_countries)
+		if polygon_country!="" and polygon_country!=player_country:return polygon_country
+	var best="";var best_distance=16.0
 	for code in allowed_countries:
 		if code==player_country or not countries.has(code):continue
 		var distance=position.distance_to(_country_point(code))
