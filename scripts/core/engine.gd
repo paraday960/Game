@@ -102,6 +102,12 @@ func _load_remaining_systems():
 		systems["retail"] = load("res://scripts/systems/retail_market_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/fuel_stations_system.gd"):
 		systems["fuel_stations"] = load("res://scripts/systems/fuel_stations_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/public_services_system.gd"):
+		systems["public_services"] = load("res://scripts/systems/public_services_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/industry_sites_system.gd"):
+		systems["industry_sites"] = load("res://scripts/systems/industry_sites_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/financial_services_system.gd"):
+		systems["financial_services"] = load("res://scripts/systems/financial_services_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/urban_facilities_system.gd"):
 		systems["urban_facilities"] = load("res://scripts/systems/urban_facilities_system.gd").new()
 
