@@ -38,7 +38,13 @@ var system_order = [
 	"fisheries",      # 3.39
 	"heritage",       # 3.40
 	"space",          # 3.41
-	"elections"       # 3.65
+	"elections",      # 3.65
+	"settlements",    # 3.42 تفصیلی
+	"transport_roads",# 3.43 تفصیلی
+	"hospitality",    # 3.44
+	"retail",         # 3.45 بعدی
+	"fuel_stations",  # 3.46
+	"urban_facilities"# 3.47
 ]
 
 # سیستم‌های لود شده
@@ -87,6 +93,12 @@ func _load_remaining_systems():
 		systems["physical"] = load("res://scripts/systems/physical_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/people_system.gd"):
 		systems["people"] = load("res://scripts/systems/people_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/settlements_system.gd"):
+		systems["settlements"] = load("res://scripts/systems/settlements_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/transport_roads_system.gd"):
+		systems["transport_roads"] = load("res://scripts/systems/transport_roads_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
+		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
 # تابع اصلی تیک - اجرای اتمی
 func tick(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:
