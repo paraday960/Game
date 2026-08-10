@@ -22,7 +22,7 @@ required = {
     "id", "alpha2", "name_fa", "capital_fa", "currency_fa", "population",
     "gdp", "military_power", "tech_level", "lat", "lon", "bloc",
     "climate_fa", "snow_factor", "flood_factor", "heat_factor",
-    "municipal_capacity", "strategic_weight", "playable",
+    "municipal_capacity", "strategic_weight", "playable", "borders", "landlocked", "area_km2",
 }
 for row in rows:
     code = row.get("id", "???")

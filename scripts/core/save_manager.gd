@@ -276,7 +276,10 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 		state_data = IntelligenceOperationManager.reset(state_data)
 		migrated = true
 	state_data = WorldManager.ensure_world(state_data)
-	state_data["schema_version"] = 17
+	if source_schema < 18 or not state_data.has("map_network"):
+		state_data = MapLayerManager.update_network_metrics(state_data)
+		migrated = true
+	state_data["schema_version"] = 18
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:

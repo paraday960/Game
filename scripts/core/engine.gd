@@ -468,6 +468,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 		snapshot = CabinetManager.reset(snapshot)
 		snapshot = LawManager.reset(snapshot)
 		snapshot = IntelligenceOperationManager.reset(snapshot)
+		snapshot = MapLayerManager.update_network_metrics(snapshot)
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
@@ -602,6 +603,8 @@ func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 		var wrapped_intelligence={"system":"intelligence_operations","event":intelligence_event.duplicate(true),"simulation_day":TimeManager.get_total_days(snapshot)}
 		generated_events.append(wrapped_intelligence)
 		EventLog.log_event("intelligence_operation_event",intelligence_event,turn,snapshot.get("version",0))
+
+	snapshot = MapLayerManager.update_network_metrics(snapshot)
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
 	snapshot = _compute_indicators(snapshot)

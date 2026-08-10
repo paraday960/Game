@@ -48,7 +48,16 @@
       "strategic_weight": 0.523,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ARM",
+        "GEO",
+        "IRN",
+        "RUS",
+        "TUR"
+      ],
+      "landlocked": true,
+      "area_km2": 86600.0
     },
     {
       "id": "ARG",
@@ -77,7 +86,16 @@
       "strategic_weight": 0.667,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BOL",
+        "BRA",
+        "CHL",
+        "PRY",
+        "URY"
+      ],
+      "landlocked": false,
+      "area_km2": 2780400.0
     },
     {
       "id": "ZAF",
@@ -106,7 +124,17 @@
       "strategic_weight": 0.646,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "BWA",
+        "LSO",
+        "MOZ",
+        "NAM",
+        "SWZ",
+        "ZWE"
+      ],
+      "landlocked": false,
+      "area_km2": 1221037.0
     },
     {
       "id": "ALB",
@@ -135,7 +163,15 @@
       "strategic_weight": 0.454,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MNE",
+        "GRC",
+        "MKD",
+        "UNK"
+      ],
+      "landlocked": false,
+      "area_km2": 28748.0
     },
     {
       "id": "DEU",
@@ -164,7 +200,20 @@
       "strategic_weight": 0.784,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AUT",
+        "BEL",
+        "CZE",
+        "DNK",
+        "FRA",
+        "LUX",
+        "NLD",
+        "POL",
+        "CHE"
+      ],
+      "landlocked": false,
+      "area_km2": 357114.0
     },
     {
       "id": "ATG",
@@ -193,7 +242,10 @@
       "strategic_weight": 0.275,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 442.0
     },
     {
       "id": "AND",
@@ -222,7 +274,13 @@
       "strategic_weight": 0.298,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "FRA",
+        "ESP"
+      ],
+      "landlocked": true,
+      "area_km2": 468.0
     },
     {
       "id": "AGO",
@@ -251,7 +309,15 @@
       "strategic_weight": 0.569,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "COG",
+        "COD",
+        "ZMB",
+        "NAM"
+      ],
+      "landlocked": false,
+      "area_km2": 1246700.0
     },
     {
       "id": "AUT",
@@ -280,7 +346,19 @@
       "strategic_weight": 0.63,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CZE",
+        "DEU",
+        "HUN",
+        "ITA",
+        "LIE",
+        "SVK",
+        "SVN",
+        "CHE"
+      ],
+      "landlocked": true,
+      "area_km2": 83871.0
     },
     {
       "id": "ETH",
@@ -309,7 +387,17 @@
       "strategic_weight": 0.592,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DJI",
+        "ERI",
+        "KEN",
+        "SOM",
+        "SSD",
+        "SDN"
+      ],
+      "landlocked": true,
+      "area_km2": 1104300.0
     },
     {
       "id": "JOR",
@@ -338,7 +426,16 @@
       "strategic_weight": 0.512,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "IRQ",
+        "ISR",
+        "PSE",
+        "SAU",
+        "SYR"
+      ],
+      "landlocked": false,
+      "area_km2": 89342.0
     },
     {
       "id": "ARM",
@@ -367,7 +464,15 @@
       "strategic_weight": 0.452,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AZE",
+        "GEO",
+        "IRN",
+        "TUR"
+      ],
+      "landlocked": true,
+      "area_km2": 29743.0
     },
     {
       "id": "URY",
@@ -396,7 +501,13 @@
       "strategic_weight": 0.511,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ARG",
+        "BRA"
+      ],
+      "landlocked": false,
+      "area_km2": 181034.0
     },
     {
       "id": "ERI",
@@ -425,7 +536,14 @@
       "strategic_weight": 0.431,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DJI",
+        "ETH",
+        "SDN"
+      ],
+      "landlocked": false,
+      "area_km2": 117600.0
     },
     {
       "id": "UZB",
@@ -454,7 +572,16 @@
       "strategic_weight": 0.579,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AFG",
+        "KAZ",
+        "KGZ",
+        "TJK",
+        "TKM"
+      ],
+      "landlocked": true,
+      "area_km2": 447400.0
     },
     {
       "id": "AUS",
@@ -483,7 +610,10 @@
       "strategic_weight": 0.709,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 7692024.0
     },
     {
       "id": "EST",
@@ -512,7 +642,13 @@
       "strategic_weight": 0.463,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "LVA",
+        "RUS"
+      ],
+      "landlocked": false,
+      "area_km2": 45227.0
     },
     {
       "id": "ISR",
@@ -541,7 +677,16 @@
       "strategic_weight": 0.663,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "EGY",
+        "JOR",
+        "LBN",
+        "PSE",
+        "SYR"
+      ],
+      "landlocked": false,
+      "area_km2": 20770.0
     },
     {
       "id": "SVK",
@@ -570,7 +715,16 @@
       "strategic_weight": 0.551,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AUT",
+        "CZE",
+        "HUN",
+        "POL",
+        "UKR"
+      ],
+      "landlocked": true,
+      "area_km2": 49037.0
     },
     {
       "id": "SVN",
@@ -599,7 +753,15 @@
       "strategic_weight": 0.499,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AUT",
+        "HRV",
+        "ITA",
+        "HUN"
+      ],
+      "landlocked": false,
+      "area_km2": 20273.0
     },
     {
       "id": "ESP",
@@ -628,7 +790,16 @@
       "strategic_weight": 0.722,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AND",
+        "FRA",
+        "GIB",
+        "PRT",
+        "MAR"
+      ],
+      "landlocked": false,
+      "area_km2": 505992.0
     },
     {
       "id": "CPV",
@@ -657,7 +828,10 @@
       "strategic_weight": 0.315,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 4033.0
     },
     {
       "id": "AFG",
@@ -686,7 +860,17 @@
       "strategic_weight": 0.471,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "IRN",
+        "PAK",
+        "TKM",
+        "UZB",
+        "TJK",
+        "CHN"
+      ],
+      "landlocked": true,
+      "area_km2": 652230.0
     },
     {
       "id": "SLV",
@@ -715,7 +899,13 @@
       "strategic_weight": 0.477,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GTM",
+        "HND"
+      ],
+      "landlocked": false,
+      "area_km2": 21041.0
     },
     {
       "id": "DZA",
@@ -744,7 +934,18 @@
       "strategic_weight": 0.62,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "TUN",
+        "LBY",
+        "NER",
+        "ESH",
+        "MRT",
+        "MLI",
+        "MAR"
+      ],
+      "landlocked": false,
+      "area_km2": 2381741.0
     },
     {
       "id": "ARE",
@@ -773,7 +974,13 @@
       "strategic_weight": 0.629,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "OMN",
+        "SAU"
+      ],
+      "landlocked": false,
+      "area_km2": 83600.0
     },
     {
       "id": "IDN",
@@ -802,7 +1009,14 @@
       "strategic_weight": 0.737,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "TLS",
+        "MYS",
+        "PNG"
+      ],
+      "landlocked": false,
+      "area_km2": 1904569.0
     },
     {
       "id": "UKR",
@@ -831,7 +1045,18 @@
       "strategic_weight": 0.604,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BLR",
+        "HUN",
+        "MDA",
+        "POL",
+        "ROU",
+        "RUS",
+        "SVK"
+      ],
+      "landlocked": false,
+      "area_km2": 603500.0
     },
     {
       "id": "UGA",
@@ -860,7 +1085,16 @@
       "strategic_weight": 0.538,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "COD",
+        "KEN",
+        "RWA",
+        "SSD",
+        "TZA"
+      ],
+      "landlocked": true,
+      "area_km2": 241550.0
     },
     {
       "id": "ECU",
@@ -889,7 +1123,13 @@
       "strategic_weight": 0.562,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "COL",
+        "PER"
+      ],
+      "landlocked": false,
+      "area_km2": 276841.0
     },
     {
       "id": "FSM",
@@ -918,7 +1158,10 @@
       "strategic_weight": 0.235,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 702.0
     },
     {
       "id": "USA",
@@ -947,7 +1190,13 @@
       "strategic_weight": 0.959,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "CAN",
+        "MEX"
+      ],
+      "landlocked": false,
+      "area_km2": 9372610.0
     },
     {
       "id": "ITA",
@@ -976,7 +1225,17 @@
       "strategic_weight": 0.742,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AUT",
+        "FRA",
+        "SMR",
+        "SVN",
+        "CHE",
+        "VAT"
+      ],
+      "landlocked": false,
+      "area_km2": 301336.0
     },
     {
       "id": "IRN",
@@ -1005,7 +1264,18 @@
       "strategic_weight": 0.643,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AFG",
+        "ARM",
+        "AZE",
+        "IRQ",
+        "PAK",
+        "TUR",
+        "TKM"
+      ],
+      "landlocked": false,
+      "area_km2": 1648195.0
     },
     {
       "id": "ISL",
@@ -1034,7 +1304,10 @@
       "strategic_weight": 0.431,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 103000.0
     },
     {
       "id": "BRB",
@@ -1063,7 +1336,10 @@
       "strategic_weight": 0.347,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 430.0
     },
     {
       "id": "BHS",
@@ -1092,7 +1368,10 @@
       "strategic_weight": 0.386,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 13943.0
     },
     {
       "id": "BHR",
@@ -1121,7 +1400,10 @@
       "strategic_weight": 0.47,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 765.0
     },
     {
       "id": "BRA",
@@ -1150,7 +1432,21 @@
       "strategic_weight": 0.758,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "ARG",
+        "BOL",
+        "COL",
+        "GUF",
+        "GUY",
+        "PRY",
+        "PER",
+        "SUR",
+        "URY",
+        "VEN"
+      ],
+      "landlocked": false,
+      "area_km2": 8515767.0
     },
     {
       "id": "BRN",
@@ -1179,7 +1475,12 @@
       "strategic_weight": 0.385,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MYS"
+      ],
+      "landlocked": false,
+      "area_km2": 5765.0
     },
     {
       "id": "GBR",
@@ -1208,7 +1509,12 @@
       "strategic_weight": 0.804,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "IRL"
+      ],
+      "landlocked": false,
+      "area_km2": 242900.0
     },
     {
       "id": "BLR",
@@ -1237,7 +1543,16 @@
       "strategic_weight": 0.533,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "LVA",
+        "LTU",
+        "POL",
+        "RUS",
+        "UKR"
+      ],
+      "landlocked": true,
+      "area_km2": 207600.0
     },
     {
       "id": "BGR",
@@ -1266,7 +1581,16 @@
       "strategic_weight": 0.546,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GRC",
+        "MKD",
+        "ROU",
+        "SRB",
+        "TUR"
+      ],
+      "landlocked": false,
+      "area_km2": 110879.0
     },
     {
       "id": "BEL",
@@ -1295,7 +1619,15 @@
       "strategic_weight": 0.646,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "FRA",
+        "DEU",
+        "LUX",
+        "NLD"
+      ],
+      "landlocked": false,
+      "area_km2": 30528.0
     },
     {
       "id": "BLZ",
@@ -1324,7 +1656,13 @@
       "strategic_weight": 0.313,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GTM",
+        "MEX"
+      ],
+      "landlocked": false,
+      "area_km2": 22966.0
     },
     {
       "id": "BGD",
@@ -1353,7 +1691,13 @@
       "strategic_weight": 0.667,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MMR",
+        "IND"
+      ],
+      "landlocked": false,
+      "area_km2": 147570.0
     },
     {
       "id": "BEN",
@@ -1382,7 +1726,15 @@
       "strategic_weight": 0.467,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BFA",
+        "NER",
+        "NGA",
+        "TGO"
+      ],
+      "landlocked": false,
+      "area_km2": 112622.0
     },
     {
       "id": "BTN",
@@ -1411,7 +1763,13 @@
       "strategic_weight": 0.328,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CHN",
+        "IND"
+      ],
+      "landlocked": true,
+      "area_km2": 38394.0
     },
     {
       "id": "BWA",
@@ -1440,7 +1798,15 @@
       "strategic_weight": 0.428,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "NAM",
+        "ZAF",
+        "ZMB",
+        "ZWE"
+      ],
+      "landlocked": true,
+      "area_km2": 582000.0
     },
     {
       "id": "BDI",
@@ -1469,7 +1835,14 @@
       "strategic_weight": 0.372,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "COD",
+        "RWA",
+        "TZA"
+      ],
+      "landlocked": true,
+      "area_km2": 27834.0
     },
     {
       "id": "BFA",
@@ -1498,7 +1871,17 @@
       "strategic_weight": 0.482,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BEN",
+        "CIV",
+        "GHA",
+        "MLI",
+        "NER",
+        "TGO"
+      ],
+      "landlocked": true,
+      "area_km2": 272967.0
     },
     {
       "id": "BIH",
@@ -1527,7 +1910,14 @@
       "strategic_weight": 0.46,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "HRV",
+        "MNE",
+        "SRB"
+      ],
+      "landlocked": false,
+      "area_km2": 51209.0
     },
     {
       "id": "BOL",
@@ -1556,7 +1946,16 @@
       "strategic_weight": 0.517,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ARG",
+        "BRA",
+        "CHL",
+        "PRY",
+        "PER"
+      ],
+      "landlocked": true,
+      "area_km2": 1098581.0
     },
     {
       "id": "TJK",
@@ -1585,7 +1984,15 @@
       "strategic_weight": 0.446,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AFG",
+        "CHN",
+        "KGZ",
+        "UZB"
+      ],
+      "landlocked": true,
+      "area_km2": 143100.0
     },
     {
       "id": "TZA",
@@ -1614,7 +2021,19 @@
       "strategic_weight": 0.563,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BDI",
+        "COD",
+        "KEN",
+        "MWI",
+        "MOZ",
+        "RWA",
+        "UGA",
+        "ZMB"
+      ],
+      "landlocked": false,
+      "area_km2": 945087.0
     },
     {
       "id": "THA",
@@ -1643,7 +2062,15 @@
       "strategic_weight": 0.665,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MMR",
+        "KHM",
+        "LAO",
+        "MYS"
+      ],
+      "landlocked": false,
+      "area_km2": 513120.0
     },
     {
       "id": "TKM",
@@ -1672,7 +2099,15 @@
       "strategic_weight": 0.492,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AFG",
+        "IRN",
+        "KAZ",
+        "UZB"
+      ],
+      "landlocked": true,
+      "area_km2": 488100.0
     },
     {
       "id": "TUR",
@@ -1701,7 +2136,19 @@
       "strategic_weight": 0.723,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "ARM",
+        "AZE",
+        "BGR",
+        "GEO",
+        "GRC",
+        "IRN",
+        "IRQ",
+        "SYR"
+      ],
+      "landlocked": false,
+      "area_km2": 783562.0
     },
     {
       "id": "TTO",
@@ -1730,7 +2177,10 @@
       "strategic_weight": 0.433,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 5130.0
     },
     {
       "id": "TUN",
@@ -1759,7 +2209,13 @@
       "strategic_weight": 0.511,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DZA",
+        "LBY"
+      ],
+      "landlocked": false,
+      "area_km2": 163610.0
     },
     {
       "id": "TON",
@@ -1788,7 +2244,10 @@
       "strategic_weight": 0.24,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 747.0
     },
     {
       "id": "TUV",
@@ -1817,7 +2276,10 @@
       "strategic_weight": 0.178,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 26.0
     },
     {
       "id": "TGO",
@@ -1846,7 +2308,14 @@
       "strategic_weight": 0.424,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BEN",
+        "BFA",
+        "GHA"
+      ],
+      "landlocked": false,
+      "area_km2": 56785.0
     },
     {
       "id": "JAM",
@@ -1875,7 +2344,10 @@
       "strategic_weight": 0.439,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 10991.0
     },
     {
       "id": "SLB",
@@ -1904,7 +2376,10 @@
       "strategic_weight": 0.298,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 28896.0
     },
     {
       "id": "MHL",
@@ -1933,7 +2408,10 @@
       "strategic_weight": 0.216,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 181.0
     },
     {
       "id": "CAF",
@@ -1962,7 +2440,17 @@
       "strategic_weight": 0.352,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CMR",
+        "TCD",
+        "COD",
+        "COG",
+        "SSD",
+        "SDN"
+      ],
+      "landlocked": true,
+      "area_km2": 622984.0
     },
     {
       "id": "IRL",
@@ -1991,7 +2479,12 @@
       "strategic_weight": 0.632,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GBR"
+      ],
+      "landlocked": false,
+      "area_km2": 70273.0
     },
     {
       "id": "COD",
@@ -2020,7 +2513,20 @@
       "strategic_weight": 0.57,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AGO",
+        "BDI",
+        "CAF",
+        "COG",
+        "RWA",
+        "SSD",
+        "TZA",
+        "UGA",
+        "ZMB"
+      ],
+      "landlocked": false,
+      "area_km2": 2344858.0
     },
     {
       "id": "DOM",
@@ -2049,7 +2555,12 @@
       "strategic_weight": 0.552,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "HTI"
+      ],
+      "landlocked": false,
+      "area_km2": 48671.0
     },
     {
       "id": "MKD",
@@ -2078,7 +2589,16 @@
       "strategic_weight": 0.424,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ALB",
+        "BGR",
+        "GRC",
+        "UNK",
+        "SRB"
+      ],
+      "landlocked": true,
+      "area_km2": 25713.0
     },
     {
       "id": "CZE",
@@ -2107,7 +2627,15 @@
       "strategic_weight": 0.612,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AUT",
+        "DEU",
+        "POL",
+        "SVK"
+      ],
+      "landlocked": true,
+      "area_km2": 78865.0
     },
     {
       "id": "COG",
@@ -2136,7 +2664,16 @@
       "strategic_weight": 0.433,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AGO",
+        "CMR",
+        "CAF",
+        "COD",
+        "GAB"
+      ],
+      "landlocked": false,
+      "area_km2": 342000.0
     },
     {
       "id": "DJI",
@@ -2165,7 +2702,14 @@
       "strategic_weight": 0.343,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ERI",
+        "ETH",
+        "SOM"
+      ],
+      "landlocked": false,
+      "area_km2": 23200.0
     },
     {
       "id": "DNK",
@@ -2194,7 +2738,12 @@
       "strategic_weight": 0.611,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DEU"
+      ],
+      "landlocked": false,
+      "area_km2": 43094.0
     },
     {
       "id": "DMA",
@@ -2223,7 +2772,10 @@
       "strategic_weight": 0.235,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 751.0
     },
     {
       "id": "RWA",
@@ -2252,7 +2804,15 @@
       "strategic_weight": 0.447,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BDI",
+        "COD",
+        "TZA",
+        "UGA"
+      ],
+      "landlocked": true,
+      "area_km2": 26338.0
     },
     {
       "id": "RUS",
@@ -2281,7 +2841,25 @@
       "strategic_weight": 0.811,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AZE",
+        "BLR",
+        "CHN",
+        "EST",
+        "FIN",
+        "GEO",
+        "KAZ",
+        "PRK",
+        "LVA",
+        "LTU",
+        "MNG",
+        "NOR",
+        "POL",
+        "UKR"
+      ],
+      "landlocked": false,
+      "area_km2": 17098242.0
     },
     {
       "id": "ROU",
@@ -2310,7 +2888,16 @@
       "strategic_weight": 0.627,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BGR",
+        "HUN",
+        "MDA",
+        "SRB",
+        "UKR"
+      ],
+      "landlocked": false,
+      "area_km2": 238391.0
     },
     {
       "id": "ZMB",
@@ -2339,7 +2926,19 @@
       "strategic_weight": 0.483,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AGO",
+        "BWA",
+        "COD",
+        "MWI",
+        "MOZ",
+        "NAM",
+        "TZA",
+        "ZWE"
+      ],
+      "landlocked": true,
+      "area_km2": 752612.0
     },
     {
       "id": "ZWE",
@@ -2368,7 +2967,15 @@
       "strategic_weight": 0.509,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BWA",
+        "MOZ",
+        "ZAF",
+        "ZMB"
+      ],
+      "landlocked": true,
+      "area_km2": 390757.0
     },
     {
       "id": "STP",
@@ -2397,7 +3004,10 @@
       "strategic_weight": 0.261,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 964.0
     },
     {
       "id": "CIV",
@@ -2426,7 +3036,16 @@
       "strategic_weight": 0.554,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BFA",
+        "GHA",
+        "GIN",
+        "LBR",
+        "MLI"
+      ],
+      "landlocked": false,
+      "area_km2": 322463.0
     },
     {
       "id": "WSM",
@@ -2455,7 +3074,10 @@
       "strategic_weight": 0.267,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 2842.0
     },
     {
       "id": "SMR",
@@ -2484,7 +3106,12 @@
       "strategic_weight": 0.252,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ITA"
+      ],
+      "landlocked": true,
+      "area_km2": 61.0
     },
     {
       "id": "LKA",
@@ -2513,7 +3140,12 @@
       "strategic_weight": 0.556,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "IND"
+      ],
+      "landlocked": false,
+      "area_km2": 65610.0
     },
     {
       "id": "LCA",
@@ -2542,7 +3174,10 @@
       "strategic_weight": 0.291,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 616.0
     },
     {
       "id": "VCT",
@@ -2571,7 +3206,10 @@
       "strategic_weight": 0.256,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 389.0
     },
     {
       "id": "KNA",
@@ -2600,7 +3238,10 @@
       "strategic_weight": 0.242,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 261.0
     },
     {
       "id": "SEN",
@@ -2629,7 +3270,16 @@
       "strategic_weight": 0.494,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GMB",
+        "GIN",
+        "GNB",
+        "MLI",
+        "MRT"
+      ],
+      "landlocked": false,
+      "area_km2": 196722.0
     },
     {
       "id": "SGP",
@@ -2658,7 +3308,10 @@
       "strategic_weight": 0.625,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 710.0
     },
     {
       "id": "SWE",
@@ -2687,7 +3340,13 @@
       "strategic_weight": 0.64,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "FIN",
+        "NOR"
+      ],
+      "landlocked": false,
+      "area_km2": 450295.0
     },
     {
       "id": "CHE",
@@ -2716,7 +3375,16 @@
       "strategic_weight": 0.661,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AUT",
+        "FRA",
+        "ITA",
+        "LIE",
+        "DEU"
+      ],
+      "landlocked": true,
+      "area_km2": 41284.0
     },
     {
       "id": "SWZ",
@@ -2745,7 +3413,13 @@
       "strategic_weight": 0.35,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MOZ",
+        "ZAF"
+      ],
+      "landlocked": true,
+      "area_km2": 17364.0
     },
     {
       "id": "SDN",
@@ -2774,7 +3448,18 @@
       "strategic_weight": 0.536,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CAF",
+        "TCD",
+        "EGY",
+        "ERI",
+        "ETH",
+        "LBY",
+        "SSD"
+      ],
+      "landlocked": false,
+      "area_km2": 1886068.0
     },
     {
       "id": "SSD",
@@ -2803,7 +3488,17 @@
       "strategic_weight": 0.482,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CAF",
+        "COD",
+        "ETH",
+        "KEN",
+        "SDN",
+        "UGA"
+      ],
+      "landlocked": true,
+      "area_km2": 619745.0
     },
     {
       "id": "SUR",
@@ -2832,7 +3527,14 @@
       "strategic_weight": 0.333,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BRA",
+        "GUF",
+        "GUY"
+      ],
+      "landlocked": false,
+      "area_km2": 163820.0
     },
     {
       "id": "SYR",
@@ -2861,7 +3563,16 @@
       "strategic_weight": 0.572,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "IRQ",
+        "ISR",
+        "JOR",
+        "LBN",
+        "TUR"
+      ],
+      "landlocked": false,
+      "area_km2": 185180.0
     },
     {
       "id": "SOM",
@@ -2890,7 +3601,14 @@
       "strategic_weight": 0.439,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DJI",
+        "ETH",
+        "KEN"
+      ],
+      "landlocked": false,
+      "area_km2": 637657.0
     },
     {
       "id": "SLE",
@@ -2919,7 +3637,13 @@
       "strategic_weight": 0.4,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GIN",
+        "LBR"
+      ],
+      "landlocked": false,
+      "area_km2": 71740.0
     },
     {
       "id": "SYC",
@@ -2948,7 +3672,10 @@
       "strategic_weight": 0.276,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 452.0
     },
     {
       "id": "TLS",
@@ -2977,7 +3704,12 @@
       "strategic_weight": 0.312,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "IDN"
+      ],
+      "landlocked": false,
+      "area_km2": 14874.0
     },
     {
       "id": "CHL",
@@ -3006,7 +3738,14 @@
       "strategic_weight": 0.617,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ARG",
+        "BOL",
+        "PER"
+      ],
+      "landlocked": false,
+      "area_km2": 756102.0
     },
     {
       "id": "SRB",
@@ -3035,7 +3774,19 @@
       "strategic_weight": 0.531,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BIH",
+        "BGR",
+        "HRV",
+        "HUN",
+        "UNK",
+        "MKD",
+        "MNE",
+        "ROU"
+      ],
+      "landlocked": true,
+      "area_km2": 88361.0
     },
     {
       "id": "IRQ",
@@ -3064,7 +3815,17 @@
       "strategic_weight": 0.611,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "IRN",
+        "JOR",
+        "KWT",
+        "SAU",
+        "SYR",
+        "TUR"
+      ],
+      "landlocked": false,
+      "area_km2": 438317.0
     },
     {
       "id": "SAU",
@@ -3093,7 +3854,18 @@
       "strategic_weight": 0.696,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "IRQ",
+        "JOR",
+        "KWT",
+        "OMN",
+        "QAT",
+        "ARE",
+        "YEM"
+      ],
+      "landlocked": false,
+      "area_km2": 2149690.0
     },
     {
       "id": "OMN",
@@ -3122,7 +3894,14 @@
       "strategic_weight": 0.531,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "SAU",
+        "ARE",
+        "YEM"
+      ],
+      "landlocked": false,
+      "area_km2": 309500.0
     },
     {
       "id": "GHA",
@@ -3151,7 +3930,14 @@
       "strategic_weight": 0.564,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BFA",
+        "CIV",
+        "TGO"
+      ],
+      "landlocked": false,
+      "area_km2": 238533.0
     },
     {
       "id": "FRA",
@@ -3180,7 +3966,19 @@
       "strategic_weight": 0.795,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AND",
+        "BEL",
+        "DEU",
+        "ITA",
+        "LUX",
+        "MCO",
+        "ESP",
+        "CHE"
+      ],
+      "landlocked": false,
+      "area_km2": 551695.0
     },
     {
       "id": "PSE",
@@ -3210,7 +4008,14 @@
       "un_member": false,
       "playable": true,
       "generated_balance": true,
-      "observer_state": true
+      "observer_state": true,
+      "borders": [
+        "ISR",
+        "EGY",
+        "JOR"
+      ],
+      "landlocked": false,
+      "area_km2": 6220.0
     },
     {
       "id": "FIN",
@@ -3239,7 +4044,14 @@
       "strategic_weight": 0.589,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "NOR",
+        "SWE",
+        "RUS"
+      ],
+      "landlocked": false,
+      "area_km2": 338424.0
     },
     {
       "id": "FJI",
@@ -3268,7 +4080,10 @@
       "strategic_weight": 0.354,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 18272.0
     },
     {
       "id": "PHL",
@@ -3297,7 +4112,10 @@
       "strategic_weight": 0.663,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 342353.0
     },
     {
       "id": "CYP",
@@ -3326,7 +4144,10 @@
       "strategic_weight": 0.455,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 9251.0
     },
     {
       "id": "KGZ",
@@ -3355,7 +4176,15 @@
       "strategic_weight": 0.452,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CHN",
+        "KAZ",
+        "TJK",
+        "UZB"
+      ],
+      "landlocked": true,
+      "area_km2": 199951.0
     },
     {
       "id": "KAZ",
@@ -3384,7 +4213,16 @@
       "strategic_weight": 0.608,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CHN",
+        "KGZ",
+        "RUS",
+        "TKM",
+        "UZB"
+      ],
+      "landlocked": true,
+      "area_km2": 2724900.0
     },
     {
       "id": "QAT",
@@ -3413,7 +4251,12 @@
       "strategic_weight": 0.558,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "SAU"
+      ],
+      "landlocked": false,
+      "area_km2": 11586.0
     },
     {
       "id": "LAO",
@@ -3442,7 +4285,16 @@
       "strategic_weight": 0.443,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MMR",
+        "KHM",
+        "CHN",
+        "THA",
+        "VNM"
+      ],
+      "landlocked": true,
+      "area_km2": 236800.0
     },
     {
       "id": "LBN",
@@ -3471,7 +4323,13 @@
       "strategic_weight": 0.46,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ISR",
+        "SYR"
+      ],
+      "landlocked": false,
+      "area_km2": 10452.0
     },
     {
       "id": "LVA",
@@ -3500,7 +4358,15 @@
       "strategic_weight": 0.471,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BLR",
+        "EST",
+        "LTU",
+        "RUS"
+      ],
+      "landlocked": false,
+      "area_km2": 64559.0
     },
     {
       "id": "LSO",
@@ -3529,7 +4395,12 @@
       "strategic_weight": 0.332,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ZAF"
+      ],
+      "landlocked": true,
+      "area_km2": 30355.0
     },
     {
       "id": "POL",
@@ -3558,7 +4429,18 @@
       "strategic_weight": 0.686,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BLR",
+        "CZE",
+        "DEU",
+        "LTU",
+        "RUS",
+        "SVK",
+        "UKR"
+      ],
+      "landlocked": false,
+      "area_km2": 312679.0
     },
     {
       "id": "LUX",
@@ -3587,7 +4469,14 @@
       "strategic_weight": 0.491,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BEL",
+        "FRA",
+        "DEU"
+      ],
+      "landlocked": true,
+      "area_km2": 2586.0
     },
     {
       "id": "LBR",
@@ -3616,7 +4505,14 @@
       "strategic_weight": 0.376,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GIN",
+        "CIV",
+        "SLE"
+      ],
+      "landlocked": false,
+      "area_km2": 111369.0
     },
     {
       "id": "LBY",
@@ -3645,7 +4541,17 @@
       "strategic_weight": 0.493,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DZA",
+        "TCD",
+        "EGY",
+        "NER",
+        "SDN",
+        "TUN"
+      ],
+      "landlocked": false,
+      "area_km2": 1759540.0
     },
     {
       "id": "LTU",
@@ -3674,7 +4580,15 @@
       "strategic_weight": 0.513,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BLR",
+        "LVA",
+        "POL",
+        "RUS"
+      ],
+      "landlocked": false,
+      "area_km2": 65300.0
     },
     {
       "id": "LIE",
@@ -3703,7 +4617,13 @@
       "strategic_weight": 0.318,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AUT",
+        "CHE"
+      ],
+      "landlocked": true,
+      "area_km2": 160.0
     },
     {
       "id": "MDG",
@@ -3732,7 +4652,10 @@
       "strategic_weight": 0.47,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 587041.0
     },
     {
       "id": "MWI",
@@ -3761,7 +4684,14 @@
       "strategic_weight": 0.449,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MOZ",
+        "TZA",
+        "ZMB"
+      ],
+      "landlocked": true,
+      "area_km2": 118484.0
     },
     {
       "id": "MLT",
@@ -3790,7 +4720,10 @@
       "strategic_weight": 0.42,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 316.0
     },
     {
       "id": "MDV",
@@ -3819,7 +4752,10 @@
       "strategic_weight": 0.356,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 300.0
     },
     {
       "id": "MYS",
@@ -3848,7 +4784,14 @@
       "strategic_weight": 0.641,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BRN",
+        "IDN",
+        "THA"
+      ],
+      "landlocked": false,
+      "area_km2": 330803.0
     },
     {
       "id": "MLI",
@@ -3877,7 +4820,18 @@
       "strategic_weight": 0.486,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DZA",
+        "BFA",
+        "GIN",
+        "CIV",
+        "MRT",
+        "NER",
+        "SEN"
+      ],
+      "landlocked": true,
+      "area_km2": 1240192.0
     },
     {
       "id": "HUN",
@@ -3906,7 +4860,18 @@
       "strategic_weight": 0.586,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AUT",
+        "HRV",
+        "ROU",
+        "SRB",
+        "SVK",
+        "SVN",
+        "UKR"
+      ],
+      "landlocked": true,
+      "area_km2": 93028.0
     },
     {
       "id": "MAR",
@@ -3935,7 +4900,14 @@
       "strategic_weight": 0.592,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DZA",
+        "ESH",
+        "ESP"
+      ],
+      "landlocked": false,
+      "area_km2": 446550.0
     },
     {
       "id": "EGY",
@@ -3964,7 +4936,15 @@
       "strategic_weight": 0.647,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "ISR",
+        "LBY",
+        "PSE",
+        "SDN"
+      ],
+      "landlocked": false,
+      "area_km2": 1002450.0
     },
     {
       "id": "MNG",
@@ -3993,7 +4973,13 @@
       "strategic_weight": 0.446,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CHN",
+        "RUS"
+      ],
+      "landlocked": true,
+      "area_km2": 1564110.0
     },
     {
       "id": "MRT",
@@ -4022,7 +5008,15 @@
       "strategic_weight": 0.413,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DZA",
+        "MLI",
+        "SEN",
+        "ESH"
+      ],
+      "landlocked": false,
+      "area_km2": 1030700.0
     },
     {
       "id": "MUS",
@@ -4051,7 +5045,10 @@
       "strategic_weight": 0.407,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 2040.0
     },
     {
       "id": "MOZ",
@@ -4080,7 +5077,17 @@
       "strategic_weight": 0.478,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "MWI",
+        "ZAF",
+        "SWZ",
+        "TZA",
+        "ZMB",
+        "ZWE"
+      ],
+      "landlocked": false,
+      "area_km2": 801590.0
     },
     {
       "id": "MDA",
@@ -4109,7 +5116,13 @@
       "strategic_weight": 0.431,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ROU",
+        "UKR"
+      ],
+      "landlocked": true,
+      "area_km2": 33846.0
     },
     {
       "id": "MCO",
@@ -4138,7 +5151,12 @@
       "strategic_weight": 0.329,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "FRA"
+      ],
+      "landlocked": false,
+      "area_km2": 2.02
     },
     {
       "id": "MNE",
@@ -4167,7 +5185,16 @@
       "strategic_weight": 0.367,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ALB",
+        "BIH",
+        "HRV",
+        "UNK",
+        "SRB"
+      ],
+      "landlocked": false,
+      "area_km2": 13812.0
     },
     {
       "id": "MEX",
@@ -4196,7 +5223,14 @@
       "strategic_weight": 0.737,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "BLZ",
+        "GTM",
+        "USA"
+      ],
+      "landlocked": false,
+      "area_km2": 1964375.0
     },
     {
       "id": "MMR",
@@ -4225,7 +5259,16 @@
       "strategic_weight": 0.556,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BGD",
+        "CHN",
+        "IND",
+        "LAO",
+        "THA"
+      ],
+      "landlocked": false,
+      "area_km2": 676578.0
     },
     {
       "id": "NRU",
@@ -4254,7 +5297,10 @@
       "strategic_weight": 0.182,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 21.0
     },
     {
       "id": "NAM",
@@ -4283,7 +5329,15 @@
       "strategic_weight": 0.415,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "AGO",
+        "BWA",
+        "ZAF",
+        "ZMB"
+      ],
+      "landlocked": false,
+      "area_km2": 825615.0
     },
     {
       "id": "NOR",
@@ -4312,7 +5366,14 @@
       "strategic_weight": 0.617,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "FIN",
+        "SWE",
+        "RUS"
+      ],
+      "landlocked": false,
+      "area_km2": 323802.0
     },
     {
       "id": "NPL",
@@ -4341,7 +5402,13 @@
       "strategic_weight": 0.514,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CHN",
+        "IND"
+      ],
+      "landlocked": true,
+      "area_km2": 147181.0
     },
     {
       "id": "NER",
@@ -4370,7 +5437,18 @@
       "strategic_weight": 0.472,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DZA",
+        "BEN",
+        "BFA",
+        "TCD",
+        "LBY",
+        "MLI",
+        "NGA"
+      ],
+      "landlocked": true,
+      "area_km2": 1267000.0
     },
     {
       "id": "NGA",
@@ -4399,7 +5477,15 @@
       "strategic_weight": 0.646,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BEN",
+        "CMR",
+        "TCD",
+        "NER"
+      ],
+      "landlocked": false,
+      "area_km2": 923768.0
     },
     {
       "id": "NZL",
@@ -4428,7 +5514,10 @@
       "strategic_weight": 0.578,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 270467.0
     },
     {
       "id": "NIC",
@@ -4457,7 +5546,13 @@
       "strategic_weight": 0.452,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CRI",
+        "HND"
+      ],
+      "landlocked": false,
+      "area_km2": 130373.0
     },
     {
       "id": "HTI",
@@ -4486,7 +5581,12 @@
       "strategic_weight": 0.48,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "DOM"
+      ],
+      "landlocked": false,
+      "area_km2": 27750.0
     },
     {
       "id": "NLD",
@@ -4515,7 +5615,13 @@
       "strategic_weight": 0.686,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BEL",
+        "DEU"
+      ],
+      "landlocked": false,
+      "area_km2": 41850.0
     },
     {
       "id": "IND",
@@ -4544,7 +5650,17 @@
       "strategic_weight": 0.855,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "BGD",
+        "BTN",
+        "MMR",
+        "CHN",
+        "NPL",
+        "PAK"
+      ],
+      "landlocked": false,
+      "area_km2": 3287590.0
     },
     {
       "id": "HND",
@@ -4573,7 +5689,14 @@
       "strategic_weight": 0.489,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GTM",
+        "SLV",
+        "NIC"
+      ],
+      "landlocked": false,
+      "area_km2": 112492.0
     },
     {
       "id": "VAT",
@@ -4603,7 +5726,12 @@
       "un_member": false,
       "playable": true,
       "generated_balance": true,
-      "observer_state": true
+      "observer_state": true,
+      "borders": [
+        "ITA"
+      ],
+      "landlocked": true,
+      "area_km2": 0.44
     },
     {
       "id": "VUT",
@@ -4632,7 +5760,10 @@
       "strategic_weight": 0.276,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 12189.0
     },
     {
       "id": "VEN",
@@ -4661,7 +5792,14 @@
       "strategic_weight": 0.555,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BRA",
+        "COL",
+        "GUY"
+      ],
+      "landlocked": false,
+      "area_km2": 916445.0
     },
     {
       "id": "VNM",
@@ -4690,7 +5828,14 @@
       "strategic_weight": 0.664,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "KHM",
+        "CHN",
+        "LAO"
+      ],
+      "landlocked": false,
+      "area_km2": 331212.0
     },
     {
       "id": "PRY",
@@ -4719,7 +5864,14 @@
       "strategic_weight": 0.494,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ARG",
+        "BOL",
+        "BRA"
+      ],
+      "landlocked": true,
+      "area_km2": 406752.0
     },
     {
       "id": "PLW",
@@ -4748,7 +5900,10 @@
       "strategic_weight": 0.198,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 459.0
     },
     {
       "id": "PAN",
@@ -4777,7 +5932,13 @@
       "strategic_weight": 0.518,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "COL",
+        "CRI"
+      ],
+      "landlocked": false,
+      "area_km2": 75417.0
     },
     {
       "id": "PNG",
@@ -4806,7 +5967,12 @@
       "strategic_weight": 0.476,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "IDN"
+      ],
+      "landlocked": false,
+      "area_km2": 462840.0
     },
     {
       "id": "PAK",
@@ -4835,7 +6001,15 @@
       "strategic_weight": 0.699,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AFG",
+        "CHN",
+        "IND",
+        "IRN"
+      ],
+      "landlocked": false,
+      "area_km2": 881912.0
     },
     {
       "id": "PRT",
@@ -4864,7 +6038,12 @@
       "strategic_weight": 0.605,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ESP"
+      ],
+      "landlocked": false,
+      "area_km2": 92090.0
     },
     {
       "id": "PER",
@@ -4893,7 +6072,16 @@
       "strategic_weight": 0.623,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BOL",
+        "BRA",
+        "CHL",
+        "COL",
+        "ECU"
+      ],
+      "landlocked": false,
+      "area_km2": 1285216.0
     },
     {
       "id": "TCD",
@@ -4922,7 +6110,17 @@
       "strategic_weight": 0.465,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CMR",
+        "CAF",
+        "LBY",
+        "NER",
+        "NGA",
+        "SDN"
+      ],
+      "landlocked": true,
+      "area_km2": 1284000.0
     },
     {
       "id": "CHN",
@@ -4951,7 +6149,27 @@
       "strategic_weight": 0.95,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "AFG",
+        "BTN",
+        "MMR",
+        "HKG",
+        "IND",
+        "KAZ",
+        "NPL",
+        "PRK",
+        "KGZ",
+        "LAO",
+        "MAC",
+        "MNG",
+        "PAK",
+        "RUS",
+        "TJK",
+        "VNM"
+      ],
+      "landlocked": false,
+      "area_km2": 9706961.0
     },
     {
       "id": "JPN",
@@ -4980,7 +6198,10 @@
       "strategic_weight": 0.785,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 377930.0
     },
     {
       "id": "CRI",
@@ -5009,7 +6230,13 @@
       "strategic_weight": 0.528,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "NIC",
+        "PAN"
+      ],
+      "landlocked": false,
+      "area_km2": 51100.0
     },
     {
       "id": "KHM",
@@ -5038,7 +6265,14 @@
       "strategic_weight": 0.511,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "LAO",
+        "THA",
+        "VNM"
+      ],
+      "landlocked": false,
+      "area_km2": 181035.0
     },
     {
       "id": "CMR",
@@ -5067,7 +6301,17 @@
       "strategic_weight": 0.526,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CAF",
+        "TCD",
+        "COG",
+        "GNQ",
+        "GAB",
+        "NGA"
+      ],
+      "landlocked": false,
+      "area_km2": 475442.0
     },
     {
       "id": "CAN",
@@ -5096,7 +6340,12 @@
       "strategic_weight": 0.729,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "USA"
+      ],
+      "landlocked": false,
+      "area_km2": 9984670.0
     },
     {
       "id": "KOR",
@@ -5125,7 +6374,12 @@
       "strategic_weight": 0.723,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "PRK"
+      ],
+      "landlocked": false,
+      "area_km2": 100210.0
     },
     {
       "id": "PRK",
@@ -5154,7 +6408,14 @@
       "strategic_weight": 0.629,
       "un_member": true,
       "playable": true,
-      "generated_balance": false
+      "generated_balance": false,
+      "borders": [
+        "CHN",
+        "KOR",
+        "RUS"
+      ],
+      "landlocked": false,
+      "area_km2": 120538.0
     },
     {
       "id": "HRV",
@@ -5183,7 +6444,16 @@
       "strategic_weight": 0.525,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BIH",
+        "HUN",
+        "MNE",
+        "SRB",
+        "SVN"
+      ],
+      "landlocked": false,
+      "area_km2": 56594.0
     },
     {
       "id": "COL",
@@ -5212,7 +6482,16 @@
       "strategic_weight": 0.647,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BRA",
+        "ECU",
+        "PAN",
+        "PER",
+        "VEN"
+      ],
+      "landlocked": false,
+      "area_km2": 1141748.0
     },
     {
       "id": "KEN",
@@ -5241,7 +6520,16 @@
       "strategic_weight": 0.583,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ETH",
+        "SOM",
+        "SSD",
+        "TZA",
+        "UGA"
+      ],
+      "landlocked": false,
+      "area_km2": 580367.0
     },
     {
       "id": "CUB",
@@ -5270,7 +6558,10 @@
       "strategic_weight": 0.541,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 109884.0
     },
     {
       "id": "COM",
@@ -5299,7 +6590,10 @@
       "strategic_weight": 0.303,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 1862.0
     },
     {
       "id": "KWT",
@@ -5328,7 +6622,13 @@
       "strategic_weight": 0.547,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "IRQ",
+        "SAU"
+      ],
+      "landlocked": false,
+      "area_km2": 17818.0
     },
     {
       "id": "KIR",
@@ -5357,7 +6657,10 @@
       "strategic_weight": 0.23,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 811.0
     },
     {
       "id": "GAB",
@@ -5386,7 +6689,14 @@
       "strategic_weight": 0.431,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CMR",
+        "COG",
+        "GNQ"
+      ],
+      "landlocked": false,
+      "area_km2": 267668.0
     },
     {
       "id": "GMB",
@@ -5415,7 +6725,12 @@
       "strategic_weight": 0.334,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "SEN"
+      ],
+      "landlocked": false,
+      "area_km2": 10689.0
     },
     {
       "id": "GRD",
@@ -5444,7 +6759,10 @@
       "strategic_weight": 0.26,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [],
+      "landlocked": false,
+      "area_km2": 344.0
     },
     {
       "id": "GEO",
@@ -5473,7 +6791,15 @@
       "strategic_weight": 0.47,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ARM",
+        "AZE",
+        "RUS",
+        "TUR"
+      ],
+      "landlocked": false,
+      "area_km2": 69700.0
     },
     {
       "id": "GTM",
@@ -5502,7 +6828,15 @@
       "strategic_weight": 0.558,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BLZ",
+        "SLV",
+        "HND",
+        "MEX"
+      ],
+      "landlocked": false,
+      "area_km2": 108889.0
     },
     {
       "id": "GUY",
@@ -5531,7 +6865,14 @@
       "strategic_weight": 0.426,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "BRA",
+        "SUR",
+        "VEN"
+      ],
+      "landlocked": false,
+      "area_km2": 214969.0
     },
     {
       "id": "GIN",
@@ -5560,7 +6901,17 @@
       "strategic_weight": 0.476,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CIV",
+        "GNB",
+        "LBR",
+        "MLI",
+        "SEN",
+        "SLE"
+      ],
+      "landlocked": false,
+      "area_km2": 245857.0
     },
     {
       "id": "GNQ",
@@ -5589,7 +6940,13 @@
       "strategic_weight": 0.397,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "CMR",
+        "GAB"
+      ],
+      "landlocked": false,
+      "area_km2": 28051.0
     },
     {
       "id": "GNB",
@@ -5618,7 +6975,13 @@
       "strategic_weight": 0.329,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "GIN",
+        "SEN"
+      ],
+      "landlocked": false,
+      "area_km2": 36125.0
     },
     {
       "id": "YEM",
@@ -5647,7 +7010,13 @@
       "strategic_weight": 0.609,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "OMN",
+        "SAU"
+      ],
+      "landlocked": false,
+      "area_km2": 527968.0
     },
     {
       "id": "GRC",
@@ -5676,7 +7045,15 @@
       "strategic_weight": 0.594,
       "un_member": true,
       "playable": true,
-      "generated_balance": true
+      "generated_balance": true,
+      "borders": [
+        "ALB",
+        "BGR",
+        "TUR",
+        "MKD"
+      ],
+      "landlocked": false,
+      "area_km2": 131990.0
     }
   ]
 }

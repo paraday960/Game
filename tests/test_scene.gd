@@ -36,6 +36,8 @@ func _ready():
 		failed.append("قوانین ملی داده‌محور نامعتبر هستند")
 	if not IntelligenceOperationManager.is_valid():
 		failed.append("عملیات اطلاعاتی داده‌محور نامعتبر هستند")
+	if not MapLayerManager.is_valid():
+		failed.append("داده مراکز و مسیرهای نقشه نامعتبر است")
 	if not WorldManager.is_valid() or WorldManager.countries.size() != 195 or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 194:
 		failed.append("داده جهان یا روابط ۱۹۵ کشور کامل نیست")
 	else:
@@ -55,6 +57,16 @@ func _ready():
 				failed.append("کشور کوچک واتیکان قابل انتخاب و شبیه‌سازی نیست")
 			else:
 				print("World + scenario + analytics baseline + microstate selection OK")
+		var regional_ids=MapLayerManager.get_regional_country_ids("IRN")
+		var air_routes=MapLayerManager.get_static_routes("air")
+		var sea_routes=MapLayerManager.get_static_routes("sea")
+		var map_state=MapLayerManager.update_network_metrics(GameState.state.duplicate(true))
+		if not regional_ids.has("IRQ") or not regional_ids.has("TUR") or air_routes.size()<20 or sea_routes.size()<15:
+			failed.append("لایه‌های جهانی یا نمای منطقه‌ای مسیرهای کافی ندارند")
+		elif not map_state.has("map_network"):
+			failed.append("شاخص اتصال نقشه به State متصل نشد")
+		else:
+			print("Strategic maps: global layers + regional neighbors + air/sea routes OK")
 		var rich_state = WorldManager.apply_country_profile(GameState.state.duplicate(true), "USA")
 		var relation_before = float(rich_state["diplomacy"]["relations"]["TUR"])
 		var rich_tick = GameEngine.tick(rich_state, 0, 0, [])

@@ -19,6 +19,7 @@ var current_state: Dictionary = {}
 var selected_system: String = "economy"
 var selected_world_country: String = ""
 var world_region_filter: String = "all"
+var map_layers: Dictionary = {"relations":true,"wars":true,"alliances":true,"trade":true,"air":false,"sea":false,"land":false,"weather":false,"intelligence":false}
 var country_select_option: OptionButton
 var scenario_select_option: OptionButton
 var scenario_description_lbl: Label
@@ -1476,19 +1477,29 @@ func _build_world():
 	_row(identity, "جمعیت پایه", PersianFormatter.format_large(float(player_profile.get("population", 0))) + " نفر")
 	_row(identity, "تولید داخلی پایه", PersianFormatter.format_money(float(player_profile.get("gdp", 0))))
 
-	var map_card = _card("🗺️ نقشه تعاملی ۱۹۵ کشور")
 	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
 	for war_target in world.get("wars", {}).keys():
-		if map_countries.has(war_target):
-			map_countries[war_target]["at_war"] = true
+		if map_countries.has(war_target): map_countries[war_target]["at_war"] = true
 	for npc_war in world.get("npc_wars", {}).values():
 		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
 			if map_countries.has(participant): map_countries[participant]["at_war"] = true
-	var world_map = WorldMapClass.new()
-	world_map.selected_code = selected_world_country
-	world_map.set_world(map_countries, rel, player_id)
-	world_map.country_selected.connect(_on_map_country_selected)
-	map_card.add_child(world_map)
+
+	var layers_card = _card("🧭 لایه‌های اطلاعاتی نقشه")
+	var layer_help = Label.new(); layer_help.text = "هر لایه را مستقل روشن یا خاموش کنید؛ روی کشور یا مسیر نگه دارید تا جزئیات نمایش داده شود."; layer_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; layer_help.modulate = Color(0.75,0.82,0.92); layers_card.add_child(layer_help)
+	var layer_grid = GridContainer.new(); layer_grid.columns = 3; layers_card.add_child(layer_grid)
+	var layer_defs = [["relations","رنگ روابط"],["wars","جنگ‌ها"],["alliances","اتحادها"],["trade","کریدور تجاری"],["air","مسیرهای پروازی"],["sea","مسیرهای دریایی"],["land","مسیرهای زمینی"],["weather","اقلیم"],["intelligence","گزارش اطلاعاتی"]]
+	for layer_def in layer_defs:
+		var toggle = CheckButton.new(); toggle.text = layer_def[1]; toggle.button_pressed = bool(map_layers.get(layer_def[0],false)); toggle.toggled.connect(_on_map_layer_toggled.bind(str(layer_def[0]))); layer_grid.add_child(toggle)
+
+	var map_card = _card("🌐 نقشه راهبردی جهان — ۱۹۵ کشور")
+	var world_map = WorldMapClass.new(); world_map.selected_code = selected_world_country
+	world_map.set_map_data(map_countries,rel,player_id,world,st,map_layers,"global"); world_map.country_selected.connect(_on_map_country_selected); map_card.add_child(world_map)
+
+	var regional_title = "%s / %s" % [_fa_geo_name(str(player_profile.get("region",""))),_fa_geo_name(str(player_profile.get("subregion","")))]
+	var regional_card = _card("🔎 نمای نزدیک منطقه‌ای — %s" % regional_title)
+	var regional_hint = Label.new(); regional_hint.text = "کشور شما، همسایگان مرزی، کشورهای همان زیرمنطقه و مراکز حمل‌ونقل با جزئیات بیشتر نمایش داده می‌شوند."; regional_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; regional_hint.modulate = Color(0.75,0.82,0.92); regional_card.add_child(regional_hint)
+	var regional_map = WorldMapClass.new(); regional_map.selected_code = selected_world_country
+	regional_map.set_map_data(map_countries,rel,player_id,world,st,map_layers,"regional"); regional_map.country_selected.connect(_on_map_country_selected); regional_card.add_child(regional_map)
 
 	var overview = _card("🌍 موقعیت بین‌المللی")
 	_row(overview, "امتیاز اقدام دیپلماتیک", PersianFormatter.to_persian_digits("%.1f از 5" % dip.get("action_points", 0.0)))
@@ -1496,6 +1507,10 @@ func _build_world():
 	_bar(overview, "قدرت نرم", dip.get("soft_power", 35) / 100.0)
 	_row(overview, "جنگ‌های فعال شما", PersianFormatter.to_persian_digits(str(world.get("wars", {}).size())))
 	_row(overview, "جنگ‌های دیگر جهان", PersianFormatter.to_persian_digits(str(world.get("npc_wars", {}).size())))
+	var network_metrics: Dictionary = st.get("map_network", {})
+	_bar(overview, "اتصال هوایی جهانی", float(network_metrics.get("air_connectivity",0.0)))
+	_bar(overview, "اتصال دریایی جهانی", float(network_metrics.get("sea_connectivity",0.0)))
+	_bar(overview, "اتصال زمینی منطقه", float(network_metrics.get("land_connectivity",0.0)))
 
 	var global_card = _card("🌐 تحولات کشورهای غیر‌بازیکن")
 	_row(global_card, "اتحادهای مستقل", PersianFormatter.to_persian_digits(str(world.get("npc_alliances", []).size())))
@@ -1606,7 +1621,19 @@ func _build_selected_country_card(state: Dictionary, target: String):
 	var relation = float(state.get("diplomacy", {}).get("relations", {}).get(target, 50.0))
 	var card = _card("🎯 کشور انتخابی: %s" % _fa_country(target))
 	_row(card, "رابطه", "%s — %s" % [PersianFormatter.to_persian_digits("%.0f" % relation), _relation_word(relation)], _color_for(relation / 100.0))
+	_row(card, "پایتخت", str(profile.get("capital_fa","")))
+	_row(card, "منطقه", "%s / %s" % [_fa_geo_name(str(profile.get("region",""))),_fa_geo_name(str(profile.get("subregion","")))])
+	_row(card, "جمعیت", PersianFormatter.format_large(float(profile.get("population",0)))+" نفر")
 	_row(card, "تولید داخلی", PersianFormatter.format_money(float(profile.get("gdp", 0.0))))
+	_row(card, "مساحت", PersianFormatter.format_large(float(profile.get("area_km2",0)))+" کیلومتر مربع")
+	_row(card, "همسایگان زمینی", PersianFormatter.to_persian_digits(str(profile.get("borders",[]).size())))
+	var air_count=0;var sea_count=0
+	for route in MapLayerManager.get_static_routes("air"):
+		if route.from_country==target or route.to_country==target:air_count+=1
+	for route in MapLayerManager.get_static_routes("sea"):
+		if route.from_country==target or route.to_country==target:sea_count+=1
+	_row(card,"مسیرهای هوایی راهبردی",PersianFormatter.to_persian_digits(str(air_count)))
+	_row(card,"مسیرهای دریایی راهبردی",PersianFormatter.to_persian_digits(str(sea_count)))
 	_row(card, "قدرت نظامی", PersianFormatter.to_persian_digits("%.1f" % profile.get("military_power", 0.0)))
 	_bar(card, "سطح فناوری", float(profile.get("tech_level", 0.0)))
 	var wars: Dictionary = state.get("world", {}).get("wars", {})
@@ -1669,6 +1696,10 @@ func _on_world_region_selected(index:int,selector:OptionButton):
 	if index<0 or index>=selector.item_count:return
 	world_region_filter=str(selector.get_item_metadata(index));_switch_tab("world")
 
+func _on_map_layer_toggled(pressed:bool,layer:String):
+	map_layers[layer]=pressed
+	_switch_tab("world")
+
 func _on_map_country_selected(code: String):
 	selected_world_country = code
 	var relation = GameState.state.get("diplomacy", {}).get("relations", {}).get(code, 0)
@@ -1681,6 +1712,9 @@ func _on_world_action(country: String, action: String, action_title: String):
 	if _run_tick_with([cmd]):
 		_toast("🌍 «%s» درباره %s اجرا شد" % [action_title, _fa_country(country)])
 		_switch_tab("world")
+
+func _fa_geo_name(value:String)->String:
+	return {"Africa":"آفریقا","Americas":"قاره آمریکا","Asia":"آسیا","Europe":"اروپا","Oceania":"اقیانوسیه","Northern Africa":"شمال آفریقا","Sub-Saharan Africa":"آفریقای جنوب صحرا","Eastern Africa":"شرق آفریقا","Middle Africa":"مرکز آفریقا","Southern Africa":"جنوب آفریقا","Western Africa":"غرب آفریقا","Northern Europe":"شمال اروپا","Eastern Europe":"شرق اروپا","Southern Europe":"جنوب اروپا","Western Europe":"غرب اروپا","Western Asia":"غرب آسیا","Central Asia":"آسیای مرکزی","Eastern Asia":"شرق آسیا","Southern Asia":"جنوب آسیا","South-Eastern Asia":"جنوب‌شرق آسیا","North America":"آمریکای شمالی","Central America":"آمریکای مرکزی","South America":"آمریکای جنوبی","Caribbean":"کارائیب","Australia and New Zealand":"استرالیا و نیوزیلند","Melanesia":"ملانزی","Micronesia":"میکرونزی","Polynesia":"پلی‌نزی"}.get(value,"پیرامون کشور")
 
 func _fa_country(code: String) -> String:
 	return WorldManager.get_country_name(code)
