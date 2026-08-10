@@ -107,8 +107,12 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if not state_data is Dictionary or not event_data is Array:
 		return {"success": false, "reason": "وضعیت یا رویدادهای ذخیره نامعتبر است"}
 	if version < 2 or not state_data.has("schema_version"):
-		state_data["schema_version"] = 2
 		state_data["command_receipts"] = state_data.get("command_receipts", [])
+		migrated = true
+	if int(state_data.get("schema_version", 1)) < 3:
+		state_data["pending_decisions"] = state_data.get("pending_decisions", [])
+		state_data["decision_history"] = state_data.get("decision_history", [])
+		state_data["schema_version"] = 3
 		migrated = true
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 

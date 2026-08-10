@@ -108,6 +108,25 @@ func _ready():
 			else:
 				print("AI advisor: 65 diagnoses + valid action OK")
 
+	# تبدیل رویداد به تصمیم، اجرای گزینه در موتور اتمی و ثبت تاریخچه
+	var decision_manager = load("res://scripts/core/decision_manager.gd")
+	var decision_state = s.duplicate(true)
+	decision_state = decision_manager.update_pending(decision_state, [
+		{"system": "environment", "event": {"type": "drought"}}
+	], t)
+	var pending_test: Array = decision_state.get("pending_decisions", [])
+	if pending_test.is_empty():
+		failed.append("رویداد خشکسالی به تصمیم تبدیل نشد")
+	else:
+		var decision_id = str(pending_test[0]["id"])
+		var decision_cmd = GameCommand.create_decision_resolve(decision_id, "irrigation")
+		var decision_result = GameEngine.tick(decision_state, v, t, [decision_cmd])
+		var history: Array = decision_result.get("state", {}).get("decision_history", [])
+		if not decision_result.success or history.is_empty() or history[-1].get("decision_id", "") != decision_id:
+			failed.append("گزینه تصمیم اتمی اجرا یا ثبت نشد")
+		else:
+			print("Interactive event decision + consequence: OK")
+
 	# ذخیره اتمی نسخه‌دار + بارگذاری + تشخیص دستکاری checksum
 	var save_path = "user://automated-test-save.json"
 	SaveManager.delete_save(save_path)

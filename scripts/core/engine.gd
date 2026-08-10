@@ -4,9 +4,10 @@ extends Node
 # preload مستقیم - بدون وابستگی به کش کلاس سراسری (سازگار با import سرد و CI)
 const GameCommandClass = preload("res://scripts/core/command.gd")
 const VersioningClass = preload("res://scripts/core/versioning.gd")
+const DecisionManagerClass = preload("res://scripts/core/decision_manager.gd")
 
 const SUPPORTED_COMMANDS = [
-	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy"
+	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy", "decision_resolve"
 ]
 const DIPLOMACY_ACTIONS = ["improve_relations", "negotiate_sanctions"]
 const MAX_COMMAND_RECEIPTS = 512
@@ -257,6 +258,8 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 		return {"success": false, "reason": compute_result.reason, "state": current_state, "version": current_version, "tick": current_tick}
 
 	snapshot = compute_result.state
+	# برخی رویدادها به تصمیم چندگزینه‌ای تبدیل می‌شوند؛ انقضا نیز پیامد پیش‌فرض دارد.
+	snapshot = DecisionManagerClass.update_pending(snapshot, compute_result.get("events", []), snapshot_tick)
 
 	# ۵. Commit - اعمال اتمی نتیجه
 	snapshot["version"] = snapshot_version + 1
@@ -340,6 +343,13 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				return {"valid": false, "reason": "کشور هدف در روابط دیپلماتیک وجود ندارد"}
 			if not DIPLOMACY_ACTIONS.has(action):
 				return {"valid": false, "reason": "اقدام دیپلماتیک شناخته‌شده نیست"}
+		elif cmd.type == "decision_resolve":
+			var decision_id = cmd.payload.get("decision_id", "")
+			var choice_id = cmd.payload.get("choice_id", "")
+			if not decision_id is String or not choice_id is String:
+				return {"valid": false, "reason": "شناسه تصمیم یا گزینه نامعتبر است"}
+			if not DecisionManagerClass.validate_choice(state, decision_id, choice_id):
+				return {"valid": false, "reason": "تصمیم یا گزینه انتخابی دیگر معتبر نیست"}
 	return {"valid": true, "reason": ""}
 
 func _record_command_receipts(snapshot: Dictionary, commands: Array):
@@ -359,30 +369,42 @@ func _is_finite_number(value) -> bool:
 	return true
 
 func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
-	if cmd is GameCommandClass:
-		if cmd.type == "budget_allocate":
-			var allocs = cmd.payload.get("allocations", {})
-			for k in allocs.keys():
-				if snapshot["economy"]["budget_allocations"].has(k):
-					snapshot["economy"]["budget_allocations"][k] = allocs[k]
-		elif cmd.type == "tax_set":
-			snapshot["economy"]["tax_rate"] = cmd.payload.get("rate", 0.2)
-		elif cmd.type == "research_start":
-			var tech_id = cmd.payload.get("tech_id", "")
-			snapshot["technology"]["in_progress"] = tech_id
-		elif cmd.type == "diplomacy":
-			var target = cmd.payload.get("target", "")
-			var action = cmd.payload.get("action", "")
-			if snapshot["diplomacy"]["relations"].has(target):
-				if action == "improve_relations":
-					snapshot["diplomacy"]["relations"][target] = clamp(snapshot["diplomacy"]["relations"][target] + 5, -100, 100)
-				elif action == "negotiate_sanctions" and snapshot["diplomacy"]["sanctions"].size() > 0:
-					snapshot["diplomacy"]["sanctions"].pop_back()
-			# لاگ فرمان در همان تراکنش و با فراداده نسخه مقصد
-			EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
+	if not cmd is GameCommandClass:
+		return
+	if cmd.type == "budget_allocate":
+		var allocs = cmd.payload.get("allocations", {})
+		for k in allocs.keys():
+			if snapshot["economy"]["budget_allocations"].has(k):
+				snapshot["economy"]["budget_allocations"][k] = allocs[k]
+	elif cmd.type == "tax_set":
+		snapshot["economy"]["tax_rate"] = cmd.payload.get("rate", 0.2)
+	elif cmd.type == "research_start":
+		var tech_id = cmd.payload.get("tech_id", "")
+		snapshot["technology"]["in_progress"] = tech_id
+	elif cmd.type == "diplomacy":
+		var target = cmd.payload.get("target", "")
+		var action = cmd.payload.get("action", "")
+		if snapshot["diplomacy"]["relations"].has(target):
+			if action == "improve_relations":
+				snapshot["diplomacy"]["relations"][target] = clamp(snapshot["diplomacy"]["relations"][target] + 5, -100, 100)
+			elif action == "negotiate_sanctions" and snapshot["diplomacy"]["sanctions"].size() > 0:
+				snapshot["diplomacy"]["sanctions"].pop_back()
+	elif cmd.type == "decision_resolve":
+		var decision_result = DecisionManagerClass.resolve_decision(
+			snapshot, cmd.payload.get("decision_id", ""), cmd.payload.get("choice_id", ""))
+		if decision_result.success:
+			EventLog.log_event("decision_resolved", {
+				"message": "تصمیم «%s» با گزینه «%s» اجرا شد" % [
+					decision_result.decision.get("title", ""), decision_result.choice.get("text", "")],
+				"decision_id": cmd.payload.get("decision_id", ""),
+				"choice_id": cmd.payload.get("choice_id", "")
+			}, cmd.tick, cmd.version)
+	# تمام انواع فرمان در همان تراکنش و با فراداده نسخه مقصد ثبت می‌شوند.
+	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 
 func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 	# ترتیب دترمینستیک بسیار مهم است برای عدم Desync در چندنفره
+	var generated_events: Array = []
 	for sys_name in system_order:
 		if systems.has(sys_name):
 			var sys = systems[sys_name]
@@ -393,7 +415,9 @@ func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 			# هر سیستم می‌تواند رویداد تولید کند
 			if result.has("events"):
 				for e in result.events:
-					EventLog.log_event("system_event", {"system": sys_name, "event": e}, tick, snapshot.get("version", 0))
+					var wrapped = {"system": sys_name, "event": e.duplicate(true)}
+					generated_events.append(wrapped)
+					EventLog.log_event("system_event", wrapped, tick, snapshot.get("version", 0))
 
 	# محاسبه شاخص‌های کلان در انتها
 	snapshot = _compute_indicators(snapshot)
@@ -403,7 +427,7 @@ func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 	if not integrity.valid:
 		return {"success": false, "reason": integrity.reason, "state": snapshot}
 
-	return {"success": true, "state": snapshot}
+	return {"success": true, "state": snapshot, "events": generated_events}
 
 func _compute_indicators(state: Dictionary) -> Dictionary:
 	# HDI، قدرت، خوشبختی و...

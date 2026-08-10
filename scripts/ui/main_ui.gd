@@ -308,6 +308,13 @@ func _build_dashboard():
 			l.modulate = Color(1.0, 0.5, 0.5)
 			warn.add_child(l)
 
+	# رویدادهای راهبردی که منتظر تصمیم بازیکن‌اند.
+	var pending_decisions: Array = st.get("pending_decisions", [])
+	if not pending_decisions.is_empty():
+		var decisions_card = _card("⚖️ تصمیم‌های فوری (%s)" % PersianFormatter.to_persian_digits(str(pending_decisions.size())))
+		for i in range(min(pending_decisions.size(), 3)):
+			_add_pending_decision(decisions_card, pending_decisions[i])
+
 	# شورای هوش‌های تخصصی: مهم‌ترین مسئله‌ها را با دلیل و اقدام قابل اجرا پیشنهاد می‌دهد.
 	var recommendations = AIAdvisor.get_top_recommendations(st, st.get("tick", 0), 4)
 	var advisor_card = _card("🧠 شورای هوشمند کشور")
@@ -342,6 +349,48 @@ func _build_dashboard():
 	var c4 = _card("🏅 قدرت و اعتبار")
 	_row(c4, "شاخص قدرت", PersianFormatter.format_number(int(ind.get("power_score", 0))))
 	_row(c4, "سطح رهبری", PersianFormatter.to_persian_digits(str(st.get("level", 1))))
+
+func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
+	var panel = PanelContainer.new()
+	parent.add_child(panel)
+	var body = VBoxContainer.new()
+	body.add_theme_constant_override("separation", 6)
+	panel.add_child(body)
+	var title = Label.new()
+	title.text = "🔔 " + str(decision.get("title", "تصمیم فوری"))
+	title.add_theme_font_size_override("font_size", 18)
+	title.modulate = Color(1.0, 0.82, 0.35)
+	body.add_child(title)
+	var description = Label.new()
+	description.text = str(decision.get("description", ""))
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(description)
+	var remaining = max(0, int(decision.get("expires_tick", GameState.tick)) - GameState.tick)
+	var deadline = Label.new()
+	deadline.text = "مهلت تصمیم: %s روز" % PersianFormatter.to_persian_digits(str(remaining))
+	deadline.modulate = Color(1.0, 0.65, 0.45)
+	body.add_child(deadline)
+	for choice in decision.get("choices", []):
+		var choice_row = HBoxContainer.new()
+		body.add_child(choice_row)
+		var button = Button.new()
+		button.text = str(choice.get("text", "انتخاب"))
+		button.custom_minimum_size = Vector2(220, 48)
+		button.pressed.connect(_on_decision_choice.bind(
+			str(decision.get("id", "")), str(choice.get("id", "")), str(choice.get("text", ""))))
+		choice_row.add_child(button)
+		var consequence = Label.new()
+		consequence.text = str(choice.get("consequence", ""))
+		consequence.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		consequence.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		consequence.modulate = Color(0.78, 0.82, 0.9)
+		choice_row.add_child(consequence)
+
+func _on_decision_choice(decision_id: String, choice_id: String, choice_title: String):
+	var cmd = GameCommandClass.create_decision_resolve(decision_id, choice_id)
+	if _run_tick_with([cmd]):
+		_toast("⚖️ گزینه «%s» اجرا شد" % choice_title)
+		_switch_tab("dashboard")
 
 func _add_ai_recommendation(parent: VBoxContainer, recommendation: Dictionary):
 	var box = HBoxContainer.new()

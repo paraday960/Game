@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 2,
+			"schema_version": 3,
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -223,8 +223,10 @@ func init_default_state():
 			"stability": 0.60,
 			"power_score": 55.0
 		},
-		"events_active": [],
-		"score": 0.0,
+			"events_active": [],
+			"pending_decisions": [],
+			"decision_history": [],
+			"score": 0.0,
 		"level": 1,
 		"xp": 0.0
 	}
