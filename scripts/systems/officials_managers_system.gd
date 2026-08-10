@@ -3,8 +3,9 @@ extends BaseSystem
 func compute(state: Dictionary, tick: int) -> Dictionary:
     var officials=state.get("officials",{})
     officials["ministers"]=officials.get("ministers",20)
-    officials["governors"]=officials.get("governors",31)
-    officials["mayors"]=officials.get("mayors",1200)
+    var country_id=str(state.get("country",{}).get("id",WorldManager.default_country))
+    officials["governors"]=max(1,CountryGeographyManager.get_unit_count(country_id))
+    officials["mayors"]=max(officials["governors"],int(state.get("administration",{}).get("municipalities",1200)))
     officials["senior_managers"]=officials.get("senior_managers",5000)
     officials["competence"]=officials.get("competence",0.60)
     officials["corruption"]=officials.get("corruption",state.get("politics",{}).get("corruption",0.30))

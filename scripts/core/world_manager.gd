@@ -120,12 +120,69 @@ func apply_country_profile(state: Dictionary, country_id: String) -> Dictionary:
 	var tech_level = float(profile["tech_level"])
 	for branch in state["technology"]["branches"].keys():
 		state["technology"]["branches"][branch] = clamp(tech_level * 0.55, 0.08, 0.75)
+	_apply_national_geography_profile(state, country_id, profile)
 	state["world"] = _build_world(country_id)
 	state["diplomacy"]["relations"] = _initial_relations(country_id)
 	state["diplomacy"]["sanctions"] = []
 	state["diplomacy"]["treaties"] = []
 	state["diplomacy"]["action_points"] = 3.0
 	return state
+
+func _apply_national_geography_profile(state: Dictionary, country_id: String, profile: Dictionary):
+	# تعداد و مقیاس تأسیسات هر کشور از نقشه واقعی، مساحت، جمعیت و اقتصاد همان کشور آغاز می‌شود.
+	var population = max(1.0, float(profile.get("population", 1.0)))
+	var area = max(0.1, float(profile.get("area_km2", 1.0)))
+	var gdp = max(1.0, float(profile.get("gdp", 1.0)))
+	var technology = clamp(float(profile.get("tech_level", 0.4)), 0.05, 1.0)
+	var unit_count = max(1, CountryGeographyManager.get_unit_count(country_id))
+	var city_count = max(1, CountryGeographyManager.get_cities(country_id).size())
+	var administration: Dictionary = state.get("administration", {})
+	administration["provinces"] = unit_count
+	administration["municipalities"] = max(unit_count, int(pow(population / 50000.0, 0.82)))
+	administration["regional_inequality"] = clamp(0.48 - technology * 0.20 + min(0.12, float(unit_count) / 1000.0), 0.12, 0.62)
+	state["administration"] = administration
+	var roads_km = max(5.0, area * (0.035 + technology * 0.045) + population / (1400.0 - technology * 550.0))
+	var rail_km = roads_km * (0.025 + technology * 0.105)
+	var coastal = not bool(profile.get("landlocked", false))
+	state["transport_detail"] = {
+		"roads_km": roads_km,
+		"roads_quality": clamp(0.30 + technology * 0.58, 0.25, 0.94),
+		"rail_km": rail_km,
+		"rail_quality": clamp(0.25 + technology * 0.60, 0.20, 0.94),
+		"ports": max(1, int(sqrt(gdp / 1000000000.0) * 1.5)) if coastal else 0,
+		"ports_capacity": clamp(0.30 + technology * 0.55, 0.20, 1.0) if coastal else 0.0,
+		"airports": max(1, int(pow(population / 750000.0, 0.72)) + city_count / 2),
+		"airports_capacity": clamp(0.30 + technology * 0.58, 0.20, 1.0),
+		"metro_stations": max(0, int((population / 1000000.0) * technology * technology * 5.0)),
+		"traffic_congestion": clamp(0.58 - technology * 0.24 + float(city_count) / 500.0, 0.12, 0.78),
+		"logistics_efficiency": clamp(0.28 + technology * 0.65, 0.20, 0.95),
+		"fuel_consumption": roads_km * 0.012,
+	}
+	state["settlements_detail"] = {
+		"total": max(city_count, int(pow(population / 12000.0, 0.78))),
+		"cities_large": max(0, int(population / 1500000.0)),
+		"cities_medium": max(1, int(population / 350000.0)),
+		"cities_small": max(city_count, int(population / 120000.0)),
+		"towns": max(1, int(population / 60000.0)),
+		"villages": max(1, int(population / 7000.0)),
+		"urban_pop": population * float(state.get("population", {}).get("urban_ratio", 0.65)),
+		"rural_pop": population * (1.0 - float(state.get("population", {}).get("urban_ratio", 0.65))),
+		"density": population / area,
+		"sprawl": clamp(0.48 - technology * 0.20, 0.12, 0.55),
+		"housing_quality": clamp(0.35 + technology * 0.52, 0.25, 0.92),
+	}
+	state["industry_sites_detail"] = {
+		"factories": max(1, int(gdp / 100000000.0)),
+		"warehouses": max(1, int(gdp / 60000000.0)),
+		"mines": max(0, int(area / 8500.0 * (0.45 + float(profile.get("strategic_weight", 0.3))))),
+		"power_plants": max(1, int(population / 800000.0)),
+		"industrial_parks": max(1, int(gdp / 15000000000.0)),
+		"utilization": 0.70,
+		"pollution_industrial": clamp(0.52 - technology * 0.18, 0.18, 0.58),
+	}
+	state["physical"]["settlements"] = state["settlements_detail"]["total"]
+	state["physical"]["transport_routes"] = max(unit_count, int(roads_km / 25.0))
+	state["physical"]["facilities"] = max(unit_count, int(population / 18000.0))
 
 func can_select_country(state: Dictionary, country_id: String) -> Dictionary:
 	if int(state.get("tick", 0)) != 0:

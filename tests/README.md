@@ -2,6 +2,9 @@
 
 ## اجرا (با Godot 4.2 هدلس)
 ```bash
+python3 tests/validate_country_data.py
+python3 tests/validate_world_map.py
+python3 tests/validate_country_maps.py
 godot --headless --path . --import                                  # آماده‌سازی (یک بار)
 godot --headless --path . res://tests/test_scene.tscn              # تست واحد: موتور، ۶۵ سیستم، AIها
 godot --headless --path . res://tests/test_long.tscn               # تست بلندمدت: ۳۶ ماه / بیش از ۱۰۰۰ روز داخلی
@@ -24,6 +27,7 @@ godot --headless --path . -s res://tests/test_competitive_client.gd
 - استریک، شتاب، XP، سطح و بازشدن دستاوردهای هفته/سال
 - داده ۱۹۵ کشور، ۱۹۳ عضو سازمان ملل + ۲ ناظر، فیلد فارسی، مرز، منابع/مجوز و بازه اعداد
 - نقشه اورجینال: ۱۹۵ چندضلعی/مرز، Hit-test کشور، ۳۳هزار نقطه، جهان/منطقه و ۹ لایه مسیر
+- نقشه ملی: پوشش هر ۱۹۵ کشور، ۴٬۳۸۶ تقسیم Admin-1، ۱٬۹۵۱ شهر فارسی، ۲۶۰هزار نقطه، پایتخت و شاخص‌های منطقه‌ای زنده
 - انتخاب هر کشور/سناریو، دیپلماسی، تاریخچه جنگ و پیمان صلح
 - کمپین رقابتی: دو State مستقل، فرمان مخصوص کشور و آشتی روابط/پیمان‌ها
 - AI مستقل جهان: ماتریس رابطه، تجارت، اتحاد، جنگ و اثر اقتصادی

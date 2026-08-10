@@ -76,6 +76,7 @@ jobs:
           set -euo pipefail
           python3 tests/validate_country_data.py
           python3 tests/validate_world_map.py
+          python3 tests/validate_country_maps.py
           godot --headless --path . res://tests/test_scene.tscn
           godot --headless --path . res://tests/test_long.tscn
           godot --headless --path . -s res://tests/test_ui.gd

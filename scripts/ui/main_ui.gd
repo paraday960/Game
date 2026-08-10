@@ -4,6 +4,7 @@ extends Control
 
 const GameCommandClass = preload("res://scripts/core/command.gd")
 const WorldMapClass = preload("res://scripts/ui/world_map.gd")
+const CountryMapClass = preload("res://scripts/ui/country_map.gd")
 const TrendChartClass = preload("res://scripts/ui/trend_chart.gd")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 
@@ -20,6 +21,10 @@ var selected_system: String = "economy"
 var selected_world_country: String = ""
 var world_region_filter: String = "all"
 var map_layers: Dictionary = {"relations":true,"wars":true,"alliances":true,"trade":true,"air":false,"sea":false,"land":false,"weather":false,"intelligence":false}
+var country_map_layer: String = "administrative"
+var country_map_show_cities: bool = true
+var country_map_show_transport: bool = true
+var selected_country_unit: String = ""
 var country_select_option: OptionButton
 var scenario_select_option: OptionButton
 var scenario_description_lbl: Label
@@ -125,6 +130,7 @@ const TABS := [
 	["technology", "🔬 فناوری"],
 	["population", "👥 جمعیت"],
 	["military", "🪖 ارتش"],
+	["country_map", "🗺️ کشور"],
 	["world", "🌍 جهان"],
 	["systems", "🏛️ سامانه‌ها"]
 ]
@@ -199,8 +205,8 @@ func _build_chrome():
 		var key = tab_def[0]
 		var btn = Button.new()
 		btn.text = tab_def[1]
-		btn.custom_minimum_size = Vector2(95, 56)
-		btn.add_theme_font_size_override("font_size", 17)
+		btn.custom_minimum_size = Vector2(86, 56)
+		btn.add_theme_font_size_override("font_size", 16)
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_switch_tab.bind(key))
 		tabs_hbox.add_child(btn)
@@ -306,6 +312,7 @@ func _switch_tab(tab_key: String):
 		"technology": _build_technology()
 		"population": _build_population()
 		"military": _build_military()
+		"country_map": _build_country_map()
 		"world": _build_world()
 		"systems": _build_systems()
 
@@ -631,6 +638,7 @@ func _on_new_game_pressed():
 	EventLog.clear()
 	GameState.init_default_state()
 	selected_world_country = ""
+	selected_country_unit = ""
 	selected_system = "economy"
 	current_state = GameState.get_state_copy()
 	_refresh_header()
@@ -1420,6 +1428,119 @@ func _on_military_program(program_id: String, title: String):
 		_toast("🏗️ برنامه «%s» آغاز شد" % title); _switch_tab("military")
 
 # ============================================================
+# تب نقشه ملی — تقسیمات، شهرها و اطلاعات زنده کشور بازیکن
+# ============================================================
+func _build_country_map():
+	var state = GameState.state
+	var code = str(state.get("country", {}).get("id", WorldManager.default_country))
+	var profile = WorldManager.get_country(code)
+	var units = CountryGeographyManager.get_units(code)
+	var cities = CountryGeographyManager.get_cities(code)
+	if units.is_empty():
+		var missing = _card("🗺️ نقشه ملی")
+		var missing_label = Label.new(); missing_label.text = "داده نقشه ملی این کشور بارگذاری نشده است."; missing.add_child(missing_label)
+		return
+	if selected_country_unit == "" or CountryGeographyManager.get_unit(code, selected_country_unit).is_empty():
+		for unit in units:
+			if unit.get("capital", false):
+				selected_country_unit = str(unit.get("id", "")); break
+		if selected_country_unit == "": selected_country_unit = str(units[0].get("id", ""))
+
+	var population = float(state.get("population", {}).get("total", profile.get("population", 0.0)))
+	var area = max(1.0, float(profile.get("area_km2", 1.0)))
+	var gdp = float(state.get("economy", {}).get("gdp", profile.get("gdp", 0.0)))
+	var identity = _card("🏛️ نمای ملی %s" % str(profile.get("name_fa", code)))
+	_row(identity, "پایتخت", str(profile.get("capital_fa", "")))
+	_row(identity, "تقسیمات اداری واقعی", PersianFormatter.to_persian_digits(str(units.size())))
+	_row(identity, "شهرهای شاخص روی نقشه", PersianFormatter.to_persian_digits(str(cities.size())))
+	_row(identity, "مساحت", PersianFormatter.format_large(area) + " کیلومتر مربع")
+	_row(identity, "تراکم جمعیت", PersianFormatter.format_number(int(population / area)) + " نفر در کیلومتر مربع")
+	_row(identity, "تولید داخلی سرانه", PersianFormatter.format_money(gdp / max(population, 1.0)))
+
+	var controls = _card("🧭 لایه‌های اطلاعات ملی")
+	var hint = Label.new(); hint.text = "رنگ هر ناحیه از State زنده بازی محاسبه می‌شود. مرزها و شهرها جغرافیایی‌اند و توزیع منطقه‌ای شاخص‌ها برآورد مدل بازی است."; hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.76, 0.83, 0.92); controls.add_child(hint)
+	var control_row = HBoxContainer.new(); controls.add_child(control_row)
+	var layer_select = OptionButton.new(); layer_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var layer_defs = [["administrative","تقسیمات اداری"],["population","تراکم جمعیت"],["economy","فعالیت اقتصادی"],["infrastructure","کیفیت زیرساخت"],["satisfaction","رضایت منطقه‌ای"],["security","امنیت داخلی"],["weather","ریسک اقلیمی"],["resources","ظرفیت منابع"],["military","اهمیت نظامی"]]
+	for layer_def in layer_defs:
+		layer_select.add_item(layer_def[1]); layer_select.set_item_metadata(layer_select.item_count - 1, layer_def[0])
+		if layer_def[0] == country_map_layer: layer_select.select(layer_select.item_count - 1)
+	layer_select.item_selected.connect(_on_country_map_layer_selected.bind(layer_select)); control_row.add_child(layer_select)
+	var city_toggle = CheckButton.new(); city_toggle.text = "شهرها"; city_toggle.button_pressed = country_map_show_cities; city_toggle.toggled.connect(_on_country_map_overlay_toggled.bind("cities")); control_row.add_child(city_toggle)
+	var transport_toggle = CheckButton.new(); transport_toggle.text = "راه و ریل"; transport_toggle.button_pressed = country_map_show_transport; transport_toggle.toggled.connect(_on_country_map_overlay_toggled.bind("transport")); control_row.add_child(transport_toggle)
+
+	var map_card = _card("🗺️ نقشه کشور — %s" % str(profile.get("name_fa", code)))
+	var national_map = CountryMapClass.new(); national_map.selected_unit = selected_country_unit
+	national_map.set_country_data(code, state, country_map_layer, country_map_show_cities, country_map_show_transport)
+	national_map.unit_selected.connect(_on_country_unit_selected); map_card.add_child(national_map)
+	var accessibility = Label.new(); accessibility.text = "روی هر استان/ایالت بزنید تا برآورد جمعیت، اقتصاد، زیرساخت، امنیت و اقلیم آن نمایش داده شود. کلید تأیید نیز ناحیه بعدی را انتخاب می‌کند."; accessibility.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; accessibility.modulate = Color(0.72,0.80,0.90); map_card.add_child(accessibility)
+
+	_build_selected_national_unit(state, code, selected_country_unit)
+
+	var live = _card("📊 شاخص‌های زنده سراسری روی نقشه")
+	_bar(live, "رضایت عمومی", float(state.get("population", {}).get("happiness", state.get("population", {}).get("satisfaction", 0.60))))
+	_bar(live, "کیفیت زیرساخت", float(state.get("infrastructure", {}).get("quality", 0.55)))
+	_bar(live, "امنیت عمومی", float(state.get("security", {}).get("public_security", 0.65)))
+	_bar(live, "پوشش خدمات محلی", float(state.get("administration", {}).get("service_coverage", 0.70)))
+	_bar(live, "خودکفایی منابع", float(state.get("resources", {}).get("self_sufficiency", 0.65)))
+	_bar(live, "آمادگی نظامی", float(state.get("military", {}).get("readiness", 0.55)))
+	var current_weather = state.get("weather", {}).get("current", {})
+	_row(live, "وضعیت اقلیمی", str(current_weather.get("condition", state.get("weather", {}).get("climate", profile.get("climate_fa", "")))))
+	_row(live, "راه‌های مختل", _fmt_pct(float(state.get("municipal_services", {}).get("roads_blocked", 0.0))))
+
+	var infrastructure = _card("🚆 شبکه و تأسیسات ملی")
+	var transport = state.get("transport_detail", {})
+	var industry_sites = state.get("industry_sites_detail", {})
+	_row(infrastructure, "جاده", PersianFormatter.format_large(float(transport.get("roads_km", area * 0.05))) + " کیلومتر")
+	_row(infrastructure, "راه‌آهن", PersianFormatter.format_large(float(transport.get("rail_km", 0.0))) + " کیلومتر")
+	_row(infrastructure, "فرودگاه", PersianFormatter.to_persian_digits(str(int(transport.get("airports", max(1, cities.size() / 3))))))
+	_row(infrastructure, "بندر", PersianFormatter.to_persian_digits(str(int(transport.get("ports", 0 if profile.get("landlocked", false) else 1)))))
+	_row(infrastructure, "کارخانه", PersianFormatter.format_number(int(industry_sites.get("factories", max(1.0, gdp / 100000000.0)))))
+	_row(infrastructure, "معدن فعال", PersianFormatter.format_number(int(industry_sites.get("mines", max(0.0, area / 10000.0)))))
+	_bar(infrastructure, "کیفیت جاده", float(transport.get("roads_quality", state.get("infrastructure", {}).get("quality", 0.55))))
+	_bar(infrastructure, "کارآمدی لجستیک", float(transport.get("logistics_efficiency", 0.55)))
+
+	var city_card = _card("🏙️ شهرهای شاخص")
+	for city in cities:
+		var city_text = ("پایتخت — " if city.get("capital", false) else "شهر — ") + str(city.get("name_fa", ""))
+		if int(city.get("population", 0)) > 0: city_text += " | جمعیت جغرافیایی: " + PersianFormatter.format_large(float(city.get("population", 0)))
+		var city_label = Label.new(); city_label.text = "• " + city_text; city_label.modulate = Color(1.0,0.90,0.55) if city.get("capital", false) else Color(0.84,0.90,0.96); city_card.add_child(city_label)
+
+func _build_selected_national_unit(state: Dictionary, code: String, unit_id: String):
+	var metrics = CountryGeographyManager.get_unit_metrics(code, unit_id, state)
+	if metrics.is_empty(): return
+	var title = "📍 %s %s" % [metrics.get("type_fa", "ناحیه"), metrics.get("name_fa", "")]
+	if metrics.get("capital", false): title += " — ناحیه پایتخت"
+	var card = _card(title)
+	_row(card, "جمعیت برآوردی", PersianFormatter.format_large(float(metrics.get("population", 0))) + " نفر")
+	_row(card, "سهم از جمعیت کشور", _fmt_pct(float(metrics.get("population_share", 0.0))))
+	_row(card, "تولید داخلی برآوردی", PersianFormatter.format_money(float(metrics.get("gdp", 0))))
+	_row(card, "GDP سرانه برآوردی", PersianFormatter.format_money(float(metrics.get("gdp_per_capita", 0))))
+	_row(card, "مساحت برآوردی", PersianFormatter.format_large(float(metrics.get("area_km2", 0))) + " کیلومتر مربع")
+	_row(card, "راه‌های برآوردی", PersianFormatter.format_large(float(metrics.get("roads_km", 0))) + " کیلومتر")
+	_bar(card, "زیرساخت منطقه", float(metrics.get("infrastructure", 0.0)))
+	_bar(card, "رضایت منطقه", float(metrics.get("satisfaction", 0.0)))
+	_bar(card, "امنیت منطقه", float(metrics.get("security", 0.0)))
+	_bar(card, "ظرفیت منابع", float(metrics.get("resource_score", 0.0)))
+	_bar(card, "اهمیت نظامی", float(metrics.get("military_score", 0.0)))
+	_bar(card, "ریسک اقلیمی", float(metrics.get("weather_risk", 0.0)))
+
+func _on_country_map_layer_selected(index: int, selector: OptionButton):
+	if index < 0 or index >= selector.item_count: return
+	country_map_layer = str(selector.get_item_metadata(index)); _switch_tab("country_map")
+
+func _on_country_map_overlay_toggled(pressed: bool, overlay: String):
+	if overlay == "cities": country_map_show_cities = pressed
+	elif overlay == "transport": country_map_show_transport = pressed
+	_switch_tab("country_map")
+
+func _on_country_unit_selected(unit_id: String):
+	selected_country_unit = unit_id
+	var unit = CountryGeographyManager.get_unit(str(GameState.state.get("country", {}).get("id", "")), unit_id)
+	_toast("📍 ناحیه انتخابی: %s" % str(unit.get("name_fa", "")))
+	_switch_tab("country_map")
+
+# ============================================================
 # تب جهان — دیپلماسی تعاملی
 # ============================================================
 func _build_world():
@@ -1688,6 +1809,7 @@ func _on_country_start_selected():
 	var cmd = GameCommandClass.create_country_select(country_id, scenario_id)
 	if _run_tick_with([cmd]):
 		selected_world_country = ""
+		selected_country_unit = ""
 		_toast("🏳️ بازی با %s و سناریوی «%s» آغاز شد" % [
 			WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)])
 		_switch_tab("world")

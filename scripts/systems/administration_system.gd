@@ -12,8 +12,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	admin["decentralization"] = admin.get("decentralization", 0.40)
 	admin["regional_inequality"] = admin.get("regional_inequality", 0.35)
 	admin["local_governance"] = admin.get("local_governance", 0.55)
-	admin["provinces"] = admin.get("provinces", 31)
-	admin["municipalities"] = admin.get("municipalities", 1200)
+	var country_id = str(state.get("country", {}).get("id", WorldManager.default_country))
+	admin["provinces"] = max(1, CountryGeographyManager.get_unit_count(country_id))
+	admin["municipalities"] = max(admin["provinces"], int(admin.get("municipalities", 1200)))
 	admin["local_budget_share"] = admin.get("local_budget_share", 0.25)
 	admin["service_coverage"] = admin.get("service_coverage", 0.70)
 

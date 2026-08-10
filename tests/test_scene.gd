@@ -43,6 +43,20 @@ func _ready():
 	else:
 		var iran_hit=GeographyManager.country_at_normalized(GeographyManager.normalized_point(53.0,32.0))
 		if iran_hit!="IRN":failed.append("انتخاب مستقیم چندضلعی ایران شکست خورد: "+iran_hit)
+	if not CountryGeographyManager.is_valid():
+		failed.append("نقشه ملی، تقسیمات اداری یا شهرهای ۱۹۵ کشور نامعتبر است")
+	else:
+		var mapped_countries=0;var mapped_units=0
+		for map_country in WorldManager.get_country_ids():
+			var units=CountryGeographyManager.get_units(str(map_country));var cities=CountryGeographyManager.get_cities(str(map_country))
+			if units.is_empty() or cities.is_empty():failed.append("نقشه ملی کشور %s ناقص است"%map_country);break
+			mapped_countries+=1;mapped_units+=units.size()
+		var iran_units=CountryGeographyManager.get_units("IRN")
+		var iran_metrics=CountryGeographyManager.get_unit_metrics("IRN",str(iran_units[0].id),GameState.state)
+		if iran_units.size()!=31 or iran_metrics.is_empty() or float(iran_metrics.get("population",0))<=0:
+			failed.append("شاخص‌های منطقه‌ای نقشه ایران ساخته نشد")
+		else:
+			print("National maps: %d countries + %d Admin-1 units + live regional metrics OK"%[mapped_countries,mapped_units])
 	if not WorldManager.is_valid() or WorldManager.countries.size() != 195 or GameState.state.get("diplomacy", {}).get("relations", {}).size() != 194:
 		failed.append("داده جهان یا روابط ۱۹۵ کشور کامل نیست")
 	else:

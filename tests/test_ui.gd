@@ -15,7 +15,7 @@ func _init():
 	if scene.content.get_child_count() < 3:
 		fails.append("داشبورد خالی است: %d کارت" % scene.content.get_child_count())
 	# سوییچ به همه تب‌ها
-	for tab in ["government", "laws", "economy", "projects", "technology", "population", "military", "world", "systems", "dashboard"]:
+	for tab in ["government", "laws", "economy", "projects", "technology", "population", "military", "country_map", "world", "systems", "dashboard"]:
 		scene._switch_tab(tab)
 		await process_frame
 		if scene.content.get_child_count() == 0:

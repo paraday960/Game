@@ -21,13 +21,16 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		"خدمات": 0.20,
 		"بیکار": 0.05
 	})
-	people["leaders"] = people.get("leaders", {
-		"وزرا": 20,
-		"نمایندگان": 290,
-		"استانداران": 31,
-		"شهرداران": 1200,
-		"مدیران_ارشد": 5000
-	})
+	var leaders = people.get("leaders", {})
+	if not leaders is Dictionary:
+		leaders = {}
+	leaders["وزرا"] = leaders.get("وزرا", 20)
+	leaders["نمایندگان"] = leaders.get("نمایندگان", 290)
+	leaders["مدیران_ارشد"] = leaders.get("مدیران_ارشد", 5000)
+	var country_id = str(state.get("country", {}).get("id", WorldManager.default_country))
+	leaders["استانداران"] = max(1, CountryGeographyManager.get_unit_count(country_id))
+	leaders["شهرداران"] = max(leaders["استانداران"], int(state.get("administration", {}).get("municipalities", 1)))
+	people["leaders"] = leaders
 	people["elites"] = people.get("elites", {
 		"نخبه_علمی": 10000,
 		"کارآفرین": 50000,
