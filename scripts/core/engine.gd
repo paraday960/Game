@@ -123,6 +123,12 @@ func _load_remaining_systems():
 		systems["officials"] = load("res://scripts/systems/officials_managers_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/politicians_system.gd"):
 		systems["politicians_detail"] = load("res://scripts/systems/politicians_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/public_employees_system.gd"):
+		systems["public_employees"] = load("res://scripts/systems/public_employees_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/private_sector_system.gd"):
+		systems["private_sector"] = load("res://scripts/systems/private_sector_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/elites_system.gd"):
+		systems["elites_detail"] = load("res://scripts/systems/elites_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
