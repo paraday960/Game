@@ -117,6 +117,12 @@ func _load_remaining_systems():
 	if ResourceLoader.exists("res://scripts/systems/urban_facilities_system.gd"):
 		systems["urban_facilities"] = load("res://scripts/systems/urban_facilities_system.gd").new()
 
+	if ResourceLoader.exists("res://scripts/systems/workforce_jobs_system.gd"):
+		systems["workforce_detail"] = load("res://scripts/systems/workforce_jobs_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/officials_managers_system.gd"):
+		systems["officials"] = load("res://scripts/systems/officials_managers_system.gd").new()
+	if ResourceLoader.exists("res://scripts/systems/politicians_system.gd"):
+		systems["politicians_detail"] = load("res://scripts/systems/politicians_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/hospitality_system.gd"):
 		systems["hospitality"] = load("res://scripts/systems/hospitality_system.gd").new()
 
