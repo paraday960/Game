@@ -52,7 +52,29 @@ func _init():
 			unified_map.set_base_layer(layer)
 			await process_frame
 		unified_map.focus_world(); unified_map.zoom_in(); unified_map.zoom_out()
-		print("  ✓ unified map: continuous world/country zoom + 10 lenses")
+		# تغییر انتخاب فقط پنل زمینه‌ای را عوض می‌کند و خود نقشه پایدار می‌ماند.
+		var persistent_map_id=unified_map.get_instance_id();scene._on_unified_country_selected("TUR");await process_frame;await process_frame
+		if scene.current_unified_map.get_instance_id()!=persistent_map_id:fails.append("نقشه هنگام انتخاب کشور بی‌دلیل بازسازی شد")
+		if scene.map_context_host==null or scene.map_context_host.get_child_count()==0:fails.append("پنل زمینه‌ای پایدار نقشه خالی است")
+		print("  ✓ unified map: continuous zoom + 10 lenses + persistent context")
+	# فرمان سریع باید همه ۱۱ بخش، ۶۵ سامانه و ۱۹۵ کشور را جست‌وجو کند.
+	if scene.command_palette==null or scene.command_palette.entries.size()<271:fails.append("فرمان سریع پوشش کامل ندارد")
+	else:
+		scene._open_command_palette("ایران");await process_frame
+		if not scene.command_palette.visible or scene.command_palette.results_box.get_child_count()==0:fails.append("جست‌وجوی فارسی فرمان سریع نتیجه نداد")
+		scene.command_palette.close_palette()
+		scene._toast("اعلان آزمایشی رابط حرفه‌ای");await process_frame
+		if scene.toast_stack.get_child_count()==0:fails.append("ToastStack اعلان را نمایش نداد")
+		print("  ✓ command palette + Persian search + stacked notifications")
+	# نمودار تعاملی باید داده، Hover/Touch و انتخاب ماه را بدون خطا پردازش کند.
+	var chart=load("res://scripts/ui/trend_chart.gd").new();chart.size=Vector2(800,330);root.add_child(chart);chart.set_history([{"label":"ماه ۱","happiness":0.5,"stability":0.6,"power":0.4,"gdp_index":0.9},{"label":"ماه ۲","happiness":0.55,"stability":0.58,"power":0.45,"gdp_index":1.0},{"label":"ماه ۳","happiness":0.62,"stability":0.64,"power":0.5,"gdp_index":1.1}]);await process_frame
+	chart._update_hover(Vector2(400,150))
+	if chart.hovered_index<0:fails.append("نمودار تعاملی ماه را انتخاب نکرد")
+	chart.queue_free();print("  ✓ interactive trend chart: crosshair + month inspection")
+	# واکنش‌گرایی در عرض کم باید چیدمان را بدون حذف قابلیت‌ها بازآرایی کند.
+	var original_size=scene.size;scene.size=Vector2(700,1600);scene._apply_responsive_layout()
+	if scene.status_grid.columns!=2 or scene.map_overlay_grid.columns!=3:fails.append("چیدمان واکنش‌گرای موبایل فعال نشد")
+	scene.size=original_size;scene._apply_responsive_layout();print("  ✓ responsive command center: 2-column mobile adaptation")
 	# بازکردن صفحه جزئیات تک‌تک ۶۵ سامانه
 	var engine = root.get_node("GameEngine")
 	var inspected = 0

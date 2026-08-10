@@ -5,6 +5,8 @@ extends Control
 const GameCommandClass = preload("res://scripts/core/command.gd")
 const UnifiedMapClass = preload("res://scripts/ui/unified_map.gd")
 const CommandBackgroundClass = preload("res://scripts/ui/command_background.gd")
+const CommandPaletteClass = preload("res://scripts/ui/command_palette.gd")
+const ToastStackClass = preload("res://scripts/ui/toast_stack.gd")
 const TrendChartClass = preload("res://scripts/ui/trend_chart.gd")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 
@@ -35,6 +37,15 @@ var gdp_status_lbl: Label
 var approval_status_lbl: Label
 var stability_status_lbl: Label
 var alert_status_lbl: Label
+var chrome_root: VBoxContainer
+var status_grid: GridContainer
+var content_scroll: ScrollContainer
+var map_context_host: VBoxContainer
+var map_overlay_grid: GridContainer
+var map_control_flow: HFlowContainer
+var command_palette: Control
+var toast_stack: VBoxContainer
+var page_generation := 0
 
 # ---------- ارجاع‌های گره ----------
 var content: VBoxContainer
@@ -147,6 +158,8 @@ func _ready():
 	SettingsManager.settings_changed.connect(_on_setting_changed)
 	current_state = GameState.get_state_copy()
 	_build_chrome()
+	resized.connect(_apply_responsive_layout)
+	call_deferred("_apply_responsive_layout")
 	_switch_tab("map")
 	_refresh_header()
 	GameEngine.tick_completed.connect(_on_tick_completed)
@@ -165,7 +178,8 @@ func _build_chrome():
 	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(background_rect)
 
-	var root = VBoxContainer.new()
+	chrome_root = VBoxContainer.new()
+	var root = chrome_root
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.offset_left = 16
 	root.offset_right = -16
@@ -186,13 +200,14 @@ func _build_chrome():
 	header_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_title.add_theme_font_size_override("font_size", 25)
 	identity_row.add_child(header_title)
+	var quick_command = Button.new(); quick_command.text = "فرمان سریع"; quick_command.tooltip_text = "جست‌وجوی همه بخش‌ها، سامانه‌ها و کشورها (Ctrl+K)"; quick_command.custom_minimum_size=Vector2(132,42); quick_command.pressed.connect(_open_command_palette); identity_row.add_child(quick_command)
 	date_lbl = Label.new(); date_lbl.add_theme_font_size_override("font_size", 16); date_lbl.modulate = Color(0.72,0.84,0.90); identity_row.add_child(date_lbl)
 
-	var status_grid = GridContainer.new(); status_grid.columns = 4; status_grid.add_theme_constant_override("h_separation", 8); command_box.add_child(status_grid)
-	gdp_status_lbl = _status_chip(status_grid, "اقتصاد", Color(0.24,0.88,0.54))
-	approval_status_lbl = _status_chip(status_grid, "رضایت", Color(0.25,0.78,1.0))
-	stability_status_lbl = _status_chip(status_grid, "ثبات", Color(1.0,0.73,0.24))
-	alert_status_lbl = _status_chip(status_grid, "هشدارها", Color(1.0,0.36,0.32))
+	status_grid = GridContainer.new(); status_grid.columns = 4; status_grid.add_theme_constant_override("h_separation", 8); status_grid.add_theme_constant_override("v_separation",6); command_box.add_child(status_grid)
+	gdp_status_lbl = _status_chip(status_grid, "اقتصاد", Color(0.24,0.88,0.54),"economy")
+	approval_status_lbl = _status_chip(status_grid, "رضایت", Color(0.25,0.78,1.0),"population")
+	stability_status_lbl = _status_chip(status_grid, "ثبات", Color(1.0,0.73,0.24),"government")
+	alert_status_lbl = _status_chip(status_grid, "هشدارها", Color(1.0,0.36,0.32),"dashboard")
 	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 13); engagement_lbl.modulate = Color(0.61,0.73,0.80); command_box.add_child(engagement_lbl)
 
 	# ناوبری افقی قابل اسکرول؛ در موبایل هیچ گزینه‌ای بریده نمی‌شود.
@@ -205,10 +220,11 @@ func _build_chrome():
 		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_switch_tab.bind(key)); tabs_hbox.add_child(btn); tab_buttons[key] = btn
 
 	# محتوای اصلی؛ نقشه و پنل‌های مدیریتی از همین فضای مشترک استفاده می‌کنند.
-	var scroll = ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(scroll)
-	content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; content.add_theme_constant_override("separation", 10); scroll.add_child(content)
+	content_scroll = ScrollContainer.new(); content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(content_scroll)
+	content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; content.add_theme_constant_override("separation", 10); content_scroll.add_child(content)
 
-	toast_lbl = Label.new(); toast_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; toast_lbl.add_theme_font_size_override("font_size",15); toast_lbl.modulate = Color(0.42,1.0,0.68); root.add_child(toast_lbl)
+	# Label پنهان فقط برای سازگاری تست/کد قدیمی؛ اعلان واقعی در ToastStack نمایش داده می‌شود.
+	toast_lbl = Label.new(); toast_lbl.hide(); add_child(toast_lbl)
 
 	# تیکر رویداد فشرده به جای اشغال بخش بزرگی از صفحه.
 	var event_panel = PanelContainer.new(); event_panel.theme_type_variation = "TickerPanel"; root.add_child(event_panel)
@@ -227,22 +243,29 @@ func _build_chrome():
 	_mk_btn(footer, "بارگذاری", Vector2(115,50), _on_load_pressed)
 	_mk_btn(footer, "صدا: خاموش" if FeedbackManager.muted else "صدا: روشن", Vector2(120,50), _on_sound_pressed, "SoundBtn")
 
+	toast_stack = ToastStackClass.new(); toast_stack.anchor_left=0.48;toast_stack.anchor_right=0.98;toast_stack.anchor_top=0.10;toast_stack.anchor_bottom=0.42;toast_stack.offset_left=0;toast_stack.offset_right=0;toast_stack.offset_top=0;toast_stack.offset_bottom=0;add_child(toast_stack)
+	command_palette = CommandPaletteClass.new(); command_palette.item_chosen.connect(_on_palette_item_chosen); add_child(command_palette); command_palette.set_entries(_build_command_entries())
+
 func _build_professional_theme() -> Theme:
 	var result = Theme.new()
+	var compact = str(SettingsManager.get_value("ui_density","comfortable")) == "compact"
+	var high_contrast = bool(SettingsManager.get_value("high_contrast",false))
+	var padding = 9 if compact else 14
+	var button_padding = 7 if compact else 9
 	result.default_font = PersianFont
-	result.default_font_size = int(17.0 * float(SettingsManager.get_value("text_scale", 1.0)))
-	result.set_color("font_color", "Label", Color(0.88,0.93,0.96))
+	result.default_font_size = int((16.0 if compact else 17.0) * float(SettingsManager.get_value("text_scale", 1.0)))
+	result.set_color("font_color", "Label", Color.WHITE if high_contrast else Color(0.88,0.93,0.96))
 	result.set_color("font_shadow_color", "Label", Color(0.0,0.0,0.0,0.42))
 	result.set_constant("shadow_offset_x", "Label", 1); result.set_constant("shadow_offset_y", "Label", 1)
-	result.set_stylebox("panel", "PanelContainer", _style_box(Color(0.035,0.074,0.105,0.94), Color(0.16,0.38,0.46,0.82), 10, 1, 14))
-	result.set_stylebox("panel", "CommandPanel", _style_box(Color(0.024,0.058,0.086,0.98), Color(0.22,0.67,0.74,0.68), 12, 1, 13))
+	result.set_stylebox("panel", "PanelContainer", _style_box(Color(0.018,0.034,0.048,0.99) if high_contrast else Color(0.035,0.074,0.105,0.94), Color(0.38,0.82,0.86,0.95) if high_contrast else Color(0.16,0.38,0.46,0.82), 10, 1 if not high_contrast else 2, padding))
+	result.set_stylebox("panel", "CommandPanel", _style_box(Color(0.012,0.027,0.039,1.0) if high_contrast else Color(0.024,0.058,0.086,0.98), Color(0.45,0.94,0.94,1.0) if high_contrast else Color(0.22,0.67,0.74,0.68), 12, 1 if not high_contrast else 2, padding))
 	result.set_stylebox("panel", "NavPanel", _style_box(Color(0.018,0.044,0.068,0.97), Color(0.12,0.34,0.42,0.76), 9, 1, 5))
 	result.set_stylebox("panel", "TickerPanel", _style_box(Color(0.020,0.046,0.067,0.97), Color(0.22,0.43,0.49,0.62), 8, 1, 8))
 	result.set_stylebox("panel", "DockPanel", _style_box(Color(0.015,0.037,0.058,0.99), Color(0.25,0.60,0.67,0.62), 10, 1, 5))
 	result.set_stylebox("panel", "StatusChip", _style_box(Color(0.046,0.094,0.119,0.96), Color(0.15,0.37,0.43,0.80), 8, 1, 7))
-	var button_normal = _style_box(Color(0.055,0.112,0.142,0.98), Color(0.18,0.44,0.51,0.85), 8, 1, 9)
-	var button_hover = _style_box(Color(0.073,0.172,0.197,0.99), Color(0.26,0.80,0.84,0.95), 8, 1, 9)
-	var button_pressed = _style_box(Color(0.035,0.222,0.235,1.0), Color(0.38,0.94,0.91,1.0), 8, 2, 9)
+	var button_normal = _style_box(Color(0.055,0.112,0.142,0.98), Color(0.18,0.44,0.51,0.85), 8, 1, button_padding)
+	var button_hover = _style_box(Color(0.073,0.172,0.197,0.99), Color(0.26,0.80,0.84,0.95), 8, 1, button_padding)
+	var button_pressed = _style_box(Color(0.035,0.222,0.235,1.0), Color(0.38,0.94,0.91,1.0), 8, 2, button_padding)
 	for kind in ["Button", "OptionButton"]:
 		result.set_stylebox("normal", kind, button_normal); result.set_stylebox("hover", kind, button_hover); result.set_stylebox("pressed", kind, button_pressed); result.set_stylebox("focus", kind, button_hover)
 		result.set_color("font_color", kind, Color(0.86,0.93,0.96)); result.set_color("font_hover_color", kind, Color.WHITE); result.set_color("font_pressed_color", kind, Color.WHITE)
@@ -255,6 +278,8 @@ func _build_professional_theme() -> Theme:
 	result.set_stylebox("normal", "LineEdit", _style_box(Color(0.012,0.034,0.052,0.98), Color(0.18,0.43,0.50,0.88), 7, 1, 9))
 	result.set_stylebox("focus", "LineEdit", _style_box(Color(0.018,0.054,0.073,1.0), Color(0.31,0.87,0.87,1.0), 7, 2, 9))
 	result.set_color("font_color", "LineEdit", Color(0.91,0.96,0.98)); result.set_color("font_placeholder_color", "LineEdit", Color(0.45,0.59,0.65))
+	result.set_stylebox("panel", "TooltipPanel", _style_box(Color(0.005,0.020,0.031,0.99),Color(0.26,0.78,0.82,0.92),7,1,8))
+	result.set_color("font_color","TooltipLabel",Color(0.94,0.98,1.0))
 	return result
 
 func _style_box(background: Color, border: Color, radius: int, width: int, padding: int) -> StyleBoxFlat:
@@ -264,12 +289,80 @@ func _style_box(background: Color, border: Color, radius: int, width: int, paddi
 	style.shadow_color = Color(0.0,0.0,0.0,0.30); style.shadow_size = 5; style.shadow_offset = Vector2(0,2)
 	return style
 
-func _status_chip(parent: Control, title_text: String, accent: Color) -> Label:
-	var panel = PanelContainer.new(); panel.theme_type_variation = "StatusChip"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL; parent.add_child(panel)
+func _status_chip(parent: Control, title_text: String, accent: Color, target_tab:String) -> Label:
+	var panel = PanelContainer.new(); panel.theme_type_variation = "StatusChip"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL;panel.mouse_filter=Control.MOUSE_FILTER_STOP;panel.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND;panel.tooltip_text="بازکردن "+title_text;panel.gui_input.connect(_on_status_chip_input.bind(target_tab)); parent.add_child(panel)
 	var box = VBoxContainer.new(); box.add_theme_constant_override("separation",1); panel.add_child(box)
 	var title = Label.new(); title.text = title_text; title.add_theme_font_size_override("font_size",12); title.modulate = Color(0.58,0.71,0.77); box.add_child(title)
-	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",17); value.modulate = accent; box.add_child(value)
+	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",17); value.modulate = accent;value.mouse_filter=Control.MOUSE_FILTER_IGNORE; box.add_child(value)
+	title.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	return value
+
+func _on_status_chip_input(event:InputEvent,target_tab:String):
+	if (event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed) or (event is InputEventScreenTouch and event.pressed):FeedbackManager.play_click();_switch_tab(target_tab)
+
+func _build_command_entries() -> Array:
+	var result:Array=[]
+	for tab in TABS:
+		result.append({"kind":"tab","id":str(tab[0]),"title":str(tab[1]),"group":"بخش","keywords":"مدیریت صفحه مرکز"})
+	for system_id in GameEngine.system_order:
+		result.append({"kind":"system","id":str(system_id),"title":str(SYSTEM_FA.get(system_id,"سامانه")),"group":"سامانه","keywords":str(system_id),"description":"بازکردن پایش و جزئیات سامانه"})
+	for country_id in WorldManager.get_country_ids():
+		var profile=WorldManager.get_country(str(country_id));result.append({"kind":"country","id":str(country_id),"title":str(profile.get("name_fa",country_id)),"group":"کشور","keywords":"%s %s %s"%[country_id,profile.get("capital_fa",""),profile.get("subregion","")],"description":"انتخاب و فوکوس روی نقشه"})
+	return result
+
+func _open_command_palette(initial_query:String=""):
+	if is_instance_valid(command_palette):
+		command_palette.open_palette(initial_query)
+
+func _on_palette_item_chosen(kind:String,id:String):
+	match kind:
+		"tab": _switch_tab(id)
+		"system": selected_system=id;_switch_tab("systems")
+		"country":
+			selected_world_country=id;selected_country_unit="";selected_map_route={};_switch_tab("map");call_deferred("_focus_palette_country",id)
+
+func _focus_palette_country(country_id:String):
+	if is_instance_valid(current_unified_map):current_unified_map.focus_country(country_id)
+
+func _apply_responsive_layout():
+	if not is_instance_valid(chrome_root):return
+	var narrow=size.x<820.0 or float(SettingsManager.get_value("text_scale",1.0))>1.10
+	var margin=8.0 if narrow else 16.0
+	chrome_root.offset_left=margin;chrome_root.offset_right=-margin;chrome_root.offset_top=8.0 if narrow else 12.0;chrome_root.offset_bottom=-8.0 if narrow else -12.0
+	if is_instance_valid(status_grid):status_grid.columns=2 if narrow else 4
+	if is_instance_valid(toast_stack):
+		toast_stack.anchor_left=0.06 if narrow else 0.48;toast_stack.anchor_right=0.94 if narrow else 0.98;toast_stack.anchor_top=0.08;toast_stack.anchor_bottom=0.42
+	if is_instance_valid(map_overlay_grid):map_overlay_grid.columns=3 if narrow else 5
+	if is_instance_valid(current_unified_map):current_unified_map.custom_minimum_size.y=560.0 if narrow else 760.0
+
+func _apply_tooltip_preferences():
+	var enabled=bool(SettingsManager.get_value("tooltips_enabled",true));_apply_tooltip_recursive(self,enabled)
+
+func _apply_tooltip_recursive(node:Node,enabled:bool):
+	if node is Control:
+		if enabled and node.has_meta("saved_tooltip"):node.tooltip_text=str(node.get_meta("saved_tooltip"));node.remove_meta("saved_tooltip")
+		elif not enabled and node.tooltip_text!="":node.set_meta("saved_tooltip",node.tooltip_text);node.tooltip_text=""
+	for child in node.get_children():_apply_tooltip_recursive(child,enabled)
+
+func _animate_page_in(generation:int):
+	await get_tree().process_frame
+	if generation!=page_generation or bool(SettingsManager.get_value("reduce_motion",false)):return
+	var delay=0.0
+	for child in content.get_children():
+		if not child is Control or child.is_queued_for_deletion():continue
+		child.modulate.a=0.0
+		var tween=create_tween();tween.tween_interval(delay);tween.tween_property(child,"modulate:a",1.0,0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		delay=min(0.12,delay+0.018)
+
+func _unhandled_key_input(event:InputEvent):
+	if not event is InputEventKey or not event.pressed or event.echo:return
+	if (event.ctrl_pressed and event.keycode==KEY_K) or event.keycode==KEY_F1:
+		_open_command_palette();get_viewport().set_input_as_handled();return
+	if event.alt_pressed:
+		var index=-1
+		if event.keycode>=KEY_1 and event.keycode<=KEY_9:index=event.keycode-KEY_1
+		elif event.keycode==KEY_0:index=9
+		if index>=0 and index<TABS.size():_switch_tab(str(TABS[index][0]));get_viewport().set_input_as_handled()
 
 func _mk_btn(parent, text, minsize, handler, node_name = ""):
 	var btn = Button.new()
@@ -319,6 +412,8 @@ func _switch_tab(tab_key: String):
 	if tab_key in ["world", "country_map"]:
 		tab_key = "map"
 	current_tab = tab_key
+	page_generation += 1
+	if is_instance_valid(content_scroll):content_scroll.scroll_vertical=0
 	for k in tab_buttons.keys():
 		tab_buttons[k].theme_type_variation = "PrimaryButton" if k == tab_key else ""
 		tab_buttons[k].modulate = Color.WHITE
@@ -337,16 +432,19 @@ func _switch_tab(tab_key: String):
 		"military": _build_military()
 		"network": _build_network_panel()
 		"systems": _build_systems()
+	call_deferred("_animate_page_in",page_generation)
+	call_deferred("_apply_tooltip_preferences")
 
 # ============================================================
 # ابزارهای ساخت سریع
 # ============================================================
-func _card(title: String) -> VBoxContainer:
+func _card(title: String, parent_override = null) -> VBoxContainer:
 	var panel = PanelContainer.new(); panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 7); panel.add_child(vbox)
-	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 19); t.modulate = Color(0.91,0.97,0.98); vbox.add_child(t)
-	var accent = ColorRect.new(); accent.color = Color(0.18,0.70,0.74,0.66); accent.custom_minimum_size = Vector2(0,2); accent.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(accent)
-	content.add_child(panel)
+	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 5 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 7); panel.add_child(vbox)
+	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 18 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 19); t.modulate = Color(0.91,0.97,0.98); vbox.add_child(t)
+	var accent = ColorRect.new(); accent.color = Color(0.28,0.70,1.0,0.75) if bool(SettingsManager.get_value("colorblind_palette",false)) else Color(0.18,0.70,0.74,0.66); accent.custom_minimum_size = Vector2(0,2); accent.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(accent)
+	var target = parent_override if parent_override != null and is_instance_valid(parent_override) else content
+	target.add_child(panel)
 	return vbox
 
 func _row(parent, key: String, value: String, value_color = null):
@@ -388,6 +486,10 @@ func _bar(parent, title: String, ratio: float):
 	h.add_child(pct)
 
 func _color_for(ratio: float) -> Color:
+	if bool(SettingsManager.get_value("colorblind_palette",false)):
+		if ratio>=0.65:return Color(0.25,0.72,1.0)
+		elif ratio>=0.4:return Color(1.0,0.78,0.22)
+		return Color(0.92,0.34,0.82)
 	if ratio >= 0.65:
 		return Color(0.4, 1.0, 0.5)
 	elif ratio >= 0.4:
@@ -633,15 +735,20 @@ func _on_municipal_action(action: String, title: String):
 		_switch_tab("dashboard")
 
 func _build_settings_card():
-	var card = _card("⚙️ تنظیمات و دسترس‌پذیری")
-	var grid = GridContainer.new()
-	grid.columns = 2
-	card.add_child(grid)
+	var card = _card("تنظیمات تجربه و دسترس‌پذیری")
+	var description=Label.new();description.text="ظاهر، حرکت، رنگ، لمس و بازخورد را بدون اثر روی State کمپین شخصی‌سازی کنید.";description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;description.modulate=Color(0.66,0.78,0.84);card.add_child(description)
+	var grid = GridContainer.new(); grid.columns = 2; card.add_child(grid)
 	_mk_btn(grid, "سرعت خودکار: %s" % SettingsManager.get_speed_label(), Vector2(220, 48), _on_speed_pressed)
 	_mk_btn(grid, "اندازه متن: %s٪" % PersianFormatter.to_persian_digits(str(int(float(SettingsManager.get_value("text_scale", 1.0)) * 100.0))), Vector2(220, 48), _on_text_scale_pressed)
-	_mk_btn(grid, "کنتراست بالا: %s" % ("روشن" if SettingsManager.get_value("high_contrast", false) else "خاموش"), Vector2(220, 48), _on_contrast_pressed)
-	_mk_btn(grid, "کاهش حرکت: %s" % ("روشن" if SettingsManager.get_value("reduce_motion", false) else "خاموش"), Vector2(220, 48), _on_reduce_motion_pressed)
+	_mk_btn(grid, "تراکم رابط: %s" % SettingsManager.get_ui_density_label(), Vector2(220,48), _on_density_pressed)
+	_mk_btn(grid, "کنتراست بالا: %s" % _on_off(SettingsManager.get_value("high_contrast", false)), Vector2(220, 48), _on_contrast_pressed)
+	_mk_btn(grid, "پالت کوررنگی: %s" % _on_off(SettingsManager.get_value("colorblind_palette", false)), Vector2(220,48), _on_colorblind_pressed)
+	_mk_btn(grid, "کاهش حرکت: %s" % _on_off(SettingsManager.get_value("reduce_motion", false)), Vector2(220, 48), _on_reduce_motion_pressed)
+	_mk_btn(grid, "بازخورد لرزشی: %s" % _on_off(SettingsManager.get_value("haptics_enabled", true)), Vector2(220,48), _on_haptics_pressed)
+	_mk_btn(grid, "راهنمای لمسی: %s" % _on_off(SettingsManager.get_value("tooltips_enabled", true)), Vector2(220,48), _on_tooltips_pressed)
+	_mk_btn(grid, "فرمان سریع (Ctrl+K)", Vector2(220,48), _open_command_palette)
 	_mk_btn(grid, "نمایش دوباره راهنما", Vector2(220, 48), _on_show_tutorial)
+	_mk_btn(grid, "بازنشانی تنظیمات", Vector2(220,48), _on_reset_settings)
 	_mk_btn(grid, "تأیید بازی جدید" if new_game_confirmation else "آغاز بازی جدید", Vector2(220, 48), _on_new_game_pressed)
 
 func _on_new_game_pressed():
@@ -677,6 +784,26 @@ func _on_text_scale_pressed():
 	SettingsManager.cycle_text_scale()
 	_switch_tab("dashboard")
 
+func _on_density_pressed():
+	SettingsManager.cycle_ui_density();_switch_tab("dashboard")
+
+func _on_colorblind_pressed():
+	SettingsManager.toggle("colorblind_palette");_switch_tab("dashboard")
+
+func _on_haptics_pressed():
+	var enabled=SettingsManager.toggle("haptics_enabled")
+	if enabled:FeedbackManager.play_success()
+	_switch_tab("dashboard")
+
+func _on_tooltips_pressed():
+	SettingsManager.toggle("tooltips_enabled");_switch_tab("dashboard")
+
+func _on_reset_settings():
+	SettingsManager.reset_defaults();_toast("تنظیمات تجربه به حالت استاندارد بازگشت");_switch_tab("dashboard")
+
+func _on_off(value)->String:
+	return "روشن" if bool(value) else "خاموش"
+
 func _on_contrast_pressed():
 	SettingsManager.toggle("high_contrast")
 	_switch_tab("dashboard")
@@ -690,11 +817,13 @@ func _on_show_tutorial():
 	_switch_tab("dashboard")
 
 func _on_setting_changed(key: String, value):
-	if key == "text_scale" and app_theme != null:
-		app_theme.default_font_size = int(17.0 * float(value))
+	if key in ["text_scale","ui_density","high_contrast","colorblind_palette"]:
+		app_theme=_build_professional_theme();theme=app_theme;call_deferred("_apply_responsive_layout")
 	if key == "high_contrast" and background_rect != null:
 		background_rect.modulate = Color(0.68,0.78,0.86) if bool(value) else Color.WHITE
 		background_rect.queue_redraw()
+	if key=="tooltips_enabled":call_deferred("_apply_tooltip_preferences")
+	if key in ["colorblind_palette","tooltips_enabled"] and is_instance_valid(current_unified_map):current_unified_map.queue_redraw()
 
 func _background_color() -> Color:
 	return Color(0.005, 0.008, 0.015) if bool(SettingsManager.get_value("high_contrast", false)) else Color(0.05, 0.08, 0.15)
@@ -1511,7 +1640,7 @@ func _build_unified_map():
 		var start_button = _mk_btn(setup, "شروع فرماندهی", Vector2(240,50), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 	var controls = _card("لنزهای نقشه و کنترل دوربین")
-	var main_row = HBoxContainer.new(); main_row.add_theme_constant_override("separation",7); controls.add_child(main_row)
+	map_control_flow = HFlowContainer.new(); var main_row=map_control_flow; main_row.add_theme_constant_override("h_separation",7);main_row.add_theme_constant_override("v_separation",6); controls.add_child(main_row)
 	var layer_select = OptionButton.new(); layer_select.custom_minimum_size = Vector2(230,46); layer_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var layer_defs = [["political","سیاسی"],["relations","روابط بین‌الملل"],["population","جمعیت"],["economy","اقتصاد"],["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],["resources","منابع"],["military","نظامی"]]
 	for definition in layer_defs:
@@ -1523,7 +1652,7 @@ func _build_unified_map():
 	_mk_btn(main_row, "کشور من", Vector2(108,46), _on_map_camera_command.bind("home"))
 	_mk_btn(main_row, "کشور انتخابی", Vector2(128,46), _on_map_camera_command.bind("selected"))
 	_mk_btn(main_row, "جهان", Vector2(82,46), _on_map_camera_command.bind("world"))
-	var overlay_grid = GridContainer.new(); overlay_grid.columns = 5; controls.add_child(overlay_grid)
+	map_overlay_grid = GridContainer.new(); var overlay_grid=map_overlay_grid; overlay_grid.columns = 5; controls.add_child(overlay_grid)
 	var overlay_defs = [["wars","جنگ"],["alliances","اتحاد"],["trade","تجارت"],["air","پرواز"],["sea","دریا"],["land","زمین"],["cities","شهرها"],["transport","راه و ریل"],["intelligence","اطلاعاتی"]]
 	for definition in overlay_defs:
 		var toggle = CheckButton.new(); toggle.text = definition[1]; toggle.button_pressed = bool(map_overlays.get(definition[0],false)); toggle.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0]))); overlay_grid.add_child(toggle)
@@ -1540,22 +1669,26 @@ func _build_unified_map():
 	current_unified_map.configure(map_countries, relations, player_id, world, state, map_base_layer, map_overlays, map_camera_center, map_zoom)
 	current_unified_map.country_selected.connect(_on_unified_country_selected); current_unified_map.unit_selected.connect(_on_unified_unit_selected); current_unified_map.route_selected.connect(_on_unified_route_selected); current_unified_map.view_changed.connect(_on_unified_view_changed)
 	map_card.add_child(current_unified_map)
+	map_context_host=VBoxContainer.new();map_context_host.add_theme_constant_override("separation",10);content.add_child(map_context_host)
+	_refresh_map_context_panel()
+	call_deferred("_apply_responsive_layout")
 
+func _refresh_map_context_panel():
+	if not is_instance_valid(map_context_host):return
+	for child in map_context_host.get_children():map_context_host.remove_child(child);child.queue_free()
+	var state=GameState.state;var player_id=str(state.get("world",{}).get("player_country",WorldManager.default_country))
 	if not selected_map_route.is_empty():
-		var route_card = _card("کریدور انتخابی")
-		_row(route_card, "نوع", _map_overlay_name(str(selected_map_route.get("type", ""))))
-		_row(route_card, "مسیر", str(selected_map_route.get("label", "مسیر راهبردی")))
-		_bar(route_card, "ظرفیت نسبی", float(selected_map_route.get("volume", 0.5)))
-		var route_hint = Label.new(); route_hint.text = "جنگ و اختلال مسیر می‌تواند صادرات، واردات و اتصال ملی را کاهش دهد."; route_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; route_hint.modulate = Color(0.72,0.81,0.87); route_card.add_child(route_hint)
+		var route_card=_card("کریدور انتخابی",map_context_host);_row(route_card,"نوع",_map_overlay_name(str(selected_map_route.get("type",""))));_row(route_card,"مسیر",str(selected_map_route.get("label","مسیر راهبردی")));_bar(route_card,"ظرفیت نسبی",float(selected_map_route.get("volume",0.5)))
+		var route_hint=Label.new();route_hint.text="جنگ و اختلال مسیر می‌تواند صادرات، واردات و اتصال ملی را کاهش دهد.";route_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;route_hint.modulate=Color(0.72,0.81,0.87);route_card.add_child(route_hint)
+	if selected_world_country==player_id:_build_map_player_context(state,player_id,map_context_host)
+	else:_build_selected_country_card(state,selected_world_country,map_context_host)
+	if not bool(SettingsManager.get_value("reduce_motion",false)):
+		for child in map_context_host.get_children():
+			if child is Control:child.modulate.a=0.0;create_tween().tween_property(child,"modulate:a",1.0,0.14)
 
-	if selected_world_country == player_id:
-		_build_map_player_context(state, player_id)
-	else:
-		_build_selected_country_card(state, selected_world_country)
-
-func _build_map_player_context(state: Dictionary, player_id: String):
+func _build_map_player_context(state: Dictionary, player_id: String, parent_override=null):
 	var profile = WorldManager.get_country(player_id)
-	var national = _card("کشور شما · %s" % str(profile.get("name_fa", player_id)))
+	var national = _card("کشور شما · %s" % str(profile.get("name_fa", player_id)),parent_override)
 	_row(national, "پایتخت", str(profile.get("capital_fa", "")))
 	_row(national, "جمعیت", PersianFormatter.format_large(float(state.get("population",{}).get("total",0))) + " نفر")
 	_row(national, "تولید داخلی", PersianFormatter.format_money(float(state.get("economy",{}).get("gdp",0))))
@@ -1564,8 +1697,8 @@ func _build_map_player_context(state: Dictionary, player_id: String):
 	_bar(national, "زیرساخت", float(state.get("infrastructure",{}).get("quality",0.55)))
 	_bar(national, "امنیت", float(state.get("security",{}).get("public_security",0.65)))
 	if selected_country_unit != "" and not CountryGeographyManager.get_unit(player_id, selected_country_unit).is_empty():
-		_build_selected_national_unit(state, player_id, selected_country_unit)
-	var action_card = _card("اقدام زمینه‌ای از روی نقشه")
+		_build_selected_national_unit(state, player_id, selected_country_unit,parent_override)
+	var action_card = _card("اقدام زمینه‌ای از روی نقشه",parent_override)
 	var action_hint = Label.new(); action_hint.text = "اقدام‌های پرتکرار همان‌جا که مسئله را می‌بینید اجرا می‌شوند؛ نتیجه همچنان از موتور اتمی عبور می‌کند."; action_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; action_hint.modulate = Color(0.67,0.79,0.85); action_card.add_child(action_hint)
 	var action_grid = GridContainer.new(); action_grid.columns = 3; action_card.add_child(action_grid)
 	var actions = [["road_maintenance","نگهداری راه‌ها"],["improve_drainage","تقویت زهکشی"],["buy_snowplows","خرید برف‌روب"],["stock_road_salt","ذخیره نمک جاده"],["winter_training","رزمایش زمستانی"],["cooling_centers","مراکز خنک‌کننده"]]
@@ -1609,7 +1742,7 @@ func _on_unified_route_selected(route: Dictionary):
 	selected_map_route = route.duplicate(true); call_deferred("_refresh_unified_map_context")
 
 func _refresh_unified_map_context():
-	if current_tab == "map": _switch_tab("map")
+	if current_tab=="map":_refresh_map_context_panel()
 
 func _on_map_municipal_action(action: String, title: String):
 	if _run_tick_with([GameCommandClass.create_municipal_action(action)]):
@@ -1619,14 +1752,14 @@ func _map_overlay_name(layer: String) -> String:
 	return {"wars":"جنگ","alliances":"اتحاد","trade":"تجارت","air":"هوایی","sea":"دریایی","land":"زمینی"}.get(layer,"راهبردی")
 
 # ============================================================
-# نماهای قدیمی برای سازگاری ذخیره/کد؛ ناوبری اکنون فقط نقشه واحد را باز می‌کند.
+# کارت‌های زمینه‌ای نقشه؛ بدون بازسازی خود نقشه به‌روزرسانی می‌شوند.
 # ============================================================
-func _build_selected_national_unit(state: Dictionary, code: String, unit_id: String):
+func _build_selected_national_unit(state: Dictionary, code: String, unit_id: String, parent_override=null):
 	var metrics = CountryGeographyManager.get_unit_metrics(code, unit_id, state)
 	if metrics.is_empty(): return
 	var title = "📍 %s %s" % [metrics.get("type_fa", "ناحیه"), metrics.get("name_fa", "")]
 	if metrics.get("capital", false): title += " — ناحیه پایتخت"
-	var card = _card(title)
+	var card = _card(title,parent_override)
 	_row(card, "جمعیت برآوردی", PersianFormatter.format_large(float(metrics.get("population", 0))) + " نفر")
 	_row(card, "سهم از جمعیت کشور", _fmt_pct(float(metrics.get("population_share", 0.0))))
 	_row(card, "تولید داخلی برآوردی", PersianFormatter.format_money(float(metrics.get("gdp", 0))))
@@ -1640,10 +1773,10 @@ func _build_selected_national_unit(state: Dictionary, code: String, unit_id: Str
 	_bar(card, "اهمیت نظامی", float(metrics.get("military_score", 0.0)))
 	_bar(card, "ریسک اقلیمی", float(metrics.get("weather_risk", 0.0)))
 
-func _build_selected_country_card(state: Dictionary, target: String):
+func _build_selected_country_card(state: Dictionary, target: String, parent_override=null):
 	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
 	var relation = float(state.get("diplomacy", {}).get("relations", {}).get(target, 50.0))
-	var card = _card("🎯 کشور انتخابی: %s" % _fa_country(target))
+	var card = _card("🎯 کشور انتخابی: %s" % _fa_country(target),parent_override)
 	_row(card, "رابطه", "%s — %s" % [PersianFormatter.to_persian_digits("%.0f" % relation), _relation_word(relation)], _color_for(relation / 100.0))
 	_row(card, "پایتخت", str(profile.get("capital_fa","")))
 	_row(card, "منطقه", "%s / %s" % [_fa_geo_name(str(profile.get("region",""))),_fa_geo_name(str(profile.get("subregion","")))])
@@ -1721,7 +1854,7 @@ func _on_world_action(country: String, action: String, action_title: String):
 	var cmd = GameCommandClass.create_diplomacy_action(country, action)
 	if _run_tick_with([cmd]):
 		_toast("🌍 «%s» درباره %s اجرا شد" % [action_title, _fa_country(country)])
-		_switch_tab("world")
+		_switch_tab("map")
 
 func _fa_geo_name(value:String)->String:
 	return {"Africa":"آفریقا","Americas":"قاره آمریکا","Asia":"آسیا","Europe":"اروپا","Oceania":"اقیانوسیه","Northern Africa":"شمال آفریقا","Sub-Saharan Africa":"آفریقای جنوب صحرا","Eastern Africa":"شرق آفریقا","Middle Africa":"مرکز آفریقا","Southern Africa":"جنوب آفریقا","Western Africa":"غرب آفریقا","Northern Europe":"شمال اروپا","Eastern Europe":"شرق اروپا","Southern Europe":"جنوب اروپا","Western Europe":"غرب اروپا","Western Asia":"غرب آسیا","Central Asia":"آسیای مرکزی","Eastern Asia":"شرق آسیا","Southern Asia":"جنوب آسیا","South-Eastern Asia":"جنوب‌شرق آسیا","North America":"آمریکای شمالی","Central America":"آمریکای مرکزی","South America":"آمریکای جنوبی","Caribbean":"کارائیب","Australia and New Zealand":"استرالیا و نیوزیلند","Melanesia":"ملانزی","Micronesia":"میکرونزی","Polynesia":"پلی‌نزی"}.get(value,"پیرامون کشور")
@@ -1982,11 +2115,9 @@ func _event_text_fa(event: Dictionary) -> String:
 
 func _toast(msg: String):
 	toast_generation += 1
-	var generation = toast_generation
-	toast_lbl.text = msg
-	await get_tree().create_timer(2.5).timeout
-	if generation == toast_generation and is_instance_valid(toast_lbl):
-		toast_lbl.text = ""
+	if is_instance_valid(toast_lbl):toast_lbl.text=msg
+	var severity="danger" if "⚠" in msg or "خطا" in msg or "ناموفق" in msg else ("success" if "✅" in msg or "شد" in msg or "ذخیره" in msg else "info")
+	if is_instance_valid(toast_stack):toast_stack.push_message(msg,severity)
 
 # ============================================================
 # تعامل‌ها

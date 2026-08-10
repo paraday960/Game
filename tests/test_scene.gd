@@ -20,6 +20,11 @@ func _ready():
 	else:
 		print("Persistent accessibility settings: OK")
 	SettingsManager.set_value("auto_tick_interval", original_speed)
+	var original_density=str(SettingsManager.get_value("ui_density","comfortable"));var original_palette=bool(SettingsManager.get_value("colorblind_palette",false));var original_haptics=bool(SettingsManager.get_value("haptics_enabled",true))
+	SettingsManager.set_value("ui_density","compact");SettingsManager.set_value("colorblind_palette",true);SettingsManager.set_value("haptics_enabled",false);SettingsManager.load_settings()
+	if str(SettingsManager.get_value("ui_density",""))!="compact" or not SettingsManager.get_value("colorblind_palette",false) or SettingsManager.get_value("haptics_enabled",true):failed.append("تنظیمات حرفه‌ای تراکم/کوررنگی/لرزش ماندگار نشد")
+	else:print("Professional UX preferences: density + colorblind + haptics persistence OK")
+	SettingsManager.set_value("ui_density",original_density);SettingsManager.set_value("colorblind_palette",original_palette);SettingsManager.set_value("haptics_enabled",original_haptics)
 	if not TechnologyManager.is_valid():
 		failed.append("درخت فناوری داده‌محور نامعتبر است")
 	if not ScenarioManager.is_valid():

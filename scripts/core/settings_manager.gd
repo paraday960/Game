@@ -5,11 +5,16 @@ const SETTINGS_PATH = "user://settings.json"
 const SPEEDS = [2.0, 1.0, 0.5, 0.25]
 const SPEED_LABELS = ["۰٫۵×", "۱×", "۲×", "۴×"]
 const TEXT_SCALES = [0.90, 1.0, 1.15, 1.30]
+const UI_DENSITIES = ["comfortable", "compact"]
 const DEFAULTS = {
 	"auto_tick_interval": 1.0,
 	"text_scale": 1.0,
+	"ui_density": "comfortable",
 	"reduce_motion": false,
 	"high_contrast": false,
+	"colorblind_palette": false,
+	"tooltips_enabled": true,
+	"haptics_enabled": true,
 	"sound_enabled": true,
 	"sound_volume": 0.22,
 	"tutorial_dismissed": false
@@ -86,6 +91,16 @@ func cycle_text_scale() -> float:
 	set_value("text_scale", value)
 	return value
 
+func cycle_ui_density() -> String:
+	var current = str(settings.get("ui_density", "comfortable"))
+	var index = UI_DENSITIES.find(current)
+	var value = str(UI_DENSITIES[(max(0, index) + 1) % UI_DENSITIES.size()])
+	set_value("ui_density", value)
+	return value
+
+func get_ui_density_label() -> String:
+	return "فشرده" if str(settings.get("ui_density", "comfortable")) == "compact" else "راحت"
+
 func reset_defaults():
 	settings = DEFAULTS.duplicate(true)
 	save_settings()
@@ -95,8 +110,13 @@ func reset_defaults():
 func _sanitize():
 	settings["auto_tick_interval"] = float(SPEEDS[_nearest_index(SPEEDS, float(settings.get("auto_tick_interval", 1.0)))])
 	settings["text_scale"] = float(TEXT_SCALES[_nearest_index(TEXT_SCALES, float(settings.get("text_scale", 1.0)))])
+	var density = str(settings.get("ui_density", "comfortable"))
+	settings["ui_density"] = density if UI_DENSITIES.has(density) else "comfortable"
 	settings["reduce_motion"] = bool(settings.get("reduce_motion", false))
 	settings["high_contrast"] = bool(settings.get("high_contrast", false))
+	settings["colorblind_palette"] = bool(settings.get("colorblind_palette", false))
+	settings["tooltips_enabled"] = bool(settings.get("tooltips_enabled", true))
+	settings["haptics_enabled"] = bool(settings.get("haptics_enabled", true))
 	settings["sound_enabled"] = bool(settings.get("sound_enabled", true))
 	settings["sound_volume"] = clamp(float(settings.get("sound_volume", 0.22)), 0.0, 0.5)
 	settings["tutorial_dismissed"] = bool(settings.get("tutorial_dismissed", false))

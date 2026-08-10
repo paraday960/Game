@@ -33,20 +33,31 @@ func _on_setting_changed(key: String, value):
 		volume = float(value)
 
 func play_click():
+	_haptic(12, 0.18)
 	_play_tone(520.0, 0.045, volume * 0.55)
 
 func play_success():
+	_haptic(32, 0.34)
 	_play_tone(760.0, 0.09, volume)
 
 func play_alert():
+	_haptic(90, 0.72)
 	_play_tone(220.0, 0.14, volume * 0.9)
 
 func play_achievement():
+	_haptic(65, 0.52)
 	if muted or not _available:
 		return
 	# آکورد کوتاه دو مرحله‌ای؛ فراخوانی دوم با تأخیر غیرمسدودکننده
 	_play_tone(660.0, 0.10, volume)
 	_play_delayed_tone(880.0, 0.14, volume)
+
+func _haptic(duration_ms: int, amplitude: float):
+	if not bool(SettingsManager.get_value("haptics_enabled", true)):
+		return
+	if DisplayServer.get_name() == "headless" or OS.has_feature("server"):
+		return
+	Input.vibrate_handheld(duration_ms, clamp(amplitude, 0.0, 1.0))
 
 func _play_delayed_tone(frequency: float, duration: float, amplitude: float):
 	await get_tree().create_timer(0.10).timeout

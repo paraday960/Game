@@ -11,11 +11,11 @@ if (root / "ENGINE_VERSION").read_text(encoding="utf-8").strip() != expected:
 project = (root / "project.godot").read_text(encoding="utf-8")
 if 'config/features=PackedStringArray("4.7", "Mobile")' not in project:
     errors.append("project.godot does not target Godot 4.7")
-if 'config/version="6.1.0"' not in project:
-    errors.append("application version was not bumped to 6.1.0")
+if 'config/version="6.2.0"' not in project:
+    errors.append("application version was not bumped to 6.2.0")
 export = (root / "export_presets.cfg").read_text(encoding="utf-8")
-if 'version/code=17' not in export or 'version/name="6.1.0"' not in export:
-    errors.append("Android version is not 17 / 6.1.0")
+if 'version/code=18' not in export or 'version/name="6.2.0"' not in export:
+    errors.append("Android version is not 18 / 6.2.0")
 workflow = (root / ".github/workflows/build-android.yml").read_text(encoding="utf-8")
 for marker in ['GODOT_VERSION: "4.7.1"', 'GODOT_CHANNEL: "stable"', "Godot_v${TAG}_linux.x86_64.zip", "Godot_v${TAG}_export_templates.tpz"]:
     if marker not in workflow:
@@ -44,4 +44,4 @@ for relative in [".github/workflows/build-android.yml", "BUILD.md", "GUIDE_ANDRO
         errors.append(f"obsolete Godot 4.2 reference remains in {relative}")
 if errors:
     raise SystemExit("ENGINE VERSION INVALID\n" + "\n".join(errors))
-print(f"ENGINE VERSION OK: Godot 4.7.1-stable, app 6.1.0 (Android 17), {len(uids)} script UIDs")
+print(f"ENGINE VERSION OK: Godot 4.7.1-stable, app 6.2.0 (Android 18), {len(uids)} script UIDs")

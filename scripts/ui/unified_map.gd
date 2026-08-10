@@ -51,6 +51,8 @@ var _city_screen_records: Array = []
 var _drawn_routes: Array = []
 var _press_position := Vector2.ZERO
 var _dragged := false
+var _drag_active := false
+var _pan_velocity := Vector2.ZERO
 var _last_tier := ""
 
 func _ready():
@@ -154,7 +156,7 @@ func _draw():
 		_draw_cities(selected_country)
 	_draw_selected_outline()
 	_draw_map_hud()
-	if hovered_country != "" or hovered_unit != "" or not hovered_city.is_empty() or not hovered_route.is_empty():
+	if bool(SettingsManager.get_value("tooltips_enabled",true)) and (hovered_country != "" or hovered_unit != "" or not hovered_city.is_empty() or not hovered_route.is_empty()):
 		_draw_tooltip()
 
 func _update_projection():
@@ -299,7 +301,7 @@ func _draw_routes():
 			if not _segment_near_view(start, finish):
 				continue
 			var points = _curve_points(start, finish, layer)
-			var color: Color = ROUTE_COLORS.get(layer, Color.WHITE)
+			var color: Color = _route_color(layer)
 			var width = clamp(1.2 + float(route.get("volume", 0.5)) * 1.8 + log(zoom_level) * 0.12, 1.2, 3.6)
 			if layer == "wars": _draw_dashed(points, color, width)
 			else: draw_polyline(points, color, width, true)
@@ -312,7 +314,7 @@ func _draw_hubs():
 		for hub in MapLayerManager.get_hubs(layer):
 			var point = _geo_point(float(hub.get("lon", 0.0)), float(hub.get("lat", 0.0)))
 			if not _viewport.grow(10).has_point(point): continue
-			var color: Color = ROUTE_COLORS[layer]
+			var color: Color = _route_color(layer)
 			var radius = 3.0 + min(3.0, log(zoom_level + 1.0))
 			draw_circle(point, radius + 2.0, Color(0.01, 0.03, 0.05, 0.92)); draw_circle(point, radius, color)
 			if zoom_level >= 4.0:
@@ -451,25 +453,26 @@ func _gui_input(event):
 			_zoom_at(event.position, zoom_level / 1.32); accept_event(); return
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				_press_position = event.position; _dragged = false; grab_focus()
+				_press_position = event.position; _dragged = false; _drag_active=true;_pan_velocity=Vector2.ZERO;grab_focus()
 			else:
-				if not _dragged:
-					_handle_selection(event.position, event.double_click)
+				_drag_active=false
+				if not _dragged:_handle_selection(event.position, event.double_click)
 			accept_event()
 	elif event is InputEventMouseMotion:
 		if event.button_mask & MOUSE_BUTTON_MASK_LEFT:
 			if event.position.distance_to(_press_position) > 5.0: _dragged = true
-			if _dragged: _pan_pixels(event.relative)
+			if _dragged:_pan_velocity=event.relative*45.0;_pan_pixels(event.relative)
 		else:
 			_update_hover(event.position)
 	elif event is InputEventScreenTouch:
 		if event.pressed:
-			_press_position = event.position; _dragged = false
-		elif not _dragged:
-			_handle_selection(event.position, event.double_tap)
+			_press_position=event.position;_dragged=false;_drag_active=true;_pan_velocity=Vector2.ZERO
+		else:
+			_drag_active=false
+			if not _dragged:_handle_selection(event.position,event.double_tap)
 	elif event is InputEventScreenDrag:
-		if event.position.distance_to(_press_position) > 8.0: _dragged = true
-		_pan_pixels(event.relative)
+		if event.position.distance_to(_press_position)>8.0:_dragged=true
+		_pan_velocity=event.relative*42.0;_pan_pixels(event.relative)
 	elif event is InputEventMagnifyGesture:
 		_zoom_at(event.position, zoom_level * event.factor)
 	elif event is InputEventPanGesture:
@@ -483,19 +486,20 @@ func _gui_input(event):
 func _handle_selection(position: Vector2, double_click: bool):
 	var city = _city_at(position)
 	if not city.is_empty():
+		FeedbackManager.play_click()
 		var unit_id = str(city.get("unit_id", ""))
 		if unit_id != "": selected_unit = unit_id; emit_signal("unit_selected", selected_country, unit_id)
 		queue_redraw(); return
 	if zoom_level >= ADMIN_ZOOM and selected_country != "":
 		var unit_id = _unit_at(position)
 		if unit_id != "":
-			selected_unit = unit_id; emit_signal("unit_selected", selected_country, unit_id); queue_redraw(); return
+			FeedbackManager.play_click();selected_unit = unit_id; emit_signal("unit_selected", selected_country, unit_id); queue_redraw(); return
 	var route = _route_at(position)
 	if not route.is_empty():
-		emit_signal("route_selected", route); return
+		FeedbackManager.play_click();emit_signal("route_selected", route); return
 	var code = _country_at(position)
 	if code != "":
-		selected_country = code; selected_unit = ""; emit_signal("country_selected", code)
+		FeedbackManager.play_click();selected_country = code; selected_unit = ""; emit_signal("country_selected", code)
 		if double_click: focus_country(code)
 		else: queue_redraw()
 
@@ -510,6 +514,12 @@ func _update_hover(position: Vector2):
 		hovered_city = next_city; hovered_unit = next_unit; hovered_route = next_route; hovered_country = next_country
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not next_city.is_empty() or next_unit != "" or not next_route.is_empty() or next_country != "" else Control.CURSOR_ARROW
 		queue_redraw()
+
+func _process(delta:float):
+	if _drag_active or bool(SettingsManager.get_value("reduce_motion",false)) or _pan_velocity.length()<4.0:return
+	var move=_pan_velocity*delta
+	camera_center.x-=move.x/max(1.0,_base_scale*zoom_level*2.0);camera_center.y-=move.y/max(1.0,_base_scale*zoom_level)
+	_pan_velocity*=exp(-6.5*delta);_clamp_camera();_emit_view();queue_redraw()
 
 func _pan_pixels(delta: Vector2):
 	camera_center.x -= delta.x / max(1.0, _base_scale * zoom_level * 2.0)
@@ -657,10 +667,18 @@ func _layer_name(layer: String) -> String:
 func _overlay_name(layer: String) -> String:
 	return {"wars":"جنگ","alliances":"اتحاد","trade":"تجارت","air":"پرواز","sea":"دریایی","land":"زمینی"}.get(layer, layer)
 
+func _route_color(layer:String)->Color:
+	if bool(SettingsManager.get_value("colorblind_palette",false)):
+		return {"wars":Color(0.94,0.30,0.82,0.96),"alliances":Color(0.25,0.70,1.0,0.90),"trade":Color(0.20,0.91,0.86,0.86),"air":Color(0.72,0.82,1.0,0.82),"sea":Color(0.34,0.55,1.0,0.84),"land":Color(1.0,0.76,0.18,0.82)}.get(layer,Color.WHITE)
+	return ROUTE_COLORS.get(layer,Color.WHITE)
+
 func _percent(value: float) -> String:
 	return PersianFormatter.to_persian_digits("%d٪" % int(clamp(value, 0.0, 1.0) * 100.0))
 
 func _status_gradient(value: float) -> Color:
+	if bool(SettingsManager.get_value("colorblind_palette",false)):
+		if value<0.5:return Color(0.62,0.18,0.70).lerp(Color(0.92,0.66,0.16),value*2.0)
+		return Color(0.92,0.66,0.16).lerp(Color(0.14,0.58,0.92),(value-0.5)*2.0)
 	if value < 0.5: return Color(0.66, 0.12, 0.15).lerp(Color(0.88, 0.62, 0.15), value * 2.0)
 	return Color(0.88, 0.62, 0.15).lerp(Color(0.13, 0.72, 0.40), (value - 0.5) * 2.0)
 

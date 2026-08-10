@@ -3,6 +3,7 @@
 ## اجرا (با Godot 4.7.1-stable هدلس)
 ```bash
 python3 tests/validate_engine_version.py
+python3 tests/validate_ui_architecture.py
 python3 tests/validate_country_data.py
 python3 tests/validate_world_map.py
 python3 tests/validate_country_maps.py
@@ -56,6 +57,6 @@ godot --headless --path . -s res://tests/test_competitive_client.gd
 - رد فرمان ناشناخته و جلوگیری از تغییر وضعیت
 - اتمی‌بودن EventLog: حذف کامل رویدادهای تراکنش Rollback
 - پایداری بلندمدت: بدون NaN/Inf در ۳۶ نوبت و بیش از هزار روز داخلی
-- UI: ساخت ۱۱ مرکز حرفه‌ای، نوار فرمان، داک عملیات، نقشه واحد، نمودار روند، جزئیات ۶۵ سامانه و فرمان‌های مالیات/دیپلماسی
+- UI/UX: ساخت ۱۱ مرکز حرفه‌ای، فرمان سریع ۲۷۱+ ورودی، پنل نقشه پایدار، Toast انباشته، پاسخ‌گویی، نمودار تعاملی، دسترس‌پذیری و جزئیات ۶۵ سامانه
 - شبکه ENet واقعی: اتصال دو پردازش، فرمان کلاینت، Commit میزبان و Snapshot دارای checksum
 - کد خروج غیرصفر در شکست؛ GitHub Actions پیش از ساخت APK تست‌های موتور، بلندمدت، UI و شبکه را اجرا می‌کند
