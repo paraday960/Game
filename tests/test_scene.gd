@@ -12,6 +12,14 @@ func _ready():
 		failed.append("وضعیت آغازین داده‌محور بارگذاری نشد")
 	else:
 		print("Balance config + initial state data: OK")
+	var original_speed = float(SettingsManager.get_value("auto_tick_interval", 1.0))
+	SettingsManager.set_value("auto_tick_interval", 0.5)
+	SettingsManager.load_settings()
+	if not is_equal_approx(float(SettingsManager.get_value("auto_tick_interval", 0.0)), 0.5):
+		failed.append("تنظیمات محلی ماندگار نشد")
+	else:
+		print("Persistent accessibility settings: OK")
+	SettingsManager.set_value("auto_tick_interval", original_speed)
 	if not TechnologyManager.is_valid():
 		failed.append("درخت فناوری داده‌محور نامعتبر است")
 	if not ScenarioManager.is_valid():

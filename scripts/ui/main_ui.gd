@@ -10,6 +10,7 @@ const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 # ---------- وضعیت UI ----------
 var auto_tick: bool = false
 var tick_timer: float = 0.0
+var toast_generation: int = 0
 var current_tab: String = "dashboard"
 var current_state: Dictionary = {}
 var selected_system: String = "economy"
@@ -17,6 +18,8 @@ var selected_world_country: String = ""
 var country_select_option: OptionButton
 var scenario_select_option: OptionButton
 var scenario_description_lbl: Label
+var app_theme: Theme
+var background_rect: ColorRect
 
 # ---------- ارجاع‌های گره ----------
 var content: VBoxContainer
@@ -115,10 +118,11 @@ const TABS := [
 
 func _ready():
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
-	var app_theme = Theme.new()
+	app_theme = Theme.new()
 	app_theme.default_font = PersianFont
-	app_theme.default_font_size = 18
+	app_theme.default_font_size = int(18.0 * float(SettingsManager.get_value("text_scale", 1.0)))
 	theme = app_theme
+	SettingsManager.settings_changed.connect(_on_setting_changed)
 	current_state = GameState.get_state_copy()
 	_build_chrome()
 	_switch_tab("dashboard")
@@ -134,10 +138,10 @@ func _ready():
 # قاب کلی: هدر + تب‌بار + محتوا + فوتر
 # ============================================================
 func _build_chrome():
-	var bg = ColorRect.new()
-	bg.color = Color(0.05, 0.08, 0.15)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	background_rect = ColorRect.new()
+	background_rect.color = _background_color()
+	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(background_rect)
 
 	var root = VBoxContainer.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -224,9 +228,10 @@ func _build_chrome():
 
 	_mk_btn(footer, "▶️ گام بعدی (۱ روز)", Vector2(220, 64), _on_next_tick_pressed)
 	_mk_btn(footer, "⏸️ خودکار: خاموش", Vector2(190, 64), _on_auto_pressed, "AutoBtn")
+	_mk_btn(footer, "⏩ %s" % SettingsManager.get_speed_label(), Vector2(120, 64), _on_speed_pressed, "SpeedBtn")
 	_mk_btn(footer, "💾 ذخیره", Vector2(120, 64), _on_save_pressed)
 	_mk_btn(footer, "📂 بارگذاری", Vector2(130, 64), _on_load_pressed)
-	_mk_btn(footer, "🔊 صدا", Vector2(110, 64), _on_sound_pressed, "SoundBtn")
+	_mk_btn(footer, "🔇 صدا" if FeedbackManager.muted else "🔊 صدا", Vector2(110, 64), _on_sound_pressed, "SoundBtn")
 
 func _mk_btn(parent, text, minsize, handler, node_name = ""):
 	var btn = Button.new()
@@ -361,6 +366,9 @@ func _build_dashboard():
 	var res = st.get("resources", {})
 	var ind = st.get("indicators", {})
 
+	if not bool(SettingsManager.get_value("tutorial_dismissed", false)) and int(st.get("tick", 0)) < 7:
+		_build_onboarding_card(st)
+
 	# هشدار بحران‌ها
 	var crises = _active_crises(st)
 	if crises.size() > 0:
@@ -440,7 +448,78 @@ func _build_dashboard():
 			badge.modulate = Color(1.0, 0.83, 0.35)
 			c5.add_child(badge)
 
+	_build_settings_card()
 	_build_save_slots_card()
+
+func _build_onboarding_card(state: Dictionary):
+	var card = _card("🧭 راهنمای شروع سریع")
+	var steps = [
+		["۱", "کشور و سناریوی پیروزی را در تب جهان انتخاب کنید.", int(state.get("tick", 0)) > 0],
+		["۲", "مالیات، بودجه و سیاست‌های عمومی را در تب اقتصاد تنظیم کنید.", abs(float(state.get("economy", {}).get("tax_rate", 0.20)) - 0.20) > 0.001],
+		["۳", "یک پروژه را در درخت فناوری آغاز کنید.", state.get("technology", {}).get("in_progress", null) != null],
+		["۴", "داشبورد، هشدارها و اهداف سناریو را هر هفته بررسی کنید.", state.get("analytics", {}).get("history", []).size() >= 2]
+	]
+	for step in steps:
+		var label = Label.new()
+		label.text = "%s %s. %s" % ["✅" if step[2] else "◻️", step[0], step[1]]
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.modulate = Color(0.55, 1.0, 0.65) if step[2] else Color(0.88, 0.90, 0.96)
+		card.add_child(label)
+	var shortcuts = HBoxContainer.new()
+	shortcuts.alignment = BoxContainer.ALIGNMENT_CENTER
+	card.add_child(shortcuts)
+	_mk_btn(shortcuts, "رفتن به جهان", Vector2(145, 44), _switch_tab.bind("world"))
+	_mk_btn(shortcuts, "رفتن به اقتصاد", Vector2(155, 44), _switch_tab.bind("economy"))
+	_mk_btn(shortcuts, "رفتن به فناوری", Vector2(155, 44), _switch_tab.bind("technology"))
+	_mk_btn(shortcuts, "پنهان‌کردن راهنما", Vector2(180, 44), _on_dismiss_tutorial)
+
+func _on_dismiss_tutorial():
+	SettingsManager.set_value("tutorial_dismissed", true)
+	_switch_tab("dashboard")
+
+func _build_settings_card():
+	var card = _card("⚙️ تنظیمات و دسترس‌پذیری")
+	var grid = GridContainer.new()
+	grid.columns = 2
+	card.add_child(grid)
+	_mk_btn(grid, "سرعت خودکار: %s" % SettingsManager.get_speed_label(), Vector2(220, 48), _on_speed_pressed)
+	_mk_btn(grid, "اندازه متن: %s٪" % PersianFormatter.to_persian_digits(str(int(float(SettingsManager.get_value("text_scale", 1.0)) * 100.0))), Vector2(220, 48), _on_text_scale_pressed)
+	_mk_btn(grid, "کنتراست بالا: %s" % ("روشن" if SettingsManager.get_value("high_contrast", false) else "خاموش"), Vector2(220, 48), _on_contrast_pressed)
+	_mk_btn(grid, "کاهش حرکت: %s" % ("روشن" if SettingsManager.get_value("reduce_motion", false) else "خاموش"), Vector2(220, 48), _on_reduce_motion_pressed)
+	_mk_btn(grid, "نمایش دوباره راهنما", Vector2(220, 48), _on_show_tutorial)
+
+func _on_speed_pressed():
+	SettingsManager.cycle_speed()
+	var speed_button = find_child("SpeedBtn", true, false)
+	if speed_button:
+		speed_button.text = "⏩ %s" % SettingsManager.get_speed_label()
+	if current_tab == "dashboard":
+		_switch_tab("dashboard")
+
+func _on_text_scale_pressed():
+	SettingsManager.cycle_text_scale()
+	_switch_tab("dashboard")
+
+func _on_contrast_pressed():
+	SettingsManager.toggle("high_contrast")
+	_switch_tab("dashboard")
+
+func _on_reduce_motion_pressed():
+	SettingsManager.toggle("reduce_motion")
+	_switch_tab("dashboard")
+
+func _on_show_tutorial():
+	SettingsManager.set_value("tutorial_dismissed", false)
+	_switch_tab("dashboard")
+
+func _on_setting_changed(key: String, value):
+	if key == "text_scale" and app_theme != null:
+		app_theme.default_font_size = int(18.0 * float(value))
+	if key == "high_contrast" and background_rect != null:
+		background_rect.color = _background_color()
+
+func _background_color() -> Color:
+	return Color(0.005, 0.008, 0.015) if bool(SettingsManager.get_value("high_contrast", false)) else Color(0.05, 0.08, 0.15)
 
 func _build_analytics_card(state: Dictionary):
 	var card = _card("📈 روند هفتگی کشور")
@@ -1362,9 +1441,12 @@ func _event_text_fa(event: Dictionary) -> String:
 	return translations.get(event_type, "یک رویداد جدید ثبت شد")
 
 func _toast(msg: String):
+	toast_generation += 1
+	var generation = toast_generation
 	toast_lbl.text = msg
 	await get_tree().create_timer(2.5).timeout
-	toast_lbl.text = ""
+	if generation == toast_generation and is_instance_valid(toast_lbl):
+		toast_lbl.text = ""
 
 # ============================================================
 # تعامل‌ها
@@ -1487,6 +1569,8 @@ func _run_tick_with(player_cmds: Array) -> bool:
 		return false
 
 func _engagement_pulse():
+	if bool(SettingsManager.get_value("reduce_motion", false)):
+		return
 	var tw = create_tween()
 	tw.tween_property(engagement_lbl, "scale", Vector2(1.15, 1.15), 0.1)
 	tw.tween_property(engagement_lbl, "scale", Vector2(1.0, 1.0), 0.15)
@@ -1494,7 +1578,7 @@ func _engagement_pulse():
 func _process(delta):
 	if auto_tick:
 		tick_timer += delta
-		if tick_timer > 1.0:
+		if tick_timer >= float(SettingsManager.get_value("auto_tick_interval", 1.0)):
 			tick_timer = 0.0
 			_run_tick_with([])
 

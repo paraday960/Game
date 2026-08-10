@@ -7,6 +7,9 @@ var _player: AudioStreamPlayer
 var _available: bool = false
 
 func _ready():
+	muted = not bool(SettingsManager.get_value("sound_enabled", true))
+	volume = float(SettingsManager.get_value("sound_volume", 0.22))
+	SettingsManager.settings_changed.connect(_on_setting_changed)
 	_available = DisplayServer.get_name() != "headless" and not OS.has_feature("server")
 	if not _available:
 		return
@@ -16,9 +19,18 @@ func _ready():
 
 func toggle_mute() -> bool:
 	muted = not muted
+	SettingsManager.set_value("sound_enabled", not muted)
 	if muted and _player != null:
 		_player.stop()
 	return muted
+
+func _on_setting_changed(key: String, value):
+	if key == "sound_enabled":
+		muted = not bool(value)
+		if muted and _player != null:
+			_player.stop()
+	elif key == "sound_volume":
+		volume = float(value)
 
 func play_click():
 	_play_tone(520.0, 0.045, volume * 0.55)
