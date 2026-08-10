@@ -6,6 +6,10 @@ godot --headless --path . --import                                  # آماده
 godot --headless --path . res://tests/test_scene.tscn              # تست واحد: موتور، ۶۵ سیستم، AIها
 godot --headless --path . res://tests/test_long.tscn               # تست بلندمدت: ۳۶۵ روز شبیه‌سازی
 godot --headless --path . -s res://tests/test_ui.gd                 # تست دود UI: همه تب‌ها + فرمان‌ها
+
+# تست واقعی ENet در دو پردازش (میزبان را پس‌زمینه اجرا کنید، سپس کلاینت):
+godot --headless --path . -s res://tests/test_network_host.gd
+godot --headless --path . -s res://tests/test_network_client.gd
 ```
 
 ## پوشش
@@ -20,4 +24,5 @@ godot --headless --path . -s res://tests/test_ui.gd                 # تست د�
 - اتمی‌بودن EventLog: حذف کامل رویدادهای تراکنش Rollback
 - پایداری بلندمدت: بدون NaN/Inf در ۳۶۵ روز
 - UI: ساخت همه‌ی ۶ تب، اجرای تیک، فرمان مالیات و دیپلماسی از رابط
-- کد خروج غیرصفر در شکست؛ GitHub Actions پیش از ساخت APK هر سه تست را اجرا می‌کند
+- شبکه ENet واقعی: اتصال دو پردازش، فرمان کلاینت، Commit میزبان و Snapshot دارای checksum
+- کد خروج غیرصفر در شکست؛ GitHub Actions پیش از ساخت APK تست‌های موتور، بلندمدت، UI و شبکه را اجرا می‌کند

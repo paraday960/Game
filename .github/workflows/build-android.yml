@@ -78,6 +78,18 @@ jobs:
           godot --headless --path . res://tests/test_long.tscn
           godot --headless --path . -s res://tests/test_ui.gd
 
+          # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet
+          godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1 &
+          HOST_PID=$!
+          sleep 1
+          CLIENT_STATUS=0
+          HOST_STATUS=0
+          godot --headless --path . -s res://tests/test_network_client.gd > /tmp/network-client.log 2>&1 || CLIENT_STATUS=$?
+          wait "$HOST_PID" || HOST_STATUS=$?
+          cat /tmp/network-host.log
+          cat /tmp/network-client.log
+          test "$HOST_STATUS" -eq 0 -a "$CLIENT_STATUS" -eq 0
+
       - name: Export Android APK (Debug)
         run: |
           mkdir -p build

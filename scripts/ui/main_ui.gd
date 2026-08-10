@@ -17,6 +17,9 @@ var date_lbl: Label
 var tab_buttons: Dictionary = {}
 var event_list: VBoxContainer
 var toast_lbl: Label
+var network_address_edit: LineEdit
+var network_port_spin: SpinBox
+var network_status_lbl: Label
 
 # مقادیر میانی فرمان‌های تعاملی
 var tax_slider: HSlider
@@ -68,7 +71,9 @@ func _ready():
 	_refresh_header()
 	GameEngine.tick_completed.connect(_on_tick_completed)
 	GameEngine.tick_failed.connect(_on_tick_failed)
-	P2PManager.host_game()
+	P2PManager.state_snapshot_received.connect(_on_network_state_snapshot)
+	P2PManager.network_status_changed.connect(_on_network_status_changed)
+	P2PManager.network_error.connect(_on_network_error)
 	print("رابط کاربری اصلی لود شد - شبیه‌ساز کشور")
 
 # ============================================================
@@ -569,6 +574,35 @@ func _build_world():
 			l.text = "• " + str(t)
 			c4.add_child(l)
 
+	var network = _card("🌐 چندنفره مستقیم و رایگان")
+	var hint = Label.new()
+	hint.text = "یک بازیکن میزبان می‌شود؛ دیگران با IP مستقیم یا IP شبکه محلی متصل می‌شوند. پردازش مرجع روی میزبان است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.modulate = Color(0.78, 0.82, 0.9)
+	network.add_child(hint)
+	network_status_lbl = Label.new()
+	network.add_child(network_status_lbl)
+	var connection_row = HBoxContainer.new()
+	network.add_child(connection_row)
+	network_address_edit = LineEdit.new()
+	network_address_edit.placeholder_text = "نشانی میزبان؛ نمونه: ۱۹۲.۱۶۸.۱.۱۰"
+	network_address_edit.text = "127.0.0.1"
+	network_address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	connection_row.add_child(network_address_edit)
+	network_port_spin = SpinBox.new()
+	network_port_spin.min_value = 1024
+	network_port_spin.max_value = 65535
+	network_port_spin.value = P2PManager.DEFAULT_PORT
+	network_port_spin.custom_minimum_size = Vector2(150, 0)
+	connection_row.add_child(network_port_spin)
+	var network_buttons = HBoxContainer.new()
+	network_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	network.add_child(network_buttons)
+	_mk_btn(network_buttons, "میزبانی بازی", Vector2(155, 48), _on_host_network)
+	_mk_btn(network_buttons, "اتصال به میزبان", Vector2(175, 48), _on_join_network)
+	_mk_btn(network_buttons, "قطع اتصال", Vector2(145, 48), _on_disconnect_network)
+	_refresh_network_status()
+
 func _fa_country(code: String) -> String:
 	var m = {
 		"همسایه_شرقی": "همسایه‌ی شرقی", "همسایه_غربی": "همسایه‌ی غربی",
@@ -589,6 +623,58 @@ func _on_improve_relations(country: String):
 	if ok:
 		_toast("🤝 روابط با «%s» بهبود یافت" % _fa_country(country))
 		_switch_tab("world")
+
+func _on_host_network():
+	var result = P2PManager.host_game(int(network_port_spin.value))
+	if result.success:
+		_toast("🌐 میزبان چندنفره فعال شد؛ پورت " + PersianFormatter.to_persian_digits(str(result.port)))
+	else:
+		_toast("⚠️ " + str(result.reason))
+	_refresh_network_status()
+
+func _on_join_network():
+	var result = P2PManager.join_game(network_address_edit.text, int(network_port_spin.value))
+	if result.success:
+		_toast("🌐 درخواست اتصال ارسال شد")
+	else:
+		_toast("⚠️ " + str(result.reason))
+	_refresh_network_status()
+
+func _on_disconnect_network():
+	P2PManager.disconnect_game()
+	_toast("اتصال بسته شد؛ بازی در حالت تک‌نفره است")
+	_refresh_network_status()
+
+func _refresh_network_status():
+	if network_status_lbl == null or not is_instance_valid(network_status_lbl):
+		return
+	var status = P2PManager.get_status()
+	var mode_text = "تک‌نفره"
+	if status.mode == "host":
+		mode_text = "میزبان"
+	elif status.mode == "client":
+		mode_text = "متصل‌شونده"
+	network_status_lbl.text = "وضعیت: %s | بازیکنان: %s | پورت: %s" % [
+		mode_text,
+		PersianFormatter.to_persian_digits(str(status.peers)),
+		PersianFormatter.to_persian_digits(str(status.port if status.port > 0 else P2PManager.DEFAULT_PORT))
+	]
+
+func _on_network_status_changed(_status: Dictionary):
+	_refresh_network_status()
+
+func _on_network_error(message: String):
+	_toast("⚠️ شبکه: " + message)
+	_refresh_network_status()
+
+func _on_network_state_snapshot(state: Dictionary, version: int, tick: int):
+	if version <= GameState.version:
+		return
+	GameState.set_state(state, version, tick)
+	_refresh_header()
+	_render_events()
+	_switch_tab(current_tab)
+	_toast("🌐 وضعیت روز %s از میزبان همگام شد" % PersianFormatter.to_persian_digits(str(tick)))
 
 # ============================================================
 # تب سامانه‌ها — نمای کلی ۶۵ سیستم
@@ -706,6 +792,9 @@ func _on_auto_pressed():
 		btn.text = "▶️ خودکار: روشن" if auto_tick else "⏸️ خودکار: خاموش"
 
 func _on_save_pressed():
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		_toast("⚠️ فقط میزبان می‌تواند بازی چندنفره را ذخیره کند")
+		return
 	var result = SaveManager.save_game()
 	if result.success:
 		_toast("💾 بازی با بررسی صحت و نسخه پشتیبان ذخیره شد")
@@ -713,6 +802,9 @@ func _on_save_pressed():
 		_toast("⚠️ " + str(result.get("reason", "ذخیره ناموفق بود")))
 
 func _on_load_pressed():
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		_toast("⚠️ فقط میزبان می‌تواند ذخیره چندنفره را بارگذاری کند")
+		return
 	var result = SaveManager.load_game()
 	if not result.success:
 		_toast("⚠️ " + str(result.get("reason", "بارگذاری ناموفق بود")))
@@ -728,6 +820,17 @@ func _on_load_pressed():
 # هسته تیک
 # ============================================================
 func _run_tick_with(player_cmds: Array) -> bool:
+	# کلاینت فقط فرمان را می‌فرستد؛ محاسبه و Commit منحصراً روی میزبان انجام می‌شود.
+	if P2PManager.is_network_active() and not P2PManager.can_advance_tick():
+		if player_cmds.is_empty():
+			_toast("⏳ فقط میزبان می‌تواند روز بعد را اجرا کند")
+			return true
+		for cmd in player_cmds:
+			if not P2PManager.send_command(cmd):
+				return false
+		_toast("📡 تصمیم برای تأیید به میزبان ارسال شد")
+		return true
+
 	var cmds: Array = []
 	cmds.append_array(P2PManager.get_pending_commands())
 	cmds.append_array(player_cmds)
@@ -736,6 +839,7 @@ func _run_tick_with(player_cmds: Array) -> bool:
 	var result = GameEngine.tick(GameState.state, GameState.version, GameState.tick, cmds)
 	if result.success:
 		GameState.set_state(result.state, result.version, result.tick)
+		P2PManager.broadcast_state(result.state, result.version, result.tick)
 		_refresh_header()
 		_render_events()
 		# بازخورد خوشایند (۳.۲۳۴)

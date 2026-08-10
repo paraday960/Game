@@ -88,11 +88,13 @@
 6. Command-Based Tick: فقط فرمان ارسال می‌شود، نه وضعیت
 
 ### P2P بدون سرور (۳.۸)
-- هر گوشی کپی کامل موتور دارد
-- P2PManager: host_game(), join_game(), send_command(), get_pending_commands()
-- Host: مرجع نهایی، Host Migration در خروج
-- Matchmaking: فقط برای اتصال، پردازش روی گوشی‌ها
-- WebSocket/P2P رایگان - قانون ۵
+- `ENetMultiplayerPeer` واقعی برای میزبانی و اتصال مستقیم رایگان
+- کلاینت فرمان می‌فرستد و Host تنها مرجع محاسبه و Commit است
+- Snapshot کامل با version/tick و SHA-256 برای همگام‌سازی امن پخش می‌شود
+- بسته فرمان از نظر نوع/اندازه و نرخ هر peer محدود می‌شود
+- UI میزبانی، IP، پورت، اتصال و قطع اتصال در تب جهان قرار دارد
+- تست یکپارچه دو پردازشی، ارسال فرمان مالیات و دریافت Snapshot را واقعاً آزمایش می‌کند
+- NAT traversal و Matchmaking عمومی هنوز سرویس کشف رایگان جداگانه می‌خواهد؛ LAN و IP مستقیم فعال‌اند
 
 ### هوش اختصاصی (۲.۲.۷)
 هر سیستم `decide(state, tick) -> Array[GameCommand]` دارد:
@@ -126,7 +128,8 @@
 - [ ] نقشه جهان تعاملی با Godot TileMap
 - [ ] UI تفصیلی برای هر ۳۳ سیستم (صفحه جدا)
 - [ ] سیستم رویدادهای تصادفی با انتخاب‌های چندگانه فارسی
-- [ ] چندنفره P2P واقعی با WebRTC (Godot 4)
+- [x] چندنفره مستقیم واقعی با ENet و Host authoritative
+- [ ] NAT traversal/Matchmaking عمومی رایگان برای اتصال بدون Port Forward
 - [ ] فونت Vazirmatn - افزودن فایل woff2
 - [ ] صدا و افکت جذابیت (۳.۲۳۴)
 - [ ] ذخیره/بارگذاری با Event Sourcing
