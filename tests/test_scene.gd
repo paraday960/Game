@@ -93,6 +93,27 @@ func _ready():
 						failed.append("AI خروجی نامعتبر: " + fname)
 	print("AI check: %d OK, %d failed" % [ai_ok, ai_fail])
 
+	# اعتبارسنجی سخت‌گیرانه فرمان ناشناخته
+	var bad_cmd = GameCommand.new("unknown_command", {})
+	var before_bad_state = JSON.stringify(GameState.state)
+	var bad_result = GameEngine.tick(GameState.state, GameState.version, GameState.tick, [bad_cmd])
+	if bad_result.success or JSON.stringify(GameState.state) != before_bad_state:
+		failed.append("فرمان ناشناخته رد نشد یا وضعیت را تغییر داد")
+	else:
+		print("Unknown command rejected: OK")
+
+	# رویدادهای میانی یک تراکنش Rollback نباید در لاگ باقی بمانند
+	var event_count_before = EventLog.count()
+	if not EventLog.begin_transaction():
+		failed.append("تراکنش آزمایشی EventLog باز نشد")
+	else:
+		EventLog.log_event("test_uncommitted", {"should_disappear": true})
+		EventLog.rollback_transaction()
+		if EventLog.count() != event_count_before:
+			failed.append("Rollback رویداد میانی را حذف نکرد")
+		else:
+			print("Atomic event rollback: OK")
+
 	print("")
 	if failed.size() == 0:
 		print("=== ✅ ALL TESTS PASSED (%d systems) ===" % GameEngine.systems.size())
@@ -104,4 +125,4 @@ func _ready():
 				print("  ✗ " + f)
 				seen[f] = true
 
-	get_tree().quit()
+	get_tree().quit(0 if failed.size() == 0 else 1)

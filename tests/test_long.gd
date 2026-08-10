@@ -33,4 +33,4 @@ func _ready():
 		print("=== ✅ LONG RUN PASSED ===")
 	else:
 		print("=== ❌ %s ===" % str(bad))
-	get_tree().quit()
+	get_tree().quit(0 if bad.size() == 0 else 1)

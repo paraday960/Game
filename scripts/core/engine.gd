@@ -3,6 +3,13 @@ extends Node
 
 # preload مستقیم - بدون وابستگی به کش کلاس سراسری (سازگار با import سرد و CI)
 const GameCommandClass = preload("res://scripts/core/command.gd")
+const VersioningClass = preload("res://scripts/core/versioning.gd")
+
+const SUPPORTED_COMMANDS = [
+	"next_tick", "tax_set", "budget_allocate", "research_start", "diplomacy"
+]
+const DIPLOMACY_ACTIONS = ["improve_relations", "negotiate_sanctions"]
+const MAX_COMMAND_RECEIPTS = 512
 
 signal tick_completed(new_state, events)
 signal tick_failed(reason)
@@ -209,12 +216,19 @@ func _advance_clock(state: Dictionary) -> Dictionary:
 
 # تابع اصلی تیک - اجرای اتمی
 func tick(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:
-	# ۱. اعتبارسنجی ورودی‌ها
-	var validation = _validate_commands(commands, current_state)
+	# ۱. تکمیل فراداده و اعتبارسنجی ورودی‌ها
+	_prepare_command_metadata(commands, current_tick + 1, current_version + 1)
+	var validation = _validate_commands(commands, current_state, current_tick + 1, current_version + 1)
 	if not validation.valid:
 		EventLog.log_event("tick_failed_validation", {"reason": validation.reason}, current_tick, current_version)
 		emit_signal("tick_failed", validation.reason)
 		return {"success": false, "reason": validation.reason, "state": current_state, "version": current_version, "tick": current_tick}
+
+	# تمام رویدادهای محاسبه نیز بخشی از تراکنش‌اند؛ Rollback نباید رد کاذب باقی بگذارد.
+	if not EventLog.begin_transaction():
+		var tx_reason = "تراکنش رویداد دیگری هنوز باز است"
+		emit_signal("tick_failed", tx_reason)
+		return {"success": false, "reason": tx_reason, "state": current_state, "version": current_version, "tick": current_tick}
 
 	# ۲. محاسبه روی Snapshot (کپی)
 	var snapshot = current_state.duplicate(true)
@@ -236,7 +250,8 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 	# ۳. اجرای همه معادلات و هوش سیستم‌ها به‌صورت اتمی
 	var compute_result = _compute_all_systems(snapshot, snapshot_tick)
 	if not compute_result.success:
-		# ۴. Rollback - هیچ تغییری اعمال نمی‌شود
+		# ۴. Rollback - نه وضعیت و نه رویدادهای میانی اعمال نمی‌شوند.
+		EventLog.rollback_transaction()
 		EventLog.log_event("tick_rollback", {"reason": compute_result.reason, "tick": snapshot_tick}, current_tick, current_version)
 		emit_signal("tick_failed", compute_result.reason)
 		return {"success": false, "reason": compute_result.reason, "state": current_state, "version": current_version, "tick": current_tick}
@@ -247,14 +262,16 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 	snapshot["version"] = snapshot_version + 1
 	snapshot["tick"] = snapshot_tick
 	snapshot["seed"] = Deterministic.get_state()
+	_record_command_receipts(snapshot, commands)
 
-	# لاگ رویداد موفق
+	# لاگ رویداد موفق و انتشار یک‌جای تمام رویدادهای تراکنش
 	EventLog.log_event("tick_success", {
 		"tick": snapshot_tick,
 		"version": snapshot["version"],
 		"commands_count": commands.size(),
 		"gdp_change": snapshot["economy"]["gdp"] - current_state["economy"]["gdp"] if current_state.has("economy") else 0
 	}, snapshot_tick, snapshot["version"])
+	EventLog.commit_transaction()
 
 	emit_signal("tick_completed", snapshot, EventLog.get_last(5))
 
@@ -265,23 +282,81 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 		"tick": snapshot_tick
 	}
 
-func _validate_commands(commands: Array, state: Dictionary) -> Dictionary:
-	# هر فرمان باید معتبر باشد
+func _prepare_command_metadata(commands: Array, expected_tick: int, expected_version: int):
 	for cmd in commands:
 		if cmd is GameCommandClass:
-			if cmd.type == "tax_set":
-				var rate = cmd.payload.get("rate", 0.2)
-				if rate < 0.0 or rate > 0.9:
-					return {"valid": false, "reason": "نرخ مالیات نامعتبر: %f" % rate}
-			elif cmd.type == "budget_allocate":
-				var allocs = cmd.payload.get("allocations", {})
-				var total = 0.0
-				for v in allocs.values():
-					total += v
-				if abs(total - 1.0) > 0.01:
-					return {"valid": false, "reason": "مجموع بودجه باید ۱۰۰٪ باشد، الان %.1f٪ است" % (total*100)}
-	# همه معتبر
+			if cmd.tick == 0:
+				cmd.tick = expected_tick
+			if cmd.version == 0:
+				cmd.version = expected_version
+
+func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, expected_version: int) -> Dictionary:
+	var seen: Dictionary = {}
+	var receipts: Array = state.get("command_receipts", [])
+	for cmd in commands:
+		if not cmd is GameCommandClass:
+			return {"valid": false, "reason": "ساختار فرمان معتبر نیست"}
+		if not SUPPORTED_COMMANDS.has(cmd.type):
+			return {"valid": false, "reason": "نوع فرمان پشتیبانی نمی‌شود: %s" % cmd.type}
+		if not cmd.payload is Dictionary:
+			return {"valid": false, "reason": "داده فرمان باید ساختار کلید-مقدار باشد"}
+		if cmd.tick != expected_tick or cmd.version != expected_version:
+			return {"valid": false, "reason": "فرمان متعلق به تیک یا نسخه دیگری است"}
+
+		var receipt_key = VersioningClass.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id)
+		if seen.has(receipt_key) or receipts.has(receipt_key):
+			return {"valid": false, "reason": "فرمان تکراری دریافت شد"}
+		seen[receipt_key] = true
+
+		if cmd.type == "tax_set":
+			var rate = cmd.payload.get("rate", null)
+			if not _is_finite_number(rate) or float(rate) < 0.0 or float(rate) > 0.9:
+				return {"valid": false, "reason": "نرخ مالیات باید عددی بین صفر تا نود درصد باشد"}
+		elif cmd.type == "budget_allocate":
+			var allocs = cmd.payload.get("allocations", null)
+			if not allocs is Dictionary or allocs.is_empty():
+				return {"valid": false, "reason": "تخصیص بودجه خالی یا نامعتبر است"}
+			var allowed_keys: Array = state.get("economy", {}).get("budget_allocations", {}).keys()
+			if allocs.size() != allowed_keys.size():
+				return {"valid": false, "reason": "همه ردیف‌های بودجه باید ارسال شوند"}
+			var total = 0.0
+			for key in allocs.keys():
+				if not allowed_keys.has(key):
+					return {"valid": false, "reason": "ردیف بودجه ناشناخته است: %s" % str(key)}
+				var value = allocs[key]
+				if not _is_finite_number(value) or float(value) < 0.0 or float(value) > 1.0:
+					return {"valid": false, "reason": "سهم بودجه «%s» نامعتبر است" % str(key)}
+				total += float(value)
+			if abs(total - 1.0) > 0.001:
+				return {"valid": false, "reason": "مجموع بودجه باید دقیقاً ۱۰۰٪ باشد، اکنون %.1f٪ است" % (total * 100.0)}
+		elif cmd.type == "research_start":
+			var tech_id = cmd.payload.get("tech_id", "")
+			if not tech_id is String or tech_id.strip_edges().is_empty():
+				return {"valid": false, "reason": "فناوری پژوهشی مشخص نشده است"}
+		elif cmd.type == "diplomacy":
+			var target = cmd.payload.get("target", "")
+			var action = cmd.payload.get("action", "")
+			if not state.get("diplomacy", {}).get("relations", {}).has(target):
+				return {"valid": false, "reason": "کشور هدف در روابط دیپلماتیک وجود ندارد"}
+			if not DIPLOMACY_ACTIONS.has(action):
+				return {"valid": false, "reason": "اقدام دیپلماتیک شناخته‌شده نیست"}
 	return {"valid": true, "reason": ""}
+
+func _record_command_receipts(snapshot: Dictionary, commands: Array):
+	var receipts: Array = snapshot.get("command_receipts", []).duplicate()
+	for cmd in commands:
+		if cmd is GameCommandClass:
+			receipts.append(VersioningClass.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id))
+	while receipts.size() > MAX_COMMAND_RECEIPTS:
+		receipts.pop_front()
+	snapshot["command_receipts"] = receipts
+
+func _is_finite_number(value) -> bool:
+	if not (value is int or value is float):
+		return false
+	if value is float:
+		return not is_nan(value) and not is_inf(value)
+	return true
 
 func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 	if cmd is GameCommandClass:
@@ -303,8 +378,8 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 					snapshot["diplomacy"]["relations"][target] = clamp(snapshot["diplomacy"]["relations"][target] + 5, -100, 100)
 				elif action == "negotiate_sanctions" and snapshot["diplomacy"]["sanctions"].size() > 0:
 					snapshot["diplomacy"]["sanctions"].pop_back()
-		# لاگ فرمان
-		EventLog.log_event("command_applied", cmd.to_dict(), snapshot.get("tick", 0), snapshot.get("version", 0))
+			# لاگ فرمان در همان تراکنش و با فراداده نسخه مقصد
+			EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 
 func _compute_all_systems(snapshot: Dictionary, tick: int) -> Dictionary:
 	# ترتیب دترمینستیک بسیار مهم است برای عدم Desync در چندنفره
@@ -368,16 +443,36 @@ func _compute_indicators(state: Dictionary) -> Dictionary:
 	return state
 
 func _check_integrity(state: Dictionary) -> Dictionary:
-	# بررسی ناسازگاری‌ها
-	if state["economy"]["gdp"] < 0:
+	# کل ساختار حیاتی و تمام اعداد بررسی می‌شوند؛ NaN/Inf در JSON و Lockstep خطرناک‌اند.
+	for key in ["economy", "population", "politics", "resources", "indicators", "clock"]:
+		if not state.has(key) or not state[key] is Dictionary:
+			return {"valid": false, "reason": "بخش حیاتی وضعیت گم شده یا نامعتبر است: %s" % key}
+	var invalid_path = _find_non_finite(state, "state")
+	if invalid_path != "":
+		return {"valid": false, "reason": "عدد نامتناهی یا تعریف‌نشده در %s" % invalid_path}
+	if float(state["economy"].get("gdp", -1.0)) < 0.0:
 		return {"valid": false, "reason": "GDP منفی شد"}
-	if state["population"]["total"] <= 0:
+	if float(state["population"].get("total", 0.0)) <= 0.0:
 		return {"valid": false, "reason": "جمعیت صفر یا منفی"}
-	if state["economy"]["tax_rate"] < 0 or state["economy"]["tax_rate"] > 1:
+	var tax_rate = float(state["economy"].get("tax_rate", -1.0))
+	if tax_rate < 0.0 or tax_rate > 1.0:
 		return {"valid": false, "reason": "نرخ مالیات نامعتبر"}
-	for res in state["resources"]["inventory"].keys():
-		if state["resources"]["inventory"][res] < 0:
-			# موجودی منفی نباید باشد - بحران است اما 0 می‌شود
-			state["resources"]["inventory"][res] = 0
-	# همه چک‌ها پاس شد
+	for res in state["resources"].get("inventory", {}).keys():
+		if float(state["resources"]["inventory"][res]) < 0.0:
+			return {"valid": false, "reason": "موجودی منفی برای منبع %s" % str(res)}
 	return {"valid": true, "reason": ""}
+
+func _find_non_finite(value, path: String) -> String:
+	if value is float and (is_nan(value) or is_inf(value)):
+		return path
+	if value is Dictionary:
+		for key in value.keys():
+			var found = _find_non_finite(value[key], "%s.%s" % [path, str(key)])
+			if found != "":
+				return found
+	elif value is Array:
+		for i in range(value.size()):
+			var found = _find_non_finite(value[i], "%s[%d]" % [path, i])
+			if found != "":
+				return found
+	return ""

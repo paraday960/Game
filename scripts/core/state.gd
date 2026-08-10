@@ -14,10 +14,12 @@ func _ready():
 
 func init_default_state():
 	state = {
-		"version": 0,
-		"tick": 0,
-		"seed": seed_value,
-		"clock": {
+			"schema_version": 2,
+			"version": 0,
+			"tick": 0,
+			"seed": seed_value,
+			"command_receipts": [],
+			"clock": {
 			"year": 2027,
 			"month": 1,
 			"day": 1,

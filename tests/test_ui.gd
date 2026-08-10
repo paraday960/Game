@@ -44,4 +44,4 @@ func _init():
 		print("=== ✅ UI SMOKE TEST PASSED ===")
 	else:
 		print("=== ❌ UI ISSUES: %s ===" % str(fails))
-	quit()
+	quit(0 if fails.size() == 0 else 1)

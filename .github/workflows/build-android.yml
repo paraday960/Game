@@ -67,9 +67,16 @@ jobs:
           grep -q 'keystore/debug_user' export_presets.cfg || sed -i 's|keystore/debug=.*|&\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"|' export_presets.cfg
           grep 'keystore' export_presets.cfg
 
-      - name: Godot Import
+      - name: Godot Import and parse validation
         run: |
-          godot --headless --path . --import --verbose || true
+          godot --headless --path . --import --verbose
+
+      - name: Run simulation and UI tests
+        run: |
+          set -euo pipefail
+          godot --headless --path . res://tests/test_scene.tscn
+          godot --headless --path . res://tests/test_long.tscn
+          godot --headless --path . -s res://tests/test_ui.gd
 
       - name: Export Android APK (Debug)
         run: |
