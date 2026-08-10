@@ -5,6 +5,7 @@
 godot --headless --path . --import                                  # آماده‌سازی (یک بار)
 godot --headless --path . res://tests/test_scene.tscn              # تست واحد: موتور، ۶۵ سیستم، AIها
 godot --headless --path . res://tests/test_long.tscn               # تست بلندمدت: ۳۶۵ روز شبیه‌سازی
+godot --headless --path . -s res://tests/test_ui.gd                 # تست دود UI: همه تب‌ها + فرمان‌ها
 ```
 
 ## پوشش
@@ -14,3 +15,4 @@ godot --headless --path . res://tests/test_long.tscn               # تست بل
 - ذخیره/بارگذاری JSON
 - اجرای بی‌خطای decide همه‌ی AIها (اصل ۷)
 - پایداری بلندمدت: بدون NaN/Inf در ۳۶۵ روز
+- UI: ساخت همه‌ی ۶ تب، اجرای تیک، فرمان مالیات و دیپلماسی از رابط
