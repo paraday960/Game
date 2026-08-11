@@ -158,6 +158,41 @@ func get_unit_metrics(code: String, unit_id: String, state: Dictionary) -> Dicti
 	var military_score = clamp(float(unit.get("strategic_index", 0.5)) * 0.68 + national_military * 0.20 + readiness * 0.12, 0.0, 1.0)
 	var roads_default = max(5.0, total_area * (0.035 + wealth * 0.045) + profile_population / (1400.0 - wealth * 550.0))
 	var roads_total = float(state.get("transport_detail", {}).get("roads_km", roads_default)) if is_player_country else roads_default
+
+	# === ۳۳ سیستم - متریک کامل برای هر استان - نقشه‌محور عمیق ===
+	var is_player = is_player_country
+	var econ = state.get("economy", {}) if is_player else {}
+	var pop_state = state.get("population", {}) if is_player else {}
+	var health = state.get("health", {}) if is_player else {}
+	var edu = state.get("education", {}) if is_player else {}
+	var welfare = state.get("welfare", {}) if is_player else {}
+	var env = state.get("environment", {}) if is_player else {}
+	var culture = state.get("culture", {}) if is_player else {}
+	var intel = state.get("intelligence", {}) if is_player else {}
+	var admin = state.get("administration", {}) if is_player else {}
+	var agri = state.get("agriculture", {}) if is_player else {}
+	var industry = state.get("industry", {}) if is_player else {}
+	var trade = state.get("trade", {}) if is_player else {}
+	var tourism = state.get("tourism", {}) if is_player else {}
+	var central_bank = state.get("central_bank", {}) if is_player else {}
+	var stock_market = state.get("stock_market", {}) if is_player else {}
+	var jud = state.get("judicial", {}) if is_player else {}
+	var family = state.get("family", {}) if is_player else {}
+	var sports = state.get("sports_youth", {}) if is_player else {}
+	var eth = state.get("ethnicity", {}) if is_player else {}
+	var stats = state.get("statistics", {}) if is_player else {}
+	var emergency = state.get("emergency", {}) if is_player else {}
+	var heritage = state.get("heritage", {}) if is_player else {}
+	var space = state.get("space", {}) if is_player else {}
+	var elections = state.get("elections", {}) if is_player else {}
+	var retail = state.get("retail", {}) if is_player else {}
+	var fuel = state.get("fuel_stations", {}) if is_player else {}
+	var urban = state.get("urban_facilities", {}) if is_player else {}
+
+	# تابع کمکی برای نویز محلی
+	var local_noise = func(key: String) -> float:
+		return _stable_fraction(unit_id + "-" + key) - 0.5
+
 	return {
 		"id": unit_id,
 		"name_fa": unit.get("name_fa", "ناحیه"),
@@ -179,6 +214,38 @@ func get_unit_metrics(code: String, unit_id: String, state: Dictionary) -> Dicti
 		"military_score": military_score,
 		"strategic_index": float(unit.get("strategic_index", 0.5)),
 		"roads_km": roads_total * (population_share * 0.65 + area_share * 0.35),
+		# === ۳۳ سیستم کامل ===
+		"agriculture": clamp(float(agri.get("food_security", 0.85)) + local_noise.call("agri")*0.15, 0.10, 0.98) if is_player else clamp(0.30+wealth*0.50,0.10,0.95),
+		"industry": clamp(float(industry.get("output",100.0))/150.0 + local_noise.call("ind")*0.10, 0.10, 0.95) if is_player else clamp(0.20+wealth*0.60,0.10,0.90),
+		"trade": clamp(float(trade.get("export_diversity",0.60)) + local_noise.call("trade")*0.12, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"tourism": clamp(float(tourism.get("service_quality",0.60)) + local_noise.call("tour")*0.10, 0.10, 0.85) if is_player else clamp(0.25+wealth*0.50,0.10,0.85),
+		"central_bank": clamp(1.0 - float(central_bank.get("inflation",0.08))/0.30, 0.10, 0.90) if is_player else clamp(wealth,0.10,0.90),
+		"stock_market": clamp(float(stock_market.get("investor_confidence",0.60)) + local_noise.call("stock")*0.10, 0.10, 0.90) if is_player else clamp(wealth*0.8,0.10,0.90),
+		"retail": clamp(float(retail.get("competition",0.60)) + local_noise.call("retail")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"fuel_stations": clamp(float(fuel.get("coverage",0.75)) + local_noise.call("fuel")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"health": clamp(float(health.get("quality",0.60)) + local_noise.call("health")*0.12, 0.10, 0.95) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"education": clamp(float(edu.get("quality",0.55)) + local_noise.call("edu")*0.12, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"welfare": clamp(1.0 - float(welfare.get("poverty",0.15))*2.0 + local_noise.call("welfare")*0.10, 0.10, 0.90) if is_player else clamp(1.0-wealth*0.3,0.10,0.90),
+		"family": clamp(float(family.get("child_welfare",0.65)) + local_noise.call("family")*0.10, 0.10, 0.90) if is_player else clamp(0.40+wealth*0.40,0.10,0.90),
+		"sports_youth": clamp(float(sports.get("youth_happiness",0.60)) + local_noise.call("sports")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"ethnicity": clamp(1.0 - float(eth.get("tension",0.30)) + local_noise.call("eth")*0.10, 0.10, 0.90) if is_player else clamp(0.60,0.10,0.90),
+		"culture": clamp(float(culture.get("cohesion",0.65)) + local_noise.call("cult")*0.10, 0.10, 0.90) if is_player else clamp(0.40+wealth*0.40,0.10,0.90),
+		"judicial": clamp(float(jud.get("rule_of_law",0.60)) + local_noise.call("jud")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"intelligence": clamp(float(intel.get("cyber_readiness",0.50)) + local_noise.call("intel")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"administration": clamp(float(admin.get("efficiency",0.60)) + local_noise.call("admin")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"elections": clamp(float(elections.get("transparency",0.55)) + local_noise.call("elect")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"politics": clamp(float(state.get("politics",{}).get("stability",0.60)) + local_noise.call("pol")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"statistics": clamp(float(stats.get("accuracy",0.75)) + local_noise.call("stat")*0.10, 0.10, 0.90) if is_player else clamp(0.40+wealth*0.40,0.10,0.90),
+		"emergency": clamp(float(emergency.get("preparedness",0.50)) + local_noise.call("emer")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"environment": clamp(float(env.get("air_quality",0.60)) + local_noise.call("env")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"urban_facilities": clamp(float(urban.get("water_network",0.75)) + local_noise.call("urban")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"public_services": clamp(float(state.get("public_services_detail",{}).get("coverage_health",0.75)) + local_noise.call("pub")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"transport_roads": clamp(1.0 - float(state.get("transport_detail",{}).get("traffic_congestion",0.40)) + local_noise.call("trans")*0.10, 0.10, 0.90) if is_player else clamp(0.40+wealth*0.40,0.10,0.90),
+		"settlements": clamp(float(state.get("settlements_detail",{}).get("housing_quality",0.60)) + local_noise.call("sett")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
+		"heritage": clamp(float(heritage.get("preservation",0.65)) + local_noise.call("her")*0.10, 0.10, 0.90) if is_player else clamp(0.40+wealth*0.30,0.10,0.85),
+		"space": clamp(float(space.get("level",0.10)) + local_noise.call("space")*0.05, 0.05, 0.90) if is_player else clamp(0.05+wealth*0.20,0.05,0.60),
+		"fisheries": clamp(float(state.get("fisheries",{}).get("stock_health",0.65)) + local_noise.call("fish")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.30,0.10,0.80),
+		"veterans": clamp(float(state.get("veterans",{}).get("health_care",0.65)) + local_noise.call("vet")*0.10, 0.10, 0.90) if is_player else clamp(0.40+wealth*0.30,0.10,0.85),
 	}
 
 func get_layer_value(code: String, unit_id: String, state: Dictionary, layer: String) -> float:
@@ -192,6 +259,39 @@ func get_layer_value(code: String, unit_id: String, state: Dictionary, layer: St
 		"weather": return float(metrics.get("weather_risk", 0.0))
 		"resources": return float(metrics.get("resource_score", 0.0))
 		"military": return float(metrics.get("military_score", 0.0))
+		"agriculture": return float(metrics.get("agriculture", 0.5))
+		"industry": return float(metrics.get("industry", 0.5))
+		"trade", "trade_layer": return float(metrics.get("trade", 0.5))
+		"tourism": return float(metrics.get("tourism", 0.5))
+		"central_bank": return float(metrics.get("central_bank", 0.5))
+		"stock_market": return float(metrics.get("stock_market", 0.5))
+		"retail": return float(metrics.get("retail", 0.5))
+		"fuel_stations": return float(metrics.get("fuel_stations", 0.5))
+		"health": return float(metrics.get("health", 0.5))
+		"education": return float(metrics.get("education", 0.5))
+		"welfare": return float(metrics.get("welfare", 0.5))
+		"family": return float(metrics.get("family", 0.5))
+		"sports_youth": return float(metrics.get("sports_youth", 0.5))
+		"ethnicity": return float(metrics.get("ethnicity", 0.5))
+		"culture": return float(metrics.get("culture", 0.5))
+		"judicial": return float(metrics.get("judicial", 0.5))
+		"intelligence": return float(metrics.get("intelligence", 0.5))
+		"administration": return float(metrics.get("administration", 0.5))
+		"elections": return float(metrics.get("elections", 0.5))
+		"politics": return float(metrics.get("politics", 0.5))
+		"statistics": return float(metrics.get("statistics", 0.5))
+		"emergency": return float(metrics.get("emergency", 0.5))
+		"environment": return float(metrics.get("environment", 0.5))
+		"urban_facilities": return float(metrics.get("urban_facilities", 0.5))
+		"public_services": return float(metrics.get("public_services", 0.5))
+		"transport_roads": return float(metrics.get("transport_roads", 0.5))
+		"settlements": return float(metrics.get("settlements", 0.5))
+		"heritage": return float(metrics.get("heritage", 0.5))
+		"space": return float(metrics.get("space", 0.5))
+		"fisheries": return float(metrics.get("fisheries", 0.5))
+		"veterans": return float(metrics.get("veterans", 0.5))
+		"military_power": return float(metrics.get("military_score", 0.5))
+		"trade_route_warfare": return 1.0 - float(metrics.get("security",0.5))*0.3
 	return float(metrics.get("strategic_index", 0.5))
 
 func _weather_risk(profile: Dictionary, state: Dictionary, unit: Dictionary) -> float:
