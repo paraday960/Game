@@ -179,7 +179,7 @@ func _draw():
 	_update_projection()
 	var low_detail=_motion_active()
 	_draw_ocean()
-	if not low_detail:_draw_graticule()
+	_draw_graticule()
 	_draw_countries(low_detail)
 	_unit_screen_records.clear();_drawn_routes.clear();_city_screen_records.clear()
 	if not low_detail:
@@ -194,7 +194,7 @@ func _draw():
 		_draw_population_heatmap() # تراکم جمعیت - پیشرفته
 		_draw_weather_live() # هواشناسی زنده - پیشرفته
 		if zoom_level>=NETWORK_ZOOM and overlays.get("transport",true) and selected_country!="":_draw_national_network(selected_country)
-		_draw_hubs();_draw_country_labels()
+		_draw_hubs();_draw_country_labels(low_detail)
 		if zoom_level>=CITY_ZOOM and overlays.get("cities",true) and selected_country!="":_draw_cities(selected_country)
 	_draw_selected_outline();_draw_map_hud()
 	if not low_detail and bool(SettingsManager.get_value("tooltips_enabled",true)) and (hovered_country!="" or hovered_unit!="" or not hovered_city.is_empty() or not hovered_route.is_empty()):_draw_tooltip()
@@ -242,18 +242,19 @@ func _draw_countries(low_detail:bool=false):
 			fill = fill.lightened(0.12); border = Color.WHITE; width += 1.1
 		if code_string == selected_country:
 			fill = fill.lightened(0.08); border = Color(1.0, 0.79, 0.22); width += 1.3
+		var is_focus := code_string == player_country or code_string == hovered_country or code_string == selected_country
 		for polygon in GeographyManager.get_polygons(code_string):
 			var outer = _screen_ring(polygon.outer)
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
-			if not low_detail and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():draw_colored_polygon(outer,fill)
-			if not low_detail:
+			if (not low_detail or is_focus) and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():draw_colored_polygon(outer,fill)
+			if not low_detail or is_focus:
 				for hole in polygon.holes:
 					var screen_hole=_screen_ring(hole)
 					if screen_hole.size()>=3 and _polygon_visible(screen_hole) and not Geometry2D.triangulate_polygon(screen_hole).is_empty():draw_colored_polygon(screen_hole,OCEAN_TOP)
 			var ring = outer.duplicate(); ring.append(outer[0])
 			# سایه ساحلی: خشکی از اقیانوس بلند می‌شود (سبک نقشه سینمایی).
-			if not low_detail:
+			if not low_detail or is_focus:
 				draw_polyline(ring, Color(0.0, 0.008, 0.016, 0.32), width + 4.0, true)
 				# هاله اختصاصی کشور بازیکن — هویت بصری HOI4.
 				if code_string == player_country:
@@ -476,10 +477,13 @@ func _draw_hubs():
 				draw_rect(Rect2(point - Vector2(4, 4), Vector2(8, 8)), normal_color, true)
 				draw_rect(Rect2(point - Vector2(5, 5), Vector2(10, 10)), Color(0.0,0.0,0.0,0.35), false, 1.2)
 
-func _draw_country_labels():
+func _draw_country_labels(low_detail: bool = false):
 	var occupied: Array = []
 	for code in countries.keys():
 		var profile = countries[code]
+		# هنگام حرکت فقط کشورهای کانونی برچسب دارند تا عناصر ناگهان نپرند
+		if low_detail and code != player_country and code != selected_country and code != hovered_country:
+			continue
 		var strategic = float(profile.get("strategic_weight", 0.2))
 		if zoom_level < 1.55 and strategic < 0.72 and code != player_country and code != selected_country: continue
 		if zoom_level < 2.7 and strategic < 0.42 and code != player_country and code != selected_country: continue
@@ -1011,6 +1015,17 @@ func _draw_map_hud():
 	var layer_panel = Rect2(size.x - width - 14, 14, width, 52)
 	draw_rect(layer_panel, Color(0.006, 0.022, 0.039, 0.92), true)
 	draw_string(PersianFont, layer_panel.position + Vector2(16, 35), "لایه · " + layer_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color(1.0, 0.81, 0.30))
+	# مقدار لنز فعال برای کشور زیر نشانگر — اطلاعات نمایشی زنده و دقیق
+	if hovered_country != "":
+		var hover_profile: Dictionary = countries.get(hovered_country, {})
+		if not hover_profile.is_empty():
+			var hover_value = _country_layer_value(hovered_country, hover_profile)
+			var hover_name: String = str(hover_profile.get("name_fa", hovered_country))
+			var hover_line: String = "%s · %s" % [hover_name, _percent(hover_value)]
+			var hover_panel = Rect2(size.x - width - 14, 70, width, 44)
+			draw_rect(hover_panel, Color(0.006, 0.022, 0.039, 0.92), true)
+			draw_rect(hover_panel, Color(0.29, 0.76, 0.84, 0.45), false, 1.0)
+			draw_string(PersianFont, hover_panel.position + Vector2(16, 29), hover_line, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.88, 0.94, 0.97))
 
 func _draw_tooltip():
 	var text := ""
@@ -1024,7 +1039,10 @@ func _draw_tooltip():
 		text = str(hovered_route.get("label", _overlay_name(str(hovered_route.get("type", "")))))
 	elif hovered_country != "":
 		var profile = countries.get(hovered_country, {})
-		text = "%s | پایتخت %s | جمعیت %s | GDP %s" % [profile.get("name_fa", hovered_country), profile.get("capital_fa", ""), PersianFormatter.format_large(float(profile.get("population", 0))), PersianFormatter.format_money(float(profile.get("gdp", 0)))]
+		# داده زنده شبیه‌سازی (نه مقادیر ثابت اولیه): GDP و قدرت کشورها هر ماه تغییر می‌کند
+		var live: Dictionary = full_state.get("world", {}).get("countries", {}).get(hovered_country, {})
+		if live.is_empty(): live = profile
+		text = "%s | پایتخت %s | جمعیت %s | GDP %s" % [live.get("name_fa", hovered_country), live.get("capital_fa", ""), PersianFormatter.format_large(float(live.get("population", 0))), PersianFormatter.format_money(float(live.get("gdp", 0)))]
 	if text == "": return
 	var mouse = get_local_mouse_position() + Vector2(14, -14)
 	var width = min(820.0, max(300.0, 90.0 + text.length() * 10.5))
@@ -1186,10 +1204,26 @@ func _geo_point(longitude: float, latitude: float) -> Vector2:
 	return _normalized_to_screen(GeographyManager.normalized_point(longitude, latitude))
 
 func _screen_ring(ring: PackedVector2Array) -> PackedVector2Array:
+	# بازکردن طول جغرافیایی به‌صورت زنجیره‌ای نسبت به رأس اول: اگر هر رأس جداگانه wrap شود،
+	# چندضلعی‌هایی که از خط ۱۸۰ درجه می‌گذرند (قطب جنوب، روسیه، آلاسکا و...) هنگام پن/زوم
+	# خطوط افقی غول‌پیکر روی نقشه می‌اندازند. این روش چندضلعی را پیوسته نگه می‌دارد.
 	var result := PackedVector2Array()
 	var count = ring.size()
 	if count > 2 and ring[0].is_equal_approx(ring[count - 1]): count -= 1
-	for index in range(count): result.append(_normalized_to_screen(ring[index]))
+	if count < 3:
+		return result
+	var prev_dx := 0.0
+	for index in range(count):
+		var point: Vector2 = ring[index]
+		var dx: float = point.x - camera_center.x
+		if index == 0:
+			if dx > 0.5: dx -= 1.0
+			elif dx < -0.5: dx += 1.0
+		else:
+			while dx - prev_dx > 0.5: dx -= 1.0
+			while prev_dx - dx > 0.5: dx += 1.0
+		prev_dx = dx
+		result.append(_viewport.get_center() + Vector2(dx * 2.0, point.y - camera_center.y) * _base_scale * zoom_level)
 	return result
 
 func _unwrap_around(point: Vector2, reference_x: float) -> Vector2:
