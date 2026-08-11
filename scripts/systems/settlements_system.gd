@@ -1,11 +1,12 @@
 extends BaseSystem
-# ۳.۴۲ سکونتگاه‌ها - شهر، شهرک، روستا - لایه اماکن فیزیکی تفصیلی
+# ۳.۴۲ سکونتگاه‌ها - شهر بزرگ، متوسط، کوچک، شهرک، روستا، تراکم، گسترش بی‌رویه، کیفیت مسکن، زیرساخت محلی
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
 	var settlements = state.get("settlements_detail", {})
 	var pop = state.get("population", {})
 	var infra = state.get("infrastructure", {})
 	var econ = state.get("economy", {})
+	var env = state.get("environment", {})
 
 	settlements["total"] = settlements.get("total", 1200)
 	settlements["cities_large"] = settlements.get("cities_large", 50)
@@ -18,44 +19,102 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	settlements["density"] = settlements.get("density", 50.0)
 	settlements["sprawl"] = settlements.get("sprawl", 0.30)
 	settlements["housing_quality"] = settlements.get("housing_quality", 0.60)
+	settlements["slum_ratio"] = settlements.get("slum_ratio", 0.15)
+	settlements["green_space_ratio"] = settlements.get("green_space_ratio", 0.20)
+	settlements["service_access"] = settlements.get("service_access", 0.70)
+	settlements["migration_urban"] = settlements.get("migration_urban", 100000.0)
+	settlements["new_houses_per_year"] = settlements.get("new_houses_per_year", 300000)
 
 	var events = []
 
-	# رشد شهری با جمعیت و اقتصاد
 	var pop_growth = pop.get("growth_rate",0.012)
-	var urbanization_rate = 0.01  # ۱٪ سالانه شهرنشینی افزایش
-	settlements["urban_pop"] = settlements["urban_pop"] * (1.0 + pop_growth + urbanization_rate/365.0)
-	settlements["rural_pop"] = pop.get("total",85_000_000) - settlements["urban_pop"]
-
-	# تراکم = جمعیت شهری / تعداد شهرها
-	settlements["density"] = settlements["urban_pop"] / max(settlements["cities_large"]*1000000 + settlements["cities_medium"]*200000 + settlements["cities_small"]*50000, 1.0) * 1000.0
-
-	# گسترش بی‌رویه شهری
+	var urbanization_rate = 0.012 # ۱.۲٪ سالانه شهرنشینی
+	var gdp_pc = econ.get("gdp_per_capita",5000.0)
 	var infra_coverage = infra.get("coverage",0.70)
-	settlements["sprawl"] = clamp(settlements["sprawl"] + (settlements["urban_pop"]/85_000_000.0 - infra_coverage) * 0.0001, 0.0, 0.85)
 
-	# کیفیت مسکن
-	var housing_shortage = state.get("physical",{}).get("housing_shortage",0.10)
-	settlements["housing_quality"] = clamp(settlements["housing_quality"] + (0.15 - housing_shortage) * 0.001, 0.2, 0.95)
+	# رشد شهری
+	var urban_pop = settlements["urban_pop"]
+	var rural_pop = settlements["rural_pop"]
+	var total_pop = pop.get("total",85_000_000.0)
 
-	# تعداد سکونتگاه‌ها با جمعیت رشد می‌کند
+	# مهاجرت روستا به شهر - جذابیت شهری
+	var urban_attraction = (gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2
+	settlements["migration_urban"] = total_pop * urbanization_rate / 365.0 * urban_attraction
+	urban_pop += settlements["migration_urban"]
+	rural_pop = max(total_pop - urban_pop, total_pop*0.10)
+
+	settlements["urban_pop"] = urban_pop
+	settlements["rural_pop"] = rural_pop
+	pop["total"] = total_pop
+	pop["urban_ratio"] = urban_pop / max(total_pop,1.0)
+
+	# تراکم - جمعیت شهری / مساحت مصنوعی شهری
+	var est_urban_area = settlements["cities_large"]*250.0 + settlements["cities_medium"]*80.0 + settlements["cities_small"]*25.0 # km2
+	settlements["density"] = urban_pop / max(est_urban_area,1.0)
+
+	# گسترش بی‌رویه = رشد شهری سریع بدون زیرساخت
+	var sprawl_pressure = (urban_pop/85_000_000.0 - infra_coverage)*0.5 + (settlements["migration_urban"]/100000.0)*0.3
+	settlements["sprawl"] = clamp(settlements["sprawl"]*0.996 + sprawl_pressure*0.004, 0.0, 0.90)
+
+	# کیفیت مسکن - درآمد + مصالح + تراکم معکوس
+	var housing_shortage = state.get("physical",{}).get("housing_shortage",0.10) if state.has("physical") else 0.10
+	settlements["housing_quality"] = clamp(settlements["housing_quality"]*0.994 + (0.15 - housing_shortage)*0.003 + gdp_pc/10000.0*0.003 + (1.0 - settlements["slum_ratio"])*0.002, 0.2, 0.96)
+
+	# حاشیه‌نشینی - نابرابری + بیکاری + گسترش
+	var poverty = state.get("welfare",{}).get("poverty",0.15)
+	var unemployment = econ.get("unemployment",0.08)
+	settlements["slum_ratio"] = clamp(settlements["slum_ratio"]*0.997 + (poverty*0.3 + unemployment*0.3 + settlements["sprawl"]*0.2)*0.003, 0.02, 0.50)
+
+	# فضای سبز - محیط‌زیست
+	settlements["green_space_ratio"] = clamp(env.get("forest_coverage",0.30) if env.has("forest_coverage") else 0.30*0.5 + (1.0 - settlements["sprawl"])*0.3 + 0.2, 0.05, 0.60)
+
+	# دسترسی به خدمات - زیرساخت
+	settlements["service_access"] = clamp(infra["quality"]*0.4 + infra_coverage*0.3 + settlements["housing_quality"]*0.2 + 0.10, 0.2, 0.98)
+
+	# ساخت مسکن جدید
+	var construction = infra.get("investment",5e9)/1e9 * 0.05 + gdp_pc/5000.0*100000.0
+	settlements["new_houses_per_year"] = int(construction)
+	if tick % 180 == 0:
+		settlements["new_houses_per_year"] = int(construction * (0.8 + Deterministic.next_range(0.0,0.4)))
+
+	# تعداد سکونتگاه‌ها با رشد جمعیت
 	if tick % 365 == 0:
-		if settlements["urban_pop"] > settlements["cities_large"]*1500000:
+		if settlements["urban_pop"] > settlements["cities_large"]*1500000.0*1.2:
 			settlements["cities_large"] += 1
 			settlements["cities_medium"] += 2
-			events.append({"type": "new_city", "message": "شهر بزرگ جدید تاسیس شد - مهاجرت و رشد جمعیت"})
+			settlements["cities_small"] += 3
+			events.append({"type":"new_city","message":"شهر بزرگ جدید تاسیس شد - مهاجرت و رشد جمعیت"})
+		if settlements["rural_pop"] < 10_000_000 and settlements["villages"] > 5000:
+			# خالی شدن روستاها
+			settlements["villages"] -= Deterministic.next_int_range(20, 100)
+			events.append({"type":"village_abandonment","villages": settlements["villages"], "message":"خالی شدن روستاها - مهاجرت به شهرها"})
 
-	# اثر بر زیرساخت
-	infra["coverage"] = clamp(infra_coverage + settlements["sprawl"] * -0.0001 + 0.0002, 0.2, 0.95)
+	# اثر بر زیرساخت و محیط
+	infra["coverage"] = clamp(infra_coverage + settlements["sprawl"]*-0.00015 + 0.00025, 0.2, 0.98)
+	var forest = env.get("forest_coverage",0.30) if env.has("forest_coverage") else 0.30
+	forest = clamp(forest - settlements["sprawl"]*0.00005, 0.05, 0.70)
+	if env.has("forest_coverage"):
+		env["forest_coverage"] = forest
+
 	state["infrastructure"] = infra
+	state["environment"] = env
+	state["population"] = pop
 
-	# حلقه: شهرنشینی → زیرساخت → رشد → شهرنشینی
-	if settlements["sprawl"] > 0.6 and Deterministic.chance(0.01):
-		events.append({"type": "urban_sprawl_crisis", "message": "گسترش بی‌رویه شهری - تخریب کشاورزی و ترافیک", "sprawl": settlements["sprawl"]})
-		state["environment"]["forest_coverage"] = clamp(state.get("environment",{}).get("forest_coverage",0.30) - 0.002, 0.05, 0.70)
+	# رویدادها
+	if settlements["sprawl"] > 0.62 and Deterministic.chance(0.015):
+		events.append({"type":"urban_sprawl_crisis","sprawl": settlements["sprawl"], "message":"گسترش بی‌رویه شهری - تخریب باغات و ترافیک سنگین"})
 
-	if housing_shortage > 0.3 and Deterministic.chance(0.012):
-		events.append({"type": "housing_shortage_protest", "message": "بحران مسکن - جوانان قادر به خانه‌دار شدن نیستند", "shortage": housing_shortage})
+	if housing_shortage > 0.35 and Deterministic.chance(0.014):
+		events.append({"type":"housing_shortage_protest","shortage": housing_shortage, "message":"بحران مسکن - جوانان قادر به خانه‌دار شدن نیستند - تجمع مقابل وزارت مسکن"})
+
+	if settlements["slum_ratio"] > 0.30 and Deterministic.chance(0.012):
+		events.append({"type":"slum_expansion","slum": settlements["slum_ratio"], "message":"گسترش حاشیه‌نشینی - %d٪ جمعیت در سکونتگاه غیررسمی" % int(settlements["slum_ratio"]*100.0)})
+
+	if settlements["service_access"] < 0.45 and Deterministic.chance(0.011):
+		events.append({"type":"service_access_crisis","access": settlements["service_access"], "message":"دسترسی پایین به خدمات شهری در حاشیه‌ها"})
+
+	if settlements["density"] > 8000.0 and Deterministic.chance(0.010):
+		events.append({"type":"overcrowding","density": settlements["density"], "message":"تراکم بحرانی - هر کیلومتر %d نفر" % int(settlements["density"])})
 
 	state["settlements_detail"] = settlements
-	return {"success": true, "state": state, "events": events}
+	return {"success":true,"state":state,"events":events}

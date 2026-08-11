@@ -1,5 +1,5 @@
 extends BaseSystem
-# ۳.۴۷ تأسیسات شهری - آب، برق، مخابرات، زباله - بخش ۳.۴۷
+# ۳.۴۷ تأسیسات شهری - آب، برق، مخابرات، زباله، فاضلاب، روشنایی، پیاده‌رو، نگهداری
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
 	var urban = state.get("urban_facilities", {})
@@ -11,62 +11,80 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	urban["water_network"] = urban.get("water_network", 0.75)
 	urban["electricity_grid"] = urban.get("electricity_grid", 0.70)
 	urban["telecom_coverage"] = urban.get("telecom_coverage", 0.80)
+	urban["5g_coverage"] = urban.get("5g_coverage", 0.25)
 	urban["waste_collection"] = urban.get("waste_collection", 0.70)
 	urban["waste_recycling"] = urban.get("waste_recycling", 0.15)
 	urban["sewage_coverage"] = urban.get("sewage_coverage", 0.65)
 	urban["street_lighting"] = urban.get("street_lighting", 0.60)
+	urban["sidewalks"] = urban.get("sidewalks", 0.55)
+	urban["parks_maintenance"] = urban.get("parks_maintenance", 0.60)
 	urban["maintenance_cost"] = urban.get("maintenance_cost", 2_000_000_000.0)
+	urban["leakage_water"] = urban.get("leakage_water", 0.25)
+	urban["outage_hours"] = urban.get("outage_hours", 5.0)
 
 	var events = []
 
-	var urban_budget_share = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * 0.3
-	var urban_budget = econ.get("government_spending",0.0) * urban_budget_share
+	var budget_share = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * 0.35
+	var urban_budget = econ.get("government_spending",0.0) * budget_share
+	var total_pop = pop.get("total",85_000_000.0)
+	var infra_q = infra.get("quality",0.55)
+	var digital = state.get("technology",{}).get("branches",{}).get("دیجیتال",0.20)
 
 	# آب
-	var water_target = 0.7 + urban_budget_share * 2.0 + infra.get("quality",0.55) * 0.2
-	urban["water_network"] = clamp(urban["water_network"] * 0.995 + water_target * 0.005, 0.3, 0.98)
+	var water_target = 0.65 + budget_share*2.2 + infra_q*0.25 + 0.10
+	urban["water_network"] = clamp(urban["water_network"]*0.993 + water_target*0.007, 0.25, 0.99)
+	urban["leakage_water"] = clamp((1.0 - urban["water_network"])*0.4 + 0.05, 0.05, 0.50)
 
 	# برق
-	var elec_target = 0.65 + state.get("resources",{}).get("inventory",{}).get("برق",100.0)/100.0 * 0.2 + urban_budget_share * 1.5
-	urban["electricity_grid"] = clamp(urban["electricity_grid"] * 0.995 + elec_target * 0.005, 0.3, 0.98)
+	var electricity_target = 0.60 + state.get("resources",{}).get("inventory",{}).get("برق",100.0)/100.0*0.20 + budget_share*1.6 + infra_q*0.15
+	urban["electricity_grid"] = clamp(urban["electricity_grid"]*0.993 + electricity_target*0.007, 0.25, 0.99)
+	urban["outage_hours"] = clamp((1.0 - urban["electricity_grid"])*20.0 + Deterministic.next_range(0.0,2.0), 0.2, 40.0)
 
-	# مخابرات
-	var telecom_target = 0.75 + state.get("technology",{}).get("branches",{}).get("دیجیتال",0.20) * 0.3 + urban_budget_share * 1.0
-	urban["telecom_coverage"] = clamp(urban["telecom_coverage"] * 0.995 + telecom_target * 0.005, 0.3, 0.99)
+	# مخابرات و 5G
+	var telecom_target = 0.70 + digital*0.35 + budget_share*0.8 + infra_q*0.15
+	urban["telecom_coverage"] = clamp(urban["telecom_coverage"]*0.992 + telecom_target*0.008, 0.30, 0.995)
+	urban["5g_coverage"] = clamp(urban["5g_coverage"] + digital*0.001 + urban["telecom_coverage"]*0.0005, 0.05, 0.85)
 
-	# زباله - جمع‌آوری و بازیافت
-	var waste_per_capita = 0.8  # کیلوگرم روزانه
-	var total_waste = pop.get("total",85_000_000) * waste_per_capita / 1000.0  # تن روزانه
-	urban["waste_collection"] = clamp(urban["waste_collection"] + (urban_budget_share - 0.05) * 0.002, 0.3, 0.98)
-	urban["waste_recycling"] = clamp(urban["waste_recycling"] + (env.get("recycling_rate",0.15) - 0.15) * 0.001 + 0.0002, 0.05, 0.70)
+	# زباله
+	var waste_per_capita = 0.8
+	var total_waste = total_pop * waste_per_capita / 1000.0
+	urban["waste_collection"] = clamp(urban["waste_collection"]*0.994 + (budget_share*1.5 + infra_q*0.3 + 0.3)*0.006, 0.25, 0.99)
+	urban["waste_recycling"] = clamp(urban["waste_recycling"]*0.997 + (env.get("recycling_rate",0.15) if env.has("recycling_rate") else 0.15 -0.15)*0.002 + 0.0003, 0.03, 0.75)
 
 	# فاضلاب
-	urban["sewage_coverage"] = clamp(urban["sewage_coverage"] + (urban_budget_share - 0.05) * 0.001, 0.2, 0.95)
+	urban["sewage_coverage"] = clamp(urban["sewage_coverage"]*0.995 + (budget_share*1.2 + infra_q*0.2 + 0.4)*0.005, 0.20, 0.96)
 
-	# روشنایی معابر
-	urban["street_lighting"] = clamp(urban["street_lighting"] + (urban["electricity_grid"] - 0.5) * 0.001, 0.2, 0.95)
+	# روشنایی و پیاده‌رو
+	urban["street_lighting"] = clamp(urban["street_lighting"]*0.996 + (urban["electricity_grid"]*0.6 + budget_share*1.0 + 0.2)*0.004, 0.15, 0.96)
+	urban["sidewalks"] = clamp(urban["sidewalks"]*0.995 + (infra_q*0.4 + budget_share*0.8 + 0.2)*0.005, 0.15, 0.90)
+	urban["parks_maintenance"] = clamp(urban["parks_maintenance"]*0.994 + (budget_share*1.0 + env.get("green_energy",0.20)*0.3 + 0.3)*0.006, 0.20, 0.95)
 
-	# هزینه نگهداری
-	urban["maintenance_cost"] = total_waste * 100000.0 + urban["water_network"] * 1_000_000_000.0
+	# هزینه
+	urban["maintenance_cost"] = total_waste * 120000.0 + urban["water_network"]*1_100_000_000.0 + urban["electricity_grid"]*800_000_000.0
+	urban["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)
 
-	# اثر بر بهداشت و محیط
-	var waste_effect = (1.0 - urban["waste_collection"]) * 0.3 + (1.0 - urban["sewage_coverage"]) * 0.2
-	state["health"]["quality"] = clamp(state.get("health",{}).get("quality",0.60) - waste_effect * 0.001, 0.1, 0.95)
-	state["environment"]["pollution"] = clamp(state.get("environment",{}).get("pollution",0.4) + waste_effect * 0.001, 0.0, 1.0)
-	state["environment"]["water_quality"] = clamp(state.get("environment",{}).get("water_quality",0.65) + (urban["water_network"] - 0.5) * 0.001, 0.1, 0.95)
+	# اثر بر بهداشت و محیط و رضایت
+	var waste_effect = (1.0 - urban["waste_collection"])*0.30 + (1.0 - urban["sewage_coverage"])*0.20 + urban["leakage_water"]*0.1
+	state["health"]["quality"] = clamp(state.get("health",{}).get("quality",0.60) - waste_effect*0.0008, 0.1, 0.95)
+	var pollution_base = state.get("environment",{}).get("air_quality",0.60)
+	state["environment"]["air_quality"] = clamp(pollution_base + waste_effect*0.0002, 0.1, 0.95) if state["environment"].has("air_quality") else state["environment"]
+	state["population"]["happiness"] = clamp(state.get("population",{}).get("happiness",0.60) + (urban["waste_collection"]-0.5)*0.0004 + (urban["street_lighting"]-0.5)*0.0002, 0.05, 0.95)
 
 	# رویدادها
-	if urban["waste_collection"] < 0.5 and Deterministic.chance(0.012):
-		events.append({"type": "waste_crisis", "message": "بحران زباله شهری - انباشت زباله در خیابان‌ها!", "collection": urban["waste_collection"]})
+	if urban["waste_collection"] < 0.48 and Deterministic.chance(0.014):
+		events.append({"type":"waste_crisis","collection": urban["waste_collection"], "message":"بحران زباله - انباشت در خیابان‌ها، بوی تعفن"})
 
-	if urban["water_network"] < 0.5 and Deterministic.chance(0.01):
-		events.append({"type": "water_shortage_urban", "message": "قطع آب در برخی محلات - فرسودگی شبکه آبرسانی"})
+	if urban["water_network"] < 0.50 and Deterministic.chance(0.012):
+		events.append({"type":"water_shortage_urban","water": urban["water_network"], "leakage": urban["leakage_water"], "message":"قطع آب محلات - فرسودگی شبکه، هدررفت %d٪" % int(urban["leakage_water"]*100.0)})
 
-	if urban["electricity_grid"] < 0.5 and Deterministic.chance(0.01):
-		events.append({"type": "blackout", "message": "خاموشی گسترده برق - فشار بر شبکه"})
+	if urban["electricity_grid"] < 0.48 and Deterministic.chance(0.011):
+		events.append({"type":"blackout","grid": urban["electricity_grid"], "outage": urban["outage_hours"], "message":"خاموشی گسترده - %d ساعت قطعی هفتگی" % int(urban["outage_hours"])})
 
-	if urban["waste_recycling"] > 0.4 and Deterministic.chance(0.006):
-		events.append({"type": "recycling_success", "message": "موفقیت بازیافت - اقتصاد چرخشی و کاهش آلودگی"})
+	if urban["waste_recycling"] > 0.40 and Deterministic.chance(0.007):
+		events.append({"type":"recycling_success","recycling": urban["waste_recycling"], "message":"جهش بازیافت - %d٪ زباله بازیافت می‌شود" % int(urban["waste_recycling"]*100.0)})
+
+	if urban["5g_coverage"] > 0.60 and tick % 180 == 0 and Deterministic.chance(0.02):
+		events.append({"type":"5g_milestone","coverage": urban["5g_coverage"], "message":"پوشش 5G ۶۰٪ - شهر هوشمند"})
 
 	state["urban_facilities"] = urban
-	return {"success": true, "state": state, "events": events}
+	return {"success":true,"state":state,"events":events}

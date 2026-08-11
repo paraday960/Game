@@ -1,5 +1,35 @@
 extends BaseAI
-# هوش تخصصی households؛ پروفایل، شاخص هدف و توضیح تصمیم در BaseAI ثبت شده است.
+# هوش تخصصی households - تاب‌آوری خانوار - تحلیل دترمینستیک، بودجه‌محور، اقدام چندسطحی
 
 func decide(state: Dictionary, tick: int) -> Array:
-	return super.decide(state, tick)
+	var hh = state.get("households_detail_full", {})
+	var econ = state.get("economy", {})
+	var cmds = []
+
+	# تشخیص اولیه از BaseAI
+	var diag = diagnose(state)
+	var urgency = diag.get("urgency", 0.0)
+	var metric_val = hh.get("savings_rate", 0.15)
+
+	# شرط اضطراری بر اساس شاخص اصلی
+	if hh.get("savings_rate", 0.15) < 0.15:
+		var budget_cmd = build_budget_command(state, "رفاه")
+		if budget_cmd != null:
+			cmds.append(budget_cmd)
+		if hh.get("debt_ratio",0.20) > 0.50:
+			cmds.append(GameCommand.create_policy_change("debt_relief", true))
+
+	# اگر هیچ بحران فوری نیست اما سلامت پایین است، باز هم بودجه را تنظیم کن
+	if cmds.is_empty() and urgency > 0.18:
+		var fallback = build_budget_command(state, diag.get("budget_key", "رفاه"))
+		if fallback != null:
+			cmds.append(fallback)
+
+	# در صورت عدم نیاز به اقدام، تصمیم پایه را برگردان
+	if cmds.is_empty():
+		return super.decide(state, tick)
+	return cmds
+
+func evaluate(state: Dictionary) -> float:
+	var d = diagnose(state)
+	return float(d.get("health", 0.5))

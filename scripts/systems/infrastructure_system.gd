@@ -1,43 +1,106 @@
 extends BaseSystem
-# زیرساخت - ۳.۱۵
+# زیرساخت - ۳.۱۵ - کیفیت، ظرفیت، پوشش، راه، برق، آب، مخابرات، مسکن، نگهداری، گلوگاه، سرمایه‌گذاری
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
-	var infra = state["infrastructure"]
-	var econ = state["economy"]
-	var pop = state["population"]
-	var resources = state["resources"]
+	var infra = state.get("infrastructure", {})
+	infra["quality"] = infra.get("quality", 0.55)
+	infra["capacity"] = infra.get("capacity", 0.60)
+	infra["coverage"] = infra.get("coverage", 0.70)
+	infra["road_quality"] = infra.get("road_quality", 0.55)
+	infra["rail_quality"] = infra.get("rail_quality", 0.45)
+	infra["electricity_grid"] = infra.get("electricity_grid", 0.70)
+	infra["water_network"] = infra.get("water_network", 0.65)
+	infra["telecom"] = infra.get("telecom", 0.70)
+	infra["housing_quality"] = infra.get("housing_quality", 0.60)
+	infra["maintenance_cost"] = infra.get("maintenance_cost", 0.02)
+	infra["investment"] = infra.get("investment", 5_000_000_000.0)
+	infra["decay_rate"] = infra.get("decay_rate", 0.03)
+	infra["projects"] = infra.get("projects", [])
+	infra["bottleneck_score"] = infra.get("bottleneck_score", 0.20)
 
 	var events = []
+	var econ = state.get("economy", {})
+	var pop = state.get("population", {})
+	var resources = state.get("resources", {})
+	var tech = state.get("technology", {})
 
-	var budget = econ["budget_allocations"].get("زیرساخت", 0.18) * econ["government_spending"]
+	var budget_share = econ.get("budget_allocations", {}).get("زیرساخت", 0.18)
+	var budget = budget_share * econ.get("government_spending", 95e9)
+	var gdp = econ.get("gdp", 500e9)
+	var growth = econ.get("growth_rate", 0.02)
+	var total_pop = pop.get("total", 85_000_000.0)
 
-	# کیفیت زیرساخت
-	var maintenance_need = infra["quality"] * 0.02 * econ["gdp"] * 0.01  # ۲٪ ارزش سالانه
+	# نیاز نگهداری - ۲٪ ارزش جایگزینی سالانه، فرسودگی با کیفیت بالاتر بیشتر!
+	var maintenance_need = infra["quality"] * 0.02 * gdp * 0.015
+	infra["maintenance_cost"] = maintenance_need / max(gdp,1.0)
+
+	# کیفیت زیرساخت - بودجه کافی vs فرسودگی
 	if budget < maintenance_need:
-		infra["quality"] -= 0.001  # فرسودگی ۵٪ سالانه ۳.۱۵.۴
+		infra["decay_rate"] = 0.05 # ۵٪ سالانه اگر نگهداری کم
+		infra["quality"] -= infra["decay_rate"]/365.0
+		if tick % 30 == 0 and Deterministic.chance(0.10):
+			events.append({"type":"infra_decay","quality": infra["quality"], "message":"فرسودگی زیرساخت - بودجه نگهداری کم است"})
 	else:
-		infra["quality"] += 0.0005
+		infra["decay_rate"] = 0.01
+		infra["quality"] += (0.0006 + budget_share*0.001) # رشد کند با سرمایه‌گذاری
 
-	infra["quality"] = clamp(infra["quality"], 0.1, 1.0)
+	infra["quality"] = clamp(infra["quality"], 0.05, 0.98)
 
-	# ظرفیت - اثر گلوگاه
-	var demand = pop["total"] / 85_000_000.0
-	var capacity_ratio = demand / max(infra["capacity"], 0.1)
-	if capacity_ratio > 1.0:
-		events.append({"type": "bottleneck", "ratio": capacity_ratio, "message": "گلوگاه زیرساختی - تقاضا بیش از ظرفیت"})
-		infra["capacity"] += 0.0002  # سرمایه‌گذاری خودکار کم
+	# زیرشاخه‌ها - هرکدام با تاخیر به کیفیت کل همگرا
+	infra["road_quality"] = clamp(infra["road_quality"]*0.995 + infra["quality"]*0.005 + Deterministic.next_range(-0.0005,0.0008), 0.1, 0.95)
+	infra["rail_quality"] = clamp(infra["rail_quality"]*0.995 + infra["quality"]*0.004 + tech.get("branches",{}).get("صنعت",0.20)*0.001, 0.1, 0.90)
+	infra["electricity_grid"] = clamp(infra["electricity_grid"]*0.994 + infra["quality"]*0.005 + (resources.get("production",{}).get("برق",15.0)/20.0)*0.001, 0.2, 0.98)
+	infra["water_network"] = clamp(infra["water_network"]*0.996 + infra["quality"]*0.004, 0.2, 0.95)
+	infra["telecom"] = clamp(infra["telecom"]*0.990 + infra["quality"]*0.005 + tech.get("branches",{}).get("دیجیتال",0.20)*0.005, 0.3, 0.98)
+	infra["housing_quality"] = clamp(infra["housing_quality"]*0.993 + infra["quality"]*0.004 + econ.get("gdp_per_capita",5000.0)/10000.0*0.003, 0.2, 0.95)
+
+	# پوشش - جمعیت و کیفیت
+	var coverage_target = infra["quality"]*0.6 + pop.get("urban_ratio",0.75)*0.2 + 0.2
+	infra["coverage"] = clamp(infra["coverage"]*0.992 + coverage_target*0.008, 0.3, 0.98)
+
+	# ظرفیت - اثر گلوگاه - تقاضای جمعیت و GDP
+	var demand = (total_pop / 85_000_000.0)*0.6 + (gdp/500e9)*0.4
+	var capacity_ratio = demand / max(infra["capacity"], 0.05)
+	infra["bottleneck_score"] = clamp(capacity_ratio - 1.0, -0.5, 2.0)
+
+	if capacity_ratio > 1.15:
+		events.append({"type":"bottleneck","ratio": capacity_ratio, "score": infra["bottleneck_score"], "message":"گلوگاه زیرساختی - تقاضا %.0f%% بیش از ظرفیت" % (capacity_ratio*100.0)})
+		infra["capacity"] += 0.0005 # سرمایه‌گذاری خودکار اضطراری
+		econ["growth_rate"] = econ.get("growth_rate",0.02) - 0.001
+	elif capacity_ratio > 1.0:
+		infra["capacity"] += 0.0003
 	else:
-		infra["capacity"] = clamp(infra["capacity"] + 0.0001, 0.2, 1.5)
+		infra["capacity"] = clamp(infra["capacity"] + 0.00015 + budget_share*0.0002, 0.2, 1.8)
 
-	# اثر زیرساخت بر رشد - هر +۱۰ کیفیت → +۰.۵٪ رشد ۳.۱۵.۴
-	var growth_bonus = (infra["quality"] - 0.5) * 0.05
-	# این در اقتصاد اعمال می‌شود اما اینجا ثبت
+	# سرمایه‌گذاری - رشد با اقتصاد
+	infra["investment"] *= (1.0 + growth*0.3/365.0)
+	if budget > maintenance_need:
+		infra["investment"] += (budget - maintenance_need) * 0.3 / 365.0
 
-	# بلایای طبیعی به زیرساخت آسیب می‌زند
-	if Deterministic.chance(0.005):
-		var damage = Deterministic.next_range(0.01, 0.05)
+	# بلایای طبیعی به زیرساخت آسیب می‌زند - ۰.۵٪ احتمال روزانه
+	if Deterministic.chance(0.006):
+		var damage = Deterministic.next_range(0.01, 0.06)
 		infra["quality"] -= damage
-		events.append({"type": "infrastructure_damage", "damage": damage, "message": "آسیب به زیرساخت به دلیل بلای طبیعی"})
+		infra["road_quality"] -= damage*0.8
+		infra["electricity_grid"] -= damage*0.6
+		events.append({"type":"infrastructure_damage","damage": damage, "quality": infra["quality"], "message":"آسیب به زیرساخت - خسارت %d٪ بر اثر بلای طبیعی" % int(damage*100.0)})
+
+	# پروژه‌های بزرگ - هر ۶ ماه
+	if tick % 180 == 0 and infra["quality"] < 0.70 and budget_share > 0.12:
+		if infra["projects"].size() < 5:
+			infra["projects"].append({
+				"name": "توسعه زیرساخت %d" % (infra["projects"].size()+1),
+				"progress": 0.0,
+				"cost": 1_000_000_000.0,
+				"tick_start": tick
+			})
+	# پیشرفت پروژه‌ها
+	for proj in infra["projects"]:
+		proj["progress"] += 0.05
+		if proj["progress"] >= 1.0:
+			events.append({"type":"infra_project_complete","project": proj["name"], "message":"پروژه %s تکمیل شد" % proj["name"]})
+	infra["projects"] = infra["projects"].filter(func(p): return p["progress"] < 1.0)
 
 	state["infrastructure"] = infra
-	return {"success": true, "state": state, "events": events}
+	state["economy"] = econ
+	return {"success":true,"state":state,"events":events}
