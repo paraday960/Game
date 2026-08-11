@@ -179,6 +179,8 @@ func _draw():
 	if not low_detail:
 		if zoom_level>=ADMIN_ZOOM and selected_country!="":_draw_admin_detail(selected_country)
 		_draw_routes()
+		_draw_war_fronts() # جبهه‌های جنگ - نقشه‌محور
+		_draw_supply_lines() # خطوط تدارکات - نقشه‌محور
 		if zoom_level>=NETWORK_ZOOM and overlays.get("transport",true) and selected_country!="":_draw_national_network(selected_country)
 		_draw_hubs();_draw_country_labels()
 		if zoom_level>=CITY_ZOOM and overlays.get("cities",true) and selected_country!="":_draw_cities(selected_country)
@@ -473,6 +475,132 @@ func _draw_national_network(code: String):
 		draw_polyline(points, Color(0.01, 0.025, 0.04, 0.80), 4.2, true)
 		draw_polyline(points, road_color, 1.7, true)
 		if index <= 6: _draw_dashed(points, Color(0.77, 0.90, 0.96, 0.78), 0.8 + rail_quality)
+
+func _draw_war_fronts():
+	# رسم جبهه‌های جنگ - خط مقدم بین کشورها با پیشرفت و عرض
+	var mil = full_state.get("military", {})
+	var fronts = mil.get("fronts_detail", {}).get("active_fronts", []) if mil.has("fronts_detail") else []
+	var world = full_state.get("world", {})
+	var wars = world.get("wars", {})
+	if fronts.is_empty() and wars.is_empty():
+		return
+
+	# اگر fronts خالی ولی wars داریم - از wars بساز
+	if fronts.is_empty():
+		for target in wars.keys():
+			var player_id = str(world.get("player_country",""))
+			var player_profile = countries.get(player_id, {})
+			var enemy_profile = countries.get(str(target), {})
+			if player_profile.is_empty() or enemy_profile.is_empty():
+				continue
+			var start = _geo_point(float(player_profile.get("lon",0.0)), float(player_profile.get("lat",0.0)))
+			var finish = _geo_point(float(enemy_profile.get("lon",0.0)), float(enemy_profile.get("lat",0.0)))
+			if not _segment_near_view(start, finish):
+				continue
+			var war = wars[target]
+			var progress = float(war.get("progress",0.0)) # -100 تا +100
+			# رنگ بر اساس پیشرفت: سبز اگر در حال پیروزی، قرمز اگر شکست
+			var front_color = Color(0.20, 0.85, 0.40, 0.85) if progress > 0 else Color(0.95, 0.25, 0.25, 0.85) if progress < -20 else Color(0.85, 0.75, 0.20, 0.80)
+			var width = clamp(2.5 + abs(progress)/30.0, 2.5, 6.0)
+			var mid = (start + finish) * 0.5 + Vector2(0, -20).rotated((finish-start).angle())
+			var points1 = _curve_points(start, mid, "wars")
+			var points2 = _curve_points(mid, finish, "wars")
+			draw_polyline(points1, Color(0.0,0.0,0.0,0.40), width+2.0, true)
+			draw_polyline(points2, Color(0.0,0.0,0.0,0.40), width+2.0, true)
+			_draw_dashed(points1, front_color, width)
+			_draw_dashed(points2, front_color, width)
+			# فلش پیشرفت
+			if points1.size() > 5:
+				var arrow_pos = points1[points1.size()/2]
+				var dir = (finish - start).normalized()
+				var arrow_size = 8.0
+				var perp = Vector2(-dir.y, dir.x)
+				if progress > 0:
+					# فلش به سمت دشمن
+					draw_line(arrow_pos, arrow_pos + dir*arrow_size + perp*arrow_size*0.5, front_color, 2.5)
+					draw_line(arrow_pos, arrow_pos + dir*arrow_size - perp*arrow_size*0.5, front_color, 2.5)
+				else:
+					# فلش عقب‌نشینی
+					draw_line(arrow_pos, arrow_pos - dir*arrow_size + perp*arrow_size*0.5, Color(0.95,0.25,0.25,0.85), 2.5)
+					draw_line(arrow_pos, arrow_pos - dir*arrow_size - perp*arrow_size*0.5, Color(0.95,0.25,0.25,0.85), 2.5)
+			# متن پیشرفت
+			if zoom_level >= 2.0:
+				var label = "جبهه %s: %+.0f" % [WorldManager.get_country_name(str(target)), progress]
+				draw_string(PersianFont, mid + Vector2(10, -10), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, front_color)
+	else:
+		for front in fronts:
+			var target = str(front.get("target",""))
+			var player_id = str(full_state.get("world",{}).get("player_country",""))
+			var player_profile = countries.get(player_id, {})
+			var enemy_profile = countries.get(target, {})
+			if player_profile.is_empty() or enemy_profile.is_empty():
+				continue
+			var start = _geo_point(float(player_profile.get("lon",0.0)), float(player_profile.get("lat",0.0)))
+			var finish = _geo_point(float(enemy_profile.get("lon",0.0)), float(enemy_profile.get("lat",0.0)))
+			if not _segment_near_view(start, finish):
+				continue
+			var progress = float(front.get("progress",0.0))
+			var width_km = float(front.get("width_km",300.0))
+			var terrain = str(front.get("terrain","دشت"))
+			var supply = float(front.get("supply_status",0.5))
+			var air_sup = float(front.get("air_superiority",0.5))
+			var front_color = Color(0.20, 0.85, 0.40, 0.85) if progress > 20 else Color(0.95, 0.25, 0.25, 0.85) if progress < -20 else Color(0.85, 0.75, 0.20, 0.80)
+			var width = clamp(3.0 + width_km/200.0, 3.0, 8.0)
+			var mid = (start + finish) * 0.5
+			var points = _curve_points(start, finish, "wars")
+			draw_polyline(points, Color(0.0,0.0,0.0,0.45), width+2.5, true)
+			_draw_dashed(points, front_color, width)
+			# اطلاعات جبهه
+			if zoom_level >= 2.5 and points.size() > 2:
+				var mid_point = points[points.size()/2]
+				var info = "%s | %s | تدارکات %.0f٪ | هوایی %.0f٪" % [terrain, ("پیشروی" if progress>0 else "عقب‌نشینی"), supply*100.0, air_sup*100.0]
+				draw_string(PersianFont, mid_point + Vector2(10, -15), info, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.90,0.92,0.95))
+
+func _draw_supply_lines():
+	# رسم خطوط تدارکات از پایتخت به جبهه - رنگ بر اساس آسیب‌پذیری
+	var mil = full_state.get("military", {})
+	var logi = mil.get("logistics_detail", {})
+	if logi.is_empty():
+		return
+	var supply_vuln = float(logi.get("supply_line_vulnerability",0.30))
+	var fuel_days = float(logi.get("fuel_stock_days",25.0))
+	var ammo_days = float(logi.get("ammo_stock_days",20.0))
+	var player_id = str(full_state.get("world",{}).get("player_country",""))
+	var player_profile = countries.get(player_id, {})
+	if player_profile.is_empty():
+		return
+	var capital = CountryGeographyManager.get_capital_city(player_id)
+	if capital.is_empty():
+		return
+	var start = _normalized_to_screen(capital.point)
+	var world = full_state.get("world", {})
+	var wars = world.get("wars", {})
+	for target in wars.keys():
+		var enemy_profile = countries.get(str(target), {})
+		if enemy_profile.is_empty():
+			continue
+		var finish = _geo_point(float(enemy_profile.get("lon",0.0)), float(enemy_profile.get("lat",0.0)))
+		# نقطه میانی جبهه ۷۰٪ به سمت دشمن
+		var front_point = start.lerp(finish, 0.70)
+		if not _segment_near_view(start, front_point):
+			continue
+		# رنگ بر اساس آسیب‌پذیری و ذخایر
+		var supply_color = Color(0.25, 0.85, 0.45, 0.75) # سبز = امن
+		if supply_vuln > 0.60 or fuel_days < 5.0 or ammo_days < 3.0:
+			supply_color = Color(0.95, 0.25, 0.25, 0.85) # قرمز = بحرانی
+		elif supply_vuln > 0.40 or fuel_days < 15.0:
+			supply_color = Color(0.95, 0.75, 0.20, 0.80) # زرد = پرخطر
+		var points = _curve_points(start, front_point, "land")
+		# خط تدارکات نقطه‌چین ظریف
+		_draw_dashed(points, supply_color, 1.8)
+		# کامیون‌های کوچک متحرک روی مسیر
+		if not bool(SettingsManager.get_value("reduce_motion",false)):
+			var t = fmod(Time.get_ticks_msec()*0.0003, 1.0)
+			var idx = int(t * (points.size()-1))
+			if idx < points.size():
+				var truck_pos = points[idx]
+				draw_circle(truck_pos, 3.0, Color(0.15,0.15,0.15,0.85))
+				draw_circle(truck_pos, 1.8, supply_color)
 
 func _draw_selected_outline():
 	if selected_country == "": return

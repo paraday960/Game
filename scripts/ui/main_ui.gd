@@ -2145,6 +2145,42 @@ func _build_map_player_context(state: Dictionary, player_id: String, parent_over
 	_bar(national, "امنیت", float(state.get("security",{}).get("public_security",0.65)))
 	if selected_country_unit != "" and not CountryGeographyManager.get_unit(player_id, selected_country_unit).is_empty():
 		_build_selected_national_unit(state, player_id, selected_country_unit,parent_override)
+
+	# === پنل نقشه‌محور پیشرفته - جبهه‌ها و تدارکات ===
+	var mil = state.get("military", {})
+	var warfare = state.get("trade_route_warfare", {})
+	var world = state.get("world", {})
+	var fronts = mil.get("fronts_detail", {}).get("active_fronts", []) if mil.has("fronts_detail") else []
+	var logi = mil.get("logistics_detail", {})
+
+	if not fronts.is_empty() or not world.get("wars", {}).is_empty():
+		var front_card = _card("⚔️ جبهه‌های فعال - نقشه‌محور", parent_override)
+		_row(front_card, "تعداد جبهه", PersianFormatter.to_persian_digits(str(fronts.size() if not fronts.is_empty() else world.get("wars", {}).size())))
+		if not logi.is_empty():
+			_bar(front_card, "ذخیره سوخت", float(logi.get("fuel_stock_days", 25.0))/30.0)
+			_bar(front_card, "ذخیره مهمات", float(logi.get("ammo_stock_days", 20.0))/20.0)
+			_bar(front_card, "آسیب‌پذیری تدارکات", float(logi.get("supply_line_vulnerability", 0.30)))
+			_row(front_card, "کاروان‌ها", PersianFormatter.to_persian_digits(str(logi.get("convoy_trucks", 800))))
+		var front_hint = Label.new()
+		front_hint.text = "خط مقدم روی نقشه با فلش پیشروی/عقب‌نشینی، خط تدارکات نقطه‌چین از پایتخت به جبهه با رنگ سبز/زرد/قرمز بر اساس امنیت - کامیون‌های متحرک روی مسیر دیده می‌شود"
+		front_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		front_hint.modulate = Color(0.72,0.81,0.87)
+		front_card.add_child(front_hint)
+
+	# پنل مسیرهای تجاری مختل
+	if not warfare.get("attacks", []).is_empty() or not warfare.get("chokepoints", {}).is_empty():
+		var warfare_card = _card("🚢 جنگ مسیرهای تجاری - زنده روی نقشه", parent_override)
+		_row(warfare_card, "حملات فعال", PersianFormatter.to_persian_digits(str(warfare.get("attacks", []).size())))
+		_row(warfare_card, "گلوگاه مسدود", PersianFormatter.to_persian_digits(str(warfare.get("chokepoints", {}).size())))
+		_bar(warfare_card, "سطح دزدی دریایی", float(warfare.get("piracy_level", 0.10)))
+		_bar(warfare_card, "اثر محاصره", float(warfare.get("blockade_effectiveness", 0.0)))
+		_row(warfare_card, "خسارت اقتصادی", PersianFormatter.format_money(float(warfare.get("economic_damage", 0.0))))
+		var warfare_hint = Label.new()
+		warfare_hint.text = "مسیرهای مختل قرمز چشمک‌زن با انفجار وسط، گلوگاه مسدود با ضربان قرمز و 🚫 - روی هر خط کلیک کن و عملیات شبیخون/محاصره/مین/اسکورت اجرا کن"
+		warfare_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		warfare_hint.modulate = Color(0.95,0.5,0.5)
+		warfare_card.add_child(warfare_hint)
+
 	var action_card = _card("◈ اقدام زمینه‌ای از روی نقشه",parent_override)
 	var action_hint = Label.new(); action_hint.text = "اقدام‌های پرتکرار همان‌جا که مسئله را می‌بینید اجرا می‌شوند؛ نتیجه همچنان از موتور اتمی عبور می‌کند."; action_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; action_hint.modulate = Color(0.67,0.79,0.85); action_card.add_child(action_hint)
 	var action_grid = GridContainer.new(); action_grid.columns = 3; action_card.add_child(action_grid)
@@ -2226,6 +2262,14 @@ func _on_chokepoint_attack(chokepoint_id: String, action: String, title: String)
 		_toast("🌊 عملیات %s در %s اجرا شد" % [action, title])
 		_switch_tab("map")
 
+func _on_map_operation(target_country: String, operation_type: String, title: String):
+	var cmd = GameCommandClass.create_map_operation(target_country, operation_type, {})
+	if _run_tick_with([cmd]):
+		_toast("🗺️ %s روی %s اجرا شد" % [title, _fa_country(target_country)])
+		_switch_tab("map")
+	else:
+		_toast("⚠️ عملیات نقشه‌محور ممکن نشد")
+
 func _on_map_camera_route_focus():
 	if is_instance_valid(current_unified_map) and not selected_map_route.is_empty():
 		var from_lat = float(selected_map_route.get("from_lat", 0.0))
@@ -2262,6 +2306,48 @@ func _build_selected_national_unit(state: Dictionary, code: String, unit_id: Str
 	_bar(card, "ظرفیت منابع", float(metrics.get("resource_score", 0.0)))
 	_bar(card, "اهمیت نظامی", float(metrics.get("military_score", 0.0)))
 	_bar(card, "ریسک اقلیمی", float(metrics.get("weather_risk", 0.0)))
+
+	# === عملیات نقشه‌محور روی استان/شهر ===
+	var player_id = str(state.get("world",{}).get("player_country",""))
+	var is_own = code == player_id
+	var city_ops_card = _card("🗺️ عملیات نقشه‌محور - %s" % metrics.get("name_fa","ناحیه"), parent_override)
+	var city_hint = Label.new()
+	city_hint.text = "مثل دنیای واقعی: روی نقشه استان/شهر را انتخاب کن و عملیات بساز - استحکامات، پایگاه، جاده، فرودگاه"
+	city_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	city_hint.modulate = Color(0.72,0.81,0.87)
+	city_ops_card.add_child(city_hint)
+	var city_grid = GridContainer.new()
+	city_grid.columns = 2
+	city_ops_card.add_child(city_grid)
+
+	var city_ops = []
+	if is_own:
+		city_ops = [
+			["fortify","🏰 استحکام‌سازی","ساخت سنگر و استحکامات - دفاع +۲۰٪"],
+			["airfield","✈️ باند هوایی","ساخت باند فرودگاه اضطراری"],
+			["depot","📦 انبار تدارکات","انبار سوخت و مهمات - تدارکات +۱۵٪"],
+			["radar","📡 ایستگاه رادار","پوشش شناسایی +۲۰٪"],
+			["factory","🏭 کارخانه","تولید محلی +"],
+			["bunker","🛡️ پناهگاه","پناهگاه غیرنظامی - کاهش تلفات"]
+		]
+	else:
+		city_ops = [
+			["sabotage","💣 خرابکاری","انفجار پل/خط آهن در خاک دشمن"],
+			["airstrike","✈️ بمباران","حمله هوایی به زیرساخت"],
+			["drone_recon","🛸 شناسایی پهپادی","جمع‌آوری اطلاعات"],
+			["psyops","📢 تبلیغات","پخش اعلامیه و جنگ روانی"],
+			["special_ops","🎯 عملیات ویژه","کماندویی - ترور/گروگان"],
+			["blockade","🚧 محاصره منطقه‌ای","بستن راه‌های منطقه"]
+		]
+
+	for op in city_ops:
+		var btn = Button.new()
+		btn.text = op[1]
+		btn.tooltip_text = op[2]
+		btn.custom_minimum_size = Vector2(200, 44)
+		btn.pressed.connect(FeedbackManager.play_click)
+		btn.pressed.connect(_on_map_operation.bind(code, op[0], op[1]))
+		city_grid.add_child(btn)
 
 func _build_selected_country_card(state: Dictionary, target: String, parent_override=null):
 	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
@@ -2318,6 +2404,70 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 			reply_button.pressed.connect(FeedbackManager.play_click)
 			reply_button.pressed.connect(_on_world_action.bind(target, reply_def[0], reply_def[1]))
 			offer_buttons.add_child(reply_button)
+	# === بخش نقشه‌محور: اطلاعات جبهه و تدارکات ===
+	if wars.has(target):
+		var war = wars[target]
+		var progress = float(war.get("progress", 0.0))
+		var force_ratio = float(war.get("force_ratio", 1.0)) if war.has("force_ratio") else 1.0
+		var air_sup = float(war.get("air_superiority", 0.5)) if war.has("air_superiority") else 0.5
+		var daily_prog = float(war.get("daily_progress", 0.0)) if war.has("daily_progress") else 0.0
+		var war_card = _card("⚔️ جبهه جنگ - نقشه‌محور", parent_override)
+		_row(war_card, "پیشروی", "%+.1f%%" % progress, _color_for((progress + 100.0) / 200.0))
+		_bar(war_card, "نسبت قوا", clamp(force_ratio/2.0, 0.0, 1.0))
+		_bar(war_card, "برتری هوایی", air_sup)
+		_row(war_card, "پیشروی روزانه", "%+.2f km" % daily_prog)
+		# اطلاعات تدارکات از سیستم نظامی
+		var mil_detail = state.get("military", {}).get("logistics_detail", {})
+		if not mil_detail.is_empty():
+			_bar(war_card, "ذخیره سوخت", float(mil_detail.get("fuel_stock_days", 25.0))/30.0)
+			_bar(war_card, "ذخیره مهمات", float(mil_detail.get("ammo_stock_days", 20.0))/20.0)
+			_bar(war_card, "آسیب‌پذیری تدارکات", float(mil_detail.get("supply_line_vulnerability", 0.30)))
+			_row(war_card, "کاروان‌ها", PersianFormatter.to_persian_digits(str(mil_detail.get("convoy_trucks", 800))))
+		# جبهه‌های تفصیلی
+		var fronts = state.get("military", {}).get("fronts_detail", {}).get("active_fronts", []) if state.get("military",{}).has("fronts_detail") else []
+		for front in fronts:
+			if str(front.get("target","")) == target:
+				_row(war_card, "زمین", str(front.get("terrain","دشت")))
+				_row(war_card, "هوا", str(front.get("weather","آفتابی")))
+				_bar(war_card, "تدارکات جبهه", float(front.get("supply_status",0.5)))
+				break
+
+		# عملیات نقشه‌محور روی کشور دشمن
+		var map_ops_card = _card("🗺️ عملیات نقشه‌محور روی %s" % _fa_country(target), parent_override)
+		var map_hint = Label.new()
+		map_hint.text = "مثل دنیای واقعی: حمله هوایی، محاصره دریایی، خرابکاری زیرساخت، پهپاد swarm، سایبری، تبلیغات - همه با کلیک روی نقشه"
+		map_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		map_hint.modulate = Color(0.72,0.81,0.87)
+		map_ops_card.add_child(map_hint)
+		var map_ops_grid = GridContainer.new()
+		map_ops_grid.columns = 2
+		map_ops_card.add_child(map_ops_grid)
+		var map_ops = [
+			["airstrike","✈️ حمله هوایی","بمباران تاسیسات - هزینه ۱.۵ میلیارد"],
+			["naval_blockade","⚓ محاصره دریایی","بستن بنادر - اثر بر تجارت"],
+			["sabotage_infrastructure","💣 خرابکاری زیرساخت","انفجار پل/خط لوله"],
+			["drone_swarm","🛸 پهپاد انبوه","۲۰ فروند پهپاد انتحاری"],
+			["cyber_attack","💻 حمله سایبری","اخلال شبکه برق"],
+			["propaganda","📢 جنگ روانی","تضعیف روحیه دشمن"],
+			["humanitarian","🎁 کمک بشردوستانه","نفوذ نرم +۲"]
+		]
+		for op in map_ops:
+			var btn = Button.new()
+			btn.text = op[1]
+			btn.tooltip_text = op[2]
+			btn.custom_minimum_size = Vector2(210, 48)
+			var can_op = float(state.get("military",{}).get("readiness",0.6)) >= 0.40
+			btn.disabled = not can_op
+			if not can_op:
+				btn.tooltip_text += " - آمادگی کم"
+			if op[0] == "airstrike" or op[0] == "drone_swarm":
+				btn.theme_type_variation = "DangerButton"
+			elif op[0] == "humanitarian":
+				btn.theme_type_variation = "SuccessButton"
+			btn.pressed.connect(FeedbackManager.play_click)
+			btn.pressed.connect(_on_map_operation.bind(target, op[0], op[1]))
+			map_ops_grid.add_child(btn)
+
 	var action_grid = GridContainer.new()
 	action_grid.columns = 3
 	card.add_child(action_grid)
