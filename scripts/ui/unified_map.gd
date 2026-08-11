@@ -440,6 +440,19 @@ func _draw_routes():
 			var record = route.duplicate(true); record["points"] = points; record["type"] = layer
 			_drawn_routes.append(record)
 
+# مختصات (lon, lat) یک شهر/واحد مشخص؛ در نبود آن Vector2.ZERO برمی‌گرداند
+func _settlement_point(code: String, unit_id: String) -> Vector2:
+	if unit_id == "" or code == "":
+		return Vector2.ZERO
+	for city in CountryGeographyManager.get_cities(code):
+		if str(city.get("unit_id", "")) == unit_id:
+			return Vector2(float(city.get("lon", 0.0)), float(city.get("lat", 0.0)))
+	# fallback: پایتخت
+	var capital = CountryGeographyManager.get_capital_city(code)
+	if not capital.is_empty():
+		return Vector2(float(capital.get("lon", 0.0)), float(capital.get("lat", 0.0)))
+	return Vector2.ZERO
+
 func _draw_hubs():
 	for layer in ["air", "sea"]:
 		if not overlays.get(layer, false): continue
@@ -765,17 +778,28 @@ func _draw_constructions():
 	var constructions = adv.get("constructions", [])
 	var buildings = adv.get("buildings", [])
 
-	# ساخت‌وساز در حال ساخت - نقطه‌چین زرد
+	# ساخت‌وسازها: در حال ساخت (نقطه‌چین زرد) + تکمیل‌شده (خط توپر دائمی).
+	# مهم: ساخت‌وساز تکمیل‌شده نباید از نقشه حذف شود - جاده/راه‌آهن ساخته‌شده باید همیشه دیده شود.
 	for construction in constructions:
 		var status = str(construction.get("status","building"))
-		if status == "completed":
-			continue
 		var from_lat = float(construction.get("from_lat",0.0))
 		var from_lon = float(construction.get("from_lon",0.0))
 		var to_lat = float(construction.get("to_lat",0.0))
 		var to_lon = float(construction.get("to_lon",0.0))
 		var from_c = str(construction.get("from_country",""))
 		var to_c = str(construction.get("to_country",""))
+		var from_u = str(construction.get("from_unit",""))
+		var to_u = str(construction.get("to_unit",""))
+		# ۱) مختصات دقیق از شهر/واحد مبدأ و مقصد (نه مرکز کشور)
+		if from_lat == 0.0 and from_lon == 0.0 and from_c != "":
+			var from_point: Vector2 = _settlement_point(from_c, from_u)
+			if from_point != Vector2.ZERO:
+				from_lat = from_point.y; from_lon = from_point.x
+		if to_lat == 0.0 and to_lon == 0.0 and to_c != "":
+			var to_point: Vector2 = _settlement_point(to_c, to_u)
+			if to_point != Vector2.ZERO:
+				to_lat = to_point.y; to_lon = to_point.x
+		# ۲) در غیر این صورت مرکز کشور (تقریب درشت)
 		if from_lat == 0.0 and from_lon == 0.0 and from_c != "":
 			var from_profile = countries.get(from_c, {})
 			if not from_profile.is_empty():
@@ -797,6 +821,10 @@ func _draw_constructions():
 
 		var build_type = str(construction.get("build_type","road"))
 		var progress = float(construction.get("progress",0.0))
+		# تکمیل‌شده‌ها از فهرست دائمی network_links رسم می‌شوند (زیر را ببینید)
+		if status == "completed":
+			continue
+		var is_completed = false
 
 		var color_map = {
 			"road": Color(0.85, 0.65, 0.25, 0.80),
@@ -810,22 +838,77 @@ func _draw_constructions():
 		var build_color = color_map.get(build_type, Color(0.9,0.7,0.2,0.80))
 		var points = _curve_points(start, finish, "land")
 
-		# پیشرفت با نقطه‌چین
-		var dash_len = int(points.size() * progress)
-		if dash_len > 2:
-			var partial = PackedVector2Array()
-			for i in range(dash_len):
-				partial.append(points[i])
-			draw_polyline(partial, build_color, 2.2, true)
-			# بقیه خاکستری نقطه‌چین
-			var remaining = PackedVector2Array()
-			for i in range(dash_len, points.size()):
-				remaining.append(points[i])
-			_draw_dashed(remaining, Color(0.5,0.5,0.5,0.50), 1.5)
+		if is_completed:
+			# تکمیل‌شده: خط توپر پررنگ با حاشیه تیره - همیشه روی نقشه دیده می‌شود
+			draw_polyline(points, Color(0.0, 0.02, 0.03, 0.75), 4.0, true)
+			var done_color = build_color.lightened(0.15)
+			done_color.a = 0.95
+			draw_polyline(points, done_color, 2.4, true)
+		else:
+			# در حال ساخت: پیشرفت با نقطه‌چین
+			var dash_len = int(points.size() * max(progress, 0.05))
+			if dash_len > 2:
+				var partial = PackedVector2Array()
+				for i in range(dash_len):
+					partial.append(points[i])
+				draw_polyline(partial, build_color, 2.2, true)
+				# بقیه خاکستری نقطه‌چین
+				var remaining = PackedVector2Array()
+				for i in range(dash_len, points.size()):
+					remaining.append(points[i])
+				_draw_dashed(remaining, Color(0.5,0.5,0.5,0.50), 1.5)
 
 		if zoom_level >= 3.0 and points.size() > 2:
 			var mid = points[points.size()/2]
-			draw_string(PersianFont, mid + Vector2(8, -6), "%s %.0f%%" % [build_type, progress*100.0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, build_color)
+			if is_completed:
+				draw_string(PersianFont, mid + Vector2(8, -6), "%s ✓" % build_type, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, build_color.lightened(0.2))
+			else:
+				draw_string(PersianFont, mid + Vector2(8, -6), "%s %.0f%%" % [build_type, progress*100.0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, build_color)
+
+	# === خطوط زیرساختی تکمیل‌شده (دائمی) - جاده، راه‌آهن ===
+	for link in adv.get("network_links", []):
+		var link_from_lat = float(link.get("from_lat",0.0))
+		var link_from_lon = float(link.get("from_lon",0.0))
+		var link_to_lat = float(link.get("to_lat",0.0))
+		var link_to_lon = float(link.get("to_lon",0.0))
+		var link_from_c = str(link.get("from_country",""))
+		var link_to_c = str(link.get("to_country",""))
+		var link_from_u = str(link.get("from_unit",""))
+		var link_to_u = str(link.get("to_unit",""))
+		if link_from_lat == 0.0 and link_from_lon == 0.0 and link_from_c != "":
+			var fp: Vector2 = _settlement_point(link_from_c, link_from_u)
+			if fp != Vector2.ZERO:
+				link_from_lat = fp.y; link_from_lon = fp.x
+		if link_to_lat == 0.0 and link_to_lon == 0.0 and link_to_c != "":
+			var tp: Vector2 = _settlement_point(link_to_c, link_to_u)
+			if tp != Vector2.ZERO:
+				link_to_lat = tp.y; link_to_lon = tp.x
+		if link_from_lat == 0.0 and link_from_lon == 0.0 and link_from_c != "":
+			var fp2 = countries.get(link_from_c, {})
+			if not fp2.is_empty():
+				link_from_lat = float(fp2.get("lat",0.0)); link_from_lon = float(fp2.get("lon",0.0))
+		if link_to_lat == 0.0 and link_to_lon == 0.0 and link_to_c != "":
+			var tp2 = countries.get(link_to_c, {})
+			if not tp2.is_empty():
+				link_to_lat = float(tp2.get("lat",0.0)); link_to_lon = float(tp2.get("lon",0.0))
+		if link_from_lat == 0.0 and link_to_lat == 0.0:
+			continue
+		var link_start = _geo_point(link_from_lon, link_from_lat)
+		var link_finish = _geo_point(link_to_lon, link_to_lat)
+		if not _segment_near_view(link_start, link_finish):
+			continue
+		var link_type = str(link.get("build_type","road"))
+		var link_color_map = {
+			"road": Color(0.95, 0.75, 0.30, 0.95),
+			"rail": Color(0.70, 0.70, 0.78, 0.95)
+		}
+		var link_color = link_color_map.get(link_type, Color(0.9,0.75,0.3,0.95))
+		var link_points = _curve_points(link_start, link_finish, "land")
+		draw_polyline(link_points, Color(0.0, 0.02, 0.03, 0.80), 4.5, true)
+		draw_polyline(link_points, link_color, 2.6, true)
+		if zoom_level >= 3.0 and link_points.size() > 2:
+			var link_mid = link_points[link_points.size()/2]
+			draw_string(PersianFont, link_mid + Vector2(8, -6), ("جاده ✓" if link_type == "road" else "راه‌آهن ✓"), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, link_color)
 
 	# ساختمان‌های ساخته‌شده - آیکون
 	for building in buildings:
