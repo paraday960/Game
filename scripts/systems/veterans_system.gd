@@ -160,4 +160,200 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type":"coverage_veterans","coverage": _coverage, "message":"پوشش veterans پایین - دسترسی محدود"})
 
 
+	
+	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
+	var _extra_politics = state.get("politics",{})
+	var _extra_econ = state.get("economy",{})
+	var _extra_pop = state.get("population",{})
+	var _extra_env = state.get("environment",{})
+	var _extra_tech = state.get("technology",{})
+	var _extra_culture = state.get("culture",{})
+
+	var _trust = float(_extra_politics.get("trust",0.55))
+	var _corruption = float(_extra_politics.get("corruption",0.30))
+	var _stability = float(_extra_politics.get("stability",0.60))
+	var _happiness = float(_extra_pop.get("happiness",0.60))
+	var _gini = float(state.get("welfare",{}).get("gini",0.38))
+	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
+
+	# اثر اعتماد بر کارآمدی
+	var _sys_q = 0.60
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		_sys_q = float(state["veterans"].get("quality",0.60) if state["veterans"].has("quality") else state["veterans"].get("efficiency",0.60) if state["veterans"].has("efficiency") else 0.60)
+	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		state["veterans"]["quality"] = _sys_q
+
+	# نابرابری و نارضایتی
+	if _gini > 0.42 and Deterministic.chance(0.007):
+		events.append({"type":"inequality_veterans_deep","gini": _gini, "message":"نابرابری اثر بر veterans - شکاف طبقاتی"})
+
+	# فناوری دوگانه (نظامی-غیرنظامی)
+	if _digital > 0.65 and Deterministic.chance(0.006):
+		events.append({"type":"dual_use_tech_veterans","digital": _digital, "message":"فناوری دوگانه در veterans - کاربرد نظامی و غیرنظامی"})
+
+	# تاب‌آوری اقلیمی
+	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
+	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
+		events.append({"type":"climate_vulnerability_veterans","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی veterans"})
+
+	# شبکه اجتماعی و سرمایه اجتماعی
+	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
+	if _social_capital < 0.40 and Deterministic.chance(0.006):
+		events.append({"type":"low_social_capital_veterans","capital": _social_capital, "message":"سرمایه اجتماعی پایین در veterans"})
+
+	# اثر تورمی بر هزینه نگهداری
+	var _inflation = float(_extra_econ.get("inflation",0.08))
+	if state.has("veterans") and state["veterans"] is Dictionary and state["veterans"].has("maintenance_cost"):
+		state["veterans"]["maintenance_cost"] = float(state["veterans"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
+
+
+	
+	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
+	var _extra_politics = state.get("politics",{})
+	var _extra_econ = state.get("economy",{})
+	var _extra_pop = state.get("population",{})
+	var _extra_env = state.get("environment",{})
+	var _extra_tech = state.get("technology",{})
+	var _extra_culture = state.get("culture",{})
+
+	var _trust = float(_extra_politics.get("trust",0.55))
+	var _corruption = float(_extra_politics.get("corruption",0.30))
+	var _stability = float(_extra_politics.get("stability",0.60))
+	var _happiness = float(_extra_pop.get("happiness",0.60))
+	var _gini = float(state.get("welfare",{}).get("gini",0.38))
+	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
+
+	# اثر اعتماد بر کارآمدی
+	var _sys_q = 0.60
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		_sys_q = float(state["veterans"].get("quality",0.60) if state["veterans"].has("quality") else state["veterans"].get("efficiency",0.60) if state["veterans"].has("efficiency") else 0.60)
+	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		state["veterans"]["quality"] = _sys_q
+
+	# نابرابری و نارضایتی
+	if _gini > 0.42 and Deterministic.chance(0.007):
+		events.append({"type":"inequality_veterans_deep","gini": _gini, "message":"نابرابری اثر بر veterans - شکاف طبقاتی"})
+
+	# فناوری دوگانه (نظامی-غیرنظامی)
+	if _digital > 0.65 and Deterministic.chance(0.006):
+		events.append({"type":"dual_use_tech_veterans","digital": _digital, "message":"فناوری دوگانه در veterans - کاربرد نظامی و غیرنظامی"})
+
+	# تاب‌آوری اقلیمی
+	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
+	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
+		events.append({"type":"climate_vulnerability_veterans","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی veterans"})
+
+	# شبکه اجتماعی و سرمایه اجتماعی
+	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
+	if _social_capital < 0.40 and Deterministic.chance(0.006):
+		events.append({"type":"low_social_capital_veterans","capital": _social_capital, "message":"سرمایه اجتماعی پایین در veterans"})
+
+	# اثر تورمی بر هزینه نگهداری
+	var _inflation = float(_extra_econ.get("inflation",0.08))
+	if state.has("veterans") and state["veterans"] is Dictionary and state["veterans"].has("maintenance_cost"):
+		state["veterans"]["maintenance_cost"] = float(state["veterans"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
+
+
+	
+	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
+	var _extra_politics = state.get("politics",{})
+	var _extra_econ = state.get("economy",{})
+	var _extra_pop = state.get("population",{})
+	var _extra_env = state.get("environment",{})
+	var _extra_tech = state.get("technology",{})
+	var _extra_culture = state.get("culture",{})
+
+	var _trust = float(_extra_politics.get("trust",0.55))
+	var _corruption = float(_extra_politics.get("corruption",0.30))
+	var _stability = float(_extra_politics.get("stability",0.60))
+	var _happiness = float(_extra_pop.get("happiness",0.60))
+	var _gini = float(state.get("welfare",{}).get("gini",0.38))
+	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
+
+	# اثر اعتماد بر کارآمدی
+	var _sys_q = 0.60
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		_sys_q = float(state["veterans"].get("quality",0.60) if state["veterans"].has("quality") else state["veterans"].get("efficiency",0.60) if state["veterans"].has("efficiency") else 0.60)
+	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		state["veterans"]["quality"] = _sys_q
+
+	# نابرابری و نارضایتی
+	if _gini > 0.42 and Deterministic.chance(0.007):
+		events.append({"type":"inequality_veterans_deep","gini": _gini, "message":"نابرابری اثر بر veterans - شکاف طبقاتی"})
+
+	# فناوری دوگانه (نظامی-غیرنظامی)
+	if _digital > 0.65 and Deterministic.chance(0.006):
+		events.append({"type":"dual_use_tech_veterans","digital": _digital, "message":"فناوری دوگانه در veterans - کاربرد نظامی و غیرنظامی"})
+
+	# تاب‌آوری اقلیمی
+	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
+	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
+		events.append({"type":"climate_vulnerability_veterans","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی veterans"})
+
+	# شبکه اجتماعی و سرمایه اجتماعی
+	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
+	if _social_capital < 0.40 and Deterministic.chance(0.006):
+		events.append({"type":"low_social_capital_veterans","capital": _social_capital, "message":"سرمایه اجتماعی پایین در veterans"})
+
+	# اثر تورمی بر هزینه نگهداری
+	var _inflation = float(_extra_econ.get("inflation",0.08))
+	if state.has("veterans") and state["veterans"] is Dictionary and state["veterans"].has("maintenance_cost"):
+		state["veterans"]["maintenance_cost"] = float(state["veterans"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
+
+
+	
+	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
+	var _extra_politics = state.get("politics",{})
+	var _extra_econ = state.get("economy",{})
+	var _extra_pop = state.get("population",{})
+	var _extra_env = state.get("environment",{})
+	var _extra_tech = state.get("technology",{})
+	var _extra_culture = state.get("culture",{})
+
+	var _trust = float(_extra_politics.get("trust",0.55))
+	var _corruption = float(_extra_politics.get("corruption",0.30))
+	var _stability = float(_extra_politics.get("stability",0.60))
+	var _happiness = float(_extra_pop.get("happiness",0.60))
+	var _gini = float(state.get("welfare",{}).get("gini",0.38))
+	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
+
+	# اثر اعتماد بر کارآمدی
+	var _sys_q = 0.60
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		_sys_q = float(state["veterans"].get("quality",0.60) if state["veterans"].has("quality") else state["veterans"].get("efficiency",0.60) if state["veterans"].has("efficiency") else 0.60)
+	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
+	if state.has("veterans") and state["veterans"] is Dictionary:
+		state["veterans"]["quality"] = _sys_q
+
+	# نابرابری و نارضایتی
+	if _gini > 0.42 and Deterministic.chance(0.007):
+		events.append({"type":"inequality_veterans_deep","gini": _gini, "message":"نابرابری اثر بر veterans - شکاف طبقاتی"})
+
+	# فناوری دوگانه (نظامی-غیرنظامی)
+	if _digital > 0.65 and Deterministic.chance(0.006):
+		events.append({"type":"dual_use_tech_veterans","digital": _digital, "message":"فناوری دوگانه در veterans - کاربرد نظامی و غیرنظامی"})
+
+	# تاب‌آوری اقلیمی
+	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
+	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
+		events.append({"type":"climate_vulnerability_veterans","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی veterans"})
+
+	# شبکه اجتماعی و سرمایه اجتماعی
+	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
+	if _social_capital < 0.40 and Deterministic.chance(0.006):
+		events.append({"type":"low_social_capital_veterans","capital": _social_capital, "message":"سرمایه اجتماعی پایین در veterans"})
+
+	# اثر تورمی بر هزینه نگهداری
+	var _inflation = float(_extra_econ.get("inflation",0.08))
+	if state.has("veterans") and state["veterans"] is Dictionary and state["veterans"].has("maintenance_cost"):
+		state["veterans"]["maintenance_cost"] = float(state["veterans"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
+
+
 	return {"success": true, "state": state, "events": events}

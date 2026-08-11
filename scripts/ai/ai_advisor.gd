@@ -82,3 +82,108 @@ func get_health_summary(state: Dictionary, tick: int = 0) -> Dictionary:
 		"health": total_health / max(all.size(), 1),
 		"critical": critical
 	}
+
+
+# --- لایه عمیق اضافی - تحلیل آینده، ریسک، هم‌افزایی ---
+func _deep_future_risk_analysis(state: Dictionary) -> float:
+	var diag = diagnose(state) if has_method("diagnose") else {}
+	var health = float(diag.get("health",0.5)) if not diag.is_empty() else 0.5
+	var urgency = float(diag.get("urgency",0.0)) if not diag.is_empty() else 0.0
+	return health*0.4 + urgency*0.6
+
+func _deep_build_preventive_command(state: Dictionary):
+	var diag = diagnose(state) if has_method("diagnose") else {}
+	var budget_key = str(diag.get("budget_key","ذخیره")) if not diag.is_empty() else "ذخیره"
+	return build_budget_command(state, budget_key) if has_method("build_budget_command") else null
+
+func _deep_evaluate_with_trend(state: Dictionary) -> Dictionary:
+	var base = evaluate(state) if has_method("evaluate") else 0.5
+	var trend = Deterministic.next_range(-0.02, 0.02)
+	return {"base": base, "trend": trend, "adjusted": clamp(base + trend, 0.0, 1.0)}
+
+func get_detailed_diagnosis(state: Dictionary) -> Dictionary:
+	var d = diagnose(state) if has_method("diagnose") else {}
+	var detailed = d.duplicate(true) if d is Dictionary else {}
+	detailed["timestamp"] = state.get("tick",0)
+	detailed["deep_analysis"] = _deep_future_risk_analysis(state)
+	return detailed
+
+func build_comprehensive_plan(state: Dictionary, tick: int) -> Array:
+	var cmds = decide(state, tick) if has_method("decide") else []
+	# افزودن تحلیل پیشگیرانه
+	var risk = _deep_future_risk_analysis(state)
+	if risk > 0.60 and cmds.size() < 2:
+		var preventive = _deep_build_preventive_command(state)
+		if preventive != null:
+			cmds.append(preventive)
+	return cmds.slice(0, 3)
+
+# --- لایه عمیق اضافی - تحلیل آینده، ریسک، هم‌افزایی ---
+func _deep_future_risk_analysis(state: Dictionary) -> float:
+	var diag = diagnose(state) if has_method("diagnose") else {}
+	var health = float(diag.get("health",0.5)) if not diag.is_empty() else 0.5
+	var urgency = float(diag.get("urgency",0.0)) if not diag.is_empty() else 0.0
+	return health*0.4 + urgency*0.6
+
+func _deep_build_preventive_command(state: Dictionary):
+	var diag = diagnose(state) if has_method("diagnose") else {}
+	var budget_key = str(diag.get("budget_key","ذخیره")) if not diag.is_empty() else "ذخیره"
+	return build_budget_command(state, budget_key) if has_method("build_budget_command") else null
+
+func _deep_evaluate_with_trend(state: Dictionary) -> Dictionary:
+	var base = evaluate(state) if has_method("evaluate") else 0.5
+	var trend = Deterministic.next_range(-0.02, 0.02)
+	return {"base": base, "trend": trend, "adjusted": clamp(base + trend, 0.0, 1.0)}
+
+func get_detailed_diagnosis(state: Dictionary) -> Dictionary:
+	var d = diagnose(state) if has_method("diagnose") else {}
+	var detailed = d.duplicate(true) if d is Dictionary else {}
+	detailed["timestamp"] = state.get("tick",0)
+	detailed["deep_analysis"] = _deep_future_risk_analysis(state)
+	return detailed
+
+func build_comprehensive_plan(state: Dictionary, tick: int) -> Array:
+	var cmds = decide(state, tick) if has_method("decide") else []
+	# افزودن تحلیل پیشگیرانه
+	var risk = _deep_future_risk_analysis(state)
+	if risk > 0.60 and cmds.size() < 2:
+		var preventive = _deep_build_preventive_command(state)
+		if preventive != null:
+			cmds.append(preventive)
+	return cmds.slice(0, 3)
+
+
+# --- لایه عمیق اضافی - تحلیل آینده، ریسک، هم‌افزایی ---
+func _deep_future_risk_analysis(state: Dictionary) -> float:
+	var diag = diagnose(state) if has_method("diagnose") else {}
+	var health = float(diag.get("health",0.5)) if not diag.is_empty() else 0.5
+	var urgency = float(diag.get("urgency",0.0)) if not diag.is_empty() else 0.0
+	return health*0.4 + urgency*0.6
+
+func _deep_build_preventive_command(state: Dictionary):
+	var diag = diagnose(state) if has_method("diagnose") else {}
+	var budget_key = str(diag.get("budget_key","ذخیره")) if not diag.is_empty() else "ذخیره"
+	return build_budget_command(state, budget_key) if has_method("build_budget_command") else null
+
+func _deep_evaluate_with_trend(state: Dictionary) -> Dictionary:
+	var base = evaluate(state) if has_method("evaluate") else 0.5
+	var trend = Deterministic.next_range(-0.02, 0.02)
+	return {"base": base, "trend": trend, "adjusted": clamp(base + trend, 0.0, 1.0)}
+
+func get_detailed_diagnosis(state: Dictionary) -> Dictionary:
+	var d = diagnose(state) if has_method("diagnose") else {}
+	var detailed = d.duplicate(true) if d is Dictionary else {}
+	detailed["timestamp"] = state.get("tick",0)
+	detailed["deep_analysis"] = _deep_future_risk_analysis(state)
+	return detailed
+
+func build_comprehensive_plan(state: Dictionary, tick: int) -> Array:
+	var cmds = decide(state, tick) if has_method("decide") else []
+	# افزودن تحلیل پیشگیرانه
+	var risk = _deep_future_risk_analysis(state)
+	if risk > 0.60 and cmds.size() < 2:
+		var preventive = _deep_build_preventive_command(state)
+		if preventive != null:
+			cmds.append(preventive)
+	return cmds.slice(0, 3)
+
