@@ -8,6 +8,7 @@ signal view_changed(center, zoom)
 signal zoom_tier_changed(tier)
 
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
+const MapFxLayerClass = preload("res://scripts/ui/map_fx_layer.gd")
 const MIN_ZOOM := 1.0
 const MAX_ZOOM := 80.0
 const ADMIN_ZOOM := 3.6
@@ -60,6 +61,7 @@ var _ignore_mouse_until_ms:=0
 var _motion_until_ms:=0
 var _settled_redraw_pending:=false
 var _last_tier := ""
+var fx_layer: Control
 
 func _ready():
 	custom_minimum_size = Vector2(0, 820)
@@ -68,7 +70,29 @@ func _ready():
 	focus_mode = Control.FOCUS_ALL
 	clip_contents = true
 	resized.connect(queue_redraw)
+	# لایه افکت‌های زنده (موج، جنگ، تجارت، ابر) بالای نقشه ثابت
+	fx_layer = MapFxLayerClass.new()
+	fx_layer.map = self
+	add_child(fx_layer)
 	queue_redraw()
+
+# آیا افکت زنده‌ای برای نمایش هست؟ (باتری: بازترسیم فقط با نرخ ~۱۲ فریم)
+func _fx_active() -> bool:
+	if bool(SettingsManager.get_value("reduce_motion", false)):
+		return false
+	if not visible:
+		return false
+	if base_layer == "weather":
+		return true
+	if overlays.get("trade", false):
+		return true
+	if not world_state.get("wars", {}).is_empty() or not world_state.get("npc_wars", {}).is_empty():
+		return true
+	if zoom_level <= 2.3:
+		return true
+	if player_country != "":
+		return true
+	return false
 
 func configure(new_countries: Dictionary, new_relations: Dictionary, new_player: String, new_world: Dictionary, state: Dictionary, layer: String, new_overlays: Dictionary, initial_center: Vector2 = Vector2(0.5, 0.5), initial_zoom: float = 1.0):
 	countries = new_countries.duplicate(true)
@@ -173,6 +197,9 @@ func _draw_ocean():
 	var world_bottom_right = _normalized_to_screen(Vector2(1.0, 1.0), false)
 	var world_rect = Rect2(world_top_left, world_bottom_right - world_top_left)
 	draw_rect(world_rect, Color(0.015, 0.068, 0.102, 0.86), true)
+	# استخر نور ملایم مرکزی — عمق سینمایی ثابت بدون هزینه فریم.
+	for ring_index in range(5):
+		draw_circle(Vector2(size.x * 0.5, size.y * 0.32), 250.0 + float(ring_index) * 95.0, Color(0.10, 0.34, 0.46, 0.022))
 
 func _draw_graticule():
 	var alpha = clamp(0.10 + log(zoom_level) * 0.035, 0.10, 0.24)
@@ -210,6 +237,12 @@ func _draw_countries(low_detail:bool=false):
 					var screen_hole=_screen_ring(hole)
 					if screen_hole.size()>=3 and _polygon_visible(screen_hole) and not Geometry2D.triangulate_polygon(screen_hole).is_empty():draw_colored_polygon(screen_hole,OCEAN_TOP)
 			var ring = outer.duplicate(); ring.append(outer[0])
+			# سایه ساحلی: خشکی از اقیانوس بلند می‌شود (سبک نقشه سینمایی).
+			if not low_detail:
+				draw_polyline(ring, Color(0.0, 0.008, 0.016, 0.32), width + 4.0, true)
+				# هاله اختصاصی کشور بازیکن — هویت بصری HOI4.
+				if code_string == player_country:
+					draw_polyline(ring, Color(0.35, 0.85, 1.0, 0.20), width + 6.5, true)
 			draw_polyline(ring, border, width, true)
 
 func _draw_admin_detail(code: String):
@@ -398,6 +431,8 @@ func _draw_selected_outline():
 		var outer = _screen_ring(polygon.outer)
 		if outer.size() < 3 or not _polygon_visible(outer): continue
 		var ring = outer.duplicate(); ring.append(outer[0])
+		# هاله طلایی نرم پشت خط انتخاب — خوانایی در نمای شلوغ.
+		draw_polyline(ring, Color(1.0, 0.79, 0.22, 0.18), clamp(7.0 + log(zoom_level), 7.0, 10.0), true)
 		draw_polyline(ring, Color(1.0, 0.76, 0.18, 0.96), clamp(2.0 + log(zoom_level) * 0.35, 2.0, 4.5), true)
 
 func _draw_map_hud():

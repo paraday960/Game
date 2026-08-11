@@ -10,6 +10,8 @@ const ToastStackClass = preload("res://scripts/ui/toast_stack.gd")
 const TouchScrollClass = preload("res://scripts/ui/touch_scroll_container.gd")
 const TrendChartClass = preload("res://scripts/ui/trend_chart.gd")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
+const EmblemArt = preload("res://assets/art/emblem_sigil.png")
+const HeroBannerArt = preload("res://assets/art/hero_world_banner.jpg")
 
 # ---------- وضعیت UI ----------
 var auto_tick: bool = false
@@ -876,6 +878,16 @@ func _build_command_kpis(st: Dictionary):
 	var stab = float(ind.get("stability", st.get("politics", {}).get("stability", 0.6)))
 	_kpi_card(grid, "⚖", "ثبات کشور", _fmt_pct(stab), _health_word(stab), _color_for(stab), "government")
 	_kpi_card(grid, "★", "قدرت ملی", PersianFormatter.format_number(int(ind.get("power_score", 0))), "سطح %s" % PersianFormatter.to_persian_digits(str(st.get("level", 1))), ACCENT_GOLD, "systems")
+
+# تپش ملایم تناوبی برای دکمه‌های کلیدی — حرکت ظریف سبک رابط بازی‌های استراتژیک.
+func _pulse_control(ctrl: Control):
+	if bool(SettingsManager.get_value("reduce_motion", false)) or not is_instance_valid(ctrl):
+		return
+	var tween = ctrl.create_tween()
+	tween.set_loops()
+	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(ctrl, "modulate:a", 0.84, 0.95)
+	tween.tween_property(ctrl, "modulate:a", 1.0, 0.95)
 
 func _health_word(ratio: float) -> String:
 	if ratio >= 0.75: return "عالی"
@@ -1913,7 +1925,13 @@ func _build_unified_map():
 
 	if int(state.get("tick", 0)) == 0:
 		var setup = _hero_card()
-		var hero_icon = Label.new(); hero_icon.text = "❖"; hero_icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_icon.add_theme_font_size_override("font_size", 60); hero_icon.modulate = ACCENT_GOLD; setup.add_child(hero_icon)
+		# بنر سینمایی «زمین در شب» — هنر بازی در نخستین نگاه.
+		var banner_clip = Control.new(); banner_clip.clip_contents = true; banner_clip.custom_minimum_size = Vector2(0, 315); banner_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL; banner_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var banner = TextureRect.new(); banner.texture = HeroBannerArt; banner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; banner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED; banner.set_anchors_preset(Control.PRESET_FULL_RECT); banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		banner_clip.add_child(banner); setup.add_child(banner_clip)
+		# نشان طلایی عقاب و کره — امضای بصری بازی.
+		var emblem_box = CenterContainer.new(); emblem_box.mouse_filter = Control.MOUSE_FILTER_IGNORE; setup.add_child(emblem_box)
+		var emblem_art = TextureRect.new(); emblem_art.texture = EmblemArt; emblem_art.custom_minimum_size = Vector2(252, 150); emblem_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; emblem_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT; emblem_art.mouse_filter = Control.MOUSE_FILTER_IGNORE; emblem_box.add_child(emblem_art)
 		var hero_title = Label.new(); hero_title.text = "شبیه‌ساز کشور"; hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_title.add_theme_font_size_override("font_size", 46); setup.add_child(hero_title)
 		var hero_sub = Label.new(); hero_sub.text = "فرماندهی یک ملت واقعی؛ ۱۹۵ کشور، ۶۵ سامانه زنده و تصمیم‌های ماهانه شما. کشور و سناریو را برگزینید؛ پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; hero_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hero_sub.modulate = TEXT_MUTED; setup.add_child(hero_sub)
 		var row_country = _chooser_row(setup, "⚑ کشور")
@@ -1932,6 +1950,7 @@ func _build_unified_map():
 		scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); row_scenario.add_child(scenario_select_option)
 		scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = TEXT_MUTED; scenario_description_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
 		var start_button = _mk_btn(setup, "⚑ شروع فرماندهی", Vector2(340,62), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; start_button.add_theme_font_size_override("font_size", 27)
+		_pulse_control(start_button)
 
 	var controls = _card("◉ لنزها و لایه‌های نقشه")
 	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
