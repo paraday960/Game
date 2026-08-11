@@ -29,6 +29,10 @@ var map_overlays: Dictionary = {"wars":true,"alliances":true,"trade":true,"air":
 var map_advanced_mode: String = "select" # select, battle_plan, build_road, build_rail, build_fort, build_depot, build_airfield, build_radar
 var map_advanced_start_country: String = ""
 var map_advanced_start_unit: String = ""
+var _comparison_unit_a: String = ""
+var _comparison_unit_b: String = ""
+var _comparison_country_a: String = ""
+var _comparison_country_b: String = ""
 var map_camera_center := Vector2(0.5, 0.5)
 var map_zoom := 1.0
 var selected_country_unit: String = ""
@@ -2033,6 +2037,25 @@ func _build_unified_map():
 
 	# برگه کنترل شناور پایین نقشه — لنزها و لایه‌های تحلیلی.
 	var controls = _card("◉ لنزها و لایه‌های نقشه")
+	# === جستجوی فارسی نقشه‌محور - حرفه‌ای ===
+	var search_row = HBoxContainer.new()
+	search_row.add_theme_constant_override("separation", 8)
+	controls.add_child(search_row)
+	var search_icon = Label.new()
+	search_icon.text = "🔍"
+	search_icon.add_theme_font_size_override("font_size", 22)
+	search_row.add_child(search_icon)
+	var search_edit = LineEdit.new()
+	search_edit.placeholder_text = "جستجوی کشور/شهر فارسی... مثلا ایران، تهران، اصفهان"
+	search_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	search_edit.custom_minimum_size = Vector2(0, 42)
+	search_row.add_child(search_edit)
+	var search_btn = Button.new()
+	search_btn.text = "جستجو"
+	search_btn.custom_minimum_size = Vector2(90, 42)
+	search_row.add_child(search_btn)
+	search_edit.text_submitted.connect(_on_map_search.bind(search_edit))
+	search_btn.pressed.connect(_on_map_search.bind(search_edit))
 	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
 	map_control_flow = HFlowContainer.new(); map_control_flow.add_theme_constant_override("h_separation",7); map_control_flow.add_theme_constant_override("v_separation",6); controls.add_child(map_control_flow)
 	var lens_defs = [
@@ -2462,6 +2485,147 @@ func _on_advanced_map_mode(mode: String):
 						btn.theme_type_variation = "LensChipActive" if is_active else "LensChip"
 						btn.set_pressed_no_signal(is_active)
 
+func _on_map_search(edit: LineEdit):
+	var query = str(edit.text).strip_edges()
+	if query.is_empty():
+		_toast("🔍 نام کشور یا شهر فارسی را وارد کن")
+		return
+	# جستجوی کشورها - فارسی
+	var found_country = ""
+	var found_city = {}
+	var found_unit = {}
+	var lower_query = query.to_lower()
+
+	# جستجوی کشور
+	for code in WorldManager.get_country_ids():
+		var name_fa = WorldManager.get_country_name(code)
+		if lower_query in name_fa.to_lower() or lower_query in code.to_lower():
+			found_country = code
+			break
+
+	# جستجوی شهر اگر کشور پیدا نشد یا همراه کشور
+	if found_country == "":
+		# جستجوی تمام شهرها
+		for code in WorldManager.get_country_ids():
+			var cities = CountryGeographyManager.get_cities(code)
+			for city in cities:
+				var city_name = str(city.get("name_fa",""))
+				if lower_query in city_name.to_lower():
+					found_country = code
+					found_city = city
+					break
+			if found_country != "":
+				break
+
+	# اگر هنوز پیدا نشد، جستجوی استان
+	if found_country == "":
+		for code in WorldManager.get_country_ids():
+			var units = CountryGeographyManager.get_units(code)
+			for unit in units:
+				var unit_name = str(unit.get("name_fa",""))
+				if lower_query in unit_name.to_lower():
+					found_country = code
+					found_unit = unit
+					break
+			if found_country != "":
+				break
+
+	if found_country == "":
+		_toast("❌ '%s' پیدا نشد - نام فارسی کشور/شهر/استان را وارد کن (مثلا ایران، تهران، اصفهان)" % query)
+		return
+
+	# تمرکز روی کشور/شهر پیدا شده
+	selected_world_country = found_country
+	if not found_city.is_empty():
+		selected_country_unit = str(found_city.get("unit_id",""))
+		_toast("✅ شهر پیدا شد: %s در %s" % [str(found_city.get("name_fa","")), WorldManager.get_country_name(found_country)])
+	elif not found_unit.is_empty():
+		selected_country_unit = str(found_unit.get("id",""))
+		_toast("✅ استان پیدا شد: %s در %s" % [str(found_unit.get("name_fa","")), WorldManager.get_country_name(found_country)])
+	else:
+		selected_country_unit = ""
+		_toast("✅ کشور پیدا شد: %s" % WorldManager.get_country_name(found_country))
+
+	if is_instance_valid(current_unified_map):
+		current_unified_map.focus_country(found_country)
+
+	# اگر شهر پیدا شد، زوم بیشتر
+	if not found_city.is_empty() and is_instance_valid(current_unified_map):
+		# زوم به شهر - کمی بیشتر
+		current_unified_map.zoom_level = clamp(current_unified_map.zoom_level * 1.8, 5.0, 20.0)
+
+	call_deferred("_refresh_unified_map_context")
+	# مقایسه دو استان - اگر قبلا یکی انتخاب شده بود
+	if not found_unit.is_empty() and not _comparison_unit_a.is_empty() and _comparison_unit_b.is_empty():
+		_comparison_unit_b = str(found_unit.get("id",""))
+		_toast("📊 مقایسه فعال: %s vs %s" % [_comparison_unit_a, _comparison_unit_b])
+		call_deferred("_show_comparison_panel")
+
+func _show_comparison_panel():
+	# نمایش مقایسه دو استان - ۳۳ سیستم کنار هم
+	if _comparison_unit_a.is_empty() or _comparison_unit_b.is_empty():
+		return
+	var state = GameState.state
+	var country_a = _comparison_country_a if not _comparison_country_a.is_empty() else selected_world_country
+	var country_b = _comparison_country_b if not _comparison_country_b.is_empty() else selected_world_country
+	var metrics_a = CountryGeographyManager.get_unit_metrics(country_a, _comparison_unit_a, state)
+	var metrics_b = CountryGeographyManager.get_unit_metrics(country_b, _comparison_unit_b, state)
+	if metrics_a.is_empty() or metrics_b.is_empty():
+		_toast("❌ مقایسه ممکن نیست - استان‌ها از کشورهای مختلف")
+		return
+
+	var compare_card = _card("📊 مقایسه دو استان - نقشه‌محور", map_context_host)
+	var header = HBoxContainer.new()
+	compare_card.add_child(header)
+	var col_a = VBoxContainer.new(); col_a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var col_b = VBoxContainer.new(); col_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(col_a)
+	header.add_child(col_b)
+
+	var title_a = Label.new(); title_a.text = "A: %s" % metrics_a.get("name_fa",""); title_a.modulate = Color(0.4,0.85,1.0); col_a.add_child(title_a)
+	var title_b = Label.new(); title_b.text = "B: %s" % metrics_b.get("name_fa",""); title_b.modulate = Color(1.0,0.85,0.4); col_b.add_child(title_b)
+
+	var systems_to_compare = ["population","gdp","infrastructure","satisfaction","security","agriculture","industry","health","education","military_score"]
+	for sys_key in systems_to_compare:
+		var row = HBoxContainer.new()
+		compare_card.add_child(row)
+		var label = Label.new(); label.text = sys_key; label.custom_minimum_size = Vector2(110,0); row.add_child(label)
+		var val_a = float(metrics_a.get(sys_key,0.5))
+		var val_b = float(metrics_b.get(sys_key,0.5))
+		var bar_a = ProgressBar.new(); bar_a.max_value = 1.0; bar_a.value = val_a; bar_a.custom_minimum_size = Vector2(140,14); row.add_child(bar_a)
+		var bar_b = ProgressBar.new(); bar_b.max_value = 1.0; bar_b.value = val_b; bar_b.custom_minimum_size = Vector2(140,14); row.add_child(bar_b)
+		var diff = val_a - val_b
+		var diff_label = Label.new(); diff_label.text = "%+.0f%%" % (diff*100.0); diff_label.modulate = Color(0.2,0.85,0.4) if diff>0 else Color(0.95,0.25,0.25) if diff<0 else Color(0.7,0.7,0.7); row.add_child(diff_label)
+
+	var clear_btn = Button.new(); clear_btn.text = "❌ پاک کردن مقایسه"; clear_btn.pressed.connect(_on_clear_comparison); compare_card.add_child(clear_btn)
+
+func _on_clear_comparison():
+	_comparison_unit_a = ""
+	_comparison_unit_b = ""
+	_comparison_country_a = ""
+	_comparison_country_b = ""
+	_toast("📊 مقایسه پاک شد")
+	call_deferred("_refresh_unified_map_context")
+
+func _on_set_comparison_a(country_code: String, unit_id: String, name_fa: String):
+	_comparison_country_a = country_code
+	_comparison_unit_a = unit_id
+	_toast("📊 A انتخاب شد: %s - حالا استان دوم را برای مقایسه انتخاب کن" % name_fa)
+	if not _comparison_unit_b.is_empty():
+		call_deferred("_show_comparison_panel")
+	else:
+		call_deferred("_refresh_unified_map_context")
+
+func _on_set_comparison_b(country_code: String, unit_id: String, name_fa: String):
+	_comparison_country_b = country_code
+	_comparison_unit_b = unit_id
+	_toast("📊 B انتخاب شد: %s" % name_fa)
+	if not _comparison_unit_a.is_empty():
+		call_deferred("_show_comparison_panel")
+	else:
+		_toast("اول A را انتخاب کن")
+		call_deferred("_refresh_unified_map_context")
+
 func _on_unified_overlay_toggled(pressed: bool, layer: String):
 	map_overlays[layer] = pressed
 	if is_instance_valid(current_unified_map): current_unified_map.set_overlay(layer, pressed)
@@ -2711,6 +2875,20 @@ func _build_selected_national_unit(state: Dictionary, code: String, unit_id: Str
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_on_map_operation.bind(code, op[0], op[1]))
 		city_grid.add_child(btn)
+
+	# دکمه مقایسه - نقشه‌محور پیشرفته
+	var compare_row = HBoxContainer.new()
+	city_ops_card.add_child(compare_row)
+	var compare_btn_a = Button.new()
+	compare_btn_a.text = "📊 انتخاب برای مقایسه A"
+	compare_btn_a.custom_minimum_size = Vector2(180, 40)
+	compare_btn_a.pressed.connect(_on_set_comparison_a.bind(code, unit_id, metrics.get("name_fa","")))
+	compare_row.add_child(compare_btn_a)
+	var compare_btn_b = Button.new()
+	compare_btn_b.text = "📊 مقایسه با B"
+	compare_btn_b.custom_minimum_size = Vector2(180, 40)
+	compare_btn_b.pressed.connect(_on_set_comparison_b.bind(code, unit_id, metrics.get("name_fa","")))
+	compare_row.add_child(compare_btn_b)
 
 func _build_selected_country_card(state: Dictionary, target: String, parent_override=null):
 	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
