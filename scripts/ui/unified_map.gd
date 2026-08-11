@@ -62,6 +62,11 @@ var _ignore_mouse_until_ms:=0
 var _motion_until_ms:=0
 var _settled_redraw_pending:=false
 var _last_tier := ""
+var _layer_value_cache: Dictionary = {}
+var _cache_tick: int = -1
+var _cache_layer: String = ""
+var _comparison_unit_a: String = ""
+var _comparison_unit_b: String = ""
 var fx_layer: Control
 
 func _ready():
@@ -297,56 +302,67 @@ func _country_fill(code: String) -> Color:
 	return palette.get(str(profile.get("region", "")), Color(0.25, 0.31, 0.33))
 
 func _country_layer_value(code: String, profile: Dictionary) -> float:
+	var current_tick = int(full_state.get("tick", 0))
+	if _cache_tick != current_tick or _cache_layer != base_layer:
+		_layer_value_cache.clear()
+		_cache_tick = current_tick
+		_cache_layer = base_layer
+	if _layer_value_cache.has(code):
+		return float(_layer_value_cache[code])
+
 	var population = max(1.0, float(profile.get("population", 1.0)))
 	var gdp = max(1.0, float(profile.get("gdp", 1.0)))
 	var wealth = clamp((log(max(500.0, gdp / population)) / log(10.0) - 2.7) / 2.0, 0.05, 1.0)
 	if code == player_country:
 		population = max(1.0, float(full_state.get("population", {}).get("total", population)))
 		gdp = max(1.0, float(full_state.get("economy", {}).get("gdp", gdp)))
+	var result = 0.5
 	match base_layer:
-		"relations": return clamp(float(relations.get(code, 100.0 if code == player_country else 50.0)) / 100.0, 0.0, 1.0)
-		"population": return clamp((log(population) / log(10.0) - 4.0) / 5.3, 0.0, 1.0)
-		"economy": return clamp((log(gdp) / log(10.0) - 8.0) / 6.0, 0.0, 1.0)
-		"infrastructure": return float(full_state.get("infrastructure", {}).get("quality", 0.55)) if code == player_country else clamp(0.22 + wealth * 0.72, 0.15, 0.95)
-		"satisfaction": return float(full_state.get("population", {}).get("happiness", 0.60)) if code == player_country else clamp(0.40 + wealth * 0.33, 0.32, 0.80)
-		"security": return float(full_state.get("security", {}).get("public_security", 0.65)) if code == player_country else clamp(0.42 + wealth * 0.36, 0.34, 0.83)
-		"weather": return clamp(max(float(profile.get("snow_factor", 0.2)), max(float(profile.get("flood_factor", 0.3)), float(profile.get("heat_factor", 0.4)))), 0.0, 1.0)
-		"resources": return clamp(0.25 + float(profile.get("strategic_weight", 0.3)) * 0.65, 0.0, 1.0)
-		"military", "military_power": return clamp(float(profile.get("military_power", 20.0)) / 100.0, 0.0, 1.0)
-		# گروه اقتصادی
-		"agriculture": return float(full_state.get("agriculture", {}).get("food_security", 0.85)) if code == player_country else clamp(0.30 + wealth*0.50, 0.10, 0.95)
-		"industry": return float(full_state.get("industry", {}).get("output", 100.0))/150.0 if code == player_country else clamp(0.20+wealth*0.60,0.10,0.90)
-		"trade_layer", "trade": return float(full_state.get("trade", {}).get("export_diversity", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"tourism": return float(full_state.get("tourism", {}).get("service_quality", 0.60)) if code == player_country else clamp(0.25+wealth*0.50,0.10,0.85)
-		"central_bank": return 1.0 - float(full_state.get("central_bank", {}).get("inflation", 0.08))/0.30 if code == player_country else clamp(wealth,0.10,0.90)
-		"stock_market": return float(full_state.get("stock_market", {}).get("investor_confidence", 0.60)) if code == player_country else clamp(wealth*0.8,0.10,0.90)
-		"retail": return float(full_state.get("retail", {}).get("competition", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"fuel_stations": return float(full_state.get("fuel_stations", {}).get("coverage", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		# اجتماعی
-		"health": return float(full_state.get("health", {}).get("quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"education": return float(full_state.get("education", {}).get("quality", 0.55)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"welfare": return 1.0 - float(full_state.get("welfare", {}).get("poverty", 0.15))*2.0 if code == player_country else clamp(1.0-wealth*0.3,0.10,0.90)
-		"family": return float(full_state.get("family", {}).get("child_welfare", 0.65)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
-		"sports_youth": return float(full_state.get("sports_youth", {}).get("youth_happiness", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"ethnicity": return 1.0 - float(full_state.get("ethnicity", {}).get("tension", 0.30)) if code == player_country else clamp(0.60,0.10,0.90)
-		"culture": return float(full_state.get("culture", {}).get("cohesion", 0.65)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
-		# سیاسی
-		"judicial": return float(full_state.get("judicial", {}).get("rule_of_law", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"intelligence": return float(full_state.get("intelligence", {}).get("cyber_readiness", 0.50)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"administration": return float(full_state.get("administration", {}).get("efficiency", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"elections": return float(full_state.get("elections", {}).get("transparency", 0.55)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"politics": return float(full_state.get("politics", {}).get("stability", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"statistics": return float(full_state.get("statistics", {}).get("accuracy", 0.75)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
-		"emergency": return float(full_state.get("emergency", {}).get("preparedness", 0.50)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		# زیرساخت
-		"environment": return float(full_state.get("environment", {}).get("air_quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"urban_facilities": return float(full_state.get("urban_facilities", {}).get("water_network", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"public_services": return float(full_state.get("public_services_detail", {}).get("coverage_health", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		"transport_roads": return 1.0 - float(full_state.get("transport_detail", {}).get("traffic_congestion", 0.40)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
-		"settlements": return float(full_state.get("settlements_detail", {}).get("housing_quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
-		# نظامی پیشرفته
-		"trade_route_warfare": return 1.0 - float(full_state.get("trade_route_warfare", {}).get("piracy_level", 0.10))*2.0
-	return 0.5
+		"relations": result = clamp(float(relations.get(code, 100.0 if code == player_country else 50.0)) / 100.0, 0.0, 1.0)
+		"population": result = clamp((log(population) / log(10.0) - 4.0) / 5.3, 0.0, 1.0)
+		"economy": result = clamp((log(gdp) / log(10.0) - 8.0) / 6.0, 0.0, 1.0)
+		"infrastructure": result = float(full_state.get("infrastructure", {}).get("quality", 0.55)) if code == player_country else clamp(0.22 + wealth * 0.72, 0.15, 0.95)
+		"satisfaction": result = float(full_state.get("population", {}).get("happiness", 0.60)) if code == player_country else clamp(0.40 + wealth * 0.33, 0.32, 0.80)
+		"security": result = float(full_state.get("security", {}).get("public_security", 0.65)) if code == player_country else clamp(0.42 + wealth * 0.36, 0.34, 0.83)
+		"weather": result = clamp(max(float(profile.get("snow_factor", 0.2)), max(float(profile.get("flood_factor", 0.3)), float(profile.get("heat_factor", 0.4)))), 0.0, 1.0)
+		"resources": result = clamp(0.25 + float(profile.get("strategic_weight", 0.3)) * 0.65, 0.0, 1.0)
+		"military", "military_power": result = clamp(float(profile.get("military_power", 20.0)) / 100.0, 0.0, 1.0)
+		"agriculture": result = float(full_state.get("agriculture", {}).get("food_security", 0.85)) if code == player_country else clamp(0.30 + wealth*0.50, 0.10, 0.95)
+		"industry": result = float(full_state.get("industry", {}).get("output", 100.0))/150.0 if code == player_country else clamp(0.20+wealth*0.60,0.10,0.90)
+		"trade_layer", "trade": result = float(full_state.get("trade", {}).get("export_diversity", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"tourism": result = float(full_state.get("tourism", {}).get("service_quality", 0.60)) if code == player_country else clamp(0.25+wealth*0.50,0.10,0.85)
+		"central_bank": result = 1.0 - float(full_state.get("central_bank", {}).get("inflation", 0.08))/0.30 if code == player_country else clamp(wealth,0.10,0.90)
+		"stock_market": result = float(full_state.get("stock_market", {}).get("investor_confidence", 0.60)) if code == player_country else clamp(wealth*0.8,0.10,0.90)
+		"retail": result = float(full_state.get("retail", {}).get("competition", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"fuel_stations": result = float(full_state.get("fuel_stations", {}).get("coverage", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"health": result = float(full_state.get("health", {}).get("quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"education": result = float(full_state.get("education", {}).get("quality", 0.55)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"welfare": result = 1.0 - float(full_state.get("welfare", {}).get("poverty", 0.15))*2.0 if code == player_country else clamp(1.0-wealth*0.3,0.10,0.90)
+		"family": result = float(full_state.get("family", {}).get("child_welfare", 0.65)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"sports_youth": result = float(full_state.get("sports_youth", {}).get("youth_happiness", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"ethnicity": result = 1.0 - float(full_state.get("ethnicity", {}).get("tension", 0.30)) if code == player_country else clamp(0.60,0.10,0.90)
+		"culture": result = float(full_state.get("culture", {}).get("cohesion", 0.65)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"judicial": result = float(full_state.get("judicial", {}).get("rule_of_law", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"intelligence": result = float(full_state.get("intelligence", {}).get("cyber_readiness", 0.50)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"administration": result = float(full_state.get("administration", {}).get("efficiency", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"elections": result = float(full_state.get("elections", {}).get("transparency", 0.55)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"politics": result = float(full_state.get("politics", {}).get("stability", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"statistics": result = float(full_state.get("statistics", {}).get("accuracy", 0.75)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"emergency": result = float(full_state.get("emergency", {}).get("preparedness", 0.50)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"environment": result = float(full_state.get("environment", {}).get("air_quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"urban_facilities": result = float(full_state.get("urban_facilities", {}).get("water_network", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"public_services": result = float(full_state.get("public_services_detail", {}).get("coverage_health", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"transport_roads": result = 1.0 - float(full_state.get("transport_detail", {}).get("traffic_congestion", 0.40)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"settlements": result = float(full_state.get("settlements_detail", {}).get("housing_quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"heritage": result = float(full_state.get("heritage", {}).get("preservation", 0.65)) if code == player_country else clamp(0.40+wealth*0.30,0.10,0.85)
+		"space": result = float(full_state.get("space", {}).get("level", 0.10)) if code == player_country else clamp(0.05+wealth*0.20,0.05,0.60)
+		"fisheries": result = float(full_state.get("fisheries", {}).get("stock_health", 0.65)) if code == player_country else clamp(0.30+wealth*0.30,0.10,0.80)
+		"veterans": result = float(full_state.get("veterans", {}).get("health_care", 0.65)) if code == player_country else clamp(0.40+wealth*0.30,0.10,0.85)
+		"military_power": result = float(full_state.get("military", {}).get("power", 65.0))/100.0 if code == player_country else clamp(float(profile.get("military_power",20.0))/100.0,0.0,1.0)
+		"trade_route_warfare": result = 1.0 - float(full_state.get("trade_route_warfare", {}).get("piracy_level", 0.10))*2.0
+
+	_layer_value_cache[code] = clamp(result, 0.0, 1.0)
+	return float(_layer_value_cache[code])
 
 func _admin_fill(code: String, unit: Dictionary) -> Color:
 	if base_layer in ["political", "relations"]:
