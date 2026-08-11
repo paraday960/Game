@@ -87,6 +87,11 @@ var drawer_overlay: Control
 var drawer_sheet: PanelContainer
 var drawer_open := false
 var map_wrap: Control
+var map_veil: ColorRect
+var map_fab_col: VBoxContainer
+var top_spacer: Control
+var hero_overlay: Control
+var map_mode := false
 var ticker_panel: PanelContainer
 var time_dock: PanelContainer
 
@@ -216,6 +221,20 @@ func _build_chrome():
 	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(background_rect)
 
+	# ── لایه جغرافیایی دائمی: نقشه جهان پشت همه پنل‌ها زنده است (سبک HOI4) ──
+	map_wrap = Control.new()
+	map_wrap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_wrap.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(map_wrap)
+	_build_persistent_world_map()
+	# پرده نیمه‌تیره: وقتی پنل مدیریتی باز است، جهان پشت آن می‌خوابد.
+	map_veil = ColorRect.new()
+	map_veil.color = Color(0.004, 0.010, 0.020, 0.66)
+	map_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_veil.visible = false
+	add_child(map_veil)
+
 	chrome_root = VBoxContainer.new()
 	var root = chrome_root
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -224,6 +243,7 @@ func _build_chrome():
 	root.offset_top = 12
 	root.offset_bottom = -12
 	root.add_theme_constant_override("separation", 8)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
 	# ── نوار بالایی: هویت کشور + تاریخ + جستجوی فرمان ──
@@ -250,6 +270,12 @@ func _build_chrome():
 	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 17); engagement_lbl.modulate = TEXT_FAINT; engagement_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; root.add_child(engagement_lbl)
 
 	# ناوبری اصلی در انتهای صفحه ساخته می‌شود (سبک HOI4: ۵ بخش ثابت + کشوی بیشتر).
+
+	# فضای نقشه‌محور: در حالت نقشه این Spacer باز می‌شود تا جهان دیده شود و پنل‌ها به پایین بچسبند.
+	top_spacer = Control.new()
+	top_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_spacer.visible = false
+	root.add_child(top_spacer)
 
 	# محتوای اصلی؛ نقشه و پنل‌های مدیریتی از همین فضای مشترک استفاده می‌کنند.
 	content_scroll = TouchScrollClass.new(); content_scroll.allow_vertical=true;content_scroll.allow_horizontal=false;content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(content_scroll)
@@ -281,6 +307,82 @@ func _build_chrome():
 	command_palette = CommandPaletteClass.new(); command_palette.item_chosen.connect(_on_palette_item_chosen); add_child(command_palette); command_palette.set_entries(_build_command_entries())
 	_build_drawer()
 	_build_simulation_overlay()
+
+# ============================================================
+# نقشه دائمی تمام‌صفحه — پایه جغرافیایی زیر همه پنل‌ها (سبک HOI4/EU4)
+# ============================================================
+func _build_persistent_world_map():
+	var state = GameState.state
+	var world: Dictionary = state.get("world", {})
+	var player_id = str(world.get("player_country", WorldManager.default_country))
+	if selected_world_country == "" or not WorldManager.countries.has(selected_world_country):
+		selected_world_country = player_id
+	current_unified_map = UnifiedMapClass.new()
+	current_unified_map.selected_country = selected_world_country
+	current_unified_map.selected_unit = selected_country_unit
+	current_unified_map.country_selected.connect(_on_unified_country_selected)
+	current_unified_map.unit_selected.connect(_on_unified_unit_selected)
+	current_unified_map.route_selected.connect(_on_unified_route_selected)
+	current_unified_map.view_changed.connect(_on_unified_view_changed)
+	map_wrap.add_child(current_unified_map)
+	current_unified_map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if not map_wrap.resized.is_connected(_on_map_wrap_resized):
+		map_wrap.resized.connect(_on_map_wrap_resized)
+	call_deferred("_on_map_wrap_resized")
+	_sync_world_map()
+	# ستون شناور دوربین — لبه‌ی در دسترس شست (موقعیت در _on_map_wrap_resized).
+	map_fab_col = VBoxContainer.new()
+	map_fab_col.add_theme_constant_override("separation", 10)
+	map_fab_col.mouse_filter = Control.MOUSE_FILTER_PASS
+	map_wrap.add_child(map_fab_col)
+	for fab_def in [["✚","in","بزرگ‌نمایی"],["−","out","کوچک‌نمایی"],["⌂","home","نمای کشور من"],["⊙","selected","نمای کشور انتخابی"],["◐","world","نمای جهان"]]:
+		var fab = Button.new(); fab.text = str(fab_def[0]); fab.tooltip_text = str(fab_def[2]); fab.custom_minimum_size = Vector2(64,64); fab.add_theme_font_size_override("font_size", 27); fab.theme_type_variation = "MapFab"
+		fab.pressed.connect(FeedbackManager.play_click); fab.pressed.connect(_on_map_camera_command.bind(str(fab_def[1]))); map_fab_col.add_child(fab)
+
+# والد غیر Container است؛ ابعاد نقشه و ستون شناور را دستی هم‌گام می‌کنیم.
+func _on_map_wrap_resized():
+	if is_instance_valid(current_unified_map):
+		current_unified_map.size = map_wrap.size
+	if is_instance_valid(map_fab_col):
+		map_fab_col.position = Vector2(18, max(0.0, map_wrap.size.y * 0.5 - 168.0))
+
+# تازه‌سازی داده نقشه پس از هر تغییر State — بدون بازسازی گره نقشه.
+func _sync_world_map():
+	if not is_instance_valid(current_unified_map):
+		return
+	var state = GameState.state
+	var world: Dictionary = state.get("world", {})
+	var player_id = str(world.get("player_country", WorldManager.default_country))
+	if selected_world_country == "" or not WorldManager.countries.has(selected_world_country):
+		selected_world_country = player_id
+	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
+	for war_target in world.get("wars", {}).keys():
+		if map_countries.has(war_target): map_countries[war_target]["at_war"] = true
+	for npc_war in world.get("npc_wars", {}).values():
+		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
+			if map_countries.has(participant): map_countries[participant]["at_war"] = true
+	current_unified_map.selected_country = selected_world_country
+	current_unified_map.configure(map_countries, state.get("diplomacy", {}).get("relations", {}), player_id, world, state, map_base_layer, map_overlays, map_camera_center, map_zoom)
+
+# حالت نقشه: پرده می‌خوابد، پنل‌ها به برگه پایین تبدیل می‌شوند و نقشه تعاملی است.
+func _set_map_mode(active: bool):
+	map_mode = active
+	if is_instance_valid(map_veil): map_veil.visible = not active
+	if is_instance_valid(map_fab_col): map_fab_col.visible = active
+	if is_instance_valid(top_spacer):
+		top_spacer.visible = active
+		top_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if is_instance_valid(content_scroll):
+		content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if is_instance_valid(content):
+		content.alignment = BoxContainer.ALIGNMENT_END if active else BoxContainer.ALIGNMENT_BEGIN
+	if is_instance_valid(current_unified_map):
+		current_unified_map.mouse_filter = Control.MOUSE_FILTER_STOP if active else Control.MOUSE_FILTER_IGNORE
+		if is_instance_valid(current_unified_map.fx_layer): current_unified_map.fx_layer.visible = active
+	if is_instance_valid(hero_overlay):
+		hero_overlay.queue_free()
+		hero_overlay = null
+		if is_instance_valid(content_scroll): content_scroll.visible = true
 
 # ============================================================
 # ناوبری پایانی و کشوی «بیشتر» — الگوی HOI4 روی موبایل
@@ -582,6 +684,9 @@ func _animate_page_in(generation:int):
 		delay=min(0.12,delay+0.018)
 
 func _unhandled_key_input(event:InputEvent):
+	# تا مُدال قهرمان آغاز روی صحنه است، میان‌برها مسدودند (رفتار مُدال).
+	if is_instance_valid(hero_overlay):
+		return
 	if not event is InputEventKey or not event.pressed or event.echo:return
 	if (event.ctrl_pressed and event.keycode==KEY_K) or event.keycode==KEY_F1:
 		_open_command_palette();get_viewport().set_input_as_handled();return
@@ -631,6 +736,8 @@ func _refresh_header():
 	var progression = st.get("progression", {})
 	if engagement_lbl != null:
 		engagement_lbl.text = "نوبت %s  ·  %s  ·  سطح %s  ·  امتیاز %s  ·  استریک %s ماه" % [PersianFormatter.to_persian_digits(str(st.get("tick", 0))), str(progression.get("stage", "دولت نوپا")), PersianFormatter.to_persian_digits(str(st.get("level", 1))), PersianFormatter.format_number(int(st.get("score", 0))), PersianFormatter.to_persian_digits(str(progression.get("streak", 0)))]
+	# نقشه دائمی پشت‌صحنه با جدیدترین State تازه می‌ماند.
+	call_deferred("_sync_world_map")
 
 # ============================================================
 # سوییچ تب
@@ -647,6 +754,7 @@ func _switch_tab(tab_key: String):
 	_update_nav_states()
 	for c in content.get_children():
 		c.queue_free()
+	_set_map_mode(tab_key == "map")
 
 	match tab_key:
 		"map": _build_unified_map()
@@ -1919,42 +2027,10 @@ func _build_network_panel():
 # نقشه فرماندهی یکپارچه — جهان، منطقه، کشور، استان و اقدام زمینه‌ای
 # ============================================================
 func _build_unified_map():
-	var state = GameState.state
-	var diplomacy = state.get("diplomacy", {})
-	var relations: Dictionary = diplomacy.get("relations", {})
-	var world: Dictionary = state.get("world", {})
-	var player_id = str(world.get("player_country", WorldManager.default_country))
-	if selected_world_country == "" or not WorldManager.countries.has(selected_world_country): selected_world_country = player_id
+	_sync_world_map()
+	if is_instance_valid(current_unified_map):current_unified_map.queue_redraw()
 
-	if int(state.get("tick", 0)) == 0:
-		var setup = _hero_card()
-		# بنر سینمایی «زمین در شب» — هنر بازی در نخستین نگاه.
-		var banner_clip = Control.new(); banner_clip.clip_contents = true; banner_clip.custom_minimum_size = Vector2(0, 315); banner_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL; banner_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var banner = TextureRect.new(); banner.texture = HeroBannerArt; banner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; banner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED; banner.set_anchors_preset(Control.PRESET_FULL_RECT); banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		banner_clip.add_child(banner); setup.add_child(banner_clip)
-		# نشان طلایی عقاب و کره — امضای بصری بازی.
-		var emblem_box = CenterContainer.new(); emblem_box.mouse_filter = Control.MOUSE_FILTER_IGNORE; setup.add_child(emblem_box)
-		var emblem_art = TextureRect.new(); emblem_art.texture = EmblemArt; emblem_art.custom_minimum_size = Vector2(252, 150); emblem_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; emblem_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT; emblem_art.mouse_filter = Control.MOUSE_FILTER_IGNORE; emblem_box.add_child(emblem_art)
-		var hero_title = Label.new(); hero_title.text = "شبیه‌ساز کشور"; hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_title.add_theme_font_size_override("font_size", 46); setup.add_child(hero_title)
-		var hero_sub = Label.new(); hero_sub.text = "فرماندهی یک ملت واقعی؛ ۱۹۵ کشور، ۶۵ سامانه زنده و تصمیم‌های ماهانه شما. کشور و سناریو را برگزینید؛ پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; hero_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hero_sub.modulate = TEXT_MUTED; setup.add_child(hero_sub)
-		var row_country = _chooser_row(setup, "⚑ کشور")
-		country_select_option = OptionButton.new(); country_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var selected_index = 0
-		for country_id in WorldManager.get_country_ids():
-			var profile = WorldManager.get_country(country_id); country_select_option.add_item("%s · %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")]); country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
-			if country_id == player_id: selected_index = country_select_option.item_count - 1
-		country_select_option.select(selected_index); row_country.add_child(country_select_option)
-		var row_scenario = _chooser_row(setup, "☆ سناریو")
-		scenario_select_option = OptionButton.new(); scenario_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var active_scenario = str(state.get("scenario", {}).get("id", ScenarioManager.default_scenario)); var scenario_index = 0
-		for scenario_id in ScenarioManager.get_scenario_ids():
-			var definition = ScenarioManager.get_scenario(scenario_id); scenario_select_option.add_item("%s · %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")]); scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
-			if scenario_id == active_scenario: scenario_index = scenario_select_option.item_count - 1
-		scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); row_scenario.add_child(scenario_select_option)
-		scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = TEXT_MUTED; scenario_description_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
-		var start_button = _mk_btn(setup, "⚑ شروع فرماندهی", Vector2(340,62), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; start_button.add_theme_font_size_override("font_size", 27)
-		_pulse_control(start_button)
-
+	# برگه کنترل شناور پایین نقشه — لنزها و لایه‌های تحلیلی.
 	var controls = _card("◉ لنزها و لایه‌های نقشه")
 	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
 	map_control_flow = HFlowContainer.new(); map_control_flow.add_theme_constant_override("h_separation",7); map_control_flow.add_theme_constant_override("v_separation",6); controls.add_child(map_control_flow)
@@ -2051,31 +2127,81 @@ func _build_unified_map():
 		active_info.modulate = Color(0.6,0.85,1.0)
 		controls.add_child(active_info)
 
-	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
-	for war_target in world.get("wars", {}).keys():
-		if map_countries.has(war_target): map_countries[war_target]["at_war"] = true
-	for npc_war in world.get("npc_wars", {}).values():
-		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
-			if map_countries.has(participant): map_countries[participant]["at_war"] = true
-	var map_card = _card("◈ نقشه پیوسته جهان تا شهر")
-	map_wrap = Control.new(); map_wrap.custom_minimum_size = Vector2(0, 860); map_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL; map_wrap.mouse_filter = Control.MOUSE_FILTER_PASS; map_card.add_child(map_wrap)
-	current_unified_map = UnifiedMapClass.new(); current_unified_map.selected_country = selected_world_country; current_unified_map.selected_unit = selected_country_unit
-	current_unified_map.configure(map_countries, relations, player_id, world, state, map_base_layer, map_overlays, map_camera_center, map_zoom)
-	current_unified_map.country_selected.connect(_on_unified_country_selected); current_unified_map.unit_selected.connect(_on_unified_unit_selected); current_unified_map.route_selected.connect(_on_unified_route_selected); current_unified_map.view_changed.connect(_on_unified_view_changed)
-	map_wrap.add_child(current_unified_map)
-	current_unified_map.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# ستون شناور دوربین روی نقشه — دسترسی سریع بدون ترک نمای راهبردی.
-	var fab_col = VBoxContainer.new(); fab_col.add_theme_constant_override("separation", 10)
-	fab_col.anchor_left = 0.0; fab_col.anchor_right = 0.0; fab_col.anchor_top = 0.5; fab_col.anchor_bottom = 0.5
-	fab_col.offset_left = 14; fab_col.offset_right = 76; fab_col.offset_top = -160; fab_col.offset_bottom = 160
-	fab_col.mouse_filter = Control.MOUSE_FILTER_PASS
-	map_wrap.add_child(fab_col)
-	for fab_def in [["✚","in","بزرگ‌نمایی"],["−","out","کوچک‌نمایی"],["⌂","home","نمای کشور من"],["⊙","selected","نمای کشور انتخابی"],["◐","world","نمای جهان"]]:
-		var fab = Button.new(); fab.text = str(fab_def[0]); fab.tooltip_text = str(fab_def[2]); fab.custom_minimum_size = Vector2(62,62); fab.add_theme_font_size_override("font_size", 27); fab.theme_type_variation = "MapFab"
-		fab.pressed.connect(FeedbackManager.play_click); fab.pressed.connect(_on_map_camera_command.bind(str(fab_def[1]))); fab_col.add_child(fab)
+
+	# لایه نقشه دائمی در کروم ساخته می‌شود (نسخه ۸)؛ اینجا فقط برگه شناور است.
+	_build_map_intel_card()
 	map_context_host=VBoxContainer.new();map_context_host.add_theme_constant_override("separation",10);content.add_child(map_context_host)
 	_refresh_map_context_panel()
 	call_deferred("_apply_responsive_layout")
+	call_deferred("_apply_tooltip_preferences")
+
+	# آغاز فرماندهی: مُدال قهرمان روی نقشه جهانِ زنده، مانند صفحه افتتاح EU4.
+	# حین محاسبه ناهمگام نخستین ماه (simulation_busy) قهرمان بازسازی نمی‌شود تا پرده پیشرفت دیده شود.
+	if int(GameState.state.get("tick", 0)) == 0 and not simulation_busy:
+		_build_hero_overlay()
+
+# مُدال آغاز فرماندهی — کارت قهرمان با بنر هنری روی نقشه جهانِ زنده.
+func _build_hero_overlay():
+	if is_instance_valid(hero_overlay): hero_overlay.queue_free()
+	hero_overlay = ColorRect.new()
+	hero_overlay.color = Color(0.002, 0.008, 0.016, 0.42)
+	hero_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hero_overlay.z_index = 180
+	hero_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(hero_overlay)
+	# تا قهرمان روی صحنه است، برگه برمی‌خيزد تا فقط نقشه جهان زنده دیده شود.
+	if is_instance_valid(content_scroll): content_scroll.visible = false
+	var scroll_wrap = TouchScrollClass.new(); scroll_wrap.allow_vertical = true; scroll_wrap.allow_horizontal = false; scroll_wrap.set_anchors_preset(Control.PRESET_FULL_RECT); scroll_wrap.mouse_filter = Control.MOUSE_FILTER_STOP; hero_overlay.add_child(scroll_wrap)
+	var center = CenterContainer.new(); center.size_flags_horizontal = Control.SIZE_EXPAND_FILL; center.mouse_filter = Control.MOUSE_FILTER_PASS; scroll_wrap.add_child(center)
+	var setup = _hero_card(center)
+	var panel = setup.get_parent() if setup.get_parent() is PanelContainer else null
+	if panel != null: panel.custom_minimum_size = Vector2(min(1000.0, self.size.x - 40.0), 0)
+	# بنر سینمایی «زمین در شب» — هنر بازی در نخستین نگاه.
+	var banner_clip = Control.new(); banner_clip.clip_contents = true; banner_clip.custom_minimum_size = Vector2(0, 320); banner_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL; banner_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var banner = TextureRect.new(); banner.texture = HeroBannerArt; banner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; banner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED; banner.set_anchors_preset(Control.PRESET_FULL_RECT); banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner_clip.add_child(banner); setup.add_child(banner_clip)
+	# نشان طلایی عقاب و کره — امضای بصری بازی.
+	var emblem_box = CenterContainer.new(); emblem_box.mouse_filter = Control.MOUSE_FILTER_IGNORE; setup.add_child(emblem_box)
+	var emblem_art = TextureRect.new(); emblem_art.texture = EmblemArt; emblem_art.custom_minimum_size = Vector2(252, 150); emblem_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; emblem_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT; emblem_art.mouse_filter = Control.MOUSE_FILTER_IGNORE; emblem_box.add_child(emblem_art)
+	var hero_title = Label.new(); hero_title.text = "شبیه‌ساز کشور"; hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_title.add_theme_font_size_override("font_size", 46); setup.add_child(hero_title)
+	var state = GameState.state
+	var player_id = str(state.get("world", {}).get("player_country", WorldManager.default_country))
+	var hero_sub = Label.new(); hero_sub.text = "فرماندهی یک ملت واقعی؛ ۱۹۵ کشور، ۶۵ سامانه زنده و تصمیم‌های ماهانه شما. کشور و سناریو را برگزینید؛ پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; hero_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hero_sub.modulate = TEXT_MUTED; setup.add_child(hero_sub)
+	var row_country = _chooser_row(setup, "⚑ کشور")
+	country_select_option = OptionButton.new(); country_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var selected_index = 0
+	for country_id in WorldManager.get_country_ids():
+		var profile = WorldManager.get_country(country_id); country_select_option.add_item("%s · %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")]); country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
+		if country_id == player_id: selected_index = country_select_option.item_count - 1
+	country_select_option.select(selected_index); row_country.add_child(country_select_option)
+	var row_scenario = _chooser_row(setup, "☆ سناریو")
+	scenario_select_option = OptionButton.new(); scenario_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var active_scenario = str(state.get("scenario", {}).get("id", ScenarioManager.default_scenario)); var scenario_index = 0
+	for scenario_id in ScenarioManager.get_scenario_ids():
+		var definition = ScenarioManager.get_scenario(scenario_id); scenario_select_option.add_item("%s · %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")]); scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
+		if scenario_id == active_scenario: scenario_index = scenario_select_option.item_count - 1
+	scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); row_scenario.add_child(scenario_select_option)
+	scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = TEXT_MUTED; scenario_description_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
+	var start_button = _mk_btn(setup, "⚑ شروع فرماندهی", Vector2(340,62), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; start_button.add_theme_font_size_override("font_size", 27)
+	_pulse_control(start_button)
+	if not bool(SettingsManager.get_value("reduce_motion", false)):
+		hero_overlay.modulate.a = 0.0
+		create_tween().tween_property(hero_overlay, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# کارت خلاصه جبهه و دیپلماسی در برگه نقشه — جنگ‌ها، پیشنهادها و پیمان‌ها در یک نگاه.
+func _build_map_intel_card():
+	var state = GameState.state
+	var world: Dictionary = state.get("world", {})
+	var card = _card("❖ گزارش جبهه و دیپلماسی")
+	var wars: Dictionary = world.get("wars", {})
+	var offers: Array = world.get("incoming_offers", [])
+	var alliances: Array = world.get("alliances", [])
+	var sanctions: Array = state.get("diplomacy", {}).get("sanctions", [])
+	_row(card, "جنگ‌های جاری", PersianFormatter.to_persian_digits(str(wars.size())) + ("" if wars.is_empty() else " ⚔"), ACCENT_RED if wars.size() > 0 else ACCENT_GREEN)
+	_row(card, "پیشنهادهای ورودی", PersianFormatter.to_persian_digits(str(offers.size())), ACCENT_GOLD if offers.size() > 0 else TEXT_MAIN)
+	_row(card, "پیمان‌های دفاعی", PersianFormatter.to_persian_digits(str(alliances.size())), ACCENT_BLUE if alliances.size() > 0 else TEXT_MAIN)
+	_row(card, "تحریم‌های فعال", PersianFormatter.to_persian_digits(str(sanctions.size())), ACCENT_ORANGE if sanctions.size() > 0 else TEXT_MAIN)
+	var hint = Label.new(); hint.text = "◉ برای جزئیات و اقدام، کشوری را روی نقشه لمس کنید."; hint.add_theme_font_size_override("font_size", 19); hint.modulate = TEXT_FAINT; card.add_child(hint)
 
 func _refresh_map_context_panel():
 	if not is_instance_valid(map_context_host):return

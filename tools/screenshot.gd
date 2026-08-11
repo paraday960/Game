@@ -22,12 +22,12 @@ func _initialize():
 
 func _process(_delta) -> bool:
 	frames += 1
-	if frames == 10 and tab != "" and tab != "map":
+	if frames == 10 and tab != "" and tab != "map" and not start_game:
 		scene_inst._switch_tab(tab)
 	if frames == 14 and start_game:
 		scene_inst._on_country_start_selected()
 	if frames == 110 and start_game:
-		scene_inst._switch_tab("map")
+		scene_inst._switch_tab("map" if (tab == "" or tab == "map") else tab)
 	if frames == 118 and focus_iran and is_instance_valid(scene_inst.current_unified_map):
 		scene_inst.current_unified_map.focus_country("IRN")
 	if frames == 20 and open_drawer:
