@@ -284,7 +284,14 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 		state_data["events_active"] = state_data.get("events_active", [])
 		state_data["crisis_cooldowns"] = state_data.get("crisis_cooldowns", {})
 		migrated = true
-	state_data["schema_version"] = 19
+	if source_schema < 20 or not state_data.get("military", {}).has("war_exhaustion"):
+		# رودمپ ۵: خستگی جنگ + پیشنهادهای ورودی و موضع کشورها (توسط ensure_world تضمین می‌شود)
+		var legacy_military = state_data.get("military", {})
+		legacy_military["war_exhaustion"] = float(legacy_military.get("war_exhaustion", 0.0))
+		state_data["military"] = legacy_military
+		state_data = WorldManager.ensure_world(state_data)
+		migrated = true
+	state_data["schema_version"] = 20
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:

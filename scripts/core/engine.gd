@@ -658,6 +658,11 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	snapshot = crisis_result.state
 	_collect_events(crisis_result, "crisis", snapshot, turn, generated_events, "crisis_event")
 
+	# هوش سیاست خارجی کشورها (رودمپ ۵): موضع‌گیری ماهانه، پیشنهادهای ورودی و واکنش‌ها
+	var foreign_result = ForeignAIManager.simulate_month(snapshot, turn)
+	snapshot = foreign_result.state
+	_collect_events(foreign_result, "foreign_policy", snapshot, turn, generated_events, "foreign_event")
+
 	snapshot = MapLayerManager.update_network_metrics(snapshot)
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.

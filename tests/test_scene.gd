@@ -694,6 +694,70 @@ func _ready():
 	else:
 		print("Crisis data model: همه بحران‌ها قالب تصمیم فارسی دارند: OK")
 
+	# رودمپ ۵ — هوش سیاست خارجی: سلامت داده‌محور
+	if not ForeignAIManager.is_valid():
+		failed.append("هوش سیاست خارجی کشورها معتبر نیست")
+	else:
+		print("Foreign policy AI integrity: OK")
+
+	# پیشنهاد ورودی: پذیرش توافق تجاری که کشور خارجی مطرح کرده است
+	var offer_state = WorldManager.ensure_world(s.duplicate(true))
+	offer_state["diplomacy"]["relations"]["DEU"] = 70.0
+	var offer_day = TimeManager.get_total_days(offer_state)
+	offer_state["world"]["incoming_offers"] = [{
+		"id": "trade_agreement_DEU_0", "type": "trade_agreement", "from": "DEU",
+		"offer_text": "پیشنهاد توافق تجاری", "message": "آلمان آماده امضای توافق است",
+		"created_day": offer_day, "expires_day": offer_day + 60, "tick": 0
+	}]
+	var accept_result = GameEngine.tick(offer_state, v, t, [GameCommand.create_diplomacy_action("DEU", "accept_offer")])
+	var offer_left = false
+	if accept_result.success:
+		for offer in accept_result.state["world"].get("incoming_offers", []):
+			if str(offer.get("id", "")) == "trade_agreement_DEU_0":
+				offer_left = true
+	if not accept_result.success or not accept_result.state["world"].get("trade_agreements", []).has("DEU") or offer_left:
+		failed.append("پذیرش پیشنهاد ورودی توافق تجاری درست کار نکرد")
+	else:
+		# رد پیشنهاد اتحاد: حذف پیشنهاد و افت جزئی رابطه
+		var reject_state = accept_result.state.duplicate(true)
+		reject_state["world"]["incoming_offers"] = [{
+			"id": "alliance_DEU_1", "type": "alliance", "from": "DEU",
+			"offer_text": "پیشنهاد تشکیل اتحاد", "message": "آلمان پیشنهاد اتحاد داد",
+			"created_day": offer_day, "expires_day": offer_day + 60, "tick": 0
+		}]
+		var before_reject = float(reject_state["diplomacy"]["relations"]["DEU"])
+		var reject_result = GameEngine.tick(reject_state, int(accept_result.version), int(accept_result.tick), [GameCommand.create_diplomacy_action("DEU", "reject_offer")])
+		var rejected_left = false
+		if reject_result.success:
+			for offer in reject_result.state["world"].get("incoming_offers", []):
+				if str(offer.get("id", "")) == "alliance_DEU_1":
+					rejected_left = true
+		if not reject_result.success or rejected_left or float(reject_result.state["diplomacy"]["relations"]["DEU"]) >= before_reject:
+			failed.append("رد پیشنهاد ورودی درست کار نکرد")
+		else:
+			print("Incoming offers: پذیرش توافق تجاری + رد اتحاد کشور خارجی: OK")
+
+	# منطق پذیرش صلح: دشمنی که در آستانه پیروزی است، صلح را رد می‌کند (واحد مستقیم)
+	var losing_state = WorldManager.ensure_world(s.duplicate(true))
+	losing_state["diplomacy"]["relations"]["USA"] = 0.0
+	losing_state["diplomacy"]["action_points"] = 5.0
+	losing_state["world"]["wars"]["USA"] = {"target": "USA", "started_tick": t, "progress": -60.0, "player_losses": 0, "enemy_losses": 0}
+	losing_state["military"]["war_exhaustion"] = 0.5
+	var peace_try = WorldManager.apply_action(losing_state.duplicate(true), "USA", "offer_peace", t)
+	var rejection_logged = false
+	if peace_try.success:
+		for war_event in peace_try.get("events", []):
+			if str(war_event.get("type", "")) == "peace_rejected":
+				rejection_logged = true
+	if not peace_try.success or not peace_try.state["world"].get("wars", {}).has("USA") or not rejection_logged:
+		failed.append("دشمن در آستانه پیروزی باید صلح را رد کند و جنگ ادامه یابد")
+	# خستگی جنگ در چرخه کامل موتور (حتی اگر جنگ به‌طور طبیعی پایان یابد افزایش می‌ماند)
+	var exhaustion_tick = GameEngine.tick(losing_state, v, t, [])
+	if not exhaustion_tick.success or float(exhaustion_tick.state["military"].get("war_exhaustion", 0.0)) <= 0.5:
+		failed.append("خستگی جنگ در طول نبرد رشد نکرد")
+	else:
+		print("War depth: رد صلح توسط دشمن پیروز + رشد خستگی جنگ: OK")
+
 	print("")
 	if failed.size() == 0:
 		print("=== ✅ ALL TESTS PASSED (%d systems) ===" % GameEngine.systems.size())

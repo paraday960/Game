@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 19,  # 19: موتور رویداد و بحران (events_active + crisis_cooldowns)
+			"schema_version": 20,  # 20: هوش خارجی (incoming_offers/player_stances) + خستگی جنگ
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -136,7 +136,8 @@ func init_default_state():
 				"دریایی": 0.15,
 				"موشکی": 0.10
 			},
-			"deterrence": 60.0
+			"deterrence": 60.0,
+			"war_exhaustion": 0.0
 		},
 			"diplomacy": {
 				"relations": {},
@@ -255,7 +256,7 @@ func _apply_initial_overrides():
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
 	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-	state["schema_version"] = int(state.get("schema_version", 19))
+	state["schema_version"] = int(state.get("schema_version", 20))
 	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
 	state = TimeManager.reset(state)

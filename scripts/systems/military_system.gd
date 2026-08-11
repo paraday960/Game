@@ -56,6 +56,17 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		deterrence += 10.0
 	mil["deterrence"] = clamp(deterrence, 0.0, 100.0)
 
+	# خستگی جنگ (رودمپ ۵): در جنگ توسط WorldManager رشد می‌کند و در صلح به‌تدریج فروکش
+	# می‌کند؛ تا وقتی بالاست، فشار روانی آن بر شادی و ثبات جامعه اعمال می‌شود (مقیاس ماهانه).
+	var wars_now: Dictionary = state.get("world", {}).get("wars", {})
+	var exhaustion = clamp(float(mil.get("war_exhaustion", 0.0)), 0.0, 1.0)
+	if wars_now.is_empty():
+		exhaustion = clamp(exhaustion - 0.008, 0.0, 1.0)
+	mil["war_exhaustion"] = exhaustion
+	if exhaustion > 0.05:
+		pop["happiness"] = clamp(float(pop["happiness"]) - exhaustion * 0.0004, 0.05, 0.95)
+		pol["stability"] = clamp(float(pol["stability"]) - exhaustion * 0.0002, 0.05, 0.95)
+
 	# رویدادها - ۳.۱۳.۵
 	if Deterministic.chance(0.008):
 		events.append({"type": "border_tension", "message": "تحرکات مرزی گزارش شد"})

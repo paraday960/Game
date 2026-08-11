@@ -5,13 +5,14 @@ const COUNTRIES_PATH = "res://data/countries.json"
 const ACTIONS = [
 	"improve_relations", "trade_agreement", "end_trade_agreement",
 	"form_alliance", "leave_alliance", "sanction", "lift_sanction",
-	"declare_war", "offer_peace", "negotiate_sanctions"
+	"declare_war", "offer_peace", "negotiate_sanctions",
+	"accept_offer", "reject_offer"
 ]
 const ACTION_COSTS = {
 	"improve_relations": 1.0, "trade_agreement": 1.5, "end_trade_agreement": 0.5,
 	"form_alliance": 2.0, "leave_alliance": 1.0, "sanction": 1.0,
 	"lift_sanction": 0.5, "declare_war": 3.0, "offer_peace": 1.0,
-	"negotiate_sanctions": 1.0
+	"negotiate_sanctions": 1.0, "accept_offer": 0.0, "reject_offer": 0.0
 }
 
 var countries: Dictionary = {}
@@ -82,6 +83,9 @@ func ensure_world(state: Dictionary) -> Dictionary:
 	world["npc_alliances"] = world.get("npc_alliances", [])
 	world["npc_trade_agreements"] = world.get("npc_trade_agreements", [])
 	world["recent_global_events"] = world.get("recent_global_events", [])
+	# رودمپ ۵: پیشنهادهای ورودی از کشورها و موضع فعلی هر کشور نسبت به بازیکن
+	world["incoming_offers"] = world.get("incoming_offers", [])
+	world["player_stances"] = world.get("player_stances", {})
 	state["world"] = world
 	if not state.has("diplomacy"):
 		state["diplomacy"] = {}
@@ -207,8 +211,9 @@ func can_action(state: Dictionary, target: String, action: String) -> Dictionary
 	var wars: Dictionary = world.get("wars", {})
 	var alliances: Array = world.get("alliances", [])
 	var agreements: Array = world.get("trade_agreements", [])
-	if wars.has(target) and action != "offer_peace":
-		return {"valid": false, "reason": "در زمان جنگ فقط پیشنهاد صلح قابل ارسال است"}
+	# در زمان جنگ، صلح و پاسخ به پیشنهادهای ورودی مجاز است
+	if wars.has(target) and not ["offer_peace", "accept_offer", "reject_offer"].has(action):
+		return {"valid": false, "reason": "در زمان جنگ فقط صلح یا پاسخ به پیشنهاد قابل انجام است"}
 	match action:
 		"trade_agreement":
 			if relation < 45.0: return {"valid": false, "reason": "برای توافق تجاری رابطه حداقل ۴۵ لازم است"}
@@ -233,6 +238,10 @@ func can_action(state: Dictionary, target: String, action: String) -> Dictionary
 			if float(state["military"].get("readiness", 0.0)) < 0.45: return {"valid": false, "reason": "آمادگی نظامی برای جنگ کافی نیست"}
 		"offer_peace":
 			if not wars.has(target): return {"valid": false, "reason": "جنگ فعالی با این کشور وجود ندارد"}
+		"accept_offer":
+			if not _has_offer(world, [], target): return {"valid": false, "reason": "پیشنهاد فعالی از این کشور وجود ندارد"}
+		"reject_offer":
+			if not _has_offer(world, [], target): return {"valid": false, "reason": "پیشنهاد فعالی از این کشور وجود ندارد"}
 		"negotiate_sanctions":
 			if not _has_incoming_sanction(diplomacy, target): return {"valid": false, "reason": "تحریم ورودی از این کشور وجود ندارد"}
 	return {"valid": true, "reason": ""}
@@ -287,14 +296,61 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int) 
 			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.6)) - 0.04, 0.0, 1.0)
 			events.append(_event("war_declared", target, "جنگ با %s آغاز شد" % get_country_name(target)))
 		"offer_peace":
-			var peace_record: Dictionary = world["wars"].get(target, {}).duplicate(true)
-			peace_record["outcome"] = "peace"
-			peace_record["ended_tick"] = tick
-			world["war_history"].append(peace_record)
-			world["wars"].erase(target)
-			diplomacy["relations"][target] = 20.0
-			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) - 0.08, 0.0, 1.0)
-			events.append(_event("peace_signed", target, "پیمان صلح با %s امضا شد" % get_country_name(target)))
+			# پذیرش صلح دیگر تضمین‌شده نیست: دشمن صلح را وقتی قبول می‌کند که در آستانه
+			# پیروزی نباشد (پیشروی بازیکن > -۴۰) یا جنگ بیش از یک سال کشیده باشد.
+			var war: Dictionary = world["wars"].get(target, {})
+			var progress = float(war.get("progress", 0.0))
+			var months_in_war = max(0, tick - int(war.get("started_tick", tick)))
+			if progress > -40.0 or months_in_war >= 12:
+				var peace_record: Dictionary = war.duplicate(true)
+				peace_record["outcome"] = "peace"
+				peace_record["ended_tick"] = tick
+				world["war_history"].append(peace_record)
+				world["wars"].erase(target)
+				diplomacy["relations"][target] = 20.0
+				state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) - 0.08, 0.0, 1.0)
+				state["military"]["war_exhaustion"] = max(0.0, float(state["military"].get("war_exhaustion", 0.0)) - 0.15)
+				events.append(_event("peace_signed", target, "پیمان صلح با %s امضا شد" % get_country_name(target)))
+			else:
+				diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 0.0)) - 2.0, 0.0, 100.0)
+				events.append(_event("peace_rejected", target, "%s پیشنهاد صلح را رد کرد؛ در آستانه پیروزی خود را می‌بیند" % get_country_name(target)))
+		"accept_offer":
+			var offer = find_offer(world, target)
+			var offer_type = str(offer.get("type", ""))
+			world = _remove_offer(world, str(offer.get("id", "")))
+			match offer_type:
+				"trade_agreement":
+					if not world["trade_agreements"].has(target):
+						world["trade_agreements"].append(target)
+						state["trade"]["trade_agreements"] = int(state["trade"].get("trade_agreements", 0)) + 1
+						state["trade"]["exports"] = float(state["trade"].get("exports", 0.0)) * 1.01
+					diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 3.0, 0.0, 100.0)
+					events.append(_event("trade_agreement_signed", target, "پیشنهاد تجاری %s پذیرفته شد؛ توافق امضا شد" % get_country_name(target)))
+				"alliance":
+					if not world["alliances"].has(target):
+						world["alliances"].append(target)
+						diplomacy["treaties"].append({"type":"alliance", "target":target, "tick":tick})
+					diplomacy["relations"][target] = max(float(diplomacy["relations"].get(target, 50.0)), 80.0)
+					events.append(_event("alliance_formed", target, "اتحاد راهبردی با %s برقرار شد" % get_country_name(target)))
+				"peace":
+					var offer_war = world["wars"].get(target, {})
+					if world["wars"].has(target):
+						var offer_peace_record: Dictionary = offer_war.duplicate(true)
+						offer_peace_record["outcome"] = "peace"
+						offer_peace_record["ended_tick"] = tick
+						world["war_history"].append(offer_peace_record)
+						world["wars"].erase(target)
+						diplomacy["relations"][target] = 22.0
+						state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) - 0.08, 0.0, 1.0)
+						state["military"]["war_exhaustion"] = max(0.0, float(state["military"].get("war_exhaustion", 0.0)) - 0.15)
+					events.append(_event("peace_signed", target, "آتش‌بس با %s برقرار شد" % get_country_name(target)))
+				_:
+					events.append(_event("offer_accepted", target, "پیشنهاد %s پذیرفته شد" % get_country_name(target)))
+		"reject_offer":
+			var rejected_offer = find_offer(world, target)
+			world = _remove_offer(world, str(rejected_offer.get("id", "")))
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) - 2.0, 0.0, 100.0)
+			events.append(_event("offer_rejected", target, "پیشنهاد %s رد شد" % get_country_name(target)))
 		"negotiate_sanctions":
 			_remove_incoming_sanction(diplomacy, target)
 			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 4.0, 0.0, 100.0)
@@ -325,7 +381,16 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		var enemy: Dictionary = world["countries"][target]
 		var recon_bonus = IntelligenceOperationManager.get_recon_bonus(state,target)
 		var player_force = float(state["military"].get("power", 50.0)) * float(state["military"].get("readiness", 0.6)) * (1.0 + recon_bonus)
+		# کمک متحدان بازیکن در میدان: هر متحد رسمی ۸٪ قدرت میدانی می‌افزاید (سقف ۲۴٪)
+		var ally_support = 0.08 * float(world.get("alliances", []).size())
+		player_force *= min(1.0 + ally_support, 1.24)
 		var enemy_force = float(enemy.get("military_power", 50.0)) * 0.68
+		# متحدان NPC دشمن نیز او را تقویت می‌کنند (۵٪ هر متحد، سقف ۲۰٪)
+		var enemy_allies = 0
+		for pair_key in world.get("npc_alliances", []):
+			if str(pair_key).split("|").has(target):
+				enemy_allies += 1
+		enemy_force *= min(1.0 + 0.05 * float(enemy_allies), 1.20)
 		var advantage = (player_force - enemy_force) / max(player_force + enemy_force, 1.0)
 		var daily_progress = clamp(advantage * 4.0 + Deterministic.next_range(-1.2, 1.2), -3.5, 3.5)
 		war["progress"] = float(war.get("progress", 0.0)) + daily_progress
@@ -337,6 +402,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		state["military"]["personnel"] = max(1000, int(state["military"].get("personnel", 500000)) - player_loss)
 		state["military"]["readiness"] = clamp(float(state["military"].get("readiness", 0.6)) - 0.0008, 0.1, 1.0)
 		state["economy"]["gdp"] *= 0.99996
+		# هزینه‌ی واقعی جنگ: حدود ۰٫۲٪ GDP سالانه بر بدهی افزوده می‌شود
+		state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.002 / 365.0
+		# خستگی جنگ در درازمدت رشد می‌کند (اثر آن در سیستم نظامی بر شادی و ثبات اعمال می‌شود)
+		state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.004, 0.0, 1.0)
 		enemy["military_power"] = max(10.0, float(enemy["military_power"]) - enemy_loss / 500000.0)
 		world["countries"][target] = enemy
 		if war["progress"] >= 100.0:
@@ -346,7 +415,11 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			world["war_history"].append(war.duplicate(true))
 			diplomacy["relations"][target] = 18.0
 			diplomacy["influence"] = clamp(float(diplomacy.get("influence", 40.0)) + 6.0, 0.0, 100.0)
-			events.append(_event("war_victory", target, "پیروزی در جنگ با %s؛ رهبر در قدرت باقی ماند" % get_country_name(target)))
+			# غنایم و بازارهای تازه: رشد یک‌باره اقتصادی و امید عمومی پس از پیروزی
+			state["economy"]["gdp"] = float(state["economy"].get("gdp", 1.0)) * 1.02
+			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.5)) + 0.04, 0.05, 0.95)
+			state["military"]["war_exhaustion"] = max(0.0, float(state["military"].get("war_exhaustion", 0.0)) - 0.20)
+			events.append(_event("war_victory", target, "پیروزی در جنگ با %s؛ رهبر در قدرت باقی ماند و غنایم به خزانه رسید" % get_country_name(target)))
 		elif war["progress"] <= -100.0:
 			finished.append(target)
 			war["outcome"] = "defeat"
@@ -355,6 +428,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			diplomacy["relations"][target] = 12.0
 			state["politics"]["stability"] = clamp(float(state["politics"].get("stability", 0.5)) - 0.08, 0.05, 0.95)
 			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.5)) - 0.06, 0.05, 0.95)
+			# جبران خسارت جنگ: بدهی پرش می‌کند و اقتصاد ضربه می‌خورد
+			state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.03
+			state["economy"]["gdp"] = float(state["economy"].get("gdp", 1.0)) * 0.97
+			state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.10, 0.0, 1.0)
 			events.append(_event("war_defeat", target, "شکست نظامی برابر %s؛ کشور آسیب دید اما رهبر برکنار نشد" % get_country_name(target)))
 		else:
 			world["wars"][target] = war
@@ -594,6 +671,31 @@ func _remove_incoming_sanction(diplomacy: Dictionary, target: String):
 			continue
 		kept.append(item)
 	diplomacy["sanctions"] = kept
+
+# --- پیشنهادهای ورودی (رودمپ ۵) ---
+# offer_types خالی یعنی هر نوعی؛ جست‌وجو بر اساس کشور فرستنده
+func find_offer(world: Dictionary, country: String) -> Dictionary:
+	for offer in world.get("incoming_offers", []):
+		if str(offer.get("from", "")) == country:
+			return offer
+	return {}
+
+func _has_offer(world: Dictionary, offer_types: Array, country: String) -> bool:
+	for offer in world.get("incoming_offers", []):
+		if str(offer.get("from", "")) != country:
+			continue
+		if offer_types.is_empty() or offer_types.has(str(offer.get("type", ""))):
+			return true
+	return false
+
+func _remove_offer(world: Dictionary, offer_id: String) -> Dictionary:
+	var kept: Array = []
+	for offer in world.get("incoming_offers", []):
+		if str(offer.get("id", "")) == offer_id:
+			continue
+		kept.append(offer)
+	world["incoming_offers"] = kept
+	return world
 
 func _remove_treaty(diplomacy: Dictionary, treaty_type: String, target: String):
 	var kept: Array = []

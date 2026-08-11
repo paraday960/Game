@@ -1841,6 +1841,27 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		_row(card, "پیشروی جنگ", PersianFormatter.to_persian_digits("%+.1f" % progress), _color_for((progress + 100.0) / 200.0))
 		_row(card, "تلفات نیروهای شما", PersianFormatter.format_large(float(war.get("player_losses", 0))))
 		_row(card, "تلفات دشمن", PersianFormatter.format_large(float(war.get("enemy_losses", 0))))
+	# پیشنهادهای ورودی از این کشور (رودمپ ۵): پاسخ مستقیم با پذیرش یا رد
+	var incoming_offer = WorldManager.find_offer(state.get("world", {}), target)
+	if not incoming_offer.is_empty():
+		var offer_box = Label.new()
+		offer_box.text = "📨 %s — %s" % [str(incoming_offer.get("offer_text", "پیشنهاد")), str(incoming_offer.get("message", ""))]
+		offer_box.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		offer_box.modulate = Color(0.55, 0.85, 1.0)
+		card.add_child(offer_box)
+		var offer_buttons = HFlowContainer.new()
+		card.add_child(offer_buttons)
+		for reply_def in [["accept_offer", "✅ پذیرفتن پیشنهاد", Color(0.55, 0.95, 0.65)], ["reject_offer", "❌ رد پیشنهاد", Color(1.0, 0.6, 0.6)]]:
+			var reply_check = WorldManager.can_action(state, target, reply_def[0])
+			var reply_button = Button.new()
+			reply_button.text = reply_def[1]
+			reply_button.modulate = reply_def[2]
+			reply_button.custom_minimum_size = Vector2(180, 48)
+			reply_button.disabled = not reply_check.valid
+			reply_button.tooltip_text = "" if reply_check.valid else str(reply_check.reason)
+			reply_button.pressed.connect(FeedbackManager.play_click)
+			reply_button.pressed.connect(_on_world_action.bind(target, reply_def[0], reply_def[1]))
+			offer_buttons.add_child(reply_button)
 	var action_grid = GridContainer.new()
 	action_grid.columns = 3
 	card.add_child(action_grid)
