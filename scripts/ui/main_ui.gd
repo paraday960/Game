@@ -331,27 +331,27 @@ func _build_chrome():
 	root.add_child(top_spacer)
 
 	# محتوای اصلی؛ نقشه و پنل‌های مدیریتی از همین فضای مشترک استفاده می‌کنند.
-	content_scroll = TouchScrollClass.new(); content_scroll.allow_vertical=true;content_scroll.allow_horizontal=false;content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(content_scroll)
+	content_scroll = TouchScrollClass.new(); content_scroll.allow_vertical=true;content_scroll.allow_horizontal=false;content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; content_scroll.clip_contents = true; root.add_child(content_scroll)
 	content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; content.add_theme_constant_override("separation", 10); content_scroll.add_child(content)
 
 	# Label پنهان فقط برای سازگاری تست/کد قدیمی؛ اعلان واقعی در ToastStack نمایش داده می‌شود.
 	toast_lbl = Label.new(); toast_lbl.hide(); add_child(toast_lbl)
 
 	# تیکر رخدادهای زنده؛ لمس آن میز فرمان را باز می‌کند.
-	ticker_panel = PanelContainer.new(); ticker_panel.theme_type_variation = "TickerPanel"; ticker_panel.mouse_filter = Control.MOUSE_FILTER_STOP; ticker_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; ticker_panel.tooltip_text = "مشاهده کامل در میز فرمان"; ticker_panel.gui_input.connect(_on_ticker_input); root.add_child(ticker_panel)
+	ticker_panel = PanelContainer.new(); ticker_panel.theme_type_variation = "TickerPanel"; ticker_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; ticker_panel.tooltip_text = "مشاهده کامل در میز فرمان"; root.add_child(ticker_panel)
 	var event_box = HBoxContainer.new(); event_box.add_theme_constant_override("separation",9); ticker_panel.add_child(event_box)
 	var ev_title = Label.new(); ev_title.text = "⚡ رخدادها"; ev_title.custom_minimum_size = Vector2(125,0); ev_title.modulate = ACCENT_GOLD; ev_title.add_theme_font_size_override("font_size",20); event_box.add_child(ev_title)
 	event_list = VBoxContainer.new(); event_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL; event_list.add_theme_constant_override("separation",1); event_box.add_child(event_list); _render_events()
 
 	# ── داک زمان (سبک HOI4): اقدام اصلی رهبر + جریان خودکار ──
-	time_dock = PanelContainer.new(); time_dock.theme_type_variation = "TimeDockPanel"; root.add_child(time_dock)
+	time_dock = PanelContainer.new(); time_dock.theme_type_variation = "TimeDockPanel"; time_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(time_dock)
 	var time_row = HBoxContainer.new(); time_row.alignment = BoxContainer.ALIGNMENT_CENTER; time_row.add_theme_constant_override("separation",9); time_dock.add_child(time_row)
 	_mk_btn(time_row, "▶ ماه بعد", Vector2(215,54), _on_next_tick_pressed, "PrimaryAction")
 	_mk_btn(time_row, "خودکار: خاموش", Vector2(170,54), _on_auto_pressed, "AutoBtn")
 	_mk_btn(time_row, "⚡ " + SettingsManager.get_speed_label(), Vector2(106,54), _on_speed_pressed, "SpeedBtn")
 
 	# ── ناوبری پایانی ثابت: پنج بخش اصلی همیشه در دسترس ──
-	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavBarPanel"; root.add_child(nav_panel)
+	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavBarPanel"; nav_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(nav_panel)
 	nav_row = HBoxContainer.new(); nav_row.add_theme_constant_override("separation", 3); nav_panel.add_child(nav_row)
 	for nav_def in [["map","◉","نقشه"],["dashboard","▦","میز فرمان"],["government","♜","دولت"],["economy","◈","اقتصاد"],["more","☰","بیشتر"]]:
 		_make_nav_item(nav_row, str(nav_def[0]), str(nav_def[1]), str(nav_def[2]))
