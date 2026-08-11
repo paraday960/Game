@@ -652,6 +652,12 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	snapshot = intelligence_result.state
 	_collect_events(intelligence_result, "intelligence_operations", snapshot, turn, generated_events, "intelligence_operation_event")
 
+	# موتور رویدادها و بحران‌ها (رودمپ ۴): ارزیابی ریسک‌های ماهانه، چرخه‌ی حیات بحران‌ها
+	# و تولید رویدادهایی که DecisionManager خودکار به تصمیم چندگزینه‌ای فارسی تبدیل می‌کند.
+	var crisis_result = EventCrisisManager.simulate_month(snapshot, turn)
+	snapshot = crisis_result.state
+	_collect_events(crisis_result, "crisis", snapshot, turn, generated_events, "crisis_event")
+
 	snapshot = MapLayerManager.update_network_metrics(snapshot)
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.

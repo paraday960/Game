@@ -37,6 +37,7 @@ IntelligenceOperationManager="*res://scripts/core/intelligence_operation_manager
 GeographyManager="*res://scripts/core/geography_manager.gd"
 CountryGeographyManager="*res://scripts/core/country_geography_manager.gd"
 MapLayerManager="*res://scripts/core/map_layer_manager.gd"
+EventCrisisManager="*res://scripts/core/event_crisis_manager.gd"
 GameState="*res://scripts/core/state.gd"
 GameEngine="*res://scripts/core/engine.gd"
 EventLog="*res://scripts/core/event_log.gd"

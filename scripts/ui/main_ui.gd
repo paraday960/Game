@@ -1100,6 +1100,12 @@ func _active_crises(st: Dictionary) -> Array:
 	var econ = st.get("economy", {})
 	var pop = st.get("population", {})
 	var pol = st.get("politics", {})
+	# بحران‌های فعال موتور رویداد (رودمپ ۴) با چرخه‌ی حیات و شدت، در هشدار داشبورد دیده می‌شوند.
+	for crisis in st.get("events_active", []):
+		if str(crisis.get("status", "active")) != "active":
+			continue
+		var level = "بحرانی" if int(crisis.get("severity", 1)) >= 3 else "هشدار"
+		out.append("%s «%s» — تصمیم فوری لازم است" % [level, str(crisis.get("title", "بحران"))])
 	if res.get("food_crisis", false):
 		out.append("بحران غذایی — ذخیره غذا رو به اتمام است")
 	if res.get("energy_crisis", false):

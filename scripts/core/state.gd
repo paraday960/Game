@@ -14,7 +14,7 @@ func _ready():
 
 func init_default_state():
 	state = {
-			"schema_version": 18,
+			"schema_version": 19,  # 19: موتور رویداد و بحران (events_active + crisis_cooldowns)
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
@@ -221,6 +221,7 @@ func init_default_state():
 			"power_score": 55.0
 		},
 			"events_active": [],
+			"crisis_cooldowns": {},
 			"pending_decisions": [],
 			"decision_history": [],
 			"progression": {
@@ -254,7 +255,7 @@ func _apply_initial_overrides():
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
 	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
-	state["schema_version"] = int(state.get("schema_version", 18))
+	state["schema_version"] = int(state.get("schema_version", 19))
 	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)
 	state = TimeManager.reset(state)

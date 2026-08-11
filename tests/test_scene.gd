@@ -418,12 +418,28 @@ func _ready():
 				print("Intelligence operations: duration + success + report + exposure OK")
 
 	# توسعه نظامی: شروع پروژه، پیشرفت ماهانه، تکمیل اثر و دکترین
-	var military_state = s.duplicate(true)
-	var debt_before_program = float(military_state["economy"]["national_debt"])
-	var program_result = GameEngine.tick(military_state, v, t, [GameCommand.create_military_program("reserve_training")])
-	if not program_result.success or not program_result.state.get("military_development", {}).get("active", {}).has("reserve_training"):
+	# مقایسه دوقلوی دترمینستیک: مازاد بودجه می‌تواند بدهی را کم کند، پس هزینه برنامه باید
+	# نسبت به همان وضعیت بدون برنامه سنجیده شود. وضعیت آرام شدت سوار تا هیچ بحرانی
+	# در هیچ‌کدام فعال نشود و جریان دترمینستیک دو اجرا یکسان بماند.
+	var calm_state = s.duplicate(true)
+	calm_state["population"]["happiness"] = 0.9
+	calm_state["politics"]["tension"] = 0.1
+	calm_state["economy"]["debt_to_gdp"] = 0.1
+	calm_state["health"]["quality"] = 0.9
+	calm_state["military"]["readiness"] = 0.9
+	calm_state["diplomacy"]["influence"] = 90.0
+	calm_state["intelligence"]["cyber_readiness"] = 0.9
+	calm_state["emergency"]["preparedness"] = 0.9
+	calm_state["trade"]["balance"] = 10_000_000_000.0
+	calm_state["physical"]["housing_shortage"] = 0.0
+	calm_state["elites_detail"]["brain_drain"] = 0.05
+	calm_state["resources"]["inventory"]["غذا"] = 120.0
+	calm_state["agriculture"]["food_security"] = 0.9
+	var program_result = GameEngine.tick(calm_state, v, t, [GameCommand.create_military_program("reserve_training")])
+	var without_program_result = GameEngine.tick(calm_state.duplicate(true), v, t, [])
+	if not program_result.success or not without_program_result.success or not program_result.state.get("military_development", {}).get("active", {}).has("reserve_training"):
 		failed.append("برنامه توسعه نظامی آغاز نشد")
-	elif float(program_result.state["economy"]["national_debt"]) <= debt_before_program:
+	elif float(program_result.state["economy"]["national_debt"]) <= float(without_program_result.state["economy"]["national_debt"]):
 		failed.append("هزینه برنامه نظامی ثبت نشد")
 	else:
 		var program_state = program_result.state

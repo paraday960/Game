@@ -279,7 +279,12 @@ func _decode_and_migrate(raw: Dictionary) -> Dictionary:
 	if source_schema < 18 or not state_data.has("map_network"):
 		state_data = MapLayerManager.update_network_metrics(state_data)
 		migrated = true
-	state_data["schema_version"] = 18
+	if source_schema < 19 or not state_data.has("events_active") or not state_data.has("crisis_cooldowns"):
+		# موتور رویداد و بحران: کلیدهای چرخه‌ی حیات بحران برای ذخیره‌های قدیمی
+		state_data["events_active"] = state_data.get("events_active", [])
+		state_data["crisis_cooldowns"] = state_data.get("crisis_cooldowns", {})
+		migrated = true
+	state_data["schema_version"] = 19
 	return {"success": true, "state": state_data, "events": event_data, "migrated": migrated}
 
 func _validate_state(candidate: Dictionary) -> Dictionary:
