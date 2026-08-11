@@ -39,6 +39,8 @@ var selected_country_unit: String = ""
 var selected_map_route: Dictionary = {}
 var current_unified_map: Control
 var country_select_option: OptionButton
+var country_picker_btn: Button
+var country_picker_overlay: Control
 var scenario_select_option: OptionButton
 var scenario_description_lbl: Label
 var app_theme: Theme
@@ -2275,12 +2277,24 @@ func _build_hero_overlay():
 	var player_id = str(state.get("world", {}).get("player_country", WorldManager.default_country))
 	var hero_sub = Label.new(); hero_sub.text = "فرماندهی یک ملت واقعی؛ ۱۹۵ کشور، ۶۵ سامانه زنده و تصمیم‌های ماهانه شما. کشور و سناریو را برگزینید؛ پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; hero_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hero_sub.modulate = TEXT_MUTED; setup.add_child(hero_sub)
 	var row_country = _chooser_row(setup, "⚑ کشور")
-	country_select_option = OptionButton.new(); country_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# انتخابگر کشور: دکمه سفارشی لمسی (لیست ۱۹۵ کشور در یک پنل اسکرول‌شونده با جستجو).
+	# OptionButton استاندارد گودوت در اندروید با لمس اسکرول نمی‌شود؛ این انتخابگر از
+	# TouchScrollClass (اسکرول درگ واقعی) استفاده می‌کند و برای سازگاری، مقدار انتخاب
+	# همیشه در country_select_option هم ثبت می‌شود.
+	country_select_option = OptionButton.new(); country_select_option.visible = false
 	var selected_index = 0
 	for country_id in WorldManager.get_country_ids():
 		var profile = WorldManager.get_country(country_id); country_select_option.add_item("%s · %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")]); country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
 		if country_id == player_id: selected_index = country_select_option.item_count - 1
-	country_select_option.select(selected_index); row_country.add_child(country_select_option)
+	country_select_option.select(selected_index)
+	country_picker_btn = Button.new()
+	country_picker_btn.text = country_select_option.get_item_text(selected_index)
+	country_picker_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	country_picker_btn.custom_minimum_size = Vector2(0, 56)
+	country_picker_btn.add_theme_font_size_override("font_size", 22)
+	country_picker_btn.tooltip_text = "لمس کنید و لیست کشورها را با کشیدن انگشت بچرخانید"
+	country_picker_btn.pressed.connect(_open_country_picker)
+	row_country.add_child(country_picker_btn)
 	var row_scenario = _chooser_row(setup, "☆ سناریو")
 	scenario_select_option = OptionButton.new(); scenario_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var active_scenario = str(state.get("scenario", {}).get("id", ScenarioManager.default_scenario)); var scenario_index = 0
@@ -2508,6 +2522,80 @@ func _on_unified_layer_selected(index: int, selector: OptionButton):
 	if is_instance_valid(current_unified_map): current_unified_map.set_base_layer(map_base_layer)
 
 # ردیف برچسب‌دار انتخاب‌گرها در کارت قهرمان آغاز بازی.
+# ─── انتخابگر لمسی کشور (جایگزین OptionButton غیرقابل اسکرول در اندروید) ───
+func _open_country_picker():
+	if country_picker_overlay != null and is_instance_valid(country_picker_overlay):
+		country_picker_overlay.queue_free()
+	var overlay = Control.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 500
+	add_child(overlay)
+	country_picker_overlay = overlay
+	# پس‌زمینه تیره (لمس بیرون = بستن)
+	var dim = ColorRect.new(); dim.color = Color(0.0, 0.01, 0.02, 0.78); dim.set_anchors_preset(Control.PRESET_FULL_RECT); dim.mouse_filter = Control.MOUSE_FILTER_STOP; overlay.add_child(dim)
+	dim.gui_input.connect(func(ev):
+		if ev is InputEventScreenTouch and ev.pressed:
+			overlay.queue_free())
+	# کارت مرکزی
+	var card = PanelContainer.new(); card.theme_type_variation = "CommandPanel"
+	card.anchor_left = 0.05; card.anchor_right = 0.95; card.anchor_top = 0.06; card.anchor_bottom = 0.94
+	card.offset_left = 0; card.offset_right = 0; card.offset_top = 0; card.offset_bottom = 0
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(card)
+	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 10); card.add_child(vbox)
+	# سرتیتر + دکمه بستن
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); vbox.add_child(head)
+	var title = Label.new(); title.text = "🌍 انتخاب کشور"; title.add_theme_font_size_override("font_size", 27); title.modulate = ACCENT_GOLD; title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
+	var close_btn = Button.new(); close_btn.text = "✕"; close_btn.custom_minimum_size = Vector2(64, 54); close_btn.add_theme_font_size_override("font_size", 24); close_btn.theme_type_variation = "GhostButton"; head.add_child(close_btn)
+	close_btn.pressed.connect(func(): overlay.queue_free())
+	# راهنمای لمسی
+	var hint = Label.new(); hint.text = "◉ لیست را با کشیدن انگشت اسکرول کنید · با جستجو سریع‌تر پیدا کنید"
+	hint.add_theme_font_size_override("font_size", 16); hint.modulate = TEXT_FAINT; vbox.add_child(hint)
+	# جستجوی فارسی
+	var search = LineEdit.new(); search.placeholder_text = "جستجوی کشور (فارسی یا کد)…"; search.custom_minimum_size = Vector2(0, 48); search.add_theme_font_size_override("font_size", 21); vbox.add_child(search)
+	# لیست اسکرول‌شونده لمسی
+	var scroll = TouchScrollClass.new(); scroll.allow_vertical = true; scroll.allow_horizontal = false
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	vbox.add_child(scroll)
+	var list = VBoxContainer.new(); list.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list.add_theme_constant_override("separation", 4); scroll.add_child(list)
+	# پر کردن لیست با فیلتر جستجو
+	var rebuild := func(query: String):
+		for child in list.get_children():
+			child.queue_free()
+		var q := query.strip_edges()
+		var shown := 0
+		for country_id in WorldManager.get_country_ids():
+			var profile = WorldManager.get_country(country_id)
+			var name := str(profile.get("name_fa", country_id))
+			var capital := str(profile.get("capital_fa", ""))
+			if q != "" and q not in name and q not in capital and q.to_upper() not in str(country_id):
+				continue
+			var item = Button.new()
+			item.text = "▸ %s · %s" % [name, capital]
+			item.custom_minimum_size = Vector2(0, 54)
+			item.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			item.add_theme_font_size_override("font_size", 21)
+			item.pressed.connect(_on_country_picked.bind(str(country_id), overlay))
+			list.add_child(item)
+			shown += 1
+		if shown == 0:
+			var empty = Label.new(); empty.text = "کشوری با این نام یافت نشد"; empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; empty.modulate = TEXT_FAINT; empty.add_theme_font_size_override("font_size", 19); list.add_child(empty)
+	rebuild.call("")
+	search.text_changed.connect(rebuild)
+	search.grab_focus()
+
+func _on_country_picked(country_code: String, overlay: Control):
+	# هماهنگ‌سازی با OptionButton داخلی برای سازگاری کامل با کد شروع بازی
+	for i in range(country_select_option.item_count):
+		if str(country_select_option.get_item_metadata(i)) == country_code:
+			country_select_option.select(i)
+			if is_instance_valid(country_picker_btn):
+				country_picker_btn.text = country_select_option.get_item_text(i)
+			break
+	if is_instance_valid(overlay):
+		overlay.queue_free()
+	FeedbackManager.play_click()
+
 func _chooser_row(parent, caption: String) -> HBoxContainer:
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 10); parent.add_child(row)
 	var cap = Label.new(); cap.text = caption; cap.custom_minimum_size = Vector2(150,0); cap.add_theme_font_size_override("font_size", 23); cap.modulate = TEXT_MUTED; cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER; row.add_child(cap)
