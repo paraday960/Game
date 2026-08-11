@@ -2058,60 +2058,41 @@ func _build_unified_map():
 	search_btn.pressed.connect(_on_map_search.bind(search_edit))
 	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
 	map_control_flow = HFlowContainer.new(); map_control_flow.add_theme_constant_override("h_separation",7); map_control_flow.add_theme_constant_override("v_separation",6); controls.add_child(map_control_flow)
-	var lens_defs = [
-		["political","سیاسی"],
-		["relations","روابط"],
-		["population","جمعیت"],
-		["economy","اقتصاد"],
-		["infrastructure","زیرساخت"],
-		["satisfaction","رضایت"],
-		["security","امنیت"],
-		["weather","اقلیم"],
-		["resources","منابع"],
-		["military","نظامی"],
-		# گروه اقتصادی
-		["agriculture","کشاورزی"],
-		["industry","صنعت"],
-		["trade_layer","تجارت"],
-		["tourism","گردشگری"],
-		["central_bank","بانک مرکزی"],
-		["stock_market","بورس"],
-		["retail","خرده‌فروشی"],
-		["fuel_stations","سوخت"],
-		# گروه اجتماعی
-		["health","بهداشت"],
-		["education","آموزش"],
-		["welfare","رفاه"],
-		["family","خانواده"],
-		["sports_youth","ورزش"],
-		["ethnicity","قومیت"],
-		["culture","فرهنگ"],
-		# گروه سیاسی و امنیتی
-		["judicial","قضایی"],
-		["intelligence","اطلاعات"],
-		["administration","اداره"],
-		["elections","انتخابات"],
-		["politics","سیاست"],
-		["statistics","آمار"],
-		["emergency","بحران"],
-		# گروه زیرساخت و محیط
-		["environment","محیط‌زیست"],
-		["urban_facilities","تاسیسات شهری"],
-		["public_services","خدمات عمومی"],
-		["transport_roads","راه‌ها"],
-		["settlements","سکونتگاه‌ها"],
-		# گروه نظامی پیشرفته
-		["military_power","قدرت نظامی"],
-		["trade_route_warfare","جنگ تجاری"]
+	# لنزها در گروه‌های مفهومی مرتب می‌شوند تا دسترسی منطقی و سریع باشد
+	var lens_groups = [
+		["🏛 پایه و کلی", [
+			["political","سیاسی"],["relations","روابط"],["population","جمعیت"],["economy","اقتصاد"],
+			["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],
+			["resources","منابع"],["military","نظامی"]]],
+		["💰 اقتصاد و تجارت", [
+			["agriculture","کشاورزی"],["industry","صنعت"],["trade_layer","تجارت"],["tourism","گردشگری"],
+			["central_bank","بانک مرکزی"],["stock_market","بورس"],["retail","خرده‌فروشی"],["fuel_stations","سوخت"]]],
+		["👥 جامعه و رفاه", [
+			["health","بهداشت"],["education","آموزش"],["welfare","رفاه"],["family","خانواده"],
+			["sports_youth","ورزش"],["ethnicity","قومیت"],["culture","فرهنگ"]]],
+		["⚖️ سیاست و امنیت", [
+			["judicial","قضایی"],["intelligence","اطلاعات"],["administration","اداره"],["elections","انتخابات"],
+			["politics","سیاست"],["statistics","آمار"],["emergency","بحران"]]],
+		["🏗 زیرساخت و محیط", [
+			["environment","محیط‌زیست"],["urban_facilities","تاسیسات شهری"],["public_services","خدمات عمومی"],
+			["transport_roads","راه‌ها"],["settlements","سکونتگاه‌ها"]]],
+		["🛡 دفاع و راهبرد", [
+			["military_power","قدرت نظامی"],["trade_route_warfare","جنگ تجاری"]]]
 	]
-	for lens in lens_defs:
-		var chip = Button.new(); chip.text = lens[1]; chip.toggle_mode = true; chip.custom_minimum_size = Vector2(0,50); chip.add_theme_font_size_override("font_size",21)
-		chip.theme_type_variation = "LensChipActive" if lens[0] == map_base_layer else "LensChip"
-		chip.set_meta("lens_layer", lens[0]); chip.set_pressed_no_signal(lens[0] == map_base_layer)
-		chip.pressed.connect(FeedbackManager.play_click); chip.pressed.connect(_on_map_lens_chip.bind(str(lens[0])))
-		map_control_flow.add_child(chip)
+	for group in lens_groups:
+		var group_header = Label.new(); group_header.text = str(group[0])
+		group_header.add_theme_font_size_override("font_size", 16)
+		group_header.modulate = Color(1.0, 0.81, 0.30, 0.9)
+		group_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		map_control_flow.add_child(group_header)
+		for lens in group[1]:
+			var chip = Button.new(); chip.text = lens[1]; chip.toggle_mode = true; chip.custom_minimum_size = Vector2(0,50); chip.add_theme_font_size_override("font_size",21)
+			chip.theme_type_variation = "LensChipActive" if lens[0] == map_base_layer else "LensChip"
+			chip.set_meta("lens_layer", lens[0]); chip.set_pressed_no_signal(lens[0] == map_base_layer)
+			chip.pressed.connect(FeedbackManager.play_click); chip.pressed.connect(_on_map_lens_chip.bind(str(lens[0])))
+			map_control_flow.add_child(chip)
 	var overlay_caption = Label.new(); overlay_caption.text = "لایه‌های اطلاعاتی روی نقشه"; overlay_caption.add_theme_font_size_override("font_size", 19); overlay_caption.modulate = TEXT_FAINT; controls.add_child(overlay_caption)
-	# پیل‌های لایه (چندانتخابی) با چراغ وضعیت طلایی.
+	# پیل‌های لایه (چندانتخابی) با چراغ وضعیت طلایی — دسته «اصلی»
 	map_overlay_grid = GridContainer.new(); map_overlay_grid.columns = 5; map_overlay_grid.add_theme_constant_override("h_separation",7); map_overlay_grid.add_theme_constant_override("v_separation",6); controls.add_child(map_overlay_grid)
 	var overlay_defs = [
 		["wars","جنگ"],
@@ -2122,8 +2103,18 @@ func _build_unified_map():
 		["land","زمین"],
 		["cities","شهرها"],
 		["transport","راه و ریل"],
-		["intelligence","اطلاعاتی"],
-		# پیشرفته جدید
+		["intelligence","اطلاعاتی"]
+	]
+	for definition in overlay_defs:
+		var pill = Button.new(); pill.text = definition[1]; pill.toggle_mode = true; pill.custom_minimum_size = Vector2(0,46); pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL; pill.add_theme_font_size_override("font_size",19)
+		pill.theme_type_variation = "PillToggle"
+		pill.button_pressed = bool(map_overlays.get(definition[0],false))
+		pill.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0])))
+		map_overlay_grid.add_child(pill)
+	# دسته «پیشرفته» — لایه‌های تخصصی نقشه‌محور
+	var advanced_overlay_caption = Label.new(); advanced_overlay_caption.text = "لایه‌های پیشرفته"; advanced_overlay_caption.add_theme_font_size_override("font_size", 17); advanced_overlay_caption.modulate = Color(1.0, 0.81, 0.30, 0.75); controls.add_child(advanced_overlay_caption)
+	var map_overlay_grid_adv = GridContainer.new(); map_overlay_grid_adv.columns = 5; map_overlay_grid_adv.add_theme_constant_override("h_separation",7); map_overlay_grid_adv.add_theme_constant_override("v_separation",6); controls.add_child(map_overlay_grid_adv)
+	var overlay_defs_adv = [
 		["units","یگان‌ها ⚔️"],
 		["resources_detail","معادن و چاه ⛏️"],
 		["population_heatmap","تراکم جمعیت 👥"],
@@ -2132,12 +2123,12 @@ func _build_unified_map():
 		["battle_plans","طرح نبرد 📋"],
 		["constructions","ساخت‌وساز 🏗️"]
 	]
-	for definition in overlay_defs:
+	for definition in overlay_defs_adv:
 		var pill = Button.new(); pill.text = definition[1]; pill.toggle_mode = true; pill.custom_minimum_size = Vector2(0,46); pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL; pill.add_theme_font_size_override("font_size",19)
 		pill.theme_type_variation = "PillToggle"
 		pill.button_pressed = bool(map_overlays.get(definition[0],false))
 		pill.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0])))
-		map_overlay_grid.add_child(pill)
+		map_overlay_grid_adv.add_child(pill)
 	var usage = Label.new(); usage.text = "◉ کشیدن جابه‌جا می‌کند · دو انگشت زوم · لمس کشور را انتخاب و دوبار لمس وارد کشور می‌شود؛ با زوم، استان‌ها و شبکه‌ها آشکار می‌گردند."; usage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; usage.modulate = TEXT_FAINT; usage.add_theme_font_size_override("font_size",19); controls.add_child(usage)
 
 	# === حالت‌های پیشرفته نقشه‌محور - طرح نبرد، ساخت‌وساز ===
