@@ -611,6 +611,89 @@ func _ready():
 		else:
 			print("Atomic event rollback: OK")
 
+	# نگهبان هوش سیستم‌ها (اصل ۷): مسیر شاخص همه پرونده‌ها باید روی وضعیت اجراشده عدد برگرداند
+	# و هر فایل _ai.gd باید ورودی تشخیصی PROFILES داشته باشد؛ در غیر این صورت هوش بی‌صدا می‌مرد.
+	var probe1 = GameEngine.tick(GameState.get_state_copy(), GameState.version, GameState.tick, [])
+	if not probe1.success:
+		failed.append("اجرای تیک نگهبان هوش ناموفق بود")
+	else:
+		var ai_state = probe1.state
+		var broken_profiles: Array = []
+		for ai_key in BaseAI.PROFILES.keys():
+			var raw_probe = _test_read_path(ai_state, str(BaseAI.PROFILES[ai_key][0]))
+			if not (raw_probe is int or raw_probe is float):
+				broken_profiles.append(str(ai_key))
+		if broken_profiles.size() > 0:
+			failed.append("مسیر شاخص این هوش‌ها در وضعیت گم است: " + ", ".join(broken_profiles))
+		else:
+			print("AI diagnostic profiles: همه ۶۵ مسیر شاخص عددی قابل خواندن است: OK")
+		var profiles_dir = DirAccess.open("res://scripts/ai")
+		var unmapped: Array = []
+		if profiles_dir != null:
+			for profile_file in profiles_dir.get_files():
+				if profile_file.ends_with("_ai.gd") and profile_file != "base_ai.gd" and profile_file != "ai_advisor.gd":
+					var profile_stem = profile_file.trim_suffix("_ai.gd")
+					if not BaseAI.PROFILES.has(profile_stem):
+						unmapped.append(profile_stem)
+		if unmapped.size() > 0:
+			failed.append("این فایل‌های هوش پرونده تشخیصی ندارند: " + ", ".join(unmapped))
+		else:
+			print("AI file coverage: هر فایل هوش پرونده تشخیصی دارد: OK")
+
+	# چرخه‌ی حیات بحران: فعال‌سازی با شرط وضعیتی، اتصال به تصمیم چندگزینه‌ای، انقضا و تامین مجدد
+	var crisis_attempt_state = GameState.get_state_copy()
+	crisis_attempt_state["population"]["happiness"] = 0.10
+	crisis_attempt_state["politics"]["tension"] = 0.95
+	var crisis_met = false
+	var v2 = GameState.version
+	var t2 = GameState.tick
+	for attempt in range(12):
+		var crisis_probe_result = GameEngine.tick(crisis_attempt_state, v2, t2, [])
+		if not crisis_probe_result.success:
+			break
+		crisis_attempt_state = crisis_probe_result.state
+		v2 = int(crisis_probe_result.version)
+		t2 = int(crisis_probe_result.tick)
+		for crisis in crisis_attempt_state.get("events_active", []):
+			if str(crisis.get("type", "")) == "mass_protest" and str(crisis.get("status", "")) == "active":
+				crisis_met = true
+		if crisis_met:
+			break
+	if not crisis_met:
+		failed.append("بحران اعتراض در وضعیت پرریسک فعال نشد")
+	else:
+		var decision_linked = false
+		for decision in crisis_attempt_state.get("pending_decisions", []):
+			if str(decision.get("event_type", "")) == "mass_protest":
+				decision_linked = true
+		if not decision_linked:
+			failed.append("بحران اعتراض به تصمیم چندگزینه‌ای تبدیل نشد")
+		var expiring = crisis_attempt_state.duplicate(true)
+		var now_day = TimeManager.get_total_days(expiring)
+		for crisis in expiring.get("events_active", []):
+			crisis["expires_day"] = now_day - 1
+		var expire_result = GameEngine.tick(expiring, v2, t2, [])
+		if not expire_result.success:
+			failed.append("تیک انقضای بحران ناموفق بود")
+		else:
+			var still_active = false
+			for crisis in expire_result.state.get("events_active", []):
+				if str(crisis.get("type", "")) == "mass_protest" and str(crisis.get("status", "")) == "active":
+					still_active = true
+			var has_cooldown = float(expire_result.state.get("crisis_cooldowns", {}).get("mass_protest", -1.0)) > 0.0
+			if still_active or not has_cooldown:
+				failed.append("انقضا یا دوره تامین مجدد بحران درست کار نکرد")
+			elif not decision_linked:
+				failed.append("پیوند بحران به تصمیم کامل نیست")
+			else:
+				print("Crisis lifecycle: فعال‌سازی + تصمیم + انقضا + تامین مجدد: OK")
+
+	# تعریف داده‌محور بحران‌ها باید با قالب‌های تصمیم DecisionManager سازگار باشد
+	if not EventCrisisManager.is_valid():
+		failed.append("تعریف بحران‌ها با قالب‌های تصمیم سازگار نیست")
+	else:
+		print("Crisis data model: همه بحران‌ها قالب تصمیم فارسی دارند: OK")
+
 	print("")
 	if failed.size() == 0:
 		print("=== ✅ ALL TESTS PASSED (%d systems) ===" % GameEngine.systems.size())
@@ -623,3 +706,12 @@ func _ready():
 				seen[f] = true
 
 	get_tree().quit(0 if failed.size() == 0 else 1)
+
+# خواندن مسیر نقطه‌ای از وضعیت — برای نگهبان پرونده‌های هوش (مثل BaseAI._read_path)
+func _test_read_path(source: Dictionary, path: String):
+	var current = source
+	for part in path.split("."):
+		if not current is Dictionary or not current.has(part):
+			return null
+		current = current[part]
+	return current
