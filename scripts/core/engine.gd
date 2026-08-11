@@ -10,7 +10,7 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
-	"trade_route_attack", "chokepoint_action", "map_operation"
+	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -85,7 +85,8 @@ var system_order = [
 	"foreign_affairs",   # 3.71
 	"interdependency",   # 3.63 مدل اثرگذاری متقابل
 	"quantitative",      # 3.64 دقیق‌سازی کمّی و زمانی
-	"trade_route_warfare" # 3.80 جنگ مسیرهای تجاری - نقشه‌محور
+	"trade_route_warfare", # 3.80 جنگ مسیرهای تجاری - نقشه‌محور
+	"map_advanced"       # 3.90 عملیات پیشرفته نقشه‌محور - طرح نبرد و ساخت‌وساز
 ]
 
 # سیستم‌های لود شده
@@ -110,6 +111,7 @@ func _ready():
 	systems["culture"] = load("res://scripts/systems/culture_system.gd").new()
 	systems["intelligence"] = load("res://scripts/systems/intelligence_system.gd").new()
 	systems["trade_route_warfare"] = load("res://scripts/systems/trade_route_warfare_system.gd").new()
+	systems["map_advanced"] = load("res://scripts/systems/map_advanced_system.gd").new()
 	systems["central_bank"] = load("res://scripts/systems/central_bank_system.gd").new()
 	systems["trade"] = load("res://scripts/systems/trade_system.gd").new()
 	systems["tourism"] = load("res://scripts/systems/tourism_system.gd").new()
@@ -461,10 +463,24 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var target = str(cmd.payload.get("target_country", ""))
 			if op_type.is_empty():
 				return {"valid": false, "reason": "نوع عملیات نقشه‌محور نامشخص است"}
-			if not ["airstrike","naval_blockade","sabotage_infrastructure","drone_swarm","cyber_attack","propaganda","humanitarian"].has(op_type):
+			if not ["airstrike","naval_blockade","sabotage_infrastructure","drone_swarm","cyber_attack","propaganda","humanitarian","fortify","airfield","depot","radar","factory","bunker","sabotage","drone_recon","special_ops","blockade"].has(op_type):
 				return {"valid": false, "reason": "عملیات نقشه‌محور نامعتبر است"}
-			if target.is_empty():
+			if target.is_empty() and op_type not in ["fortify","airfield","depot","radar","factory","bunker"]:
 				return {"valid": false, "reason": "کشور هدف عملیات نقشه مشخص نیست"}
+		elif cmd.type == "battle_plan":
+			var plan_type = str(cmd.payload.get("plan_type",""))
+			if not ["offensive","defensive","encirclement","breakthrough","pincer","amphibious","airborne"].has(plan_type):
+				return {"valid": false, "reason": "نوع طرح نبرد نامعتبر است"}
+			if float(state.get("military",{}).get("readiness",0.6)) < 0.30:
+				return {"valid": false, "reason": "آمادگی نظامی کم برای طرح نبرد"}
+		elif cmd.type == "construction":
+			var build_type = str(cmd.payload.get("build_type",""))
+			if not ["road","rail","fort","depot","airfield","radar","port","bunker","factory","air_defense"].has(build_type):
+				return {"valid": false, "reason": "نوع ساخت‌وساز نقشه نامعتبر است"}
+		elif cmd.type == "map_building":
+			var building_type = str(cmd.payload.get("building_type",""))
+			if not ["fort","airfield","depot","radar","factory","bunker","air_defense","port","silo","barracks"].has(building_type):
+				return {"valid": false, "reason": "نوع ساختمان نقشه نامعتبر است"}
 	return {"valid": true, "reason": ""}
 
 func _record_command_receipts(snapshot: Dictionary, commands: Array):
@@ -631,6 +647,46 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 				snapshot = result.state
 				for ev in result.events:
 					EventLog.log_event("map_operation_event", ev, cmd.tick, cmd.version)
+		elif systems.has("map_advanced"):
+			var result = systems["map_advanced"].apply_map_operation(snapshot, target_country, op_type, cmd.payload, cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("map_operation_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "battle_plan":
+		var from_c = str(cmd.payload.get("from_country",""))
+		var to_c = str(cmd.payload.get("to_country",""))
+		var plan_type = str(cmd.payload.get("plan_type","offensive"))
+		if systems.has("map_advanced"):
+			var result = systems["map_advanced"].apply_battle_plan(snapshot, from_c, str(cmd.payload.get("from_unit","")), to_c, str(cmd.payload.get("to_unit","")), plan_type, float(cmd.payload.get("from_lat",0.0)), float(cmd.payload.get("from_lon",0.0)), float(cmd.payload.get("to_lat",0.0)), float(cmd.payload.get("to_lon",0.0)), cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("battle_plan_event", ev, cmd.tick, cmd.version)
+		else:
+			snapshot = _apply_battle_plan_simple(snapshot, from_c, to_c, plan_type, cmd.tick)
+	elif cmd.type == "construction":
+		var from_c = str(cmd.payload.get("from_country",""))
+		var to_c = str(cmd.payload.get("to_country",""))
+		var build_type = str(cmd.payload.get("build_type","road"))
+		if systems.has("map_advanced"):
+			var result = systems["map_advanced"].apply_construction(snapshot, from_c, str(cmd.payload.get("from_unit","")), to_c, str(cmd.payload.get("to_unit","")), build_type, float(cmd.payload.get("from_lat",0.0)), float(cmd.payload.get("from_lon",0.0)), float(cmd.payload.get("to_lat",0.0)), float(cmd.payload.get("to_lon",0.0)), cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("construction_event", ev, cmd.tick, cmd.version)
+		else:
+			snapshot = _apply_construction_simple(snapshot, from_c, to_c, build_type, cmd.tick)
+	elif cmd.type == "map_building":
+		var building_type = str(cmd.payload.get("building_type","fort"))
+		var country_id = str(cmd.payload.get("country_id",""))
+		var unit_id = str(cmd.payload.get("unit_id",""))
+		if systems.has("map_advanced"):
+			var result = systems["map_advanced"].apply_building(snapshot, building_type, country_id, unit_id, float(cmd.payload.get("lat",0.0)), float(cmd.payload.get("lon",0.0)), cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("map_building_event", ev, cmd.tick, cmd.version)
 	# تمام انواع فرمان در همان تراکنش و با فراداده نسخه مقصد ثبت می‌شوند.
 	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 
@@ -656,6 +712,21 @@ func _apply_chokepoint_simple(snapshot: Dictionary, chokepoint_id: String, actio
 	snapshot["trade_route_warfare"] = trade_warfare
 	if action == "blockade":
 		snapshot["economy"]["gdp"] = float(snapshot["economy"].get("gdp", 500e9)) * 0.998
+	return snapshot
+
+func _apply_battle_plan_simple(snapshot: Dictionary, from_c: String, to_c: String, plan_type: String, tick: int) -> Dictionary:
+	var map_adv = snapshot.get("map_advanced", {})
+	map_adv["battle_plans"] = map_adv.get("battle_plans", [])
+	map_adv["battle_plans"].append({"from_country": from_c, "to_country": to_c, "plan_type": plan_type, "tick": tick, "status": "planned", "progress": 0.0})
+	snapshot["map_advanced"] = map_adv
+	return snapshot
+
+func _apply_construction_simple(snapshot: Dictionary, from_c: String, to_c: String, build_type: String, tick: int) -> Dictionary:
+	var map_adv = snapshot.get("map_advanced", {})
+	map_adv["constructions"] = map_adv.get("constructions", [])
+	map_adv["constructions"].append({"from_country": from_c, "to_country": to_c, "build_type": build_type, "tick": tick, "progress": 0.0, "status": "building"})
+	snapshot["map_advanced"] = map_adv
+	snapshot["economy"]["national_debt"] = float(snapshot["economy"].get("national_debt", 0.0)) + 0.5e9
 	return snapshot
 
 func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:

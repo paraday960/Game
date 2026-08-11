@@ -207,6 +207,17 @@ func init_default_state():
 			"total_blockades": 0,
 			"economic_damage": 0.0
 		},
+		"map_advanced": {
+			"battle_plans": [],
+			"constructions": [],
+			"buildings": [],
+			"forts": {},
+			"depots": {},
+			"airfields": {},
+			"radar_stations": {},
+			"supply_depots": {},
+			"front_lines": []
+		},
 		"map_network": {"air_connectivity":0.5,"sea_connectivity":0.5,"land_connectivity":0.5,"disrupted_routes":0,"updated_turn":0},
 		# لایه‌ی اماکن فیزیکی و مردم و ...
 		"physical": {

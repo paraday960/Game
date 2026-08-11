@@ -26,6 +26,9 @@ var selected_system: String = "economy"
 var selected_world_country: String = ""
 var map_base_layer: String = "political"
 var map_overlays: Dictionary = {"wars":true,"alliances":true,"trade":true,"air":false,"sea":false,"land":false,"cities":true,"transport":true,"intelligence":false}
+var map_advanced_mode: String = "select" # select, battle_plan, build_road, build_rail, build_fort, build_depot, build_airfield, build_radar
+var map_advanced_start_country: String = ""
+var map_advanced_start_unit: String = ""
 var map_camera_center := Vector2(0.5, 0.5)
 var map_zoom := 1.0
 var selected_country_unit: String = ""
@@ -2019,6 +2022,35 @@ func _build_unified_map():
 		map_overlay_grid.add_child(pill)
 	var usage = Label.new(); usage.text = "◉ کشیدن جابه‌جا می‌کند · دو انگشت زوم · لمس کشور را انتخاب و دوبار لمس وارد کشور می‌شود؛ با زوم، استان‌ها و شبکه‌ها آشکار می‌گردند."; usage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; usage.modulate = TEXT_FAINT; usage.add_theme_font_size_override("font_size",19); controls.add_child(usage)
 
+	# === حالت‌های پیشرفته نقشه‌محور - طرح نبرد، ساخت‌وساز ===
+	var advanced_caption = Label.new(); advanced_caption.text = "⚔️ حالت‌های پیشرفته نقشه‌محور (HOI4/EU4)"; advanced_caption.add_theme_font_size_override("font_size", 20); advanced_caption.modulate = Color(1.0,0.85,0.4); controls.add_child(advanced_caption)
+	var advanced_grid = GridContainer.new(); advanced_grid.columns = 3; advanced_grid.add_theme_constant_override("h_separation",7); advanced_grid.add_theme_constant_override("v_separation",6); controls.add_child(advanced_grid)
+	var advanced_modes = [
+		["select","🎯 انتخاب","حالت عادی انتخاب کشور/شهر/مسیر"],
+		["battle_plan","⚔️ طرح نبرد","کشیدن فلش تهاجمی از خودی به دشمن - HOI4"],
+		["build_road","🛣️ ساخت جاده","کلیک دو شهر برای ساخت جاده"],
+		["build_rail","🚂 راه‌آهن","کلیک دو شهر برای راه‌آهن"],
+		["build_fort","🏰 سنگر","ساخت استحکامات در استان مرزی"],
+		["build_depot","📦 انبار","انبار تدارکات - کاهش آسیب تدارکات"],
+		["build_airfield","✈️ باند","باند هوایی اضطراری"],
+		["build_radar","📡 رادار","ایستگاه رادار شناسایی"]
+	]
+	for mode_def in advanced_modes:
+		var btn = Button.new(); btn.text = mode_def[1]; btn.toggle_mode = true; btn.custom_minimum_size = Vector2(0,48); btn.add_theme_font_size_override("font_size",18)
+		btn.tooltip_text = mode_def[2]
+		btn.set_meta("advanced_mode", mode_def[0])
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_advanced_map_mode.bind(mode_def[0]))
+		advanced_grid.add_child(btn)
+	# نمایش طرح‌های فعال
+	var adv_state = state.get("map_advanced", {})
+	var plans = adv_state.get("battle_plans", [])
+	var constructions = adv_state.get("constructions", [])
+	if not plans.is_empty() or not constructions.is_empty():
+		var active_info = Label.new()
+		active_info.text = "📋 طرح‌های فعال: %d نبرد + %d ساخت‌وساز" % [plans.size(), constructions.size()]
+		active_info.modulate = Color(0.6,0.85,1.0)
+		controls.add_child(active_info)
+
 	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
 	for war_target in world.get("wars", {}).keys():
 		if map_countries.has(war_target): map_countries[war_target]["at_war"] = true
@@ -2259,6 +2291,32 @@ func _on_map_lens_chip(layer: String):
 				chip.theme_type_variation = "LensChipActive" if on else "LensChip"
 				chip.set_pressed_no_signal(on)
 
+func _on_advanced_map_mode(mode: String):
+	map_advanced_mode = mode
+	map_advanced_start_country = ""
+	map_advanced_start_unit = ""
+	# بازخورد به کاربر
+	var mode_names = {
+		"select":"🎯 حالت انتخاب",
+		"battle_plan":"⚔️ طرح نبرد - مبدا خودی، مقصد دشمن را انتخاب کن",
+		"build_road":"🛣️ ساخت جاده - دو شهر را انتخاب کن",
+		"build_rail":"🚂 راه‌آهن - دو شهر",
+		"build_fort":"🏰 استحکامات - استان مرزی خودی",
+		"build_depot":"📦 انبار - استان خودی",
+		"build_airfield":"✈️ باند - استان خودی",
+		"build_radar":"📡 رادار - استان خودی"
+	}
+	_toast(mode_names.get(mode, mode))
+	# ویژوال برای حالت فعال - همه دکمه‌ها را به‌روز کن
+	if is_instance_valid(map_control_flow):
+		for child in map_control_flow.get_parent().get_parent().get_children():
+			if child is GridContainer:
+				for btn in child.get_children():
+					if btn is Button and btn.has_meta("advanced_mode"):
+						var is_active = str(btn.get_meta("advanced_mode")) == mode
+						btn.theme_type_variation = "LensChipActive" if is_active else "LensChip"
+						btn.set_pressed_no_signal(is_active)
+
 func _on_unified_overlay_toggled(pressed: bool, layer: String):
 	map_overlays[layer] = pressed
 	if is_instance_valid(current_unified_map): current_unified_map.set_overlay(layer, pressed)
@@ -2276,10 +2334,87 @@ func _on_unified_view_changed(center: Vector2, zoom: float):
 	map_camera_center = center; map_zoom = zoom
 
 func _on_unified_country_selected(code: String):
+	# حالت‌های پیشرفته نقشه‌محور - طرح نبرد و ساخت‌وساز با دو کلیک
+	if map_advanced_mode != "select":
+		if map_advanced_start_country == "":
+			# کلیک اول - مبدا
+			map_advanced_start_country = code
+			map_advanced_start_unit = ""
+			_toast("🎯 مبدا %s انتخاب شد - حالا مقصد را انتخاب کن (%s)" % [WorldManager.get_country_name(code), map_advanced_mode])
+			call_deferred("_refresh_unified_map_context")
+			return
+		else:
+			# کلیک دوم - مقصد و اجرای عملیات
+			var from_c = map_advanced_start_country
+			var to_c = code
+			var mode = map_advanced_mode
+			map_advanced_start_country = ""
+			map_advanced_start_unit = ""
+
+			var cmd = null
+			if mode == "battle_plan":
+				cmd = GameCommandClass.create_battle_plan(from_c, "", to_c, "", "offensive")
+			elif mode.begins_with("build_"):
+				var build_type = mode.replace("build_", "")
+				cmd = GameCommandClass.create_construction(from_c, "", to_c, "", build_type)
+			else:
+				cmd = GameCommandClass.create_map_operation(to_c, mode, {})
+
+			if cmd != null and _run_tick_with([cmd]):
+				_toast("🗺️ %s از %s به %s اجرا شد" % [mode, WorldManager.get_country_name(from_c), WorldManager.get_country_name(to_c)])
+				map_advanced_mode = "select"
+				_switch_tab("map")
+				return
+			else:
+				_toast("⚠️ عملیات نقشه‌محور ممکن نشد")
+				map_advanced_mode = "select"
+
 	selected_world_country = code; selected_country_unit = ""; selected_map_route = {}
 	_toast("کشور انتخابی · " + WorldManager.get_country_name(code)); call_deferred("_refresh_unified_map_context")
 
 func _on_unified_unit_selected(code: String, unit_id: String):
+	# حالت پیشرفته - استان به استان
+	if map_advanced_mode != "select":
+		if map_advanced_start_country == "":
+			map_advanced_start_country = code
+			map_advanced_start_unit = unit_id
+			var unit = CountryGeographyManager.get_unit(code, unit_id)
+			_toast("🎯 مبدا %s - %s انتخاب شد - مقصد را انتخاب کن" % [WorldManager.get_country_name(code), str(unit.get("name_fa",""))])
+			call_deferred("_refresh_unified_map_context")
+			return
+		else:
+			var from_c = map_advanced_start_country
+			var from_u = map_advanced_start_unit
+			var to_c = code
+			var to_u = unit_id
+			var mode = map_advanced_mode
+			map_advanced_start_country = ""
+			map_advanced_start_unit = ""
+
+			var cmd = null
+			if mode == "battle_plan":
+				# تعیین نوع طرح بر اساس فاصله و وضعیت
+				var plan_type = "offensive"
+				if from_c == to_c:
+					plan_type = "defensive"
+				elif WorldManager.get_country(to_c).get("military_power",0) > 80:
+					plan_type = "encirclement"
+				cmd = GameCommandClass.create_battle_plan(from_c, from_u, to_c, to_u, plan_type)
+			elif mode.begins_with("build_"):
+				var build_type = mode.replace("build_", "")
+				cmd = GameCommandClass.create_construction(from_c, from_u, to_c, to_u, build_type)
+			else:
+				cmd = GameCommandClass.create_map_building(mode.replace("build_",""), code, unit_id)
+
+			if cmd != null and _run_tick_with([cmd]):
+				_toast("🗺️ %s از %s به %s" % [mode, from_c, to_c])
+				map_advanced_mode = "select"
+				_switch_tab("map")
+				return
+			else:
+				_toast("⚠️ عملیات ممکن نشد")
+				map_advanced_mode = "select"
+
 	selected_world_country = code; selected_country_unit = unit_id; selected_map_route = {}
 	var unit = CountryGeographyManager.get_unit(code, unit_id); _toast("ناحیه انتخابی · " + str(unit.get("name_fa", ""))); call_deferred("_refresh_unified_map_context")
 

@@ -181,6 +181,8 @@ func _draw():
 		_draw_routes()
 		_draw_war_fronts() # جبهه‌های جنگ - نقشه‌محور
 		_draw_supply_lines() # خطوط تدارکات - نقشه‌محور
+		_draw_battle_plans() # طرح‌های نبرد ترسیمی کاربر - پیشرفته
+		_draw_constructions() # ساخت‌وساز نقشه‌محور
 		if zoom_level>=NETWORK_ZOOM and overlays.get("transport",true) and selected_country!="":_draw_national_network(selected_country)
 		_draw_hubs();_draw_country_labels()
 		if zoom_level>=CITY_ZOOM and overlays.get("cities",true) and selected_country!="":_draw_cities(selected_country)
@@ -634,6 +636,184 @@ func _draw_supply_lines():
 				var truck_pos = points[idx]
 				draw_circle(truck_pos, 3.0, Color(0.15,0.15,0.15,0.85))
 				draw_circle(truck_pos, 1.8, supply_color)
+
+func _draw_battle_plans():
+	# رسم طرح‌های نبرد ترسیمی کاربر - فلش‌های HOI4 مانند
+	var adv = full_state.get("map_advanced", {})
+	var plans = adv.get("battle_plans", [])
+	if plans.is_empty():
+		return
+	for plan in plans:
+		var from_lat = float(plan.get("from_lat",0.0))
+		var from_lon = float(plan.get("from_lon",0.0))
+		var to_lat = float(plan.get("to_lat",0.0))
+		var to_lon = float(plan.get("to_lon",0.0))
+		# اگر lat/lon صفر، از کشور استفاده کن
+		if from_lat == 0.0 and from_lon == 0.0:
+			var from_c = str(plan.get("from_country",""))
+			var from_profile = countries.get(from_c, {})
+			if from_profile.is_empty(): continue
+			from_lat = float(from_profile.get("lat",0.0))
+			from_lon = float(from_profile.get("lon",0.0))
+		if to_lat == 0.0 and to_lon == 0.0:
+			var to_c = str(plan.get("to_country",""))
+			var to_profile = countries.get(to_c, {})
+			if to_profile.is_empty(): continue
+			to_lat = float(to_profile.get("lat",0.0))
+			to_lon = float(to_profile.get("lon",0.0))
+
+		var start = _geo_point(from_lon, from_lat)
+		var finish = _geo_point(to_lon, to_lat)
+		if not _segment_near_view(start, finish):
+			continue
+
+		var plan_type = str(plan.get("plan_type","offensive"))
+		var progress = float(plan.get("progress",0.0))
+		var status = str(plan.get("status","planned"))
+
+		# رنگ بر اساس نوع طرح
+		var color_map = {
+			"offensive": Color(1.0, 0.35, 0.15, 0.90),
+			"defensive": Color(0.20, 0.60, 1.0, 0.85),
+			"encirclement": Color(0.85, 0.15, 0.85, 0.90),
+			"breakthrough": Color(1.0, 0.75, 0.15, 0.90),
+			"pincer": Color(0.95, 0.45, 0.10, 0.90),
+			"amphibious": Color(0.15, 0.85, 0.85, 0.90),
+			"airborne": Color(0.85, 0.85, 0.20, 0.90)
+		}
+		var plan_color = color_map.get(plan_type, Color(1.0,0.5,0.1,0.85))
+		if status == "executed":
+			plan_color = Color(0.25, 0.85, 0.40, 0.75) # سبز برای اجرا شده
+
+		var width = clamp(2.5 + progress*2.0, 2.5, 5.5)
+		var points = _curve_points(start, finish, "wars")
+
+		# سایه
+		draw_polyline(points, Color(0.0,0.0,0.0,0.35), width+2.0, true)
+
+		# خط اصلی - نقطه‌چین اگر در حال برنامه‌ریزی، ممتد اگر اجرا شده
+		if status == "planned":
+			_draw_dashed(points, plan_color, width)
+		else:
+			draw_polyline(points, plan_color, width, true)
+
+		# فلش بزرگ در انتها
+		if points.size() > 3:
+			var last = points[points.size()-1]
+			var prev = points[points.size()-3]
+			var dir = (last - prev).normalized()
+			var perp = Vector2(-dir.y, dir.x)
+			var arrow_len = 14.0
+			var arrow_w = 8.0
+			draw_line(last, last - dir*arrow_len + perp*arrow_w, plan_color, 2.8)
+			draw_line(last, last - dir*arrow_len - perp*arrow_w, plan_color, 2.8)
+
+			# متن نوع طرح
+			if zoom_level >= 2.0:
+				var label = "%s %.0f%%" % [plan_type, progress*100.0]
+				if plan_type == "offensive": label = "⚔️ تهاجم %.0f%%" % (progress*100.0)
+				elif plan_type == "defensive": label = "🛡️ دفاع %.0f%%" % (progress*100.0)
+				elif plan_type == "encirclement": label = "♻️ محاصره %.0f%%" % (progress*100.0)
+				elif plan_type == "breakthrough": label = "💥 رخنه %.0f%%" % (progress*100.0)
+				draw_string(PersianFont, last + Vector2(10, -8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, plan_color)
+
+func _draw_constructions():
+	# رسم ساخت‌وساز نقشه‌محور - جاده، راه‌آهن، سنگر، انبار، باند
+	var adv = full_state.get("map_advanced", {})
+	var constructions = adv.get("constructions", [])
+	var buildings = adv.get("buildings", [])
+
+	# ساخت‌وساز در حال ساخت - نقطه‌چین زرد
+	for construction in constructions:
+		var status = str(construction.get("status","building"))
+		if status == "completed":
+			continue
+		var from_lat = float(construction.get("from_lat",0.0))
+		var from_lon = float(construction.get("from_lon",0.0))
+		var to_lat = float(construction.get("to_lat",0.0))
+		var to_lon = float(construction.get("to_lon",0.0))
+		var from_c = str(construction.get("from_country",""))
+		var to_c = str(construction.get("to_country",""))
+		if from_lat == 0.0 and from_lon == 0.0 and from_c != "":
+			var from_profile = countries.get(from_c, {})
+			if not from_profile.is_empty():
+				from_lat = float(from_profile.get("lat",0.0))
+				from_lon = float(from_profile.get("lon",0.0))
+		if to_lat == 0.0 and to_lon == 0.0 and to_c != "":
+			var to_profile = countries.get(to_c, {})
+			if not to_profile.is_empty():
+				to_lat = float(to_profile.get("lat",0.0))
+				to_lon = float(to_profile.get("lon",0.0))
+
+		if from_lat == 0.0 and to_lat == 0.0:
+			continue
+
+		var start = _geo_point(from_lon, from_lat)
+		var finish = _geo_point(to_lon, to_lat)
+		if not _segment_near_view(start, finish):
+			continue
+
+		var build_type = str(construction.get("build_type","road"))
+		var progress = float(construction.get("progress",0.0))
+
+		var color_map = {
+			"road": Color(0.85, 0.65, 0.25, 0.80),
+			"rail": Color(0.60, 0.60, 0.65, 0.85),
+			"fort": Color(0.55, 0.55, 0.60, 0.90),
+			"depot": Color(0.25, 0.75, 0.35, 0.80),
+			"airfield": Color(0.40, 0.70, 1.0, 0.80),
+			"radar": Color(0.30, 0.85, 0.85, 0.80),
+			"factory": Color(0.85, 0.55, 0.20, 0.80)
+		}
+		var build_color = color_map.get(build_type, Color(0.9,0.7,0.2,0.80))
+		var points = _curve_points(start, finish, "land")
+
+		# پیشرفت با نقطه‌چین
+		var dash_len = int(points.size() * progress)
+		if dash_len > 2:
+			var partial = PackedVector2Array()
+			for i in range(dash_len):
+				partial.append(points[i])
+			draw_polyline(partial, build_color, 2.2, true)
+			# بقیه خاکستری نقطه‌چین
+			var remaining = PackedVector2Array()
+			for i in range(dash_len, points.size()):
+				remaining.append(points[i])
+			_draw_dashed(remaining, Color(0.5,0.5,0.5,0.50), 1.5)
+
+		if zoom_level >= 3.0 and points.size() > 2:
+			var mid = points[points.size()/2]
+			draw_string(PersianFont, mid + Vector2(8, -6), "%s %.0f%%" % [build_type, progress*100.0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, build_color)
+
+	# ساختمان‌های ساخته‌شده - آیکون
+	for building in buildings:
+		var lat = float(building.get("lat",0.0))
+		var lon = float(building.get("lon",0.0))
+		var country_id = str(building.get("country_id",""))
+		if lat == 0.0 and lon == 0.0 and country_id != "":
+			var profile = countries.get(country_id, {})
+			if not profile.is_empty():
+				lat = float(profile.get("lat",0.0)) + Deterministic.next_range(-2.0,2.0) if false else float(profile.get("lat",0.0))
+				lon = float(profile.get("lon",0.0))
+
+		if lat == 0.0 and lon == 0.0:
+			continue
+
+		var point = _geo_point(lon, lat)
+		if not _viewport.grow(20).has_point(point):
+			continue
+
+		var b_type = str(building.get("building_type","fort"))
+		var icon_map = {
+			"fort": "🏰", "airfield": "✈️", "depot": "📦", "radar": "📡",
+			"factory": "🏭", "bunker": "🛡️", "air_defense": "🎯", "port": "⚓",
+			"barracks": "🏠", "silo": "🚀"
+		}
+		var icon = icon_map.get(b_type, "🏗️")
+		draw_circle(point, 10.0, Color(0.0,0.0,0.0,0.55))
+		draw_circle(point, 7.0, Color(0.85,0.75,0.25,0.90))
+		if zoom_level >= 4.0:
+			draw_string(PersianFont, point + Vector2(12, 4), "%s %s" % [icon, b_type], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0,0.9,0.4))
 
 func _draw_selected_outline():
 	if selected_country == "": return

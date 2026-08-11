@@ -123,6 +123,16 @@ static func create_map_operation(target_country: String, operation_type: String,
 	p["operation_type"] = operation_type
 	return _self_script().new("map_operation", p)
 
+# === نقشه‌محور پیشرفته: طرح نبرد، ساخت‌وساز ===
+static func create_battle_plan(from_country: String, from_unit: String, to_country: String, to_unit: String, plan_type: String, from_lat: float = 0.0, from_lon: float = 0.0, to_lat: float = 0.0, to_lon: float = 0.0):
+	return _self_script().new("battle_plan", {"from_country": from_country, "from_unit": from_unit, "to_country": to_country, "to_unit": to_unit, "plan_type": plan_type, "from_lat": from_lat, "from_lon": from_lon, "to_lat": to_lat, "to_lon": to_lon})
+
+static func create_construction(from_country: String, from_unit: String, to_country: String, to_unit: String, build_type: String, from_lat: float = 0.0, from_lon: float = 0.0, to_lat: float = 0.0, to_lon: float = 0.0):
+	return _self_script().new("construction", {"from_country": from_country, "from_unit": from_unit, "to_country": to_country, "to_unit": to_unit, "build_type": build_type, "from_lat": from_lat, "from_lon": from_lon, "to_lat": to_lat, "to_lon": to_lon})
+
+static func create_map_building(building_type: String, country_id: String, unit_id: String, lat: float = 0.0, lon: float = 0.0):
+	return _self_script().new("map_building", {"building_type": building_type, "country_id": country_id, "unit_id": unit_id, "lat": lat, "lon": lon})
+
 
 # --- لایه عمیق: اعتبارسنجی، کش، لاگ، نسخه‌بندی، دترمینستیک، بازیابی خطا ---
 
