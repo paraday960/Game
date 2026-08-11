@@ -148,7 +148,15 @@ func _ready():
 	systems["industry"] = load("res://scripts/systems/industry_system.gd").new()
 	# بارگذاری همه لایه‌های تکمیلی و نام‌های نگاشت‌شده
 	_load_remaining_systems()
+	_validate_system_coverage()
 	print("موتور شبیه‌سازی با %d سیستم لود شد" % systems.size())
+
+func _validate_system_coverage():
+	# شفافیت (قانون ۴): هر سیستمی که در system_order است باید پیاده‌سازی واقعی داشته باشد؛
+	# اگر نه، هشدار صریح می‌گیریم تا سیستم بی‌صدا اجرا نشود.
+	for sys_name in system_order:
+		if not systems.has(sys_name):
+			push_warning("هشدار: سیستم «%s» در system_order است اما هیچ پیاده‌سازی‌ای بارگذاری نشده — این سیستم در شبیه‌سازی اجرا نمی‌شود!" % sys_name)
 
 func _load_remaining_systems():
 	var remaining = ["administration", "ethnicity", "statistics", "emergency", "sports_youth", "veterans", "family", "fisheries", "heritage", "space", "elections", "physical", "people"]
@@ -157,7 +165,9 @@ func _load_remaining_systems():
 		if ResourceLoader.exists(path):
 			systems[name] = load(path).new()
 		else:
-			# محافظ سازگاری: نبود یک افزونه نباید کل پروژه را در شروع متوقف کند.
+			# محافظ سازگاری: نبود یک افزونه نباید کل پروژه را در شروع متوقف کند،
+			# اما بی‌صدایی خطرناک است؛ هشدار ثبت می‌شود تا سیستم ناقص دیده شود.
+			push_warning("هشدار: سیستم «%s» پیاده‌سازی ندارد (%s) — به‌جای آن base_system بارگذاری شد و این سیستم در شبیه‌سازی غیرفعال است!" % [name, path])
 			systems[name] = load("res://scripts/systems/base_system.gd").new()
 
 	# لود سیستم‌های لایه فیزیکی و انسانی (با نام متفاوت)
