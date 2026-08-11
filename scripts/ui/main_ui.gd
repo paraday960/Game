@@ -66,6 +66,25 @@ var network_port_spin: SpinBox
 var network_status_lbl: Label
 var campaign_lobby_lbl: Label
 
+# ── سیستم طراحی «اتاق فرمان» — الهام از HOI4 / EU4 / Power & Revolution ──
+const ACCENT_GOLD = Color(0.93, 0.74, 0.33)
+const ACCENT_TEAL = Color(0.24, 0.86, 0.80)
+const ACCENT_BLUE = Color(0.42, 0.68, 1.00)
+const ACCENT_GREEN = Color(0.38, 0.87, 0.56)
+const ACCENT_RED = Color(0.97, 0.42, 0.37)
+const ACCENT_ORANGE = Color(0.99, 0.68, 0.26)
+const TEXT_MAIN = Color(0.91, 0.95, 0.98)
+const TEXT_MUTED = Color(0.61, 0.73, 0.81)
+const TEXT_FAINT = Color(0.45, 0.57, 0.67)
+
+var nav_row: HBoxContainer
+var drawer_overlay: Control
+var drawer_sheet: PanelContainer
+var drawer_open := false
+var map_wrap: Control
+var ticker_panel: PanelContainer
+var time_dock: PanelContainer
+
 # مقادیر میانی فرمان‌های تعاملی
 var tax_slider: HSlider
 var tax_value_lbl: Label
@@ -179,6 +198,7 @@ func _ready():
 func _notification(what:int):
 	if what!=NOTIFICATION_WM_GO_BACK_REQUEST:return
 	if is_instance_valid(command_palette) and command_palette.visible:command_palette.close_palette();return
+	if drawer_open:_close_drawer();return
 	if simulation_busy:get_tree().quit();return
 	if current_tab!="map":_switch_tab("map")
 	else:get_tree().quit()
@@ -201,36 +221,30 @@ func _build_chrome():
 	root.add_theme_constant_override("separation", 8)
 	add_child(root)
 
-	# نوار فرمان: هویت کشور، زمان و چهار شاخصی که همیشه باید دیده شوند.
-	var command_panel = PanelContainer.new()
-	command_panel.theme_type_variation = "CommandPanel"
-	root.add_child(command_panel)
-	var command_box = VBoxContainer.new(); command_box.add_theme_constant_override("separation", 7); command_panel.add_child(command_box)
-	var identity_row = HBoxContainer.new(); identity_row.add_theme_constant_override("separation", 12); command_box.add_child(identity_row)
-	var emblem = Label.new(); emblem.text = "◆"; emblem.add_theme_font_size_override("font_size", 40); emblem.modulate = Color(0.22,0.86,0.92); identity_row.add_child(emblem)
+	# ── نوار بالایی: هویت کشور + تاریخ + جستجوی فرمان ──
+	var top_bar = PanelContainer.new()
+	top_bar.theme_type_variation = "TopBarPanel"
+	root.add_child(top_bar)
+	var top_row = HBoxContainer.new(); top_row.add_theme_constant_override("separation", 12); top_bar.add_child(top_row)
+	var emblem_panel = PanelContainer.new(); emblem_panel.theme_type_variation = "EmblemChip"; top_row.add_child(emblem_panel)
+	var emblem = Label.new(); emblem.text = "❖"; emblem.add_theme_font_size_override("font_size", 36); emblem.modulate = ACCENT_GOLD; emblem_panel.add_child(emblem)
+	var identity_col = VBoxContainer.new(); identity_col.add_theme_constant_override("separation", 0); identity_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; top_row.add_child(identity_col)
 	header_title = Label.new()
 	header_title.text = "مرکز فرماندهی ملی"
-	header_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header_title.add_theme_font_size_override("font_size", 34)
-	identity_row.add_child(header_title)
-	var quick_command = Button.new(); quick_command.text = "فرمان سریع"; quick_command.tooltip_text = "جست‌وجوی همه بخش‌ها، سامانه‌ها و کشورها (Ctrl+K)"; quick_command.custom_minimum_size=Vector2(185,62); quick_command.add_theme_font_size_override("font_size",24);quick_command.pressed.connect(_open_command_palette); identity_row.add_child(quick_command)
-	date_lbl = Label.new(); date_lbl.add_theme_font_size_override("font_size", 23); date_lbl.modulate = Color(0.72,0.84,0.90); identity_row.add_child(date_lbl)
+	header_title.add_theme_font_size_override("font_size", 29)
+	identity_col.add_child(header_title)
+	date_lbl = Label.new(); date_lbl.add_theme_font_size_override("font_size", 20); date_lbl.modulate = TEXT_MUTED; identity_col.add_child(date_lbl)
+	var quick_command = Button.new(); quick_command.text = "⌕ جستجو"; quick_command.tooltip_text = "جست‌وجوی همه بخش‌ها، سامانه‌ها و کشورها (Ctrl+K)"; quick_command.custom_minimum_size=Vector2(150,58); quick_command.add_theme_font_size_override("font_size",22);quick_command.pressed.connect(_open_command_palette); top_row.add_child(quick_command)
 
-	status_grid = GridContainer.new(); status_grid.columns = 4; status_grid.add_theme_constant_override("h_separation", 8); status_grid.add_theme_constant_override("v_separation",6); command_box.add_child(status_grid)
-	gdp_status_lbl = _status_chip(status_grid, "اقتصاد", Color(0.24,0.88,0.54),"economy")
-	approval_status_lbl = _status_chip(status_grid, "رضایت", Color(0.25,0.78,1.0),"population")
-	stability_status_lbl = _status_chip(status_grid, "ثبات", Color(1.0,0.73,0.24),"government")
-	alert_status_lbl = _status_chip(status_grid, "هشدارها", Color(1.0,0.36,0.32),"dashboard")
-	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 19); engagement_lbl.modulate = Color(0.61,0.73,0.80); command_box.add_child(engagement_lbl)
+	# ── نوار شاخص‌های حیاتی: چهار KPI که همیشه باید دیده شوند ──
+	status_grid = GridContainer.new(); status_grid.columns = 4; status_grid.add_theme_constant_override("h_separation", 7); status_grid.add_theme_constant_override("v_separation",6); root.add_child(status_grid)
+	gdp_status_lbl = _status_chip(status_grid, "◈ اقتصاد", ACCENT_GREEN,"economy")
+	approval_status_lbl = _status_chip(status_grid, "♥ رضایت", ACCENT_BLUE,"population")
+	stability_status_lbl = _status_chip(status_grid, "⚖ ثبات", ACCENT_ORANGE,"government")
+	alert_status_lbl = _status_chip(status_grid, "⚠ هشدارها", ACCENT_RED,"dashboard")
+	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 17); engagement_lbl.modulate = TEXT_FAINT; engagement_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; root.add_child(engagement_lbl)
 
-	# ناوبری افقی قابل اسکرول؛ در موبایل هیچ گزینه‌ای بریده نمی‌شود.
-	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavPanel"; root.add_child(nav_panel)
-	var nav_scroll = TouchScrollClass.new(); nav_scroll.allow_vertical=false;nav_scroll.allow_horizontal=true;nav_scroll.custom_minimum_size = Vector2(0,76); nav_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; nav_panel.add_child(nav_scroll)
-	var tabs_hbox = HBoxContainer.new(); tabs_hbox.add_theme_constant_override("separation", 6); nav_scroll.add_child(tabs_hbox)
-	for tab_def in TABS:
-		var key = tab_def[0]
-		var btn = Button.new(); btn.text = tab_def[1]; btn.custom_minimum_size = Vector2(174,64); btn.add_theme_font_size_override("font_size",23)
-		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_switch_tab.bind(key)); tabs_hbox.add_child(btn); tab_buttons[key] = btn
+	# ناوبری اصلی در انتهای صفحه ساخته می‌شود (سبک HOI4: ۵ بخش ثابت + کشوی بیشتر).
 
 	# محتوای اصلی؛ نقشه و پنل‌های مدیریتی از همین فضای مشترک استفاده می‌کنند.
 	content_scroll = TouchScrollClass.new(); content_scroll.allow_vertical=true;content_scroll.allow_horizontal=false;content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(content_scroll)
@@ -239,26 +253,130 @@ func _build_chrome():
 	# Label پنهان فقط برای سازگاری تست/کد قدیمی؛ اعلان واقعی در ToastStack نمایش داده می‌شود.
 	toast_lbl = Label.new(); toast_lbl.hide(); add_child(toast_lbl)
 
-	# تیکر رویداد فشرده به جای اشغال بخش بزرگی از صفحه.
-	var event_panel = PanelContainer.new(); event_panel.theme_type_variation = "TickerPanel"; root.add_child(event_panel)
-	var event_box = HBoxContainer.new(); event_box.add_theme_constant_override("separation",10); event_panel.add_child(event_box)
-	var ev_title = Label.new(); ev_title.text = "گزارش زنده"; ev_title.custom_minimum_size = Vector2(105,0); ev_title.modulate = Color(1.0,0.79,0.28); event_box.add_child(ev_title)
+	# تیکر رخدادهای زنده؛ لمس آن میز فرمان را باز می‌کند.
+	ticker_panel = PanelContainer.new(); ticker_panel.theme_type_variation = "TickerPanel"; ticker_panel.mouse_filter = Control.MOUSE_FILTER_STOP; ticker_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; ticker_panel.tooltip_text = "مشاهده کامل در میز فرمان"; ticker_panel.gui_input.connect(_on_ticker_input); root.add_child(ticker_panel)
+	var event_box = HBoxContainer.new(); event_box.add_theme_constant_override("separation",9); ticker_panel.add_child(event_box)
+	var ev_title = Label.new(); ev_title.text = "⚡ رخدادها"; ev_title.custom_minimum_size = Vector2(125,0); ev_title.modulate = ACCENT_GOLD; ev_title.add_theme_font_size_override("font_size",20); event_box.add_child(ev_title)
 	event_list = VBoxContainer.new(); event_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL; event_list.add_theme_constant_override("separation",1); event_box.add_child(event_list); _render_events()
 
-	# داک عملیات پرتکرار؛ تصمیم اصلی برجسته و بقیه ثانویه‌اند.
-	var footer_panel = PanelContainer.new(); footer_panel.theme_type_variation = "DockPanel"; root.add_child(footer_panel)
-	var footer_scroll = TouchScrollClass.new();footer_scroll.allow_vertical=false;footer_scroll.allow_horizontal=true; footer_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; footer_scroll.custom_minimum_size = Vector2(0,78); footer_panel.add_child(footer_scroll)
-	var footer = HBoxContainer.new(); footer.add_theme_constant_override("separation",7); footer_scroll.add_child(footer)
-	_mk_btn(footer, "اجرای ماه بعد", Vector2(174,50), _on_next_tick_pressed, "PrimaryAction")
-	_mk_btn(footer, "خودکار: خاموش", Vector2(160,50), _on_auto_pressed, "AutoBtn")
-	_mk_btn(footer, SettingsManager.get_speed_label(), Vector2(105,50), _on_speed_pressed, "SpeedBtn")
-	_mk_btn(footer, "ذخیره", Vector2(105,50), _on_save_pressed)
-	_mk_btn(footer, "بارگذاری", Vector2(115,50), _on_load_pressed)
-	_mk_btn(footer, "صدا: خاموش" if FeedbackManager.muted else "صدا: روشن", Vector2(120,50), _on_sound_pressed, "SoundBtn")
+	# ── داک زمان (سبک HOI4): اقدام اصلی رهبر + جریان خودکار ──
+	time_dock = PanelContainer.new(); time_dock.theme_type_variation = "TimeDockPanel"; root.add_child(time_dock)
+	var time_row = HBoxContainer.new(); time_row.alignment = BoxContainer.ALIGNMENT_CENTER; time_row.add_theme_constant_override("separation",9); time_dock.add_child(time_row)
+	_mk_btn(time_row, "▶ ماه بعد", Vector2(215,54), _on_next_tick_pressed, "PrimaryAction")
+	_mk_btn(time_row, "خودکار: خاموش", Vector2(170,54), _on_auto_pressed, "AutoBtn")
+	_mk_btn(time_row, "⚡ " + SettingsManager.get_speed_label(), Vector2(106,54), _on_speed_pressed, "SpeedBtn")
+
+	# ── ناوبری پایانی ثابت: پنج بخش اصلی همیشه در دسترس ──
+	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavBarPanel"; root.add_child(nav_panel)
+	nav_row = HBoxContainer.new(); nav_row.add_theme_constant_override("separation", 3); nav_panel.add_child(nav_row)
+	for nav_def in [["map","◉","نقشه"],["dashboard","▦","میز فرمان"],["government","♜","دولت"],["economy","◈","اقتصاد"],["more","☰","بیشتر"]]:
+		_make_nav_item(nav_row, str(nav_def[0]), str(nav_def[1]), str(nav_def[2]))
 
 	toast_stack = ToastStackClass.new(); toast_stack.anchor_left=0.48;toast_stack.anchor_right=0.98;toast_stack.anchor_top=0.10;toast_stack.anchor_bottom=0.42;toast_stack.offset_left=0;toast_stack.offset_right=0;toast_stack.offset_top=0;toast_stack.offset_bottom=0;add_child(toast_stack)
 	command_palette = CommandPaletteClass.new(); command_palette.item_chosen.connect(_on_palette_item_chosen); add_child(command_palette); command_palette.set_entries(_build_command_entries())
+	_build_drawer()
 	_build_simulation_overlay()
+
+# ============================================================
+# ناوبری پایانی و کشوی «بیشتر» — الگوی HOI4 روی موبایل
+# ============================================================
+func _make_nav_item(parent: Control, key: String, icon: String, label: String) -> Button:
+	var btn = Button.new()
+	btn.text = "%s\n%s" % [icon, label]
+	btn.custom_minimum_size = Vector2(0, 86)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.add_theme_font_size_override("font_size", 19)
+	btn.theme_type_variation = "NavButton"
+	btn.pressed.connect(FeedbackManager.play_click)
+	if key == "more":
+		btn.pressed.connect(_toggle_drawer)
+	else:
+		btn.pressed.connect(_switch_tab.bind(key))
+	parent.add_child(btn)
+	tab_buttons[key] = btn
+	return btn
+
+func _make_drawer_tile(parent: Control, key: String, icon: String, label: String) -> Button:
+	var btn = Button.new()
+	btn.text = "%s\n%s" % [icon, label]
+	btn.custom_minimum_size = Vector2(0, 96)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.add_theme_font_size_override("font_size", 21)
+	btn.theme_type_variation = "DrawerTile"
+	btn.pressed.connect(FeedbackManager.play_click)
+	btn.pressed.connect(_on_drawer_tab.bind(key))
+	parent.add_child(btn)
+	tab_buttons[key] = btn
+	return btn
+
+func _build_drawer():
+	drawer_overlay = ColorRect.new()
+	drawer_overlay.color = Color(0.0, 0.0, 0.0, 0.58)
+	drawer_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	drawer_overlay.z_index = 240
+	drawer_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	drawer_overlay.gui_input.connect(_on_drawer_backdrop_input)
+	drawer_overlay.visible = false
+	add_child(drawer_overlay)
+	drawer_sheet = PanelContainer.new()
+	drawer_sheet.theme_type_variation = "SheetPanel"
+	drawer_sheet.set_meta("ignore_tooltips", true)
+	drawer_sheet.anchor_left = 0.02; drawer_sheet.anchor_right = 0.98
+	drawer_sheet.anchor_top = 0.72; drawer_sheet.anchor_bottom = 0.992
+	drawer_sheet.offset_left = 0; drawer_sheet.offset_right = 0; drawer_sheet.offset_top = 0; drawer_sheet.offset_bottom = 0
+	drawer_overlay.add_child(drawer_sheet)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 10); drawer_sheet.add_child(box)
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); box.add_child(head)
+	var title = Label.new(); title.text = "☰ منوی بیشتر"; title.add_theme_font_size_override("font_size", 27); title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
+	var close_btn = Button.new(); close_btn.text = "✕"; close_btn.custom_minimum_size = Vector2(64, 54); close_btn.add_theme_font_size_override("font_size", 24); close_btn.theme_type_variation = "GhostButton"; close_btn.pressed.connect(FeedbackManager.play_click); close_btn.pressed.connect(_close_drawer); head.add_child(close_btn)
+	var tiles = GridContainer.new(); tiles.columns = 4; tiles.add_theme_constant_override("h_separation", 7); tiles.add_theme_constant_override("v_separation", 7); box.add_child(tiles)
+	for tile_def in [["laws","⚖","قوانین"],["projects","⚒","توسعه"],["technology","⚛","فناوری"],["population","☺","جامعه"],["military","⚔","دفاع"],["network","◍","چندنفره"],["systems","⚙","سامانه‌ها"]]:
+		_make_drawer_tile(tiles, str(tile_def[0]), str(tile_def[1]), str(tile_def[2]))
+	var sep = HSeparator.new(); box.add_child(sep)
+	var sys = HBoxContainer.new(); sys.alignment = BoxContainer.ALIGNMENT_CENTER; sys.add_theme_constant_override("separation", 8); box.add_child(sys)
+	_mk_btn(sys, "▼ ذخیره", Vector2(150,52), _on_save_pressed)
+	_mk_btn(sys, "▲ بارگذاری", Vector2(162,52), _on_load_pressed)
+	_mk_btn(sys, "✕ صدا" if FeedbackManager.muted else "♪ صدا", Vector2(132,52), _on_sound_pressed, "SoundBtn")
+
+func _on_drawer_backdrop_input(event: InputEvent):
+	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+		_close_drawer()
+
+func _toggle_drawer():
+	if drawer_open: _close_drawer()
+	else: _open_drawer()
+
+func _open_drawer():
+	if not is_instance_valid(drawer_overlay): return
+	drawer_open = true
+	drawer_overlay.visible = true
+	_update_nav_states()
+	if not bool(SettingsManager.get_value("reduce_motion", false)):
+		drawer_overlay.modulate.a = 0.0
+		create_tween().tween_property(drawer_overlay, "modulate:a", 1.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _close_drawer():
+	drawer_open = false
+	if is_instance_valid(drawer_overlay): drawer_overlay.visible = false
+	_update_nav_states()
+
+func _on_drawer_tab(key: String):
+	_close_drawer()
+	_switch_tab(key)
+
+func _update_nav_states():
+	var overflow_tabs = ["laws","projects","technology","population","military","network","systems"]
+	for key in tab_buttons.keys():
+		if not is_instance_valid(tab_buttons[key]): continue
+		if key in overflow_tabs:
+			tab_buttons[key].theme_type_variation = "DrawerTileActive" if key == current_tab else "DrawerTile"
+		else:
+			var active = key == current_tab or (key == "more" and (drawer_open or current_tab in overflow_tabs))
+			tab_buttons[key].theme_type_variation = "NavButtonActive" if active else "NavButton"
+
+func _on_ticker_input(event: InputEvent):
+	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+		FeedbackManager.play_click(); _switch_tab("dashboard")
 
 func _build_simulation_overlay():
 	simulation_overlay=ColorRect.new();simulation_overlay.set_anchors_preset(Control.PRESET_FULL_RECT);simulation_overlay.color=Color(0.0,0.01,0.018,0.88);simulation_overlay.mouse_filter=Control.MOUSE_FILTER_STOP;simulation_overlay.z_index=300;add_child(simulation_overlay)
@@ -282,39 +400,105 @@ func _on_tick_progress(day:int,total_days:int,phase:String):
 	simulation_progress.max_value=max(1,total_days);simulation_progress.value=day;simulation_status_lbl.text=phase
 
 func _build_professional_theme() -> Theme:
+	# سیستم طراحی «اتاق فرمان»: نیلیِ شب + طلایی حکومتی + لهجه فیروزه‌ای.
 	var result = Theme.new()
 	var compact = str(SettingsManager.get_value("ui_density","comfortable")) == "compact"
 	var high_contrast = bool(SettingsManager.get_value("high_contrast",false))
-	var padding = 15 if compact else 20
-	var button_padding = 12 if compact else 16
+	var padding = 14 if compact else 18
+	var button_padding = 10 if compact else 14
 	result.default_font = PersianFont
 	result.default_font_size = int((24.0 if compact else 28.0) * float(SettingsManager.get_value("text_scale", 1.0)))
-	result.set_color("font_color", "Label", Color.WHITE if high_contrast else Color(0.88,0.93,0.96))
-	result.set_color("font_shadow_color", "Label", Color(0.0,0.0,0.0,0.42))
+	result.set_color("font_color", "Label", Color.WHITE if high_contrast else TEXT_MAIN)
+	result.set_color("font_shadow_color", "Label", Color(0.0,0.0,0.0,0.40))
 	result.set_constant("shadow_offset_x", "Label", 1); result.set_constant("shadow_offset_y", "Label", 1)
-	result.set_stylebox("panel", "PanelContainer", _style_box(Color(0.018,0.034,0.048,0.99) if high_contrast else Color(0.035,0.074,0.105,0.94), Color(0.38,0.82,0.86,0.95) if high_contrast else Color(0.16,0.38,0.46,0.82), 10, 1 if not high_contrast else 2, padding))
-	result.set_stylebox("panel", "CommandPanel", _style_box(Color(0.012,0.027,0.039,1.0) if high_contrast else Color(0.024,0.058,0.086,0.98), Color(0.45,0.94,0.94,1.0) if high_contrast else Color(0.22,0.67,0.74,0.68), 12, 1 if not high_contrast else 2, padding))
-	result.set_stylebox("panel", "NavPanel", _style_box(Color(0.018,0.044,0.068,0.97), Color(0.12,0.34,0.42,0.76), 9, 1, 5))
-	result.set_stylebox("panel", "TickerPanel", _style_box(Color(0.020,0.046,0.067,0.97), Color(0.22,0.43,0.49,0.62), 8, 1, 8))
-	result.set_stylebox("panel", "DockPanel", _style_box(Color(0.015,0.037,0.058,0.99), Color(0.25,0.60,0.67,0.62), 10, 1, 5))
-	result.set_stylebox("panel", "StatusChip", _style_box(Color(0.046,0.094,0.119,0.96), Color(0.15,0.37,0.43,0.80), 8, 1, 7))
-	var button_normal = _style_box(Color(0.055,0.112,0.142,0.98), Color(0.18,0.44,0.51,0.85), 8, 1, button_padding)
-	var button_hover = _style_box(Color(0.073,0.172,0.197,0.99), Color(0.26,0.80,0.84,0.95), 8, 1, button_padding)
-	var button_pressed = _style_box(Color(0.035,0.222,0.235,1.0), Color(0.38,0.94,0.91,1.0), 8, 2, button_padding)
+	var panel_border = Color(0.50,0.80,0.94,0.95) if high_contrast else Color(0.19,0.35,0.46,0.92)
+	result.set_stylebox("panel", "PanelContainer", _style_box(Color(0.014,0.030,0.047,0.99) if high_contrast else Color(0.034,0.070,0.108,0.97), panel_border, 13, 1 if not high_contrast else 2, padding))
+	# نوار بالایی با خط طلایی حکومتی زیرین
+	var topbar_sb = _style_box(Color(0.018,0.040,0.063,0.97) if not high_contrast else Color(0.010,0.024,0.040,1.0), ACCENT_GOLD if not high_contrast else Color(0.95,0.88,0.60,1.0), 14, 0, 13)
+	topbar_sb.set_border_width(SIDE_BOTTOM, 3)
+	topbar_sb.set_corner_radius(CORNER_BOTTOM_LEFT, 0); topbar_sb.set_corner_radius(CORNER_BOTTOM_RIGHT, 0)
+	result.set_stylebox("panel", "TopBarPanel", topbar_sb)
+	result.set_stylebox("panel", "CommandPanel", _style_box(Color(0.012,0.027,0.039,1.0) if high_contrast else Color(0.026,0.060,0.090,0.98), Color(0.45,0.94,0.94,1.0) if high_contrast else Color(0.24,0.58,0.66,0.80), 12, 1 if not high_contrast else 2, padding))
+	result.set_stylebox("panel", "EmblemChip", _style_box(Color(0.84,0.64,0.22,0.12), Color(0.85,0.66,0.25,0.55), 12, 1, 7))
+	result.set_stylebox("panel", "StatusChip", _style_box(Color(0.052,0.100,0.148,0.95), Color(0.21,0.40,0.52,0.88), 12, 1, 9))
+	result.set_stylebox("panel", "KpiCard", _style_box(Color(0.042,0.088,0.132,0.96), Color(0.22,0.42,0.54,0.92), 14, 1, 13))
+	result.set_stylebox("panel", "HeroCard", _style_box(Color(0.048,0.096,0.142,0.98), Color(0.80,0.63,0.26,0.95), 18, 2, 22))
+	result.set_stylebox("panel", "TickerPanel", _style_box(Color(0.026,0.056,0.084,0.95), Color(0.20,0.37,0.48,0.72), 10, 1, 8))
+	result.set_stylebox("panel", "TimeDockPanel", _style_box(Color(0.022,0.048,0.075,0.88), Color(0.20,0.36,0.47,0.55), 16, 1, 8))
+	# ناوبری پایانی: شناور روی لبه، آیتم فعال با خط طلایی بالایی
+	result.set_stylebox("panel", "NavBarPanel", _style_box(Color(0.018,0.042,0.066,0.99), Color(0.24,0.42,0.55,0.90), 16, 1, 6))
+	result.set_stylebox("normal", "NavButton", _style_box(Color(0.0,0.0,0.0,0.0), Color(0.0,0.0,0.0,0.0), 8, 0, 4))
+	result.set_stylebox("hover", "NavButton", _style_box(Color(0.07,0.12,0.17,0.80), Color(0.0,0.0,0.0,0.0), 8, 0, 4))
+	result.set_stylebox("pressed", "NavButton", _style_box(Color(0.10,0.16,0.21,0.95), Color(0.0,0.0,0.0,0.0), 8, 0, 4))
+	result.set_color("font_color", "NavButton", TEXT_FAINT); result.set_color("font_hover_color", "NavButton", TEXT_MAIN); result.set_color("font_pressed_color", "NavButton", ACCENT_GOLD)
+	var nav_active_sb = _style_box(Color(0.10,0.14,0.18,0.55), ACCENT_GOLD, 8, 0, 4)
+	nav_active_sb.set_border_width(SIDE_BOTTOM, 3)
+	nav_active_sb.set_corner_radius(CORNER_BOTTOM_LEFT, 0); nav_active_sb.set_corner_radius(CORNER_BOTTOM_RIGHT, 0)
+	result.set_stylebox("normal", "NavButtonActive", nav_active_sb)
+	result.set_stylebox("hover", "NavButtonActive", nav_active_sb); result.set_stylebox("pressed", "NavButtonActive", nav_active_sb)
+	result.set_color("font_color", "NavButtonActive", ACCENT_GOLD); result.set_color("font_hover_color", "NavButtonActive", Color(1.0,0.86,0.50)); result.set_color("font_pressed_color", "NavButtonActive", ACCENT_GOLD)
+	# کشوی بیشتر و کاشی‌های بخش‌ها
+	result.set_stylebox("panel", "SheetPanel", _style_box(Color(0.026,0.060,0.092,0.995), Color(0.45,0.62,0.74,0.95), 18, 2, 16))
+	result.set_stylebox("normal", "DrawerTile", _style_box(Color(0.048,0.098,0.148,0.96), Color(0.21,0.40,0.52,0.75), 14, 1, 9))
+	result.set_stylebox("hover", "DrawerTile", _style_box(Color(0.072,0.136,0.196,0.98), ACCENT_TEAL, 14, 1, 9))
+	result.set_stylebox("pressed", "DrawerTile", _style_box(Color(0.10,0.18,0.24,1.0), Color(0.55,0.95,0.90,1.0), 14, 2, 9))
+	result.set_color("font_color", "DrawerTile", TEXT_MAIN); result.set_color("font_hover_color", "DrawerTile", Color.WHITE); result.set_color("font_pressed_color", "DrawerTile", Color.WHITE)
+	result.set_stylebox("normal", "DrawerTileActive", _style_box(Color(0.16,0.13,0.07,0.98), ACCENT_GOLD, 14, 2, 9))
+	result.set_stylebox("hover", "DrawerTileActive", _style_box(Color(0.18,0.15,0.08,0.98), ACCENT_GOLD, 14, 2, 9))
+	result.set_stylebox("pressed", "DrawerTileActive", _style_box(Color(0.14,0.11,0.06,1.0), ACCENT_GOLD, 14, 2, 9))
+	result.set_color("font_color", "DrawerTileActive", Color(1.0,0.88,0.55)); result.set_color("font_hover_color", "DrawerTileActive", Color.WHITE); result.set_color("font_pressed_color", "DrawerTileActive", Color.WHITE)
+	# دکمه‌های عمومی: تخت، هم‌تراز با نقشه تاریک، لبه فیروزه‌ای هنگام تعامل
+	var button_normal = _style_box(Color(0.054,0.108,0.158,0.98), Color(0.24,0.45,0.58,0.88), 10, 1, button_padding)
+	var button_hover = _style_box(Color(0.080,0.158,0.216,0.99), ACCENT_TEAL, 10, 1, button_padding)
+	var button_pressed = _style_box(Color(0.096,0.212,0.252,1.0), Color(0.52,0.96,0.90,1.0), 10, 2, button_padding)
+	var button_disabled = _style_box(Color(0.033,0.064,0.093,0.90), Color(0.14,0.24,0.32,0.60), 10, 1, button_padding)
 	for kind in ["Button", "OptionButton"]:
-		result.set_stylebox("normal", kind, button_normal); result.set_stylebox("hover", kind, button_hover); result.set_stylebox("pressed", kind, button_pressed); result.set_stylebox("focus", kind, button_hover)
-		result.set_color("font_color", kind, Color(0.86,0.93,0.96)); result.set_color("font_hover_color", kind, Color.WHITE); result.set_color("font_pressed_color", kind, Color.WHITE)
-	result.set_stylebox("normal", "PrimaryButton", _style_box(Color(0.06,0.44,0.47,1.0), Color(0.42,0.96,0.87,1.0), 9, 2, 10))
-	result.set_stylebox("hover", "PrimaryButton", _style_box(Color(0.08,0.57,0.57,1.0), Color(0.72,1.0,0.91,1.0), 9, 2, 10))
-	result.set_stylebox("pressed", "PrimaryButton", _style_box(Color(0.04,0.33,0.36,1.0), Color.WHITE, 9, 2, 10))
-	result.set_color("font_color", "PrimaryButton", Color.WHITE)
-	result.set_stylebox("background", "ProgressBar", _style_box(Color(0.012,0.030,0.045,0.92), Color(0.11,0.27,0.32,0.85), 6, 1, 2))
-	result.set_stylebox("fill", "ProgressBar", _style_box(Color(0.12,0.68,0.66,0.98), Color(0.34,0.91,0.84,0.90), 6, 1, 2))
-	result.set_stylebox("normal", "LineEdit", _style_box(Color(0.012,0.034,0.052,0.98), Color(0.18,0.43,0.50,0.88), 7, 1, 9))
-	result.set_stylebox("focus", "LineEdit", _style_box(Color(0.018,0.054,0.073,1.0), Color(0.31,0.87,0.87,1.0), 7, 2, 9))
+		result.set_stylebox("normal", kind, button_normal); result.set_stylebox("hover", kind, button_hover); result.set_stylebox("pressed", kind, button_pressed); result.set_stylebox("focus", kind, button_hover); result.set_stylebox("disabled", kind, button_disabled)
+		result.set_color("font_color", kind, Color(0.88,0.94,0.97)); result.set_color("font_hover_color", kind, Color.WHITE); result.set_color("font_pressed_color", kind, Color.WHITE); result.set_color("font_disabled_color", kind, Color(0.42,0.52,0.60))
+	# اقدام اصلی: طلایی حکومتی پررنگ با متن سیر
+	result.set_stylebox("normal", "PrimaryButton", _style_box(Color(0.78,0.58,0.20,1.0), Color(0.98,0.82,0.44,1.0), 12, 2, 12))
+	result.set_stylebox("hover", "PrimaryButton", _style_box(Color(0.92,0.71,0.29,1.0), Color(1.0,0.90,0.58,1.0), 12, 2, 12))
+	result.set_stylebox("pressed", "PrimaryButton", _style_box(Color(0.64,0.46,0.14,1.0), Color.WHITE, 12, 2, 12))
+	result.set_color("font_color", "PrimaryButton", Color(0.07,0.11,0.15)); result.set_color("font_hover_color", "PrimaryButton", Color(0.02,0.05,0.08)); result.set_color("font_pressed_color", "PrimaryButton", Color(0.0,0.02,0.04))
+	# دکمه خطر (جنگ و…) و دکمه موفقیت (پذیرش پیشنهاد و…)
+	result.set_stylebox("normal", "DangerButton", _style_box(Color(0.30,0.10,0.09,0.98), Color(0.85,0.36,0.30,0.95), 10, 1, button_padding))
+	result.set_stylebox("hover", "DangerButton", _style_box(Color(0.40,0.13,0.11,1.0), Color(1.0,0.50,0.42,1.0), 10, 1, button_padding))
+	result.set_stylebox("pressed", "DangerButton", _style_box(Color(0.24,0.07,0.06,1.0), Color(1.0,0.62,0.55,1.0), 10, 2, button_padding))
+	result.set_color("font_color", "DangerButton", Color(1.0,0.82,0.78)); result.set_color("font_hover_color", "DangerButton", Color.WHITE); result.set_color("font_pressed_color", "DangerButton", Color.WHITE)
+	result.set_stylebox("normal", "SuccessButton", _style_box(Color(0.08,0.22,0.13,0.98), Color(0.30,0.75,0.46,0.95), 10, 1, button_padding))
+	result.set_stylebox("hover", "SuccessButton", _style_box(Color(0.11,0.30,0.17,1.0), Color(0.42,0.90,0.56,1.0), 10, 1, button_padding))
+	result.set_stylebox("pressed", "SuccessButton", _style_box(Color(0.06,0.17,0.10,1.0), Color(0.55,1.0,0.68,1.0), 10, 2, button_padding))
+	result.set_color("font_color", "SuccessButton", Color(0.78,1.0,0.85)); result.set_color("font_hover_color", "SuccessButton", Color.WHITE); result.set_color("font_pressed_color", "SuccessButton", Color.WHITE)
+	result.set_stylebox("normal", "GhostButton", _style_box(Color(0.0,0.0,0.0,0.0), Color(0.30,0.46,0.57,0.60), 10, 1, button_padding))
+	result.set_stylebox("hover", "GhostButton", _style_box(Color(0.07,0.12,0.17,0.80), Color(0.40,0.62,0.74,0.90), 10, 1, button_padding))
+	result.set_stylebox("pressed", "GhostButton", _style_box(Color(0.10,0.16,0.21,0.95), Color(0.50,0.72,0.84,1.0), 10, 1, button_padding))
+	result.set_color("font_color", "GhostButton", TEXT_MUTED); result.set_color("font_hover_color", "GhostButton", TEXT_MAIN); result.set_color("font_pressed_color", "GhostButton", TEXT_MAIN)
+	# چیپ‌های لنز نقشه و پیل‌های لایه (حالت فعال/غیرفعال مشخص)
+	result.set_stylebox("normal", "LensChip", _style_box(Color(0.040,0.082,0.122,0.92), Color(0.22,0.40,0.52,0.75), 20, 1, 9))
+	result.set_stylebox("hover", "LensChip", _style_box(Color(0.064,0.126,0.182,0.95), Color(0.35,0.60,0.72,0.95), 20, 1, 9))
+	result.set_stylebox("pressed", "LensChip", _style_box(Color(0.072,0.180,0.192,0.98), ACCENT_TEAL, 20, 2, 9))
+	result.set_color("font_color", "LensChip", TEXT_MUTED); result.set_color("font_hover_color", "LensChip", TEXT_MAIN); result.set_color("font_pressed_color", "LensChip", Color(0.62,0.98,0.92))
+	result.set_stylebox("normal", "LensChipActive", _style_box(Color(0.072,0.180,0.192,0.98), ACCENT_TEAL, 20, 2, 9))
+	result.set_stylebox("hover", "LensChipActive", _style_box(Color(0.088,0.212,0.226,0.98), Color(0.55,0.95,0.90,1.0), 20, 2, 9))
+	result.set_stylebox("pressed", "LensChipActive", _style_box(Color(0.058,0.150,0.162,0.98), ACCENT_TEAL, 20, 2, 9))
+	result.set_color("font_color", "LensChipActive", Color(0.62,0.98,0.92)); result.set_color("font_hover_color", "LensChipActive", Color.WHITE); result.set_color("font_pressed_color", "LensChipActive", Color(0.62,0.98,0.92))
+	result.set_stylebox("normal", "PillToggle", _style_box(Color(0.034,0.070,0.105,0.88), Color(0.19,0.34,0.45,0.65), 18, 1, 8))
+	result.set_stylebox("hover", "PillToggle", _style_box(Color(0.056,0.110,0.162,0.94), Color(0.34,0.58,0.70,0.92), 18, 1, 8))
+	result.set_stylebox("pressed", "PillToggle", _style_box(Color(0.142,0.112,0.046,0.98), ACCENT_GOLD, 18, 2, 8))
+	result.set_color("font_color", "PillToggle", TEXT_FAINT); result.set_color("font_hover_color", "PillToggle", TEXT_MAIN); result.set_color("font_pressed_color", "PillToggle", Color(1.0,0.88,0.55))
+	# دکمه‌های شناور دوربین روی نقشه
+	result.set_stylebox("normal", "MapFab", _style_box(Color(0.024,0.056,0.088,0.90), Color(0.30,0.52,0.64,0.85), 12, 1, 4))
+	result.set_stylebox("hover", "MapFab", _style_box(Color(0.10,0.18,0.24,0.96), ACCENT_TEAL, 12, 1, 4))
+	result.set_stylebox("pressed", "MapFab", _style_box(Color(0.072,0.180,0.192,1.0), Color(0.55,0.95,0.90,1.0), 12, 2, 4))
+	result.set_color("font_color", "MapFab", TEXT_MAIN); result.set_color("font_hover_color", "MapFab", Color.WHITE); result.set_color("font_pressed_color", "MapFab", Color.WHITE)
+	result.set_stylebox("background", "ProgressBar", _style_box(Color(0.014,0.032,0.050,0.95), Color(0.14,0.28,0.38,0.90), 7, 1, 2))
+	result.set_stylebox("fill", "ProgressBar", _style_box(Color(0.16,0.72,0.68,0.98), Color(0.36,0.92,0.86,0.95), 7, 0, 2))
+	result.set_stylebox("normal", "LineEdit", _style_box(Color(0.012,0.034,0.052,0.98), Color(0.20,0.40,0.50,0.88), 9, 1, 9))
+	result.set_stylebox("focus", "LineEdit", _style_box(Color(0.018,0.054,0.073,1.0), Color(0.31,0.87,0.87,1.0), 9, 2, 9))
 	result.set_color("font_color", "LineEdit", Color(0.91,0.96,0.98)); result.set_color("font_placeholder_color", "LineEdit", Color(0.45,0.59,0.65))
-	result.set_stylebox("panel", "TooltipPanel", _style_box(Color(0.005,0.020,0.031,0.99),Color(0.26,0.78,0.82,0.92),7,1,8))
-	result.set_color("font_color","TooltipLabel",Color(0.94,0.98,1.0))
+	result.set_stylebox("separator", "HSeparator", _style_box(Color(0.20,0.34,0.45,0.0), Color(0.20,0.34,0.45,0.65), 0, 1, 1))
+	result.set_stylebox("panel", "TooltipPanel", _style_box(Color(0.008,0.026,0.040,0.99),Color(0.78,0.62,0.28,0.92),8,1,10))
+	result.set_color("font_color","TooltipLabel",Color(0.95,0.98,1.0))
 	return result
 
 func _style_box(background: Color, border: Color, radius: int, width: int, padding: int) -> StyleBoxFlat:
@@ -326,9 +510,12 @@ func _style_box(background: Color, border: Color, radius: int, width: int, paddi
 
 func _status_chip(parent: Control, title_text: String, accent: Color, target_tab:String) -> Label:
 	var panel = PanelContainer.new(); panel.theme_type_variation = "StatusChip"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL;panel.mouse_filter=Control.MOUSE_FILTER_STOP;panel.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND;panel.tooltip_text="بازکردن "+title_text;panel.gui_input.connect(_on_status_chip_input.bind(target_tab)); parent.add_child(panel)
-	var box = VBoxContainer.new(); box.add_theme_constant_override("separation",1); panel.add_child(box)
-	var title = Label.new(); title.text = title_text; title.add_theme_font_size_override("font_size",18); title.modulate = Color(0.58,0.71,0.77); box.add_child(title)
-	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",25); value.modulate = accent;value.mouse_filter=Control.MOUSE_FILTER_IGNORE; box.add_child(value)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation",2); panel.add_child(box)
+	box.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	var title_row = HBoxContainer.new(); title_row.add_theme_constant_override("separation",7); title_row.mouse_filter=Control.MOUSE_FILTER_IGNORE; box.add_child(title_row)
+	var dot = ColorRect.new(); dot.color = accent; dot.custom_minimum_size = Vector2(9,9); dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER; dot.mouse_filter=Control.MOUSE_FILTER_IGNORE; title_row.add_child(dot)
+	var title = Label.new(); title.text = title_text; title.add_theme_font_size_override("font_size",18); title.modulate = TEXT_MUTED; title_row.add_child(title)
+	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",24); value.modulate = accent;value.mouse_filter=Control.MOUSE_FILTER_IGNORE;value.clip_text=true;value.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; box.add_child(value)
 	title.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	return value
 
@@ -368,7 +555,7 @@ func _apply_responsive_layout():
 	if is_instance_valid(toast_stack):
 		toast_stack.anchor_left=0.06 if narrow else 0.48;toast_stack.anchor_right=0.94 if narrow else 0.98;toast_stack.anchor_top=0.08;toast_stack.anchor_bottom=0.42
 	if is_instance_valid(map_overlay_grid):map_overlay_grid.columns=3 if narrow else 5
-	if is_instance_valid(current_unified_map):current_unified_map.custom_minimum_size.y=700.0 if narrow else 820.0
+	if is_instance_valid(map_wrap):map_wrap.custom_minimum_size.y=720.0 if narrow else 860.0
 
 func _apply_tooltip_preferences():
 	var enabled=bool(SettingsManager.get_value("tooltips_enabled",true));_apply_tooltip_recursive(self,enabled)
@@ -446,12 +633,13 @@ func _refresh_header():
 func _switch_tab(tab_key: String):
 	if tab_key in ["world", "country_map"]:
 		tab_key = "map"
+	if drawer_open:
+		drawer_open = false
+		if is_instance_valid(drawer_overlay): drawer_overlay.visible = false
 	current_tab = tab_key
 	page_generation += 1
 	if is_instance_valid(content_scroll):content_scroll.scroll_vertical=0
-	for k in tab_buttons.keys():
-		tab_buttons[k].theme_type_variation = "PrimaryButton" if k == tab_key else ""
-		tab_buttons[k].modulate = Color.WHITE
+	_update_nav_states()
 	for c in content.get_children():
 		c.queue_free()
 
@@ -476,8 +664,17 @@ func _switch_tab(tab_key: String):
 func _card(title: String, parent_override = null) -> VBoxContainer:
 	var panel = PanelContainer.new(); panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 5 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 7); panel.add_child(vbox)
-	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 25 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 29); t.modulate = Color(0.91,0.97,0.98); vbox.add_child(t)
-	var accent = ColorRect.new(); accent.color = Color(0.28,0.70,1.0,0.75) if bool(SettingsManager.get_value("colorblind_palette",false)) else Color(0.18,0.70,0.74,0.66); accent.custom_minimum_size = Vector2(0,2); accent.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(accent)
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation",9); head.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(head)
+	var marker = ColorRect.new(); marker.color = Color(0.55,0.80,1.0,0.95) if bool(SettingsManager.get_value("colorblind_palette",false)) else ACCENT_GOLD; marker.custom_minimum_size = Vector2(6,30); marker.size_flags_vertical = Control.SIZE_SHRINK_CENTER; marker.mouse_filter = Control.MOUSE_FILTER_IGNORE; head.add_child(marker)
+	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 25 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 29); t.modulate = TEXT_MAIN; head.add_child(t)
+	var accent = ColorRect.new(); accent.color = Color(0.19,0.34,0.45,0.65); accent.custom_minimum_size = Vector2(0,1); accent.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(accent)
+	var target = parent_override if parent_override != null and is_instance_valid(parent_override) else content
+	target.add_child(panel)
+	return vbox
+
+func _hero_card(parent_override = null) -> VBoxContainer:
+	var panel = PanelContainer.new(); panel.theme_type_variation = "HeroCard"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 13); panel.add_child(vbox)
 	var target = parent_override if parent_override != null and is_instance_valid(parent_override) else content
 	target.add_child(panel)
 	return vbox
@@ -488,37 +685,64 @@ func _row(parent, key: String, value: String, value_color = null):
 	var kl = Label.new()
 	kl.text = key
 	kl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	kl.add_theme_font_size_override("font_size", 24)
+	kl.add_theme_font_size_override("font_size", 23)
+	kl.modulate = TEXT_MUTED
 	h.add_child(kl)
 	var vl = Label.new()
 	vl.text = value
-	vl.add_theme_font_size_override("font_size", 24)
-	if value_color != null:
-		vl.modulate = value_color
+	vl.add_theme_font_size_override("font_size", 23)
+	vl.modulate = value_color if value_color != null else TEXT_MAIN
 	h.add_child(vl)
+
+# پیل وضعیت رنگی — سبک نشان‌های HOI4 برای موضع کشورها و هشدارها.
+func _pill(parent, text: String, color: Color) -> PanelContainer:
+	var p = PanelContainer.new()
+	var sb = _style_box(Color(color.r, color.g, color.b, 0.16), Color(color.r, color.g, color.b, 0.85), 14, 1, 5)
+	p.add_theme_stylebox_override("panel", sb)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(p)
+	var l = Label.new(); l.text = text; l.add_theme_font_size_override("font_size", 20); l.modulate = color; l.mouse_filter = Control.MOUSE_FILTER_IGNORE; p.add_child(l)
+	return p
 
 func _bar(parent, title: String, ratio: float):
 	var h = HBoxContainer.new()
 	parent.add_child(h)
 	var lbl = Label.new()
 	lbl.text = title
-	lbl.custom_minimum_size = Vector2(245, 0)
+	lbl.custom_minimum_size = Vector2(240, 0)
 	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.modulate = TEXT_MUTED
 	h.add_child(lbl)
 	var bar = ProgressBar.new()
 	bar.min_value = 0
 	bar.max_value = 100
 	bar.value = clamp(ratio * 100.0, 0, 100)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.custom_minimum_size = Vector2(0, 34)
+	bar.custom_minimum_size = Vector2(0, 28)
 	bar.show_percentage = false
+	var bar_color = _color_for(ratio)
+	bar.add_theme_stylebox_override("fill", _style_box(Color(bar_color.r, bar_color.g, bar_color.b, 0.95), bar_color.lightened(0.3), 7, 0, 2))
 	h.add_child(bar)
 	var pct = Label.new()
 	pct.text = PersianFormatter.to_persian_digits("%d٪" % int(ratio * 100.0))
 	pct.custom_minimum_size = Vector2(92, 0)
 	pct.add_theme_font_size_override("font_size", 22)
-	pct.modulate = _color_for(ratio)
+	pct.modulate = bar_color
 	h.add_child(pct)
+
+# کارت شاخص کلیدی — نمای ارزش‌ها با پیکان روند؛ لمس به بخش مربوط می‌رود.
+func _kpi_card(parent, icon: String, label: String, value: String, sub: String, accent: Color, target_tab: String):
+	var panel = PanelContainer.new(); panel.theme_type_variation = "KpiCard"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP; panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	panel.tooltip_text = "بازکردن بخش مرتبط"; panel.gui_input.connect(_on_status_chip_input.bind(target_tab))
+	parent.add_child(panel)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 3); box.mouse_filter = Control.MOUSE_FILTER_IGNORE; panel.add_child(box)
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); head.mouse_filter = Control.MOUSE_FILTER_IGNORE; box.add_child(head)
+	var ic = Label.new(); ic.text = icon; ic.add_theme_font_size_override("font_size", 24); ic.modulate = accent; head.add_child(ic)
+	var ttl = Label.new(); ttl.text = label; ttl.add_theme_font_size_override("font_size", 19); ttl.modulate = TEXT_MUTED; head.add_child(ttl)
+	var val = Label.new(); val.text = value; val.add_theme_font_size_override("font_size", 30); val.modulate = accent; box.add_child(val)
+	if sub != "":
+		var s = Label.new(); s.text = sub; s.add_theme_font_size_override("font_size", 17); s.modulate = TEXT_FAINT; box.add_child(s)
 
 func _color_for(ratio: float) -> Color:
 	if bool(SettingsManager.get_value("colorblind_palette",false)):
@@ -547,6 +771,7 @@ func _build_dashboard():
 
 	if not bool(SettingsManager.get_value("tutorial_dismissed", false)) and int(st.get("tick", 0)) < 7:
 		_build_onboarding_card(st)
+	_build_command_kpis(st)
 	_build_weather_and_municipal_card(st)
 	_build_monthly_report_card(st)
 	_build_timeline_card(st)
@@ -632,6 +857,31 @@ func _build_dashboard():
 
 	_build_settings_card()
 	_build_save_slots_card()
+
+# ── چهار شاخص کلیدی کشور در صدر میز فرمان (سبک نوار قدرت HOI4) ──
+func _build_command_kpis(st: Dictionary):
+	var econ = st.get("economy", {})
+	var ind = st.get("indicators", {})
+	var growth = float(econ.get("growth_rate", 0.0))
+	var growth_icon = "▲" if growth >= 0.0 else "▼"
+	var growth_color = ACCENT_GREEN if growth >= 0.0 else ACCENT_RED
+	var grid = GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	content.add_child(grid)
+	_kpi_card(grid, "◈", "تولید ناخالص", PersianFormatter.format_money(float(econ.get("gdp", 0.0))), "%s %s رشد" % [growth_icon, _fmt_pct(absf(growth))], ACCENT_GREEN if growth >= 0.0 else ACCENT_RED, "economy")
+	var happy = float(ind.get("happiness", st.get("population", {}).get("happiness", 0.6)))
+	_kpi_card(grid, "♥", "شادی مردم", _fmt_pct(happy), _health_word(happy), _color_for(happy), "population")
+	var stab = float(ind.get("stability", st.get("politics", {}).get("stability", 0.6)))
+	_kpi_card(grid, "⚖", "ثبات کشور", _fmt_pct(stab), _health_word(stab), _color_for(stab), "government")
+	_kpi_card(grid, "★", "قدرت ملی", PersianFormatter.format_number(int(ind.get("power_score", 0))), "سطح %s" % PersianFormatter.to_persian_digits(str(st.get("level", 1))), ACCENT_GOLD, "systems")
+
+func _health_word(ratio: float) -> String:
+	if ratio >= 0.75: return "عالی"
+	if ratio >= 0.55: return "مطلوب"
+	if ratio >= 0.35: return "نیازمند توجه"
+	return "بحرانی"
 
 func _build_onboarding_card(state: Dictionary):
 	var card = _card("🧭 راهنمای شروع سریع")
@@ -811,7 +1061,7 @@ func _on_speed_pressed():
 	SettingsManager.cycle_speed()
 	var speed_button = find_child("SpeedBtn", true, false)
 	if speed_button:
-		speed_button.text = "⏩ %s" % SettingsManager.get_speed_label()
+		speed_button.text = "⚡ %s" % SettingsManager.get_speed_label()
 	if current_tab == "dashboard":
 		_switch_tab("dashboard")
 
@@ -1662,42 +1912,48 @@ func _build_unified_map():
 	if selected_world_country == "" or not WorldManager.countries.has(selected_world_country): selected_world_country = player_id
 
 	if int(state.get("tick", 0)) == 0:
-		var setup = _card("آغاز مأموریت ملی")
-		var setup_hint = Label.new(); setup_hint.text = "کشور و سناریوی خود را انتخاب کنید. پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; setup_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; setup_hint.modulate = Color(0.70,0.82,0.88); setup.add_child(setup_hint)
-		var setup_grid = GridContainer.new(); setup_grid.columns = 2; setup.add_child(setup_grid)
+		var setup = _hero_card()
+		var hero_icon = Label.new(); hero_icon.text = "❖"; hero_icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_icon.add_theme_font_size_override("font_size", 60); hero_icon.modulate = ACCENT_GOLD; setup.add_child(hero_icon)
+		var hero_title = Label.new(); hero_title.text = "شبیه‌ساز کشور"; hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_title.add_theme_font_size_override("font_size", 46); setup.add_child(hero_title)
+		var hero_sub = Label.new(); hero_sub.text = "فرماندهی یک ملت واقعی؛ ۱۹۵ کشور، ۶۵ سامانه زنده و تصمیم‌های ماهانه شما. کشور و سناریو را برگزینید؛ پس از اجرای نخستین ماه، کشور قابل تغییر نیست."; hero_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; hero_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hero_sub.modulate = TEXT_MUTED; setup.add_child(hero_sub)
+		var row_country = _chooser_row(setup, "⚑ کشور")
 		country_select_option = OptionButton.new(); country_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var selected_index = 0
 		for country_id in WorldManager.get_country_ids():
 			var profile = WorldManager.get_country(country_id); country_select_option.add_item("%s · %s" % [profile.get("name_fa", country_id), profile.get("capital_fa", "")]); country_select_option.set_item_metadata(country_select_option.item_count - 1, country_id)
 			if country_id == player_id: selected_index = country_select_option.item_count - 1
-		country_select_option.select(selected_index); setup_grid.add_child(country_select_option)
+		country_select_option.select(selected_index); row_country.add_child(country_select_option)
+		var row_scenario = _chooser_row(setup, "☆ سناریو")
 		scenario_select_option = OptionButton.new(); scenario_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var active_scenario = str(state.get("scenario", {}).get("id", ScenarioManager.default_scenario)); var scenario_index = 0
 		for scenario_id in ScenarioManager.get_scenario_ids():
 			var definition = ScenarioManager.get_scenario(scenario_id); scenario_select_option.add_item("%s · %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")]); scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
 			if scenario_id == active_scenario: scenario_index = scenario_select_option.item_count - 1
-		scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); setup_grid.add_child(scenario_select_option)
-		scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = Color(0.72,0.82,0.89); setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
-		var start_button = _mk_btn(setup, "شروع فرماندهی", Vector2(240,50), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); row_scenario.add_child(scenario_select_option)
+		scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = TEXT_MUTED; scenario_description_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
+		var start_button = _mk_btn(setup, "⚑ شروع فرماندهی", Vector2(340,62), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; start_button.add_theme_font_size_override("font_size", 27)
 
-	var controls = _card("لنزهای نقشه و کنترل دوربین")
-	map_control_flow = HFlowContainer.new(); var main_row=map_control_flow; main_row.add_theme_constant_override("h_separation",7);main_row.add_theme_constant_override("v_separation",6); controls.add_child(main_row)
-	var layer_select = OptionButton.new(); layer_select.custom_minimum_size = Vector2(230,46); layer_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var layer_defs = [["political","سیاسی"],["relations","روابط بین‌الملل"],["population","جمعیت"],["economy","اقتصاد"],["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],["resources","منابع"],["military","نظامی"]]
-	for definition in layer_defs:
-		layer_select.add_item(definition[1]); layer_select.set_item_metadata(layer_select.item_count-1, definition[0])
-		if definition[0] == map_base_layer: layer_select.select(layer_select.item_count-1)
-	layer_select.item_selected.connect(_on_unified_layer_selected.bind(layer_select)); main_row.add_child(layer_select)
-	_mk_btn(main_row, "+", Vector2(52,46), _on_map_camera_command.bind("in"))
-	_mk_btn(main_row, "−", Vector2(52,46), _on_map_camera_command.bind("out"))
-	_mk_btn(main_row, "کشور من", Vector2(108,46), _on_map_camera_command.bind("home"))
-	_mk_btn(main_row, "کشور انتخابی", Vector2(128,46), _on_map_camera_command.bind("selected"))
-	_mk_btn(main_row, "جهان", Vector2(82,46), _on_map_camera_command.bind("world"))
-	map_overlay_grid = GridContainer.new(); var overlay_grid=map_overlay_grid; overlay_grid.columns = 5; controls.add_child(overlay_grid)
+	var controls = _card("◉ لنزها و لایه‌های نقشه")
+	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
+	map_control_flow = HFlowContainer.new(); map_control_flow.add_theme_constant_override("h_separation",7); map_control_flow.add_theme_constant_override("v_separation",6); controls.add_child(map_control_flow)
+	var lens_defs = [["political","سیاسی"],["relations","روابط"],["population","جمعیت"],["economy","اقتصاد"],["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],["resources","منابع"],["military","نظامی"]]
+	for lens in lens_defs:
+		var chip = Button.new(); chip.text = lens[1]; chip.toggle_mode = true; chip.custom_minimum_size = Vector2(0,50); chip.add_theme_font_size_override("font_size",21)
+		chip.theme_type_variation = "LensChipActive" if lens[0] == map_base_layer else "LensChip"
+		chip.set_meta("lens_layer", lens[0]); chip.set_pressed_no_signal(lens[0] == map_base_layer)
+		chip.pressed.connect(FeedbackManager.play_click); chip.pressed.connect(_on_map_lens_chip.bind(str(lens[0])))
+		map_control_flow.add_child(chip)
+	var overlay_caption = Label.new(); overlay_caption.text = "لایه‌های اطلاعاتی روی نقشه"; overlay_caption.add_theme_font_size_override("font_size", 19); overlay_caption.modulate = TEXT_FAINT; controls.add_child(overlay_caption)
+	# پیل‌های لایه (چندانتخابی) با چراغ وضعیت طلایی.
+	map_overlay_grid = GridContainer.new(); map_overlay_grid.columns = 5; map_overlay_grid.add_theme_constant_override("h_separation",7); map_overlay_grid.add_theme_constant_override("v_separation",6); controls.add_child(map_overlay_grid)
 	var overlay_defs = [["wars","جنگ"],["alliances","اتحاد"],["trade","تجارت"],["air","پرواز"],["sea","دریا"],["land","زمین"],["cities","شهرها"],["transport","راه و ریل"],["intelligence","اطلاعاتی"]]
 	for definition in overlay_defs:
-		var toggle = CheckButton.new(); toggle.text = definition[1]; toggle.button_pressed = bool(map_overlays.get(definition[0],false)); toggle.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0]))); overlay_grid.add_child(toggle)
-	var usage = Label.new(); usage.text = "چرخ ماوس یا حرکت دو انگشتی: زوم · کشیدن: جابه‌جایی · لمس: انتخاب · دوبار لمس: ورود به کشور · با زوم بیشتر استان‌ها، شهرها و شبکه‌ها آشکار می‌شوند."; usage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; usage.modulate = Color(0.58,0.73,0.80); controls.add_child(usage)
+		var pill = Button.new(); pill.text = definition[1]; pill.toggle_mode = true; pill.custom_minimum_size = Vector2(0,46); pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL; pill.add_theme_font_size_override("font_size",19)
+		pill.theme_type_variation = "PillToggle"
+		pill.button_pressed = bool(map_overlays.get(definition[0],false))
+		pill.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0])))
+		map_overlay_grid.add_child(pill)
+	var usage = Label.new(); usage.text = "◉ کشیدن جابه‌جا می‌کند · دو انگشت زوم · لمس کشور را انتخاب و دوبار لمس وارد کشور می‌شود؛ با زوم، استان‌ها و شبکه‌ها آشکار می‌گردند."; usage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; usage.modulate = TEXT_FAINT; usage.add_theme_font_size_override("font_size",19); controls.add_child(usage)
 
 	var map_countries: Dictionary = world.get("countries", {}).duplicate(true)
 	for war_target in world.get("wars", {}).keys():
@@ -1705,11 +1961,22 @@ func _build_unified_map():
 	for npc_war in world.get("npc_wars", {}).values():
 		for participant in [str(npc_war.get("a", "")), str(npc_war.get("b", ""))]:
 			if map_countries.has(participant): map_countries[participant]["at_war"] = true
-	var map_card = _card("نقشه پیوسته جهان تا شهر")
+	var map_card = _card("◈ نقشه پیوسته جهان تا شهر")
+	map_wrap = Control.new(); map_wrap.custom_minimum_size = Vector2(0, 860); map_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL; map_wrap.mouse_filter = Control.MOUSE_FILTER_PASS; map_card.add_child(map_wrap)
 	current_unified_map = UnifiedMapClass.new(); current_unified_map.selected_country = selected_world_country; current_unified_map.selected_unit = selected_country_unit
 	current_unified_map.configure(map_countries, relations, player_id, world, state, map_base_layer, map_overlays, map_camera_center, map_zoom)
 	current_unified_map.country_selected.connect(_on_unified_country_selected); current_unified_map.unit_selected.connect(_on_unified_unit_selected); current_unified_map.route_selected.connect(_on_unified_route_selected); current_unified_map.view_changed.connect(_on_unified_view_changed)
-	map_card.add_child(current_unified_map)
+	map_wrap.add_child(current_unified_map)
+	current_unified_map.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# ستون شناور دوربین روی نقشه — دسترسی سریع بدون ترک نمای راهبردی.
+	var fab_col = VBoxContainer.new(); fab_col.add_theme_constant_override("separation", 10)
+	fab_col.anchor_left = 0.0; fab_col.anchor_right = 0.0; fab_col.anchor_top = 0.5; fab_col.anchor_bottom = 0.5
+	fab_col.offset_left = 14; fab_col.offset_right = 76; fab_col.offset_top = -160; fab_col.offset_bottom = 160
+	fab_col.mouse_filter = Control.MOUSE_FILTER_PASS
+	map_wrap.add_child(fab_col)
+	for fab_def in [["✚","in","بزرگ‌نمایی"],["−","out","کوچک‌نمایی"],["⌂","home","نمای کشور من"],["⊙","selected","نمای کشور انتخابی"],["◐","world","نمای جهان"]]:
+		var fab = Button.new(); fab.text = str(fab_def[0]); fab.tooltip_text = str(fab_def[2]); fab.custom_minimum_size = Vector2(62,62); fab.add_theme_font_size_override("font_size", 27); fab.theme_type_variation = "MapFab"
+		fab.pressed.connect(FeedbackManager.play_click); fab.pressed.connect(_on_map_camera_command.bind(str(fab_def[1]))); fab_col.add_child(fab)
 	map_context_host=VBoxContainer.new();map_context_host.add_theme_constant_override("separation",10);content.add_child(map_context_host)
 	_refresh_map_context_panel()
 	call_deferred("_apply_responsive_layout")
@@ -1729,7 +1996,7 @@ func _refresh_map_context_panel():
 
 func _build_map_player_context(state: Dictionary, player_id: String, parent_override=null):
 	var profile = WorldManager.get_country(player_id)
-	var national = _card("کشور شما · %s" % str(profile.get("name_fa", player_id)),parent_override)
+	var national = _card("⌂ کشور شما · %s" % str(profile.get("name_fa", player_id)),parent_override)
 	_row(national, "پایتخت", str(profile.get("capital_fa", "")))
 	_row(national, "جمعیت", PersianFormatter.format_large(float(state.get("population",{}).get("total",0))) + " نفر")
 	_row(national, "تولید داخلی", PersianFormatter.format_money(float(state.get("economy",{}).get("gdp",0))))
@@ -1739,7 +2006,7 @@ func _build_map_player_context(state: Dictionary, player_id: String, parent_over
 	_bar(national, "امنیت", float(state.get("security",{}).get("public_security",0.65)))
 	if selected_country_unit != "" and not CountryGeographyManager.get_unit(player_id, selected_country_unit).is_empty():
 		_build_selected_national_unit(state, player_id, selected_country_unit,parent_override)
-	var action_card = _card("اقدام زمینه‌ای از روی نقشه",parent_override)
+	var action_card = _card("◈ اقدام زمینه‌ای از روی نقشه",parent_override)
 	var action_hint = Label.new(); action_hint.text = "اقدام‌های پرتکرار همان‌جا که مسئله را می‌بینید اجرا می‌شوند؛ نتیجه همچنان از موتور اتمی عبور می‌کند."; action_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; action_hint.modulate = Color(0.67,0.79,0.85); action_card.add_child(action_hint)
 	var action_grid = GridContainer.new(); action_grid.columns = 3; action_card.add_child(action_grid)
 	var actions = [["road_maintenance","نگهداری راه‌ها"],["improve_drainage","تقویت زهکشی"],["buy_snowplows","خرید برف‌روب"],["stock_road_salt","ذخیره نمک جاده"],["winter_training","رزمایش زمستانی"],["cooling_centers","مراکز خنک‌کننده"]]
@@ -1754,6 +2021,23 @@ func _on_unified_layer_selected(index: int, selector: OptionButton):
 	if index < 0 or index >= selector.item_count: return
 	map_base_layer = str(selector.get_item_metadata(index))
 	if is_instance_valid(current_unified_map): current_unified_map.set_base_layer(map_base_layer)
+
+# ردیف برچسب‌دار انتخاب‌گرها در کارت قهرمان آغاز بازی.
+func _chooser_row(parent, caption: String) -> HBoxContainer:
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 10); parent.add_child(row)
+	var cap = Label.new(); cap.text = caption; cap.custom_minimum_size = Vector2(150,0); cap.add_theme_font_size_override("font_size", 23); cap.modulate = TEXT_MUTED; cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER; row.add_child(cap)
+	return row
+
+# چیپ‌های لنز نقشه: کلیک، حالت فعال را بین چیپ‌ها پخش می‌کند و صفحه بازسازی نمی‌شود.
+func _on_map_lens_chip(layer: String):
+	map_base_layer = layer
+	if is_instance_valid(current_unified_map): current_unified_map.set_base_layer(layer)
+	if is_instance_valid(map_control_flow):
+		for chip in map_control_flow.get_children():
+			if chip is Button and chip.has_meta("lens_layer"):
+				var on = str(chip.get_meta("lens_layer")) == layer
+				chip.theme_type_variation = "LensChipActive" if on else "LensChip"
+				chip.set_pressed_no_signal(on)
 
 func _on_unified_overlay_toggled(pressed: bool, layer: String):
 	map_overlays[layer] = pressed
@@ -1817,8 +2101,14 @@ func _build_selected_national_unit(state: Dictionary, code: String, unit_id: Str
 func _build_selected_country_card(state: Dictionary, target: String, parent_override=null):
 	var profile = state.get("world", {}).get("countries", {}).get(target, WorldManager.get_country(target))
 	var relation = float(state.get("diplomacy", {}).get("relations", {}).get(target, 50.0))
-	var card = _card("🎯 کشور انتخابی: %s" % _fa_country(target),parent_override)
-	_row(card, "رابطه", "%s — %s" % [PersianFormatter.to_persian_digits("%.0f" % relation), _relation_word(relation)], _color_for(relation / 100.0))
+	var card = _card("◉ کشور انتخابی: %s" % _fa_country(target),parent_override)
+	# نشان موضع رابطه، هم‌خط با سیستم نشان‌های HOI4
+	var stance_row = HBoxContainer.new(); stance_row.add_theme_constant_override("separation", 9); card.add_child(stance_row)
+	_pill(stance_row, _relation_word(relation), _color_for(relation / 100.0))
+	var rel_lbl = Label.new(); rel_lbl.text = "امتیاز رابطه %s" % PersianFormatter.to_persian_digits("%.0f" % relation); rel_lbl.add_theme_font_size_override("font_size", 21); rel_lbl.modulate = TEXT_MUTED; rel_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER; stance_row.add_child(rel_lbl)
+	var wars_now: Dictionary = state.get("world", {}).get("wars", {})
+	if wars_now.has(target):
+		_pill(stance_row, "در جنگ", ACCENT_RED)
 	_row(card, "پایتخت", str(profile.get("capital_fa","")))
 	_row(card, "منطقه", "%s / %s" % [_fa_geo_name(str(profile.get("region",""))),_fa_geo_name(str(profile.get("subregion","")))])
 	_row(card, "جمعیت", PersianFormatter.format_large(float(profile.get("population",0)))+" نفر")
@@ -1850,13 +2140,14 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		offer_box.modulate = Color(0.55, 0.85, 1.0)
 		card.add_child(offer_box)
 		var offer_buttons = HFlowContainer.new()
+		offer_buttons.add_theme_constant_override("h_separation", 8)
 		card.add_child(offer_buttons)
-		for reply_def in [["accept_offer", "✅ پذیرفتن پیشنهاد", Color(0.55, 0.95, 0.65)], ["reject_offer", "❌ رد پیشنهاد", Color(1.0, 0.6, 0.6)]]:
+		for reply_def in [["accept_offer", "✓ پذیرفتن پیشنهاد"], ["reject_offer", "✕ رد پیشنهاد"]]:
 			var reply_check = WorldManager.can_action(state, target, reply_def[0])
 			var reply_button = Button.new()
 			reply_button.text = reply_def[1]
-			reply_button.modulate = reply_def[2]
-			reply_button.custom_minimum_size = Vector2(180, 48)
+			reply_button.theme_type_variation = "SuccessButton" if reply_def[0] == "accept_offer" else "DangerButton"
+			reply_button.custom_minimum_size = Vector2(210, 50)
 			reply_button.disabled = not reply_check.valid
 			reply_button.tooltip_text = "" if reply_check.valid else str(reply_check.reason)
 			reply_button.pressed.connect(FeedbackManager.play_click)
@@ -1880,7 +2171,9 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		button.disabled = not check.valid
 		button.tooltip_text = "" if check.valid else str(check.reason)
 		if action_def[0] == "declare_war":
-			button.modulate = Color(1.0, 0.55, 0.55)
+			button.theme_type_variation = "DangerButton"
+		elif action_def[0] == "offer_peace":
+			button.theme_type_variation = "SuccessButton"
 		button.pressed.connect(FeedbackManager.play_click)
 		button.pressed.connect(_on_world_action.bind(target, action_def[0], action_def[1]))
 		action_grid.add_child(button)
@@ -2228,13 +2521,13 @@ func _on_auto_pressed():
 	auto_tick = !auto_tick
 	var btn = find_child("AutoBtn", true, false)
 	if btn:
-		btn.text = "▶️ خودکار: روشن" if auto_tick else "⏸️ خودکار: خاموش"
+		btn.text = "▶ خودکار: روشن" if auto_tick else "خودکار: خاموش"
 
 func _on_sound_pressed():
 	var is_muted = FeedbackManager.toggle_mute()
 	var btn = find_child("SoundBtn", true, false)
 	if btn:
-		btn.text = "🔇 صدا" if is_muted else "🔊 صدا"
+		btn.text = "✕ صدا" if is_muted else "♪ صدا"
 	if not is_muted:
 		FeedbackManager.play_success()
 
