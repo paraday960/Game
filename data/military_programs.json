@@ -1,15 +1,54 @@
 {
-  "version":"1.0.0",
+  "version":"2.0.0",
+  "description":"برنامه‌های توسعه نظامی عمیق - جنگ واقعی مدرن - ۲۴ برنامه از ذخیره تا هسته‌ای و فضایی",
   "programs":[
-    {"id":"reserve_training","name_fa":"آموزش نیروی ذخیره","duration_months":3,"cost_gdp_ratio":0.002,"prerequisites":[],"description":"رزمایش منظم ذخیره و بهبود بسیج ملی.","effects":{"readiness_bonus":0.03,"power_multiplier":0.01}},
-    {"id":"logistics_modernization","name_fa":"نوسازی لجستیک رزمی","duration_months":6,"cost_gdp_ratio":0.004,"prerequisites":["advanced_manufacturing"],"description":"انبار، حمل، تعمیر و زنجیره تدارکات یکپارچه.","effects":{"logistics_bonus":0.08,"readiness_bonus":0.025}},
-    {"id":"drone_fleet","name_fa":"ناوگان پهپادی","duration_months":5,"cost_gdp_ratio":0.004,"prerequisites":["defense_drones"],"description":"شناسایی و ضربت دقیق با هزینه عملیاتی کمتر.","effects":{"power_multiplier":0.06,"deterrence_bonus":3}},
-    {"id":"air_defense_network","name_fa":"شبکه پدافند یکپارچه","duration_months":8,"cost_gdp_ratio":0.006,"prerequisites":["missile_defense"],"description":"رادار و پدافند چندلایه برای مراکز حیاتی.","effects":{"deterrence_bonus":8,"casualty_reduction":0.08}},
-    {"id":"cyber_command","name_fa":"فرماندهی سایبری","duration_months":6,"cost_gdp_ratio":0.004,"prerequisites":["cyber_defense"],"description":"دفاع و عملیات سایبری هماهنگ نیروهای مسلح.","effects":{"readiness_bonus":0.02,"power_multiplier":0.04}},
-    {"id":"medical_corps","name_fa":"سپاه پزشکی رزمی","duration_months":4,"cost_gdp_ratio":0.002,"prerequisites":["modern_vaccines"],"description":"تخلیه مجروح، بیمارستان صحرایی و کاهش تلفات.","effects":{"casualty_reduction":0.12}},
-    {"id":"winter_warfare","name_fa":"آمادگی عملیات زمستانی","duration_months":3,"cost_gdp_ratio":0.0015,"prerequisites":[],"description":"تجهیزات سردسیر، تحرک برفی و پشتیبانی شهرداری در بحران.","effects":{"readiness_bonus":0.02,"casualty_reduction":0.03}},
-    {"id":"naval_modernization","name_fa":"نوسازی ناوگان دریایی","duration_months":10,"cost_gdp_ratio":0.008,"prerequisites":["advanced_manufacturing"],"description":"کشتی، حسگر و حفاظت از خطوط تجارت دریایی.","effects":{"power_multiplier":0.07,"deterrence_bonus":4}},
-    {"id":"recon_satellites","name_fa":"ماهواره شناسایی نظامی","duration_months":9,"cost_gdp_ratio":0.007,"prerequisites":["earth_observation"],"description":"پایش راهبردی، هشدار زودهنگام و هدف‌یابی دقیق.","effects":{"power_multiplier":0.05,"readiness_bonus":0.03,"deterrence_bonus":5}},
-    {"id":"defense_industry","name_fa":"خودکفایی صنایع دفاعی","duration_months":12,"cost_gdp_ratio":0.010,"prerequisites":["industrial_automation"],"description":"تولید داخلی، نگهداری تجهیزات و کاهش وابستگی خارجی.","effects":{"logistics_bonus":0.10,"power_multiplier":0.08}}
+    {"id":"reserve_training","name_fa":"آموزش نیروی ذخیره","duration_months":3,"cost_gdp_ratio":0.002,"prerequisites":[],"description":"رزمایش منظم ذخیره و بهبود بسیج ملی - کاهش زمان بسیج از ۴۵ به ۲۱ روز.","effects":{"readiness_bonus":0.03,"power_multiplier":0.01,"logistics_bonus":0.02}},
+
+    {"id":"logistics_modernization","name_fa":"نوسازی لجستیک رزمی","duration_months":6,"cost_gdp_ratio":0.004,"prerequisites":["advanced_manufacturing"],"description":"انبار خودکار، حمل ریلی سریع، تعمیر میدانی، زنجیره سرد مهمات - افزایش ذخیره از ۲۰ به ۳۵ روز.","effects":{"logistics_bonus":0.12,"readiness_bonus":0.03,"power_multiplier":0.02}},
+
+    {"id":"drone_fleet","name_fa":"ناوگان پهپادی شناسایی-رزمی","duration_months":5,"cost_gdp_ratio":0.004,"prerequisites":["defense_drones"],"description":"پهپادهای شناسایی برد متوسط و رزمی - کاهش تلفات، افزایش دقت آتش.","effects":{"power_multiplier":0.06,"deterrence_bonus":3,"readiness_bonus":0.02}},
+
+    {"id":"loitering_munitions","name_fa":"مهمات پرسه‌زن انتحاری","duration_months":4,"cost_gdp_ratio":0.0035,"prerequisites":["defense_drones"],"description":"شاهد، هاروپ، لانست - شکار توپخانه، رادار و تانک با هزینه یک‌دهم موشک.","effects":{"power_multiplier":0.08,"deterrence_bonus":4,"offense_bonus":0.05}},
+
+    {"id":"drone_swarm","name_fa":"گروه پهپاد انبوه (Swarm)","duration_months":8,"cost_gdp_ratio":0.006,"prerequisites":["defense_drones","ai_combat"],"description":"۱۰ تا ۱۰۰ پهپاد هماهنگ AI - اشباع پدافند دشمن، حمله همزمان.","effects":{"power_multiplier":0.10,"deterrence_bonus":6,"offense_bonus":0.08}},
+
+    {"id":"air_defense_network","name_fa":"شبکه پدافند یکپارچه چندلایه","duration_months":8,"cost_gdp_ratio":0.006,"prerequisites":["missile_defense"],"description":"MANPADS + SHORAD + میان‌برد + دوربرد S-300 + رادار آرایه فازی - کاهش تلفات هوایی ۳۰٪.","effects":{"deterrence_bonus":12,"casualty_reduction":0.12,"defense_bonus":0.10}},
+
+    {"id":"iron_dome_like","name_fa":"سامانه گنبد آهنین بومی","duration_months":7,"cost_gdp_ratio":0.005,"prerequisites":["missile_defense"],"description":"رهگیری راکت، پهپاد، کروز با هوش مصنوعی - محافظت شهرها و پایگاه‌ها.","effects":{"deterrence_bonus":10,"casualty_reduction":0.15,"defense_bonus":0.12}},
+
+    {"id":"cyber_command","name_fa":"فرماندهی سایبری تهاجمی","duration_months":6,"cost_gdp_ratio":0.004,"prerequisites":["cyber_defense"],"description":"حمله به شبکه دشمن، اخلال GPS، هک پهپاد، دفاع از زیرساخت حیاتی.","effects":{"readiness_bonus":0.03,"power_multiplier":0.05,"offense_bonus":0.06}},
+
+    {"id":"electronic_warfare","name_fa":"جنگ الکترونیک (EW)","duration_months":6,"cost_gdp_ratio":0.005,"prerequisites":["cyber_defense","advanced_radar"],"description":"اخلال رادار، ارتباطات، پهپاد، هدایت ماهواره - کور کردن دشمن.","effects":{"power_multiplier":0.07,"defense_bonus":0.08,"offense_bonus":0.07}},
+
+    {"id":"medical_corps","name_fa":"سپاه پزشکی رزمی پیشرفته","duration_months":4,"cost_gdp_ratio":0.0025,"prerequisites":["modern_vaccines"],"description":"تخلیه هوایی مجروح، بیمارستان صحرایی سیار، خون مصنوعی، کاهش ۴۰٪ مرگ قابل پیشگیری.","effects":{"casualty_reduction":0.18,"readiness_bonus":0.02,"logistics_bonus":0.04}},
+
+    {"id":"special_forces_expansion","name_fa":"گسترش نیروهای ویژه (SOF)","duration_months":9,"cost_gdp_ratio":0.005,"prerequisites":["advanced_training"],"description":"کماندو، ترور هدفمند، خرابکاری عمقی، نجات گروگان، عملیات روانی.","effects":{"power_multiplier":0.08,"offense_bonus":0.10,"deterrence_bonus":5}},
+
+    {"id":"winter_warfare","name_fa":"آمادگی عملیات زمستانی و کوهستان","duration_months":3,"cost_gdp_ratio":0.0015,"prerequisites":[],"description":"تجهیزات سردسیر، نقاب سفید، اسکی، تحرک برفی، جنگ کوهستان.","effects":{"readiness_bonus":0.03,"casualty_reduction":0.05,"defense_bonus":0.05}},
+
+    {"id":"urban_warfare","name_fa":"آموزش جنگ شهری (MOUT)","duration_months":5,"cost_gdp_ratio":0.003,"prerequisites":["advanced_training"],"description":"نبرد خانه‌به‌خانه، تونل، پهپاد کوچک، ربات، کاهش تلفات غیرنظامی.","effects":{"power_multiplier":0.06,"defense_bonus":0.12,"casualty_reduction":0.08}},
+
+    {"id":"naval_modernization","name_fa":"نوسازی ناوگان دریایی","duration_months":12,"cost_gdp_ratio":0.008,"prerequisites":["advanced_manufacturing"],"description":"ناوشکن، ناوچه، زیردریایی دیزلی، موشک ضدکشتی، حفاظت خط تجارت.","effects":{"power_multiplier":0.09,"deterrence_bonus":8,"logistics_bonus":0.04}},
+
+    {"id":"submarine_force","name_fa":"نیروی زیردریایی تهاجمی","duration_months":14,"cost_gdp_ratio":0.010,"prerequisites":["advanced_manufacturing","sonar_tech"],"description":"زیردریایی دیزلی-الکتریکی بی‌صدا، اژدر، موشک کروز، جنگ نامتقارن دریایی.","effects":{"power_multiplier":0.08,"deterrence_bonus":10,"offense_bonus":0.07}},
+
+    {"id":"amphibious_capability","name_fa":"توان آبی-خاکی","duration_months":10,"cost_gdp_ratio":0.007,"prerequisites":["naval_modernization"],"description":"ناو هواپیمابر بالگرد، هاورکرافت، تفنگدار دریایی، عملیات ساحلی.","effects":{"power_multiplier":0.07,"offense_bonus":0.12,"logistics_bonus":0.05}},
+
+    {"id":"recon_satellites","name_fa":"ماهواره شناسایی نظامی SAR","duration_months":12,"cost_gdp_ratio":0.009,"prerequisites":["earth_observation"],"description":"رادار دهانه مصنوعی، دید شبانه‌روزی، هشدار پرتاب موشک، ۱ متر دقت.","effects":{"power_multiplier":0.07,"readiness_bonus":0.04,"deterrence_bonus":8}},
+
+    {"id":"military_space_command","name_fa":"فرماندهی فضایی نظامی","duration_months":15,"cost_gdp_ratio":0.012,"prerequisites":["earth_observation","missile_defense"],"description":"اختلال ماهواره دشمن (ASAT)، محافظت GPS، ارتباط امن، ناوبری مستقل.","effects":{"power_multiplier":0.08,"deterrence_bonus":12,"readiness_bonus":0.03}},
+
+    {"id":"hypersonic_missiles","name_fa":"موشک هایپرسونیک","duration_months":18,"cost_gdp_ratio":0.014,"prerequisites":["missile_defense","advanced_materials"],"description":"سرعت ۵+ ماخ، مانورپذیر، عبور از پدافند، زمان پرواز ۱۰ دقیقه‌ای.","effects":{"power_multiplier":0.12,"deterrence_bonus":15,"offense_bonus":0.15}},
+
+    {"id":"long_range_strike","name_fa":"توان ضربه دوربرد دقیق","duration_months":10,"cost_gdp_ratio":0.008,"prerequisites":["missile_defense"],"description":"کروز ۱۵۰۰km، بالستیک نقطه‌زن، هدف‌یابی ماهواره‌ای، انهدام عمقی.","effects":{"power_multiplier":0.10,"deterrence_bonus":10,"offense_bonus":0.12}},
+
+    {"id":"stealth_fighters","name_fa":"جنگنده نسل پنجم رادارگریز","duration_months":20,"cost_gdp_ratio":0.016,"prerequisites":["stealth_tech","advanced_avionics"],"description":"سطح مقطع کم، سوپرکروز، آشیانه داخلی سلاح، برتری هوایی.","effects":{"power_multiplier":0.14,"deterrence_bonus":14,"readiness_bonus":0.04}},
+
+    {"id":"defense_industry","name_fa":"خودکفایی صنایع دفاعی","duration_months":12,"cost_gdp_ratio":0.010,"prerequisites":["industrial_automation"],"description":"تولید داخلی ۸۰٪، خط مونتاژ تانک و پهپاد، کاهش وابستگی و هزینه.","effects":{"logistics_bonus":0.14,"power_multiplier":0.10,"readiness_bonus":0.03}},
+
+    {"id":"c4isr_network","name_fa":"شبکه فرماندهی C4ISR یکپارچه","duration_months":8,"cost_gdp_ratio":0.006,"prerequisites":["battlefield_network"],"description":"لینک ۱۶، هدست سرباز، تبلت فرمانده، تصویر مشترک نبرد، OODA سریع.","effects":{"readiness_bonus":0.06,"power_multiplier":0.08,"defense_bonus":0.06,"offense_bonus":0.06}},
+
+    {"id":"info_warfare_unit","name_fa":"یگان جنگ اطلاعاتی و روانی","duration_months":5,"cost_gdp_ratio":0.003,"prerequisites":["cyber_defense"],"description":"پروپاگاندا، عملیات روانی، دیپ‌فیک، مدیریت افکار عمومی، تضعیف روحیه دشمن.","effects":{"deterrence_bonus":5,"defense_bonus":0.05,"offense_bonus":0.05}}
+
   ]
 }

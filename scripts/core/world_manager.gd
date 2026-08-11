@@ -379,33 +379,195 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			continue
 		var war: Dictionary = world["wars"][target]
 		var enemy: Dictionary = world["countries"][target]
+		# ==================== محاسبه نیروی واقعی - مدل عمیق چندعاملی (واقع‌گرایانه) ====================
+		# اطلاعات شناسایی
 		var recon_bonus = IntelligenceOperationManager.get_recon_bonus(state,target)
-		var player_force = float(state["military"].get("power", 50.0)) * float(state["military"].get("readiness", 0.6)) * (1.0 + recon_bonus)
-		# کمک متحدان بازیکن در میدان: هر متحد رسمی ۸٪ قدرت میدانی می‌افزاید (سقف ۲۴٪)
+		var mil = state["military"]
+		var mil_detail = mil.get("personnel_detail", {})
+		var equip = mil.get("equipment_detail", {})
+		var logi = mil.get("logistics_detail", {})
+		var cmd_detail = mil.get("command_detail", {})
+		var front_detail = mil.get("fronts_detail", {})
+
+		# نیروی پایه
+		var player_power = float(mil.get("power", 50.0))
+		var readiness = float(mil.get("readiness", 0.6))
+		var effective_readiness = float(mil.get("effective_readiness", readiness))
+
+		# ضرایب پرسنلی
+		var morale = float(mil_detail.get("morale", 0.70))
+		var training = float(mil_detail.get("training_level", 0.65))
+		var experience = float(mil_detail.get("experience", 0.50))
+		var cohesion = float(mil_detail.get("cohesion", 0.68))
+		var leadership = float(mil_detail.get("leadership_quality", 0.60))
+		var personnel_factor = morale*0.25 + training*0.20 + experience*0.20 + cohesion*0.15 + leadership*0.20
+
+		# ضرایب تجهیزاتی - نرخ عملیاتی و تنوع
+		var operational_rate = float(equip.get("operational_rate", 0.75))
+		var tank_factor = float(equip.get("tanks_mbt",1200))/1200.0*0.15
+		var ifv_factor = float(equip.get("ifv",1500))/1500.0*0.10
+		var artillery_factor = (float(equip.get("artillery_sp",500))+float(equip.get("mlrs",200))*1.5)/700.0*0.10
+		var fighter_factor = (float(equip.get("fighters_multirole",120))+float(equip.get("fighters_air_superiority",80))*1.2)/200.0*0.15
+		var drone_factor = (float(equip.get("uav_combat",80))+float(equip.get("uav_loitering",300))*0.3+float(equip.get("uav_swarm_capable",20))*2.0)/200.0*0.12
+		var sam_factor = (float(equip.get("sam_long",18))+float(equip.get("sam_medium",40))*0.5)/40.0*0.08
+		var missile_factor = (float(equip.get("ballistic_short",200))*0.2+float(equip.get("cruise_land_attack",300))*0.3+float(equip.get("hypersonic",10))*2.0)/200.0*0.10
+		var naval_factor = (float(equip.get("destroyer",6))*15.0+float(equip.get("frigate",10))*10.0+float(equip.get("submarine_ssk",6))*20.0)/300.0*0.10
+		var equipment_factor = clamp(operational_rate*0.5 + tank_factor+ifv_factor+artillery_factor+fighter_factor+drone_factor+sam_factor+missile_factor+naval_factor, 0.3, 2.0)
+
+		# لجستیک - سوخت، مهمات، خطوط تدارک، آسیب‌پذیری
+		var fuel_days = float(logi.get("fuel_stock_days",25.0))
+		var ammo_days = float(logi.get("ammo_stock_days",20.0))
+		var supply_vuln = float(logi.get("supply_line_vulnerability",0.30))
+		var convoy_prot = float(logi.get("convoy_protection",0.60))
+		var logistics_factor = clamp(fuel_days/30.0*0.25 + ammo_days/20.0*0.30 + float(logi.get("supply_lines",{}).get("road",0.60))*0.20 + convoy_prot*0.15 + (1.0-supply_vuln)*0.10, 0.15, 1.4)
+
+		# فرماندهی - C4ISR، جنگ الکترونیک، ابتکار، چرخه تصمیم
+		var c4isr = float(cmd_detail.get("c4isr_level",0.60))
+		var ew = float(cmd_detail.get("ew_capability",0.55))
+		var initiative = float(cmd_detail.get("initiative",0.60))
+		var decision_cycle = float(cmd_detail.get("decision_cycle",24.0))
+		var decision_factor = clamp(1.2 - decision_cycle/48.0, 0.5, 1.2) # چرخه کوتاه‌تر = بهتر
+		var doctrine = cmd_detail.get("doctrine","balanced")
+		var doctrine_mods = MilitaryManager.get_effective_modifiers(state)
+		var doctrine_offense = float(doctrine_mods.get("offense_bonus",0.0))
+		var doctrine_defense = float(doctrine_mods.get("defense_bonus",0.0))
+		var command_factor = clamp(c4isr*0.30 + ew*0.20 + initiative*0.25 + decision_factor*0.15 + (0.5+doctrine_offense*0.3)*0.10, 0.4, 1.6)
+
+		# جغرافیا و هوا - از جبهه‌ها
+		var terrain_modifier = 1.0
+		var weather_modifier = 1.0
+		if front_detail.get("active_fronts",[]).size() > 0:
+			for front in front_detail["active_fronts"]:
+				if str(front.get("target","")) == target:
+					var terrain = str(front.get("terrain","دشت"))
+					var weather = str(front.get("weather","آفتابی"))
+					# دکترین مانور در دشت بهتر، چریکی در کوهستان/شهری
+					terrain_modifier += MilitaryManager.get_doctrine_bonus_for_terrain(doctrine, terrain)
+					if weather == "بارانی":
+						terrain_modifier -= 0.15 # گل و لای
+						logistics_factor *= 0.85
+					elif weather == "برفی":
+						terrain_modifier -= 0.10
+						if mil.get("military_development",{}).get("completed",[]).has("winter_warfare"):
+							terrain_modifier += 0.15
+					elif weather == "مه‌آلود":
+						terrain_modifier -= 0.05
+						fighter_factor *= 0.7 # دید کم
+					break
+
+		# برتری هوایی - از جبهه
+		var air_superiority = 0.50
+		if front_detail.get("active_fronts",[]).size() > 0:
+			for front in front_detail["active_fronts"]:
+				if str(front.get("target","")) == target:
+					air_superiority = float(front.get("air_superiority",0.50))
+					break
+		var air_factor = clamp(0.6 + air_superiority*0.8, 0.3, 1.6) # برتری هوایی ۰ تا ۱.۶ برابر
+
+		# کمک متحدان
 		var ally_support = 0.08 * float(world.get("alliances", []).size())
-		player_force *= min(1.0 + ally_support, 1.24)
-		var enemy_force = float(enemy.get("military_power", 50.0)) * 0.68
-		# متحدان NPC دشمن نیز او را تقویت می‌کنند (۵٪ هر متحد، سقف ۲۰٪)
+		var ally_factor = min(1.0 + ally_support, 1.30) # کمی بیشتر از قبل به خاطر عملیات مشترک
+
+		# نیروی نهایی بازیکن - ضرب تمام عوامل (مدل چندضربی واقعی مثل Lanchester + عوامل مدرن)
+		var player_force = player_power * effective_readiness * personnel_factor * equipment_factor * logistics_factor * command_factor * terrain_modifier * weather_modifier * air_factor * (1.0 + recon_bonus) * ally_factor
+
+		# نیروی دشمن - با نویز و متحدان NPC و قدرت دریایی و هوایی
+		var enemy_base = float(enemy.get("military_power", 50.0))
 		var enemy_allies = 0
 		for pair_key in world.get("npc_alliances", []):
 			if str(pair_key).split("|").has(target):
 				enemy_allies += 1
-		enemy_force *= min(1.0 + 0.05 * float(enemy_allies), 1.20)
-		var advantage = (player_force - enemy_force) / max(player_force + enemy_force, 1.0)
-		var daily_progress = clamp(advantage * 4.0 + Deterministic.next_range(-1.2, 1.2), -3.5, 3.5)
+		var enemy_ally_factor = min(1.0 + 0.06 * float(enemy_allies), 1.25)
+		var enemy_terrain = 1.0 # دشمن در خانه می‌جنگد = دفاع بهتر
+		if Deterministic.chance(0.6):
+			enemy_terrain = 1.15
+		var enemy_logistics = clamp(0.7 + Deterministic.next_range(-0.1,0.15), 0.4, 1.2)
+		var enemy_force = enemy_base * 0.70 * enemy_ally_factor * enemy_terrain * enemy_logistics * (0.9 + Deterministic.next_range(-0.15,0.15))
+
+		# نسبت قوا و محاسبه پیشرفت روزانه با قانون لانچستر + عوامل
+		var force_ratio = player_force / max(enemy_force, 1.0)
+		var advantage = (player_force - enemy_force) / max(player_force + enemy_force, 1.0) # -1 تا +1
+		# پیشرفت روزانه: اگر برتری + terrain + هوا + لجستیک خوب باشد، پیشروی سریع‌تر
+		var base_progress = advantage * 3.5
+		base_progress += (air_superiority - 0.5)*1.2 # برتری هوایی
+		base_progress += (logistics_factor - 0.8)*0.8
+		base_progress += (command_factor - 0.8)*0.6
+		base_progress += doctrine_offense*0.5
+		base_progress += Deterministic.next_range(-1.0, 1.0) # نویز واقعی جنگ
+		# اگر تدارکات بحرانی، پیشروی کند یا حتی منفی
+		if fuel_days < 5.0 or ammo_days < 3.0:
+			base_progress -= 1.5
+		var daily_progress = clamp(base_progress, -4.5, 4.5)
 		war["progress"] = float(war.get("progress", 0.0)) + daily_progress
+
+		# تلفات واقعی - چندعاملی: قدرت دشمن * آسیب‌پذیری + مهمات + لجستیک + دکترین
 		var casualty_modifier = 1.0 - float(MilitaryManager.get_effective_modifiers(state).get("casualty_reduction", 0.0))
-		var player_loss = int(max(10.0, enemy_force * Deterministic.next_range(0.4, 1.2) * casualty_modifier))
-		var enemy_loss = int(max(10.0, player_force * Deterministic.next_range(0.4, 1.2)))
+		# تلفات ما: نیروی دشمن * (1 - دفاع) * (1 - لجستیک پزشکی) * terrain
+		var defense_factor = 1.0 + doctrine_defense
+		var medical_factor = float(state.get("military",{}).get("logistics_detail",{}).get("medical_capacity",0.70))
+		var player_loss_base = enemy_force * (0.5 + (1.0 - defense_factor*0.3)) * (1.2 - medical_factor*0.3) * (0.8 + supply_vuln*0.4)
+		var player_loss = int(max(15.0, player_loss_base * Deterministic.next_range(0.5, 1.4) * casualty_modifier * (1.3 if fuel_days < 5.0 else 1.0)))
+
+		# تلفات دشمن: نیروی ما * حمله * برتری هوایی * پهپاد
+		var offense_factor = 1.0 + doctrine_offense
+		var enemy_loss_base = player_force * offense_factor * air_factor * (0.7 + drone_factor*0.5) * (0.6 + missile_factor*0.3)
+		var enemy_loss = int(max(15.0, enemy_loss_base * Deterministic.next_range(0.5, 1.4) * (1.2 if air_superiority > 0.7 else 0.9)))
+
+		# تلفات تجهیزات (نسبتی از تلفات انسانی)
+		var equip_loss_ratio = 0.08
+		var player_equip_loss = int(player_loss * equip_loss_ratio)
+		var enemy_equip_loss = int(enemy_loss * equip_loss_ratio)
+		# ثبت تلفات انسانی و تجهیزاتی - واقعی
 		war["player_losses"] = int(war.get("player_losses", 0)) + player_loss
 		war["enemy_losses"] = int(war.get("enemy_losses", 0)) + enemy_loss
+		war["player_equip_losses"] = int(war.get("player_equip_losses", 0)) + player_equip_loss
+		war["enemy_equip_losses"] = int(war.get("enemy_equip_losses", 0)) + enemy_equip_loss
+		war["daily_progress"] = daily_progress
+		war["force_ratio"] = force_ratio
+		war["air_superiority"] = air_superiority
+
+		# کاهش پرسنل تفصیلی
 		state["military"]["personnel"] = max(1000, int(state["military"].get("personnel", 500000)) - player_loss)
-		state["military"]["readiness"] = clamp(float(state["military"].get("readiness", 0.6)) - 0.0008, 0.1, 1.0)
-		state["economy"]["gdp"] *= 0.99996
-		# هزینه‌ی واقعی جنگ: حدود ۰٫۲٪ GDP سالانه بر بدهی افزوده می‌شود
-		state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.002 / 365.0
-		# خستگی جنگ در درازمدت رشد می‌کند (اثر آن در سیستم نظامی بر شادی و ثبات اعمال می‌شود)
-		state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.004, 0.0, 1.0)
+		var personnel_detail = state["military"].get("personnel_detail", {})
+		if not personnel_detail.is_empty():
+			personnel_detail["casualties_kia"] = int(personnel_detail.get("casualties_kia",0)) + int(player_loss*0.35)
+			personnel_detail["casualties_wia"] = int(personnel_detail.get("casualties_wia",0)) + int(player_loss*0.50)
+			personnel_detail["casualties_mia"] = int(personnel_detail.get("casualties_mia",0)) + int(player_loss*0.05)
+			personnel_detail["pow"] = int(personnel_detail.get("pow",0)) + int(player_loss*0.10)
+			personnel_detail["morale"] = clamp(float(personnel_detail.get("morale",0.70)) - 0.0012 - float(state["military"].get("war_exhaustion",0.0))*0.0005, 0.10, 0.95)
+			personnel_detail["experience"] = clamp(float(personnel_detail.get("experience",0.50)) + 0.0015, 0.20, 0.95) # تجربه با جنگ
+			state["military"]["personnel_detail"] = personnel_detail
+
+		# کاهش تجهیزات - تانک، نفربر، توپ، پهپاد
+		var equip_detail = state["military"].get("equipment_detail", {})
+		if not equip_detail.is_empty():
+			equip_detail["tanks_mbt"] = max(0, int(equip_detail.get("tanks_mbt",1200)) - int(player_equip_loss*0.15))
+			equip_detail["ifv"] = max(0, int(equip_detail.get("ifv",1500)) - int(player_equip_loss*0.20))
+			equip_detail["apc"] = max(0, int(equip_detail.get("apc",2500)) - int(player_equip_loss*0.25))
+			equip_detail["artillery_sp"] = max(0, int(equip_detail.get("artillery_sp",500)) - int(player_equip_loss*0.08))
+			equip_detail["uav_combat"] = max(0, int(equip_detail.get("uav_combat",80)) - int(player_equip_loss*0.05))
+			equip_detail["uav_loitering"] = max(0, int(equip_detail.get("uav_loitering",300)) - int(player_equip_loss*0.10))
+			equip_detail["operational_rate"] = clamp(float(equip_detail.get("operational_rate",0.75)) - 0.0015, 0.15, 0.95)
+			state["military"]["equipment_detail"] = equip_detail
+
+		# کاهش آمادگی و ذخایر لجستیکی با مصرف جنگی
+		var logi_detail = state["military"].get("logistics_detail", {})
+		if not logi_detail.is_empty():
+			logi_detail["fuel_stock_days"] = clamp(float(logi_detail.get("fuel_stock_days",25.0)) - 0.08 - supply_vuln*0.05, 0.5, 90.0)
+			logi_detail["ammo_stock_days"] = clamp(float(logi_detail.get("ammo_stock_days",20.0)) - 0.10 - (1.0-air_superiority)*0.05, 0.2, 60.0)
+			# کاهش مهمات تفکیکی
+			var ammo_types = logi_detail.get("ammo_types", {})
+			for k in ammo_types.keys():
+				ammo_types[k] = clamp(float(ammo_types[k]) - Deterministic.next_range(0.2,0.8), 0.0, 150.0)
+			logi_detail["ammo_types"] = ammo_types
+			state["military"]["logistics_detail"] = logi_detail
+
+		state["military"]["readiness"] = clamp(float(state["military"].get("readiness", 0.6)) - 0.0012 - supply_vuln*0.0005, 0.08, 1.0)
+		state["economy"]["gdp"] *= 0.99994 # هزینه کمی بیشتر به خاطر جنگ عمیق
+		# هزینه‌ی واقعی جنگ: حدود ۰٫۵٪ GDP سالانه بر بدهی (جنگ مدرن گران‌تر)
+		state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.005 / 365.0
+		# خستگی جنگ با تلفات و طول جنگ
+		state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.005 + float(player_loss)/500000.0*0.01, 0.0, 1.0)
 		enemy["military_power"] = max(10.0, float(enemy["military_power"]) - enemy_loss / 500000.0)
 		world["countries"][target] = enemy
 		if war["progress"] >= 100.0:

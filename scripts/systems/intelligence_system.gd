@@ -1,178 +1,174 @@
 extends BaseSystem
-# ۳.۲۳ اطلاعات و امنیت ملی - پیاده‌سازی کامل
+# اطلاعات و امنیت ملی - ۳.۲۳ - نسخه عمیق واقعی - ISR، سایبری، جنگ الکترونیک، ضدجاسوسی، عملیات ویژه اطلاعاتی
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
 	var intel = state.get("intelligence", {})
+	var econ = state.get("economy", {})
+	var mil = state.get("military", {})
 	var tech = state.get("technology", {})
-	var military = state.get("military", {})
+	var pol = state.get("politics", {})
 	var diplomacy = state.get("diplomacy", {})
-	var politics = state.get("politics", {})
-	var security = state.get("security", {})
+	var world = state.get("world", {})
 
 	intel["power"] = intel.get("power", 50.0)
-	intel["agencies"] = intel.get("agencies", 3)
 	intel["cyber_readiness"] = intel.get("cyber_readiness", 0.50)
+	intel["cyber_offense"] = intel.get("cyber_offense", 0.45)
+	intel["cyber_defense"] = intel.get("cyber_defense", 0.55)
+	intel["sigint"] = intel.get("sigint", 0.50) # شنود سیگنال
+	intel["humint"] = intel.get("humint", 0.55) # عامل انسانی
+	intel["osint"] = intel.get("osint", 0.60) # اطلاعات باز
+	intel["imint"] = intel.get("imint", 0.50) # تصویری + ماهواره
+	intel["comint"] = intel.get("comint", 0.48)
+	intel["elint"] = intel.get("elint", 0.45) # الکترونیک
 	intel["counter_intel"] = intel.get("counter_intel", 0.55)
-	intel["foreign_intel"] = intel.get("foreign_intel", 0.50)
-	intel["critical_protection"] = intel.get("critical_protection", 0.60)
-	intel["threat_assessment"] = intel.get("threat_assessment", 0.55)
-	intel["surveillance"] = intel.get("surveillance", 0.50)
-	intel["budget_share"] = intel.get("budget_share", 0.02)
+	intel["counter_terror"] = intel.get("counter_terror", 0.60)
+	intel["infiltration_risk"] = intel.get("infiltration_risk", 0.15)
+	intel["intel_sharing_allies"] = intel.get("intel_sharing_allies", 0.40)
+	intel["satellite_coverage"] = intel.get("satellite_coverage", 0.50)
+	intel["drone_surveillance"] = intel.get("drone_surveillance", 0.45)
+	intel["ew_capability"] = intel.get("ew_capability", 0.50) # جنگ الکترونیک
+	intel["psyops"] = intel.get("psyops", 0.40)
+	intel["disinfo_defense"] = intel.get("disinfo_defense", 0.45)
+	intel["threat_level"] = intel.get("threat_level", 0.40)
+	intel["threat_internal"] = intel.get("threat_internal", 0.35)
+	intel["threat_external"] = intel.get("threat_external", 0.45)
+	intel["operations_active"] = intel.get("operations_active", 3)
+	intel["budget_efficiency"] = intel.get("budget_efficiency", 0.65)
 
 	var events = []
 
-	var intel_budget_share = state.get("economy",{}).get("budget_allocations",{}).get("امنیت",0.05) * 0.4  # 40٪ بودجه امنیت برای اطلاعات
-	var intel_budget = state.get("economy",{}).get("government_spending",0.0) * intel_budget_share
+	var budget_share = econ.get("budget_allocations", {}).get("امنیت", 0.05) + econ.get("budget_allocations", {}).get("فناوری", 0.04)*0.5
+	var budget = econ.get("government_spending", 95e9) * budget_share
+	var digital = tech.get("branches", {}).get("دیجیتال", 0.20)
+	var military_tech = tech.get("branches", {}).get("نظامی", 0.15)
+	var edu_q = state.get("education", {}).get("quality", 0.55)
+	var stability = pol.get("stability", 0.60)
+	var corruption = pol.get("corruption", 0.30)
+	var is_at_war = not world.get("wars", {}).is_empty()
 
-	# فرمول‌ها - ۳.۲۳.۳
-	# قدرت اطلاعات = f(بودجه، نیرو، فناوری، منابع انسانی)
-	var tech_factor = tech.get("branches",{}).get("دیجیتال",0.2) * 0.3 + tech.get("branches",{}).get("نظامی",0.15) * 0.2
-	var budget_factor = intel_budget / 2_000_000_000.0
-	var intel_power = 40.0 + budget_factor * 10.0 + tech_factor * 30.0 + intel["agencies"] * 5.0
-	intel["power"] = clamp(intel["power"] * 0.98 + intel_power * 0.02, 10.0, 100.0)
+	# ==================== قدرت اطلاعاتی کل ====================
+	var power_target = budget_share*2.0*0.25 + digital*0.20 + edu_q*0.15 + stability*0.15 + military_tech*0.15 + 0.10
+	intel["power"] = clamp(intel["power"]*0.985 + power_target*50.0*0.015, 10.0, 100.0)
 
-	# امنیت سایبری = f(فناوری، آموزش، زیرساخت)
-	var cyber = 0.4
-	cyber += tech_factor * 0.4
-	cyber += state.get("education",{}).get("quality",0.55) * 0.2
-	cyber += state.get("infrastructure",{}).get("quality",0.55) * 0.1
-	intel["cyber_readiness"] = clamp(intel["cyber_readiness"] * 0.995 + cyber * 0.005, 0.1, 0.95)
+	# ==================== ISR - اطلاعات، مراقبت، شناسایی ====================
+	# SIGINT - شنود - فناوری دیجیتال + ماهواره
+	var sigint_target = digital*0.35 + float(mil.get("equipment_detail",{}).get("ew_systems",40))/40.0*0.25 + edu_q*0.20 + 0.20
+	intel["sigint"] = clamp(intel["sigint"]*0.978 + sigint_target*0.022, 0.10, 0.96)
 
-	# اثر ضدجاسوسی = f(کشف نفوذ، حفاظت)
-	var counter = 0.5 + intel["power"]/100.0 * 0.3 + intel["cyber_readiness"] * 0.2
-	intel["counter_intel"] = clamp(intel["counter_intel"] * 0.99 + counter * 0.01, 0.1, 0.95)
+	# HUMINT - عامل انسانی - اعتماد و فساد معکوس + دیپلماسی
+	var humint_target = (1.0 - corruption)*0.30 + stability*0.20 + diplomacy.get("influence",40.0)/100.0*0.20 + 0.30
+	intel["humint"] = clamp(intel["humint"]*0.982 + humint_target*0.018 + Deterministic.next_range(-0.005,0.005), 0.10, 0.95)
 
-	# اطلاعات خارجی
-	intel["foreign_intel"] = clamp(intel["foreign_intel"] + Deterministic.next_range(-0.002, 0.003), 0.1, 0.95)
+	# OSINT - اطلاعات باز - دیجیتال + رسانه آزاد
+	var media_free = state.get("culture",{}).get("media_freedom",0.5)
+	intel["osint"] = clamp(intel["osint"]*0.975 + (digital*0.40 + media_free*0.30 + edu_q*0.20 + 0.10)*0.025, 0.20, 0.98)
 
-	# حفاظت زیرساخت حیاتی
-	intel["critical_protection"] = clamp(intel["critical_protection"] + (intel["cyber_readiness"] - 0.5) * 0.001, 0.1, 0.95)
+	# IMINT - تصویری - ماهواره + پهپاد
+	var sat_count = float(mil.get("equipment_detail",{}).get("satellites_recon",4))
+	var uav_recon = float(mil.get("equipment_detail",{}).get("uav_recon",150))
+	intel["imint"] = clamp(intel["imint"]*0.980 + (sat_count/10.0*0.40 + uav_recon/200.0*0.30 + digital*0.20 + 0.10)*0.02, 0.15, 0.96)
+	intel["satellite_coverage"] = clamp(sat_count/10.0*0.6 + digital*0.2 + 0.2, 0.10, 0.95)
+	intel["drone_surveillance"] = clamp(uav_recon/200.0*0.5 + digital*0.3 + 0.2, 0.10, 0.95)
 
-	# ارزیابی تهدید
-	var threat_level = 0.5
-	threat_level += (1.0 - diplomacy.get("relations",{}).values().min() / 100.0 if diplomacy.get("relations",{}).size()>0 else 0) * 0.2
-	threat_level += politics.get("tension",0.35) * 0.2
-	intel["threat_assessment"] = clamp(threat_level, 0.1, 0.95)
+	# COMINT / ELINT - ارتباطات و الکترونیک دشمن
+	intel["comint"] = clamp(intel["comint"]*0.982 + (intel["sigint"]*0.5 + digital*0.3 + 0.2)*0.018, 0.10, 0.95)
+	intel["elint"] = clamp(intel["elint"]*0.983 + (float(mil.get("equipment_detail",{}).get("ew_systems",40))/40.0*0.4 + intel["sigint"]*0.3 + 0.3)*0.017, 0.10, 0.95)
 
-	# نظارت قانونی - توازن امنیت و حقوق
-	var oversight = state.get("judicial",{}).get("rule_of_law",0.6) * 0.5 + politics.get("legitimacy",0.58) * 0.3
-	intel["oversight"] = clamp(oversight, 0.1, 0.95)
+	# ==================== سایبری - تهاجمی و تدافعی ====================
+	var cyber_units = float(mil.get("equipment_detail",{}).get("cyber_units",15))
+	var cyber_target_off = cyber_units/20.0*0.35 + digital*0.30 + edu_q*0.20 + military_tech*0.15
+	intel["cyber_offense"] = clamp(intel["cyber_offense"]*0.980 + cyber_target_off*0.020, 0.10, 0.96)
 
-	# ریسک نفوذ = f(فناوری، امنیت، نظارت)
-	var infiltration_risk = (1.0 - intel["counter_intel"]) * 0.4 + (1.0 - intel["cyber_readiness"]) * 0.3 + (1.0 - intel["oversight"]) * 0.2
-	intel["infiltration_risk"] = clamp(infiltration_risk, 0.0, 0.9)
+	var cyber_def_target = cyber_units/20.0*0.25 + digital*0.30 + edu_q*0.20 + stability*0.15 + 0.10
+	intel["cyber_defense"] = clamp(intel["cyber_defense"]*0.982 + cyber_def_target*0.018, 0.10, 0.96)
+	intel["cyber_readiness"] = clamp(intel["cyber_offense"]*0.4 + intel["cyber_defense"]*0.6, 0.10, 0.96)
 
-	# آمادگی ملی = f(اطلاعات، پیشگیری)
-	var preparedness = intel["power"]/100.0 * 0.5 + intel["threat_assessment"] * 0.2 + intel["critical_protection"] * 0.3
-	intel["national_preparedness"] = clamp(preparedness, 0.1, 0.95)
+	# جنگ الکترونیک - اخلالگر
+	intel["ew_capability"] = clamp(intel["ew_capability"]*0.984 + (float(mil.get("equipment_detail",{}).get("ew_systems",40))/40.0*0.4 + intel["sigint"]*0.2 + digital*0.2 + 0.2)*0.016, 0.10, 0.95)
 
-	# حلقه بازخورد: اطلاعات ← آمادگی؛ نفوذ ← ریسک
-	military["power"] = military.get("power",65.0) + (intel["foreign_intel"] - 0.5) * 0.5
-	state["military"] = military
+	# ==================== ضد اطلاعات و ضد تروریسم ====================
+	var counter_target = (1.0 - corruption)*0.25 + stability*0.25 + intel["power"]/100.0*0.25 + 0.25
+	intel["counter_intel"] = clamp(intel["counter_intel"]*0.985 + counter_target*0.015, 0.15, 0.95)
 
-	# رویدادها - ۳.۲۳.۵
-	if intel["infiltration_risk"] > 0.6 and Deterministic.chance(0.012):
-		events.append({"type": "espionage_exposed", "message": "نفوذ و جاسوسی فاش شد! - بحران ضدجاسوسی", "risk": intel["infiltration_risk"]})
-		politics["tension"] = politics.get("tension",0.35) + 0.03
-		state["politics"] = politics
+	var terror_threat = pol.get("tension",0.35)*0.4 + (1.0 - stability)*0.3 + 0.1
+	intel["counter_terror"] = clamp(intel["counter_terror"]*0.983 + (1.0 - terror_threat)*0.5*0.017 + intel["humint"]*0.3*0.017, 0.20, 0.96)
 
-	if intel["cyber_readiness"] < 0.4 and Deterministic.chance(0.012):
-		events.append({"type": "cyber_attack", "message": "حمله سایبری به زیرساخت حیاتی", "readiness": intel["cyber_readiness"]})
-		state["infrastructure"]["quality"] = state.get("infrastructure",{}).get("quality",0.55) - 0.01
-		intel["critical_protection"] -= 0.05
+	# خطر نفوذ - فساد + نارضایتی + جنگ سایبری
+	var infiltration_target = corruption*0.35 + (1.0 - stability)*0.25 + (1.0 - intel["counter_intel"])*0.25 + 0.05
+	if is_at_war:
+		infiltration_target += 0.15
+	intel["infiltration_risk"] = clamp(intel["infiltration_risk"]*0.96 + infiltration_target*0.04, 0.02, 0.65)
 
-	if Deterministic.chance(0.008):
-		events.append({"type": "intel_success", "message": "عملیات اطلاعاتی موفق - کشف تهدید", "power_boost": 0.02})
-		intel["power"] += 1.0
+	# اشتراک اطلاعات با متحدان
+	var alliance_count = float(world.get("alliances",[]).size())
+	intel["intel_sharing_allies"] = clamp(alliance_count*0.15 + intel["power"]/100.0*0.3 + 0.2, 0.10, 0.90)
 
-	if Deterministic.chance(0.005):
-		events.append({"type": "false_intel", "message": "بحران اطلاعات غلط - تصمیم اشتباه", "effect": -0.02})
-		politics["stability"] = politics.get("stability",0.6) - 0.01
-		state["politics"] = politics
+	# ==================== عملیات روانی و جنگ اطلاعاتی ====================
+	intel["psyops"] = clamp(intel["psyops"]*0.988 + (intel["humint"]*0.3 + intel["osint"]*0.3 + digital*0.2 + 0.2)*0.012, 0.10, 0.90)
+	intel["disinfo_defense"] = clamp(intel["disinfo_defense"]*0.986 + (edu_q*0.3 + intel["osint"]*0.2 + digital*0.2 + stability*0.2 + 0.1)*0.014, 0.15, 0.95)
+
+	# سطح تهدید کلی
+	var external_threat = 0.0
+	for war_target in world.get("wars",{}).keys():
+		external_threat += 0.15
+	external_threat += (1.0 - diplomacy.get("influence",40.0)/100.0)*0.2 + pol.get("tension",0.35)*0.2
+	intel["threat_external"] = clamp(external_threat, 0.05, 0.95)
+	intel["threat_internal"] = clamp((1.0 - stability)*0.4 + pol.get("tension",0.35)*0.3 + intel["infiltration_risk"]*0.3, 0.05, 0.85)
+	intel["threat_level"] = clamp(intel["threat_external"]*0.55 + intel["threat_internal"]*0.45, 0.05, 0.95)
+
+	# عملیات فعال - تعداد
+	intel["operations_active"] = int(clamp(intel["power"]/100.0*8.0 + (1.0 if is_at_war else 0.0)*4.0, 1.0, 15.0))
+
+	# کارآمدی بودجه
+	intel["budget_efficiency"] = clamp((1.0 - corruption*0.5)*0.6 + edu_q*0.2 + intel["power"]/100.0*0.2, 0.20, 0.95)
+
+	# ==================== اثرات جنگی واقعی ====================
+	var recon_bonus = 0.0
+	if is_at_war:
+		# ISR خوب = برتری اطلاعاتی، پیشرفت سریع‌تر، تلفات کمتر
+		var isr_combined = intel["sigint"]*0.20 + intel["imint"]*0.25 + intel["humint"]*0.15 + intel["drone_surveillance"]*0.20 + intel["satellite_coverage"]*0.20
+		recon_bonus = isr_combined*0.15
+		# جنگ الکترونیک موفق = اخلال دشمن
+		if intel["ew_capability"] > 0.70 and Deterministic.chance(0.012):
+			events.append({"type":"ew_success","ew": intel["ew_capability"], "message":"اخلال الکترونیک موفق - رادار دشمن کور شد"})
+
+		# حمله سایبری
+		if intel["cyber_offense"] > 0.65 and Deterministic.chance(0.010):
+			events.append({"type":"cyber_attack_success","cyber": intel["cyber_offense"], "message":"حمله سایبری به زیرساخت دشمن - نیروگاه خاموش شد"})
+
+		# حمله سایبری دشمن به ما
+		if intel["cyber_defense"] < 0.45 and Deterministic.chance(0.013):
+			events.append({"type":"cyber_attack_on_us","defense": intel["cyber_defense"], "message":"حمله سایبری دشمن - اخلال در شبکه بانکی"})
+			econ["gdp"] = float(econ.get("gdp",500e9)) * 0.9998
+
+		# عملیات پهپادی شناسایی
+		if intel["drone_surveillance"] > 0.65 and Deterministic.chance(0.015):
+			events.append({"type":"drone_recon_success","drone": intel["drone_surveillance"], "message":"شناسایی پهپادی - کاروان زرهی دشمن لو رفت"})
+
+	# رویدادهای عمومی اطلاعاتی
+	if intel["infiltration_risk"] > 0.40 and Deterministic.chance(0.011):
+		events.append({"type":"infiltration_detected","risk": intel["infiltration_risk"], "message":"کشف شبکه نفوذ - جاسوس دوجانبه دستگیر شد"})
+
+	if intel["threat_level"] > 0.70 and Deterministic.chance(0.012):
+		events.append({"type":"high_threat_level","threat": intel["threat_level"], "message":"سطح تهدید بالا - آماده‌باش اطلاعاتی"})
+
+	if intel["counter_terror"] < 0.45 and Deterministic.chance(0.010):
+		events.append({"type":"terror_threat","counter": intel["counter_terror"], "message":"تهدید تروریستی - خنثی‌سازی بمب در پایتخت"})
+
+	if intel["disinfo_defense"] < 0.40 and Deterministic.chance(0.013):
+		events.append({"type":"disinfo_wave","defense": intel["disinfo_defense"], "message":"موج اخبار جعلی - روایت دشمن در شبکه‌های اجتماعی پخش شد"})
+
+	if intel["satellite_coverage"] > 0.75 and tick % 180 == 0 and Deterministic.chance(0.02):
+		events.append({"type":"satellite_intel_breakthrough","coverage": intel["satellite_coverage"], "message":"پوشش ماهواره‌ای کامل - هر تحرک دشمن رصد می‌شود"})
+
+	if intel["psyops"] > 0.70 and is_at_war and Deterministic.chance(0.009):
+		events.append({"type":"psyops_success","psyops": intel["psyops"], "message":"عملیات روانی موفق - روحیه دشمن فروپاشید"})
+
+	# اثر بر ثبات و امنیت و دیپلماسی
+	pol["stability"] = clamp(float(pol.get("stability",0.60)) + (intel["counter_intel"]-0.5)*0.0003 - intel["infiltration_risk"]*0.0004, 0.05, 0.95)
+	state.get("security",{}).update({"public_security": clamp(float(state.get("security",{}).get("public_security",0.70)) + intel["counter_terror"]*0.0002, 0.10, 0.95)})
 
 	state["intelligence"] = intel
-	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("intelligence", {}) if state.has("intelligence") else sys if 'sys' in locals() else {}
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
-
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
-
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("intelligence",{}).has("efficiency"):
-		_efficiency = float(state["intelligence"].get("efficiency",0.60))
-	elif state.get("intelligence",{}).has("quality"):
-		_efficiency = float(state["intelligence"].get("quality",0.60))
-
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("intelligence") and state["intelligence"] is Dictionary:
-		state["intelligence"]["efficiency"] = _efficiency
-		state["intelligence"]["quality"] = clamp(float(state["intelligence"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
-
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("intelligence",{}).get("quality",0.60) if state.has("intelligence") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_intelligence","gap": _budget_gap, "message":"کسری بودجه نگهداری intelligence - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_intelligence","digital": _digital, "message":"جهش دیجیتال در intelligence - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_intelligence_extra","corruption": _corruption, "message":"فساد در intelligence - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_intelligence","gini": _gini, "message":"نابرابری اثر بر intelligence"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("intelligence",{}).get("productivity",0.60) if state.has("intelligence") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("intelligence") and state["intelligence"] is Dictionary:
-		state["intelligence"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("intelligence",{}).get("resilience",0.60) if state.has("intelligence") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("intelligence") and state["intelligence"] is Dictionary:
-		state["intelligence"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_intelligence","resilience": _resilience, "message":"تاب‌آوری پایین intelligence - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("intelligence",{}).get("coverage",0.70) if state.has("intelligence") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_intelligence","coverage": _coverage, "message":"پوشش intelligence پایین - دسترسی محدود"})
-
-
-	return {"success": true, "state": state, "events": events}
+	state["politics"] = pol
+	state["economy"] = econ
+	return {"success":true,"state":state,"events":events}

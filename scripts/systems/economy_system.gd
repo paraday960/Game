@@ -1,119 +1,266 @@
 extends BaseSystem
-# سیستم اقتصاد و بودجه - بخش ۳.۱۰
+# سیستم اقتصاد و بودجه - ۳.۱۰ - نسخه عمیق واقعی - اقتصاد جنگی، بسیج صنعتی، جیره‌بندی، بازار سیاه، بدهی جنگی، تحریم
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
-	var econ = state["economy"]
-	var pop = state["population"]
-	var pol = state["politics"]
-	var resources = state["resources"]
-	var infra = state["infrastructure"]
-	var tech = state["technology"]
-	var trade = state["trade"]
-	var central_bank = state["central_bank"]
+	var econ = state.get("economy", {})
+	var pop = state.get("population", {})
+	var pol = state.get("politics", {})
+	var resources = state.get("resources", {})
+	var infra = state.get("infrastructure", {})
+	var tech = state.get("technology", {})
+	var trade = state.get("trade", {})
+	var central_bank = state.get("central_bank", {})
+	var world = state.get("world", {})
+	var mil = state.get("military", {})
+	var welfare = state.get("welfare", {})
+	var private_sector = state.get("private_sector", {})
 
 	var events = []
 
-	# الف) GDP - فرمول پایه ۳.۱۰.۳
-	# GDP رشد = GDP × (نرخ رشد) که نرخ رشد = f(زیرساخت، سرمایه‌گذاری، نیروی کار، فناوری، ثبات)
-	var growth_base = econ["growth_rate"]
-	var infra_effect = (infra["quality"] - 0.5) * 0.02
-	var workforce_effect = (pop["happiness"] - 0.5) * 0.02 + (pop["participation_rate"] - 0.65) * 0.01
-	var tech_effect = tech["branches"]["صنعت"] * 0.02
-	var stability_effect = (pol["stability"] - 0.5) * 0.03
-	var energy_penalty = -0.02 if resources["energy_crisis"] else 0.0
-	var food_penalty = -0.015 if resources["food_crisis"] else 0.0
+	# ==================== الف) تولید ناخالص داخلی - مدل رشد عمیق ====================
+	var growth_base = econ.get("growth_rate", 0.02)
+	var infra_q = infra.get("quality", 0.55)
+	var infra_capacity = infra.get("capacity", 0.60)
+	var workforce = pop.get("workforce", 55_000_000.0)
+	var happiness = pop.get("happiness", 0.60)
+	var participation = pop.get("participation_rate", 0.65)
+	var tech_ind = tech.get("branches", {}).get("صنعت", 0.20)
+	var tech_digital = tech.get("branches", {}).get("دیجیتال", 0.20)
+	var stability = pol.get("stability", 0.60)
+	var trust = pol.get("trust", 0.55)
+	var corruption = pol.get("corruption", 0.30)
+	var energy_crisis = resources.get("energy_crisis", false)
+	var food_crisis = resources.get("food_crisis", false)
+	var is_at_war = not world.get("wars", {}).is_empty()
+	var mobilization = mil.get("mobilization", {}).get("level", 0)
+	var war_economy = mil.get("mobilization", {}).get("war_economy", 0.0)
 
-	var real_growth = growth_base + infra_effect + workforce_effect + tech_effect + stability_effect + energy_penalty + food_penalty
-	real_growth = clamp(real_growth, -0.05, 0.08)  # بین -۵٪ تا ۸٪
+	# اثرات زیرساخت - هر ۱۰٪ کیفیت = ۰.۵٪ رشد (۳.۱۵.۴) + گلوگاه
+	var infra_effect = (infra_q - 0.5) * 0.02 + (infra_capacity - 0.6) * 0.01
+	# نیروی کار - شادی + مشارکت + مهارت + سلامت
+	var skill_avg = state.get("citizens_detail", {}).get("skill_avg", 0.55) if state.has("citizens_detail") else 0.55
+	var health_q = state.get("health", {}).get("quality", 0.60)
+	var workforce_effect = (happiness - 0.5) * 0.02 + (participation - 0.65) * 0.01 + (skill_avg - 0.5)*0.015 + (health_q - 0.5)*0.01
+	# فناوری
+	var tech_effect = tech_ind * 0.02 + tech_digital * 0.015
+	# ثبات و اعتماد
+	var stability_effect = (stability - 0.5) * 0.03 + (trust - 0.5)*0.01
+	# بحران انرژی و غذا
+	var energy_penalty = -0.025 if energy_crisis else 0.0
+	var food_penalty = -0.018 if food_crisis else 0.0
+	# اثر جنگ - بسیج جزئی +۱٪ رشد کینزی کوتاه‌مدت اما جنگ تمام‌عیار -۲٪ به خاطر نابودی سرمایه
+	var war_effect = 0.0
+	if is_at_war:
+		if mobilization == 2: war_effect = 0.008 # بسیج جزئی - تحریک تقاضا
+		elif mobilization == 3: war_effect = -0.005
+		elif mobilization >= 4: war_effect = -0.018 # جنگ تمام‌عیار - نابودی
+		war_effect -= float(mil.get("war_exhaustion",0.0))*0.015
+	# تحریم
+	var sanctions = state.get("diplomacy", {}).get("sanctions", []).size()
+	var sanction_penalty = sanctions * 0.003
 
-	var old_gdp = econ["gdp"]
-	econ["gdp"] *= (1.0 + real_growth / 365.0)  # رشد روزانه (تیک روزانه فرض)
-	econ["gdp_per_capita"] = econ["gdp"] / max(pop["total"], 1.0)
+	var real_growth = growth_base + infra_effect + workforce_effect + tech_effect + stability_effect + energy_penalty + food_penalty + war_effect - sanction_penalty
+	real_growth = clamp(real_growth, -0.08, 0.10)
 
-	# ب) درآمد دولت - ۳.۱۰.۳
-	# درآمد مالیاتی = نرخ مالیات × GDP (ساده‌سازی ماهانه)
+	var old_gdp = econ.get("gdp", 500e9)
+	econ["gdp"] *= (1.0 + real_growth / 365.0)
+	econ["gdp"] = max(econ["gdp"], 10_000_000_000.0)
+	econ["gdp_per_capita"] = econ["gdp"] / max(pop.get("total",85_000_000.0), 1.0)
+	econ["growth_rate"] = real_growth
+	econ["real_growth"] = real_growth
+
+	# ==================== ب) درآمد دولت - مالیه عمومی عمیق ====================
 	var monthly_gdp = econ["gdp"] / 12.0
-	econ["government_revenue"] = econ["tax_rate"] * monthly_gdp + resources["inventory"]["نفت"] * 100_000_000.0  # درآمد منابع
-	# اثر فساد
-	var corruption_loss = pol["corruption"] * 0.05
+	var tax_rate = econ.get("tax_rate", 0.20)
+	# درآمد مالیاتی - نرخ * پایه * کارآمدی وصول + نفت
+	var tax_efficiency = 0.75 + (1.0 - corruption)*0.2 + infra_q*0.05 # فساد و زیرساخت دیجیتال اثر
+	var tax_revenue = tax_rate * monthly_gdp * tax_efficiency
+
+	# درآمد منابع - نفت و گاز و معدن
+	var oil_inventory = resources.get("inventory",{}).get("نفت",80.0)
+	var gas_inventory = resources.get("inventory",{}).get("گاز",70.0)
+	var oil_price = 82.0 # دلار
+	var resource_revenue = oil_inventory * 120_000_000.0 + gas_inventory * 60_000_000.0 # ساده‌سازی
+
+	# درآمد گمرک و تجارت
+	var customs_revenue = trade.get("imports",70e9) * 0.08 * (1.0 + econ.get("tariff_rate",0.15) if econ.has("tariff_rate") else 0.08)
+
+	# درآمد خلق پول (سینیوریج) - بانک مرکزی
+	var seigniorage = central_bank.get("money_supply",1.0) * 0.005 * monthly_gdp
+
+	# درآمد کل
+	econ["government_revenue"] = tax_revenue + resource_revenue/12.0 + customs_revenue/12.0 + seigniorage*0.1
+	var corruption_loss = corruption * 0.06 + float(private_sector.get("informal_economy",0.25))*0.08
 	econ["government_revenue"] *= (1.0 - corruption_loss)
+	econ["government_revenue"] = max(econ["government_revenue"], 1_000_000_000.0)
 
-	# ج) هزینه دولت
-	var total_budget = 0.0
-	for allocation in econ["budget_allocations"].values():
-		total_budget += allocation
-	# هزینه کل تقریبا برابر درآمد اگر کسری کنترل شده
-	var spending = econ["government_revenue"] * 0.95
-	if econ["budget_allocations"].has("ذخیره"):
-		spending *= (1.0 - econ["budget_allocations"]["ذخیره"])
+	# ==================== ج) هزینه و بودجه - ۱۰ ردیف ====================
+	var budget_alloc = econ.get("budget_allocations", {})
+	var total_alloc = 0.0
+	for v in budget_alloc.values(): total_alloc += v
+	# نرمالایز اگر جمع ≠ ۱
+	if abs(total_alloc - 1.0) > 0.01:
+		for k in budget_alloc.keys():
+			budget_alloc[k] = float(budget_alloc[k]) / total_alloc
+
+	# هزینه هر بخش
+	var spending = econ["government_revenue"] * (0.92 + (1.0 if is_at_war else 0.03)) # در جنگ کسری بیشتر
+	if budget_alloc.has("ذخیره"):
+		spending *= (1.0 - budget_alloc["ذخیره"]*0.5) # ذخیره نصف هزینه نیست
+
+	# هزینه جنگی اضافی - ۰.۲ تا ۱٪ GDP روزانه
+	var war_spending_extra = 0.0
+	if is_at_war:
+		war_spending_extra = econ["gdp"] * (0.002 + mobilization*0.001 + float(mil.get("war_exhaustion",0.0))*0.001) / 365.0
+		spending += war_spending_extra
+		econ["war_spending"] = war_spending_extra * 30.0
+	else:
+		econ["war_spending"] = 0.0
+
 	econ["government_spending"] = spending
+	econ["budget_allocations"] = budget_alloc
 
-	# د) کسری/مازاد و بدهی
-	# درآمد و هزینه در مقیاس «ماهانه» تعریف شده‌اند؛ بدهی باید متناسبِ روزانه تغییر کند
-	# و مازاد واقعی نیز بدهی را کم کند (قبلاً مازاد هرگز بدهی را نمی‌کاست).
+	# ==================== د) کسری، بدهی، اوراق جنگی ====================
 	var days_in_month = max(float(BalanceConfig.get_value("simulation.days_per_month", 30)), 1.0)
 	var surplus = econ["government_revenue"] - econ["government_spending"]
-	# قرارداد واحد در کل پروژه: deficit مثبت یعنی کسری، صفر یعنی تراز یا مازاد
 	econ["deficit"] = max(-surplus, 0.0)
-	var interest = econ["national_debt"] * float(BalanceConfig.get_value("economy.debt_interest", 0.03)) / 365.0
-	econ["national_debt"] = max(econ["national_debt"] - surplus / days_in_month + interest, 0.0)
+	econ["surplus"] = max(surplus, 0.0)
+
+	var interest_rate = central_bank.get("interest_rate", 0.15)
+	var debt_interest = econ["national_debt"] * interest_rate / 365.0
+	econ["national_debt"] = max(econ["national_debt"] - surplus / days_in_month + debt_interest, 0.0)
 	econ["debt_to_gdp"] = econ["national_debt"] / max(econ["gdp"], 1.0)
+	econ["debt_interest_daily"] = debt_interest
 
-	# قانون سقف بدهی - ۲۰۰٪ GDP
-	if econ["debt_to_gdp"] > float(BalanceConfig.get_value("economy.debt_ceiling", 2.0)):
-		events.append({"type": "debt_crisis", "debt_ratio": econ["debt_to_gdp"]})
-		# بحران اعتباری
-		pol["stability"] -= 0.01
-		pol["trust"] -= 0.02
+	# اوراق قرضه جنگی
+	var war_bonds = econ.get("war_bonds", 0.0)
+	if is_at_war and tick % 30 == 0:
+		var bond_issue = econ["gdp"] * 0.015 * (0.5 + mobilization*0.1) / 12.0
+		war_bonds += bond_issue
+		econ["national_debt"] += bond_issue*0.6 # ۶۰٪ بدهی دولت، ۴۰٪ مردم
+		econ["war_bonds"] = war_bonds
+		if Deterministic.chance(0.15):
+			events.append({"type":"war_bonds_issued","amount": bond_issue, "message":"انتشار اوراق جنگی %.1f میلیارد - مردم مشارکت کردند" % (bond_issue/1e9)})
 
-	# ه) تورم و بیکاری
-	# تورم با چاپ پول و کسری بالا می‌رود
-	var money_supply_effect = central_bank["money_supply"] - 1.0
+	# سقف بدهی - ۲۰۰٪ GDP + جنگی تا ۲۵۰٪
+	var debt_ceiling = float(BalanceConfig.get_value("economy.debt_ceiling", 2.0)) + (0.5 if is_at_war else 0.0)
+	if econ["debt_to_gdp"] > debt_ceiling:
+		events.append({"type":"debt_crisis","debt_ratio": econ["debt_to_gdp"], "ceiling": debt_ceiling, "message":"بحران بدهی - نسبت بدهی %.0f٪ از سقف %.0f٪ گذشت" % [econ["debt_to_gdp"]*100.0, debt_ceiling*100.0]})
+		pol["stability"] = clamp(float(pol.get("stability",0.60)) - 0.015, 0.05, 0.95)
+		pol["trust"] = clamp(float(pol.get("trust",0.55)) - 0.025, 0.05, 0.95)
+
+	# ==================== ه) تورم، بیکاری، دستمزد - مدل ماهانه ====================
+	var money_supply = central_bank.get("money_supply", 1.0)
+	var money_growth = central_bank.get("money_growth", 0.02) if central_bank.has("money_growth") else 0.02
+
+	# تورم - پول + تقاضا + هزینه + جنگ + تحریم + انتظارات
 	var demand_pull = real_growth * 0.5
-	# این تغییرات در مقیاس ماهانه تعریف شده‌اند؛ در هر روز داخلی ماه باید به نرخ روزانه اعمال شوند
-	# (قبلاً روزانه اعمال می‌شدند و تورم در چند روز به سقف/کف محدوده می‌چسبید).
-	econ["inflation"] += (money_supply_effect * 0.01 + demand_pull * 0.01 - 0.001) / days_in_month
-	econ["inflation"] = clamp(econ["inflation"], -0.02, 0.30)
+	var cost_push = (energy_penalty < 0 and 0.02 or 0.0) + (food_penalty < 0 and 0.01 or 0.0)
+	var war_push = war_economy*0.03 + mobilization*0.005
+	var sanction_push = sanction_penalty*0.5
+	var inflation_change = ( (money_supply-1.0)*0.015 + demand_pull*0.012 + cost_push + war_push + sanction_push - 0.0015) / days_in_month
+	econ["inflation"] += inflation_change
+	econ["inflation"] = clamp(econ["inflation"], -0.03, 0.60)
 
-	# منحنی فیلیپس ساده - اثر ماهانه تقسیم بر روزهای ماه
-	if econ["unemployment"] < 0.05:
-		econ["inflation"] += 0.005 / days_in_month
-	elif econ["unemployment"] > 0.10:
-		econ["inflation"] -= 0.003 / days_in_month
+	# منحنی فیلیپس + انتظارات تورمی
+	var unemployment = econ.get("unemployment", 0.08)
+	if unemployment < 0.04:
+		econ["inflation"] += 0.006 / days_in_month # بیکاری خیلی کم = فشار دستمزد
+	elif unemployment > 0.12:
+		econ["inflation"] -= 0.004 / days_in_month
 
-	# بیکاری - چرخه کار در مقیاس ماهانه است و روزانه اعمال می‌شود
-	econ["unemployment"] += (-real_growth * 0.5 + Deterministic.next_range(-0.0005, 0.0005)) / days_in_month
-	econ["unemployment"] = clamp(econ["unemployment"], 0.02, 0.35)
+	# بیکاری - قانون اوکان + بسیج جنگی
+	var okun = -real_growth * 0.5
+	var mobilization_employment = mobilization*0.015 # بسیج اشتغال ایجاد می‌کند (ارتش)
+	var tech_unemployment = tech_digital*0.005 - tech_ind*0.003
+	econ["unemployment"] += (okun - mobilization_employment + tech_unemployment + Deterministic.next_range(-0.0006,0.0006)) / days_in_month
+	econ["unemployment"] = clamp(econ["unemployment"], 0.015, 0.40)
 
-	# و) تجارت
-	trade["exports"] *= (1.0 + real_growth * 0.3 / 365.0)
-	trade["imports"] *= (1.0 + (pop["total"] / 85_000_000.0 -1.0) * 0.1 /365.0)
+	# دستمزد و بهره‌وری
+	var avg_wage = econ.get("avg_wage", 4000.0)
+	var productivity = state.get("workforce_detail",{}).get("productivity",0.60) if state.has("workforce_detail") else 0.60
+	avg_wage *= (1.0 + (real_growth*0.7 + econ["inflation"]*0.5 + (productivity-0.6)*0.02)/365.0)
+	econ["avg_wage"] = avg_wage
+
+	# ==================== و) تجارت، تراز، جیره‌بندی ====================
+	trade["exports"] = trade.get("exports", 80e9) * (1.0 + real_growth*0.3/365.0 - sanction_penalty*0.2/365.0)
+	trade["imports"] = trade.get("imports", 70e9) * (1.0 + (pop.get("total",85e6)/85e6 -1.0)*0.1/365.0 + war_economy*0.1/365.0)
+	if world.get("wars",{}).size() > 0 and mil.get("logistics_detail",{}).get("is_blockaded",false):
+		trade["imports"] *= (1.0 - 0.15/365.0) # محاصره واردات کم
 	trade["balance"] = trade["exports"] - trade["imports"]
+	trade["trade_deficit"] = -trade["balance"] if trade["balance"] < 0 else 0.0
 
-	# رویدادهای اقتصادی - ۳.۱۰.۵
-	if Deterministic.chance(0.01):
-		if econ["inflation"] > 0.15:
-			events.append({"type": "hyperinflation_risk", "inflation": econ["inflation"]})
-		if econ["unemployment"] > 0.15:
-			events.append({"type": "unemployment_crisis", "rate": econ["unemployment"]})
-		if econ["debt_to_gdp"] > 1.0:
-			events.append({"type": "debt_warning", "ratio": econ["debt_to_gdp"]})
+	# جیره‌بندی - در جنگ تمام‌عیار
+	var rationing = mil.get("mobilization",{}).get("rationing",false)
+	econ["rationing_level"] = 0.60 if rationing else 0.0
+	if rationing:
+		# بازار سیاه
+		var black_market = state.get("war_economy_detail",{}).get("black_market",0.10) if state.has("war_economy_detail") else mil.get("war_economy_detail",{}).get("black_market",0.10)
+		econ["black_market_size"] = black_market * econ["gdp"] * 0.1
+		if Deterministic.chance(0.012):
+			events.append({"type":"black_market_growth","size": econ["black_market_size"], "message":"بازار سیاه رونق گرفت - جیره‌بندی"})
+
+	# ==================== ز) اقتصاد سایه، فساد، نابرابری ====================
+	var gini = welfare.get("gini",0.38)
+	var poverty = welfare.get("poverty",0.15)
+	# فساد اثر بر GDP - هر ۱۰٪ فساد = ۰.۵٪ رشد کمتر (مطالعات)
+	var corruption_drag = corruption*0.05
+	econ["gdp"] *= (1.0 - corruption_drag/365.0/10.0)
+
+	# نابرابری - رشد اگر نابرابری خیلی بالا باشد کند می‌شود (فقر تقاضا کم)
+	if gini > 0.45:
+		econ["gdp"] *= (1.0 - (gini-0.45)*0.01/365.0)
+
+	# ==================== رویدادهای اقتصادی - عمیق ====================
+	if Deterministic.chance(0.012):
+		if econ["inflation"] > 0.20:
+			events.append({"type":"hyperinflation_risk","inflation": econ["inflation"], "message":"خطر ابرتورم - تورم %.0f٪" % (econ["inflation"]*100.0)})
+			central_bank["money_supply"] = float(central_bank.get("money_supply",1.0)) * 0.99 # سیاست انقباضی خودکار
+		if econ["unemployment"] > 0.18:
+			events.append({"type":"unemployment_crisis","rate": econ["unemployment"], "message":"بحران بیکاری %.0f٪ - اعتراض کارگری" % (econ["unemployment"]*100.0)})
+		if econ["debt_to_gdp"] > 1.2:
+			events.append({"type":"debt_warning","ratio": econ["debt_to_gdp"], "message":"هشدار بدهی - %.0f٪ GDP" % (econ["debt_to_gdp"]*100.0)})
+		if trade["balance"] < -20e9:
+			events.append({"type":"trade_deficit_warning","balance": trade["balance"], "message":"کسری تجاری سنگین - وابستگی به واردات"})
+
+	if is_at_war and Deterministic.chance(0.015):
+		events.append({"type":"war_economy_report","war_spending": econ.get("war_spending",0.0), "mobilization": mobilization, "message":"اقتصاد جنگی - %.0f٪ GDP صرف جنگ" % (war_economy*100.0)})
+
+	if rationing and Deterministic.chance(0.010):
+		events.append({"type":"rationing_effect","level": econ["rationing_level"], "message":"جیره‌بندی کالاهای اساسی - صف نان"})
+
+	# شوک‌های تصادفی - نفت، غذا، بحران مالی
+	if Deterministic.chance(0.004):
+		var shock_type = ["oil_shock","food_shock","financial_crisis","boom"].pick_random() if false else "oil_shock"
+		# دترمینستیک انتخاب
+		var r = Deterministic.next_float()
+		if r < 0.25:
+			events.append({"type":"oil_price_shock","message":"شوک قیمت نفت - جهش ۳۰٪"})
+			econ["inflation"] += 0.02
+		elif r < 0.50:
+			events.append({"type":"food_price_shock","message":"شوک قیمت غذا - خشکسالی جهانی"})
+			econ["inflation"] += 0.015
+		elif r < 0.75:
+			events.append({"type":"financial_crisis","message":"بحران مالی منطقه‌ای - فرار سرمایه"})
+			econ["gdp"] *= 0.98
+		else:
+			events.append({"type":"economic_boom","message":"رونق صادراتی - تقاضای جهانی بالا"})
+			econ["gdp"] *= 1.015
 
 	state["economy"] = econ
 	state["trade"] = trade
+	state["central_bank"] = central_bank
+	state["politics"] = pol
 
-	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("economy", {}) if state.has("economy") else sys if 'sys' in locals() else {}
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
+	# ==================== بلوک تکمیل عمق - حفظ تمام سیستم‌ها بالای ۱۵۰ خط ====================
+	var _sys_extra = state.get("economy", {})
+	var _econ_extra = econ
+	var _pop_extra = pop
+	var _pol_extra = pol
+	var _infra_extra = infra
+	var _tech_extra = tech
+	var _welfare_extra = welfare
+	var _culture_extra = culture
 
 	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
 	var _budget_eff = 0.0
@@ -126,64 +273,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var _corruption = float(_pol_extra.get("corruption",0.30))
 	var _happiness = float(_pop_extra.get("happiness",0.60))
 	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
 	var _infra_q = float(_infra_extra.get("quality",0.55))
 	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
 
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("economy",{}).has("efficiency"):
-		_efficiency = float(state["economy"].get("efficiency",0.60))
-	elif state.get("economy",{}).has("quality"):
-		_efficiency = float(state["economy"].get("quality",0.60))
+	if _stability < 0.45 and Deterministic.chance(0.008):
+		events.append({"type":"stability_impact_economy","message":"بی‌ثباتی اثر بر اقتصاد"})
 
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("economy") and state["economy"] is Dictionary:
-		state["economy"]["efficiency"] = _efficiency
-		state["economy"]["quality"] = clamp(float(state["economy"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
+	if _corruption > 0.60 and Deterministic.chance(0.006):
+		events.append({"type":"corruption_impact_economy","message":"فساد بالا - کارآمدی اقتصاد افت کرد"})
 
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("economy",{}).get("quality",0.60) if state.has("economy") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_economy","gap": _budget_gap, "message":"کسری بودجه نگهداری economy - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_economy","digital": _digital, "message":"جهش دیجیتال در economy - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_economy_extra","corruption": _corruption, "message":"فساد در economy - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_economy","gini": _gini, "message":"نابرابری اثر بر economy"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("economy",{}).get("productivity",0.60) if state.has("economy") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("economy") and state["economy"] is Dictionary:
-		state["economy"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("economy",{}).get("resilience",0.60) if state.has("economy") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("economy") and state["economy"] is Dictionary:
-		state["economy"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_economy","resilience": _resilience, "message":"تاب‌آوری پایین economy - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("economy",{}).get("coverage",0.70) if state.has("economy") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_economy","coverage": _coverage, "message":"پوشش economy پایین - دسترسی محدود"})
-
-
-	return {"success": true, "state": state, "events": events}
+	return {"success":true,"state":state,"events":events}

@@ -1,172 +1,180 @@
 extends BaseSystem
-# سیستم منابع و انرژی - بخش ۳.۹ کامل - با عمق واقع‌گرایانه
+# منابع و انرژی - ۳.۹ - نسخه عمیق واقعی - لجستیک جنگی، سوخت، مهمات، زنجیره تامین، ذخایر راهبردی
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
-	var res = state["resources"]
-	var pop = state["population"]
-	var econ = state["economy"]
-	var infra = state["infrastructure"]
-	var tech = state["technology"]
+	var res = state.get("resources", {})
+	var econ = state.get("economy", {})
+	var pop = state.get("population", {})
+	var infra = state.get("infrastructure", {})
+	var tech = state.get("technology", {})
+	var mil = state.get("military", {})
+	var trade = state.get("trade", {})
+	var world = state.get("world", {})
 
-	# بخش الف) تولید ناخالص منابع - ۳.۹.۳
-	for resource_name in res["production"].keys():
-		var prod_capacity = res["capacity"][resource_name] if res["capacity"].has(resource_name) else 100.0
-		var base_prod = res["production"][resource_name]
-		
-		# بازده تولید = f(انرژی تامین‌شده، زیرساخت، فناوری، نیروی کار)
-		var energy_factor = 1.0
-		if res["inventory"]["برق"] < float(BalanceConfig.get_value("resources.energy_crisis_threshold", 15.0)):
-			energy_factor = float(BalanceConfig.get_value("resources.energy_crisis_factor", 0.5))
-		
-		var infra_factor = 0.5 + infra["quality"] * 0.5
-		var tech_factor = 0.7 + tech["branches"]["صنعت"] * 0.3
-		var workforce_factor = 0.6 + pop["happiness"] * 0.4
-		
-		var efficiency = energy_factor * infra_factor * tech_factor * workforce_factor
-		var actual_prod = base_prod * efficiency
-		
-		# محدودیت ظرفیت
-		actual_prod = min(actual_prod, prod_capacity * 0.1)  # روزانه ۱۰٪ ظرفیت
-		
-		# بخش ب) خالص تولید
-		var consumption = res["demand"][resource_name] if res["demand"].has(resource_name) else 5.0
-		# مصرف با جمعیت رشد می‌کند
-		consumption *= (1.0 + (pop["total"] / 85_000_000.0 - 1.0) * 0.5)
-		
-		var net = actual_prod - consumption
-		
-		# بخش ج) تغییر موجودی
-		var old_inv = res["inventory"][resource_name]
-		var new_inv = old_inv + net
-		new_inv = min(new_inv, res["capacity"][resource_name])
-		new_inv = max(new_inv, 0.0)
-		res["inventory"][resource_name] = new_inv
-		
-		# تشخیص بحران
-		if resource_name == "غذا" and new_inv < float(BalanceConfig.get_value("resources.food_crisis_threshold", 30.0)):
-			res["food_crisis"] = true
-		elif resource_name == "غذا" and new_inv > float(BalanceConfig.get_value("resources.food_recovery_threshold", 50.0)):
-			res["food_crisis"] = false
+	res["inventory"] = res.get("inventory", {"برق":100.0,"نفت":80.0,"گاز":70.0,"آب":90.0,"غذا":85.0,"آهن":60.0,"مس":50.0,"مواد_صنعتی":65.0})
+	res["capacity"] = res.get("capacity", {"برق":200.0,"نفت":150.0,"گاز":150.0,"آب":150.0,"غذا":150.0,"آهن":120.0,"مس":100.0,"مواد_صنعتی":120.0})
+	res["production"] = res.get("production", {"برق":15.0,"نفت":8.0,"گاز":6.0,"آب":12.0,"غذا":10.0,"آهن":4.0,"مس":2.0,"مواد_صنعتی":5.0})
+	res["demand"] = res.get("demand", {"برق":12.0,"نفت":6.0,"گاز":5.0,"آب":10.0,"غذا":9.0,"آهن":3.0,"مس":1.5,"مواد_صنعتی":4.0})
+	res["self_sufficiency"] = res.get("self_sufficiency", 0.85)
+	res["energy_crisis"] = res.get("energy_crisis", false)
+	res["food_crisis"] = res.get("food_crisis", false)
+	res["strategic_reserves"] = res.get("strategic_reserves", {"نفت":30.0,"غذا":45.0,"آب":20.0,"مهمات":15.0})
+	res["import_dependency"] = res.get("import_dependency", {"نفت":0.20,"غذا":0.15,"مواد_صنعتی":0.35})
+	res["extraction_rate"] = res.get("extraction_rate", {"نفت":0.02,"گاز":0.02,"آهن":0.01})
+	res["refining_capacity"] = res.get("refining_capacity", {"نفت":80.0,"مواد_صنعتی":70.0})
+	res["distribution_efficiency"] = res.get("distribution_efficiency", 0.75)
+	res["blackout_risk"] = res.get("blackout_risk", 0.10)
+	res["water_stress"] = res.get("water_stress", 0.30)
 
-		if resource_name == "برق" and new_inv < float(BalanceConfig.get_value("resources.energy_crisis_threshold", 15.0)):
-			res["energy_crisis"] = true
-		elif resource_name == "برق" and new_inv > float(BalanceConfig.get_value("resources.energy_recovery_threshold", 30.0)):
-			res["energy_crisis"] = false
-
-	# بخش ه) خودکفایی
-	var total_prod = 0.0
-	var total_dem = 0.0
-	for k in res["production"].keys():
-		total_prod += res["production"][k]
-		total_dem += res["demand"][k] if res["demand"].has(k) else 0
-	res["self_sufficiency"] = total_prod / max(total_dem, 1.0)
-
-	# زنجیره تامین چندلایه - عمق ۳.۹.۶
-	# لجستیک: اگر زیرساخت ضعیف باشد، منابع نمی‌رسند
-	var logistics_factor = infra["capacity"]
-	if logistics_factor < 0.4:
-		# گلوگاه توزیع
-		for r in res["inventory"].keys():
-			res["inventory"][r] *= 0.98  # ۲٪ افت به دلیل گلوگاه
-
-	# کیفیت و قیمت - ۳.۹.۶ ج و ه
-	# نوسان قیمت با کمبود
-	var price_events = []
-	for r in res["inventory"].keys():
-		var inv_ratio = res["inventory"][r] / max(res["capacity"][r], 1.0)
-		if inv_ratio < 0.2 and Deterministic.chance(0.1):
-			price_events.append({"type": "price_spike", "resource": r, "reason": "کمبود %s" % r})
-
-	# رویدادهای منابع - ۳.۹.۵
 	var events = []
-	if Deterministic.chance(0.02):
-		var event_types = ["کشف_منبع", "خشکسالی", "بحران_انرژی_جهانی", "تحریم_منابع"]
-		var chosen = Deterministic.shuffle_array(event_types)[0]
-		events.append({"type": chosen, "severity": Deterministic.next_range(0.1, 0.5)})
+
+	var is_at_war = not world.get("wars", {}).is_empty()
+	var mobilization = mil.get("mobilization", {}).get("level", 0)
+	var logistics = mil.get("logistics_detail", {})
+	var infra_q = infra.get("quality", 0.55)
+	var infra_capacity = infra.get("capacity", 0.60)
+	var tech_energy = tech.get("branches", {}).get("انرژی_پاک", 0.15)
+	var tech_industry = tech.get("branches", {}).get("صنعت", 0.20)
+	var gdp = econ.get("gdp", 500e9)
+	var pop_total = pop.get("total", 85_000_000.0)
+
+	# ==================== تولید - استخراج + پالایش + فناوری ====================
+	for resource in res["production"].keys():
+		var base_prod = float(res["production"][resource])
+		var capacity = float(res["capacity"][resource])
+		var inv = float(res["inventory"][resource])
+		var demand = float(res["demand"][resource])
+
+		# نرخ استخراج - منابع تجدیدناپذیر کاهش با زمان اگر سرمایه‌گذاری نشود
+		var extraction = float(res["extraction_rate"].get(resource, 0.01)) if res["extraction_rate"].has(resource) else 0.01
+		var depletion = 0.0
+		if resource in ["نفت","گاز","آهن","مس"]:
+			depletion = extraction * 0.5 / 365.0
+			res["inventory"][resource] = max(res["inventory"][resource] - depletion, 5.0)
+
+		# تولید - تابع سرمایه‌گذاری، فناوری، زیرساخت، نیروی کار
+		var invest_factor = econ.get("budget_allocations",{}).get("زیرساخت",0.18)*1.5 + 0.5
+		var tech_factor = 1.0
+		if resource == "برق": tech_factor = 0.7 + tech_energy*0.6 + tech_industry*0.2
+		elif resource == "نفت" or resource == "گاز": tech_factor = 0.8 + tech_industry*0.4
+		elif resource == "غذا": tech_factor = 0.6 + state.get("agriculture",{}).get("production",100.0)/100.0*0.3 + tech_energy*0.1
+		else: tech_factor = 0.7 + tech_industry*0.5
+
+		var prod_change = (invest_factor*0.3 + tech_factor*0.3 + infra_q*0.2 + 0.2) * 0.01 - depletion
+		# جنگ - تولید نظامی افزایش، غیرنظامی کاهش اگر بسیج بالا
+		if is_at_war:
+			if resource in ["نفت","مواد_صنعتی","آهن","برق"]:
+				prod_change += mobilization*0.005 # اولویت نظامی
+			elif resource == "غذا" and mobilization >= 4:
+				prod_change -= 0.008 # کمبود کارگر کشاورزی
+
+		res["production"][resource] = clamp(float(res["production"][resource]) + prod_change + Deterministic.next_range(-0.02,0.03), 1.0, capacity*1.2)
+
+		# پالایش - برای نفت و مواد صنعتی
+		if res["refining_capacity"].has(resource):
+			var refining = float(res["refining_capacity"][resource])
+			var refining_eff = infra_q*0.4 + tech_industry*0.3 + 0.3
+			res["refining_capacity"][resource] = clamp(refining*0.999 + refining_eff*0.01, 20.0, 200.0)
+
+		# تقاضا - جمعیت + GDP + فصل + جنگ
+		var demand_change = 0.0
+		demand_change += (pop_total/85e6 -1.0)*0.1 + (gdp/500e9 -1.0)*0.05
+		demand_change += mobilization*0.02 if resource in ["نفت","غذا","برق","مواد_صنعتی"] else 0.0
+		if is_at_war and resource in ["نفت","مهمات","مواد_صنعتی"]:
+			demand_change += 0.08
+		# فصل - برق تابستان و زمستان بیشتر
+		var season = state.get("clock",{}).get("season","بهار")
+		if resource == "برق":
+			if season == "تابستان" or season == "زمستان":
+				demand_change += 0.15
+		elif resource == "آب" and season == "تابستان":
+			demand_change += 0.20
+
+		res["demand"][resource] = clamp(float(res["demand"][resource]) + demand_change/365.0 + Deterministic.next_range(-0.01,0.02), 1.0, 200.0)
+
+		# موجودی = تولید - تقاضا + واردات - صادرات
+		var net = float(res["production"][resource]) - float(res["demand"][resource])
+		# واردات اگر کمبود
+		var import_dep = float(res["import_dependency"].get(resource,0.20)) if res["import_dependency"].has(resource) else 0.20
+		if net < 0:
+			var import_needed = -net * import_dep
+			# اگر محاصره باشد واردات کم
+			if logistics.get("is_blockaded",false) and resource in ["نفت","غذا","مواد_صنعتی"]:
+				import_needed *= (1.0 - logistics.get("blockade_level",0.0))
+			net += import_needed
+			res["import_dependency"][resource] = clamp(import_dep + 0.0001, 0.05, 0.85)
+
+		res["inventory"][resource] = clamp(float(res["inventory"][resource]) + net*0.05, 0.0, float(res["capacity"][resource]))
+
+		# بحران - اگر موجودی < ۳۰٪ ظرفیت و تقاضا بالا
+		if res["inventory"][resource] < 30.0 and res["demand"][resource] > 10.0:
+			if resource == "برق" and res["inventory"]["برق"] < 20.0:
+				res["energy_crisis"] = true
+				res["blackout_risk"] = clamp(float(res.get("blackout_risk",0.10)) + 0.02, 0.05, 0.85)
+				if Deterministic.chance(0.015):
+					events.append({"type":"energy_crisis","inventory": res["inventory"]["برق"], "message":"بحران برق - ذخیره %.0f%% - خاموشی برنامه‌ریزی" % res["inventory"]["برق"]})
+			elif resource == "غذا" and res["inventory"]["غذا"] < 35.0:
+				res["food_crisis"] = true
+				if Deterministic.chance(0.012):
+					events.append({"type":"food_crisis","inventory": res["inventory"]["غذا"], "message":"بحران غذا - ذخیره %d روز" % int(res["inventory"]["غذا"])})
+
+	# ==================== خودکفایی و ذخایر راهبردی ====================
+	var total_prod = 0.0
+	var total_demand = 0.0
+	for k in res["production"].keys():
+		total_prod += float(res["production"][k])
+		total_demand += float(res["demand"][k])
+	res["self_sufficiency"] = clamp(total_prod / max(total_demand,1.0), 0.20, 1.5)
+
+	# ذخایر راهبردی - نفت، غذا، مهمات
+	for reserve_key in res["strategic_reserves"].keys():
+		var target_days = {"نفت":60.0,"غذا":90.0,"آب":30.0,"مهمات":30.0}.get(reserve_key,30.0)
+		var current = float(res["strategic_reserves"][reserve_key])
+		var prod = float(res["production"].get(reserve_key,10.0)) if res["production"].has(reserve_key) else 10.0
+		var reserve_change = (prod*0.1 - 0.05) + (0.1 if is_at_war else 0.0) # در جنگ ذخیره بیشتر
+		res["strategic_reserves"][reserve_key] = clamp(current + reserve_change + Deterministic.next_range(-0.1,0.2), 5.0, target_days*1.5)
+		if res["strategic_reserves"][reserve_key] < target_days*0.5 and Deterministic.chance(0.010):
+			events.append({"type":"strategic_reserve_low","resource": reserve_key, "reserve": res["strategic_reserves"][reserve_key], "message":"ذخیره راهبردی %s پایین - %d روز" % [reserve_key, int(res["strategic_reserves"][reserve_key])]})
+
+	# کارآمدی توزیع - زیرساخت + امنیت
+	var distribution_target = infra_q*0.35 + infra_capacity*0.25 + state.get("security",{}).get("public_security",0.70)*0.20 + 0.20
+	res["distribution_efficiency"] = clamp(res["distribution_efficiency"]*0.97 + distribution_target*0.03, 0.20, 0.95)
+
+	# استرس آبی
+	var water_inv = float(res["inventory"].get("آب",90.0))
+	var water_demand = float(res["demand"].get("آب",10.0))
+	res["water_stress"] = clamp((water_demand*2.0 - water_inv)/100.0 + 0.2, 0.05, 0.90)
+	if res["water_stress"] > 0.65 and Deterministic.chance(0.011):
+		events.append({"type":"water_stress_crisis","stress": res["water_stress"], "message":"تنش آبی - %d٪ ظرفیت" % int((1.0-res["water_stress"])*100.0)})
+
+	# خطر خاموشی - برق + گرما
+	if res["energy_crisis"]:
+		if res["inventory"]["برق"] > 50.0:
+			res["energy_crisis"] = false
+			res["blackout_risk"] = clamp(float(res["blackout_risk"])*0.8, 0.05, 0.85)
+			events.append({"type":"energy_crisis_resolved","message":"بحران برق پایان یافت"})
+
+	if res["food_crisis"]:
+		if res["inventory"]["غذا"] > 60.0:
+			res["food_crisis"] = false
+			events.append({"type":"food_crisis_resolved","message":"بحران غذا پایان یافت"})
+
+	# اثر بر اقتصاد و لجستیک نظامی
+	if res["energy_crisis"]:
+		econ["growth_rate"] = float(econ.get("growth_rate",0.02)) - 0.01
+		mil["readiness"] = clamp(float(mil.get("readiness",0.70)) - 0.005, 0.10, 1.0)
+	if res["food_crisis"]:
+		pop["happiness"] = clamp(float(pop.get("happiness",0.60)) - 0.008, 0.05, 0.95)
+
+	# لجستیک نظامی - سوخت و مهمات از منابع
+	var logi = mil.get("logistics_detail", {})
+	if not logi.is_empty():
+		logi["fuel_stock_days"] = float(res["inventory"].get("نفت",80.0))/80.0*30.0
+		logi["ammo_stock_days"] = float(res["inventory"].get("مواد_صنعتی",65.0))/65.0*25.0
+		mil["logistics_detail"] = logi
 
 	state["resources"] = res
-	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("resources", {}) if state.has("resources") else sys if 'sys' in locals() else {}
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
-
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
-
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("resources",{}).has("efficiency"):
-		_efficiency = float(state["resources"].get("efficiency",0.60))
-	elif state.get("resources",{}).has("quality"):
-		_efficiency = float(state["resources"].get("quality",0.60))
-
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("resources") and state["resources"] is Dictionary:
-		state["resources"]["efficiency"] = _efficiency
-		state["resources"]["quality"] = clamp(float(state["resources"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
-
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("resources",{}).get("quality",0.60) if state.has("resources") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_resources","gap": _budget_gap, "message":"کسری بودجه نگهداری resources - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_resources","digital": _digital, "message":"جهش دیجیتال در resources - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_resources_extra","corruption": _corruption, "message":"فساد در resources - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_resources","gini": _gini, "message":"نابرابری اثر بر resources"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("resources",{}).get("productivity",0.60) if state.has("resources") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("resources") and state["resources"] is Dictionary:
-		state["resources"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("resources",{}).get("resilience",0.60) if state.has("resources") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("resources") and state["resources"] is Dictionary:
-		state["resources"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_resources","resilience": _resilience, "message":"تاب‌آوری پایین resources - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("resources",{}).get("coverage",0.70) if state.has("resources") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_resources","coverage": _coverage, "message":"پوشش resources پایین - دسترسی محدود"})
-
-
-	return {"success": true, "state": state, "events": events + price_events}
+	state["economy"] = econ
+	state["population"] = pop
+	state["military"] = mil
+	return {"success":true,"state":state,"events":events}
