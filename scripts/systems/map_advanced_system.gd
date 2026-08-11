@@ -12,6 +12,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	adv["airfields"] = adv.get("airfields", {})
 	adv["radar_stations"] = adv.get("radar_stations", {})
 	adv["supply_depots"] = adv.get("supply_depots", {})
+	adv["network_links"] = adv.get("network_links", []) # جاده/ریل/خطوط تکمیل‌شده دائمی روی نقشه
 
 	var events = []
 	var econ = state.get("economy", {})
@@ -80,6 +81,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			construction["status"] = "completed"
 			var from_c = str(construction.get("from_country",""))
 			var to_c = str(construction.get("to_country",""))
+			# ثبت دائمی در نقشه: جاده/راه‌آهن تکمیل‌شده نباید با گذر زمان ناپدید شود
+			if build_type in ["road", "rail"]:
+				adv["network_links"].append(construction.duplicate(true))
+				adv["network_links"][-1]["completed_tick"] = tick
 
 			# اثر بر اساس نوع ساخت
 			match build_type:
