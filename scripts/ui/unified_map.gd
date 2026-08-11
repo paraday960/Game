@@ -306,7 +306,40 @@ func _country_layer_value(code: String, profile: Dictionary) -> float:
 		"security": return float(full_state.get("security", {}).get("public_security", 0.65)) if code == player_country else clamp(0.42 + wealth * 0.36, 0.34, 0.83)
 		"weather": return clamp(max(float(profile.get("snow_factor", 0.2)), max(float(profile.get("flood_factor", 0.3)), float(profile.get("heat_factor", 0.4)))), 0.0, 1.0)
 		"resources": return clamp(0.25 + float(profile.get("strategic_weight", 0.3)) * 0.65, 0.0, 1.0)
-		"military": return clamp(float(profile.get("military_power", 20.0)) / 100.0, 0.0, 1.0)
+		"military", "military_power": return clamp(float(profile.get("military_power", 20.0)) / 100.0, 0.0, 1.0)
+		# گروه اقتصادی
+		"agriculture": return float(full_state.get("agriculture", {}).get("food_security", 0.85)) if code == player_country else clamp(0.30 + wealth*0.50, 0.10, 0.95)
+		"industry": return float(full_state.get("industry", {}).get("output", 100.0))/150.0 if code == player_country else clamp(0.20+wealth*0.60,0.10,0.90)
+		"trade_layer", "trade": return float(full_state.get("trade", {}).get("export_diversity", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"tourism": return float(full_state.get("tourism", {}).get("service_quality", 0.60)) if code == player_country else clamp(0.25+wealth*0.50,0.10,0.85)
+		"central_bank": return 1.0 - float(full_state.get("central_bank", {}).get("inflation", 0.08))/0.30 if code == player_country else clamp(wealth,0.10,0.90)
+		"stock_market": return float(full_state.get("stock_market", {}).get("investor_confidence", 0.60)) if code == player_country else clamp(wealth*0.8,0.10,0.90)
+		"retail": return float(full_state.get("retail", {}).get("competition", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"fuel_stations": return float(full_state.get("fuel_stations", {}).get("coverage", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		# اجتماعی
+		"health": return float(full_state.get("health", {}).get("quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"education": return float(full_state.get("education", {}).get("quality", 0.55)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"welfare": return 1.0 - float(full_state.get("welfare", {}).get("poverty", 0.15))*2.0 if code == player_country else clamp(1.0-wealth*0.3,0.10,0.90)
+		"family": return float(full_state.get("family", {}).get("child_welfare", 0.65)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"sports_youth": return float(full_state.get("sports_youth", {}).get("youth_happiness", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"ethnicity": return 1.0 - float(full_state.get("ethnicity", {}).get("tension", 0.30)) if code == player_country else clamp(0.60,0.10,0.90)
+		"culture": return float(full_state.get("culture", {}).get("cohesion", 0.65)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		# سیاسی
+		"judicial": return float(full_state.get("judicial", {}).get("rule_of_law", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"intelligence": return float(full_state.get("intelligence", {}).get("cyber_readiness", 0.50)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"administration": return float(full_state.get("administration", {}).get("efficiency", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"elections": return float(full_state.get("elections", {}).get("transparency", 0.55)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"politics": return float(full_state.get("politics", {}).get("stability", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"statistics": return float(full_state.get("statistics", {}).get("accuracy", 0.75)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"emergency": return float(full_state.get("emergency", {}).get("preparedness", 0.50)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		# زیرساخت
+		"environment": return float(full_state.get("environment", {}).get("air_quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"urban_facilities": return float(full_state.get("urban_facilities", {}).get("water_network", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"public_services": return float(full_state.get("public_services_detail", {}).get("coverage_health", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		"transport_roads": return 1.0 - float(full_state.get("transport_detail", {}).get("traffic_congestion", 0.40)) if code == player_country else clamp(0.40+wealth*0.40,0.10,0.90)
+		"settlements": return float(full_state.get("settlements_detail", {}).get("housing_quality", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
+		# نظامی پیشرفته
+		"trade_route_warfare": return 1.0 - float(full_state.get("trade_route_warfare", {}).get("piracy_level", 0.10))*2.0
 	return 0.5
 
 func _admin_fill(code: String, unit: Dictionary) -> Color:
@@ -911,10 +944,17 @@ func _nice_scale_km() -> int:
 	return best
 
 func _layer_name(layer: String) -> String:
-	return {"political":"سیاسی","relations":"روابط","population":"جمعیت","economy":"اقتصاد","infrastructure":"زیرساخت","satisfaction":"رضایت","security":"امنیت","weather":"اقلیم","resources":"منابع","military":"نظامی"}.get(layer, layer)
+	return {
+		"political":"سیاسی","relations":"روابط","population":"جمعیت","economy":"اقتصاد","infrastructure":"زیرساخت","satisfaction":"رضایت","security":"امنیت","weather":"اقلیم","resources":"منابع","military":"نظامی",
+		"agriculture":"کشاورزی","industry":"صنعت","trade_layer":"تجارت","tourism":"گردشگری","central_bank":"بانک مرکزی","stock_market":"بورس","retail":"خرده‌فروشی","fuel_stations":"سوخت",
+		"health":"بهداشت","education":"آموزش","welfare":"رفاه","family":"خانواده","sports_youth":"ورزش","ethnicity":"قومیت","culture":"فرهنگ",
+		"judicial":"قضایی","intelligence":"اطلاعات","administration":"اداره","elections":"انتخابات","politics":"سیاست","statistics":"آمار","emergency":"بحران",
+		"environment":"محیط‌زیست","urban_facilities":"تاسیسات شهری","public_services":"خدمات عمومی","transport_roads":"راه‌ها","settlements":"سکونتگاه‌ها",
+		"military_power":"قدرت نظامی","trade_route_warfare":"جنگ تجاری"
+	}.get(layer, layer)
 
 func _overlay_name(layer: String) -> String:
-	return {"wars":"جنگ","alliances":"اتحاد","trade":"تجارت","air":"پرواز","sea":"دریایی","land":"زمینی"}.get(layer, layer)
+	return {"wars":"جنگ","alliances":"اتحاد","trade":"تجارت","trade_disrupted":"مسیر مختل 🚫","air":"پرواز","sea":"دریایی","land":"زمینی","cities":"شهرها","transport":"حمل‌ونقل","intelligence":"اطلاعات"}.get(layer, layer)
 
 func _route_color(layer:String)->Color:
 	if bool(SettingsManager.get_value("colorblind_palette",false)):

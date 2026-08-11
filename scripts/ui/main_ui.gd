@@ -1955,7 +1955,52 @@ func _build_unified_map():
 	var controls = _card("◉ لنزها و لایه‌های نقشه")
 	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
 	map_control_flow = HFlowContainer.new(); map_control_flow.add_theme_constant_override("h_separation",7); map_control_flow.add_theme_constant_override("v_separation",6); controls.add_child(map_control_flow)
-	var lens_defs = [["political","سیاسی"],["relations","روابط"],["population","جمعیت"],["economy","اقتصاد"],["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],["resources","منابع"],["military","نظامی"]]
+	var lens_defs = [
+		["political","سیاسی"],
+		["relations","روابط"],
+		["population","جمعیت"],
+		["economy","اقتصاد"],
+		["infrastructure","زیرساخت"],
+		["satisfaction","رضایت"],
+		["security","امنیت"],
+		["weather","اقلیم"],
+		["resources","منابع"],
+		["military","نظامی"],
+		# گروه اقتصادی
+		["agriculture","کشاورزی"],
+		["industry","صنعت"],
+		["trade_layer","تجارت"],
+		["tourism","گردشگری"],
+		["central_bank","بانک مرکزی"],
+		["stock_market","بورس"],
+		["retail","خرده‌فروشی"],
+		["fuel_stations","سوخت"],
+		# گروه اجتماعی
+		["health","بهداشت"],
+		["education","آموزش"],
+		["welfare","رفاه"],
+		["family","خانواده"],
+		["sports_youth","ورزش"],
+		["ethnicity","قومیت"],
+		["culture","فرهنگ"],
+		# گروه سیاسی و امنیتی
+		["judicial","قضایی"],
+		["intelligence","اطلاعات"],
+		["administration","اداره"],
+		["elections","انتخابات"],
+		["politics","سیاست"],
+		["statistics","آمار"],
+		["emergency","بحران"],
+		# گروه زیرساخت و محیط
+		["environment","محیط‌زیست"],
+		["urban_facilities","تاسیسات شهری"],
+		["public_services","خدمات عمومی"],
+		["transport_roads","راه‌ها"],
+		["settlements","سکونتگاه‌ها"],
+		# گروه نظامی پیشرفته
+		["military_power","قدرت نظامی"],
+		["trade_route_warfare","جنگ تجاری"]
+	]
 	for lens in lens_defs:
 		var chip = Button.new(); chip.text = lens[1]; chip.toggle_mode = true; chip.custom_minimum_size = Vector2(0,50); chip.add_theme_font_size_override("font_size",21)
 		chip.theme_type_variation = "LensChipActive" if lens[0] == map_base_layer else "LensChip"
