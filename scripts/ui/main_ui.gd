@@ -2090,7 +2090,25 @@ func _build_unified_map():
 	var overlay_caption = Label.new(); overlay_caption.text = "لایه‌های اطلاعاتی روی نقشه"; overlay_caption.add_theme_font_size_override("font_size", 19); overlay_caption.modulate = TEXT_FAINT; controls.add_child(overlay_caption)
 	# پیل‌های لایه (چندانتخابی) با چراغ وضعیت طلایی.
 	map_overlay_grid = GridContainer.new(); map_overlay_grid.columns = 5; map_overlay_grid.add_theme_constant_override("h_separation",7); map_overlay_grid.add_theme_constant_override("v_separation",6); controls.add_child(map_overlay_grid)
-	var overlay_defs = [["wars","جنگ"],["alliances","اتحاد"],["trade","تجارت"],["air","پرواز"],["sea","دریا"],["land","زمین"],["cities","شهرها"],["transport","راه و ریل"],["intelligence","اطلاعاتی"]]
+	var overlay_defs = [
+		["wars","جنگ"],
+		["alliances","اتحاد"],
+		["trade","تجارت"],
+		["air","پرواز"],
+		["sea","دریا"],
+		["land","زمین"],
+		["cities","شهرها"],
+		["transport","راه و ریل"],
+		["intelligence","اطلاعاتی"],
+		# پیشرفته جدید
+		["units","یگان‌ها ⚔️"],
+		["resources_detail","معادن و چاه ⛏️"],
+		["population_heatmap","تراکم جمعیت 👥"],
+		["weather_live","هواشناسی زنده 🌦️"],
+		["supply","تدارکات 📦"],
+		["battle_plans","طرح نبرد 📋"],
+		["constructions","ساخت‌وساز 🏗️"]
+	]
 	for definition in overlay_defs:
 		var pill = Button.new(); pill.text = definition[1]; pill.toggle_mode = true; pill.custom_minimum_size = Vector2(0,46); pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL; pill.add_theme_font_size_override("font_size",19)
 		pill.theme_type_variation = "PillToggle"

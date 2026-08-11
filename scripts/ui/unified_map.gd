@@ -183,6 +183,10 @@ func _draw():
 		_draw_supply_lines() # خطوط تدارکات - نقشه‌محور
 		_draw_battle_plans() # طرح‌های نبرد ترسیمی کاربر - پیشرفته
 		_draw_constructions() # ساخت‌وساز نقشه‌محور
+		_draw_military_units() # یگان‌های نظامی روی نقشه - پیشرفته
+		_draw_resources_detail() # معادن و چاه‌ها - پیشرفته
+		_draw_population_heatmap() # تراکم جمعیت - پیشرفته
+		_draw_weather_live() # هواشناسی زنده - پیشرفته
 		if zoom_level>=NETWORK_ZOOM and overlays.get("transport",true) and selected_country!="":_draw_national_network(selected_country)
 		_draw_hubs();_draw_country_labels()
 		if zoom_level>=CITY_ZOOM and overlays.get("cities",true) and selected_country!="":_draw_cities(selected_country)
@@ -814,6 +818,133 @@ func _draw_constructions():
 		draw_circle(point, 7.0, Color(0.85,0.75,0.25,0.90))
 		if zoom_level >= 4.0:
 			draw_string(PersianFont, point + Vector2(12, 4), "%s %s" % [icon, b_type], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0,0.9,0.4))
+
+func _draw_military_units():
+	# یگان‌های نظامی روی نقشه - NATO نماد + قدرت + حرکت
+	if not overlays.get("units", false) and not overlays.get("wars", false):
+		return
+	var mil = full_state.get("military", {})
+	var personnel_detail = mil.get("personnel_detail", {})
+	var equip = mil.get("equipment_detail", {})
+	var adv = full_state.get("map_advanced", {})
+	var units_placed = adv.get("military_units", []) if adv.has("military_units") else []
+
+	# اگر یگان‌های نقشه‌ای نداریم، از مواضع جبهه بساز
+	if units_placed.is_empty():
+		var world = full_state.get("world", {})
+		var wars = world.get("wars", {})
+		for target in wars.keys():
+			var player_id = str(world.get("player_country",""))
+			var player_profile = countries.get(player_id, {})
+			var enemy_profile = countries.get(str(target), {})
+			if player_profile.is_empty() or enemy_profile.is_empty():
+				continue
+			var start = _geo_point(float(player_profile.get("lon",0.0)), float(player_profile.get("lat",0.0)))
+			var finish = _geo_point(float(enemy_profile.get("lon",0.0)), float(enemy_profile.get("lat",0.0)))
+			var mid = start.lerp(finish, 0.6)
+			if not _viewport.grow(30).has_point(mid):
+				continue
+			# ۳ یگان در جبهه
+			for i in range(3):
+				var offset = Vector2(Deterministic.next_range(-15.0,15.0), Deterministic.next_range(-15.0,15.0)) if false else Vector2(i*12.0-12.0, 0)
+				var pos = mid + offset
+				# نوع یگان تصادفی دترمینستیک
+				var unit_types = ["پیاده","زرهی","توپخانه","پدافند"]
+				var u_type = unit_types[i % unit_types.size()]
+				var color = Color(0.20,0.85,0.40,0.90) if i==0 else Color(0.85,0.65,0.20,0.90) if i==1 else Color(0.85,0.25,0.25,0.85)
+				draw_rect(Rect2(pos-Vector2(10,8), Vector2(20,16)), Color(0.0,0.0,0.0,0.65), true)
+				draw_rect(Rect2(pos-Vector2(10,8), Vector2(20,16)), color, false, 1.8)
+				if zoom_level >= 2.5:
+					draw_string(PersianFont, pos+Vector2(14,4), u_type, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, color)
+
+func _draw_resources_detail():
+	# معادن و چاه‌های نفت و گاز روی نقشه - آیکون ⛏️🛢️
+	if not overlays.get("resources_detail", false) and base_layer != "resources":
+		return
+	if zoom_level < 3.0:
+		return
+	var player_id = str(full_state.get("world",{}).get("player_country",""))
+	var resources = full_state.get("resources", {})
+	var inv = resources.get("inventory", {})
+	# نمایش منابع برای کشور بازیکن و همسایگان
+	var countries_to_show = [player_id]
+	if full_state.get("world",{}).has("countries"):
+		for border in WorldManager.get_country(player_id).get("borders",[]):
+			countries_to_show.append(str(border))
+
+	for code in countries_to_show:
+		var profile = countries.get(code, {})
+		if profile.is_empty():
+			continue
+		var units = CountryGeographyManager.get_units(code)
+		for unit in units:
+			var res_score = float(unit.get("resource_index",0.5))
+			if res_score < 0.55 and Deterministic.next_range(0.0,1.0) > 0.15:
+				continue
+			var point = _normalized_to_screen(unit.center)
+			if not _viewport.grow(20).has_point(point):
+				continue
+			# نوع منبع بر اساس resource_index و کشور
+			var resource_types = ["🛢️ نفت","⛏️ آهن","⛏️ مس","🌾 غذا","💧 آب","⚡ برق"]
+			var r_type = resource_types[int(res_score*5.9) % resource_types.size()]
+			var res_color = Color(0.15,0.15,0.15,0.75)
+			if "نفت" in r_type: res_color = Color(0.15,0.15,0.15,0.85)
+			elif "آهن" in r_type or "مس" in r_type: res_color = Color(0.65,0.45,0.20,0.85)
+			elif "غذا" in r_type: res_color = Color(0.25,0.75,0.30,0.80)
+			elif "آب" in r_type: res_color = Color(0.20,0.55,0.95,0.80)
+			else: res_color = Color(0.85,0.75,0.15,0.80)
+
+			draw_circle(point, 8.0, Color(0.0,0.0,0.0,0.45))
+			draw_circle(point, 5.5, res_color)
+			if zoom_level >= 4.5:
+				draw_string(PersianFont, point+Vector2(10,4), r_type, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9,0.92,0.95))
+
+func _draw_population_heatmap():
+	# تراکم جمعیت - هیت‌مپ با دایره‌های شفاف
+	if not overlays.get("population_heatmap", false) and base_layer != "population":
+		return
+	if zoom_level < 2.0:
+		return
+	var state = full_state
+	for code in countries.keys():
+		var profile = countries[code]
+		var pop = float(profile.get("population",0))
+		if pop < 10_000_000:
+			continue
+		var point = _geo_point(float(profile.get("lon",0.0)), float(profile.get("lat",0.0)))
+		if not _viewport.grow(40).has_point(point):
+			continue
+		var density = clamp((log(pop)/log(10.0)-6.0)/3.0, 0.1, 1.0)
+		var radius = clamp(density*30.0 + 8.0, 8.0, 45.0) * (zoom_level/3.0)
+		var heat_color = Color(0.20,0.50,1.0,0.15).lerp(Color(1.0,0.90,0.20,0.25), density).lerp(Color(1.0,0.20,0.15,0.35), max(0.0,density-0.6)*2.5)
+		draw_circle(point, radius, heat_color)
+		if zoom_level >= 3.5 and density > 0.6:
+			draw_string(PersianFont, point+Vector2(0, radius+14), PersianFormatter.format_large(pop), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(0.85,0.90,0.95))
+
+func _draw_weather_live():
+	# هواشناسی زنده - برف، باران، طوفان روی نقشه
+	if not overlays.get("weather_live", false) and base_layer != "weather":
+		return
+	var weather = full_state.get("weather", {}).get("current", {})
+	if weather.is_empty():
+		return
+	var hazard = str(weather.get("hazard","none"))
+	var severity = float(weather.get("severity",0.0))
+	if severity < 0.1:
+		return
+	for code in countries.keys():
+		var profile = countries[code]
+		var point = _geo_point(float(profile.get("lon",0.0)), float(profile.get("lat",0.0)))
+		if not _viewport.grow(30).has_point(point):
+			continue
+		var local_severity = severity * (0.7 + _stable_fraction(code)*0.6)
+		if local_severity < 0.15:
+			continue
+		var weather_icon = "❄️" if hazard=="snow" else "🌧️" if hazard=="flood" else "🔥" if hazard=="heat" else "🌪️"
+		var weather_color = Color(0.70,0.85,1.0,0.70) if hazard=="snow" else Color(0.20,0.45,0.95,0.65) if hazard=="flood" else Color(1.0,0.55,0.15,0.70)
+		draw_circle(point, clamp(local_severity*20.0, 5.0, 25.0), weather_color)
+		if zoom_level >= 2.5:
+			draw_string(PersianFont, point+Vector2(12,4), "%s %.0f%%" % [weather_icon, local_severity*100.0], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, weather_color)
 
 func _draw_selected_outline():
 	if selected_country == "": return
