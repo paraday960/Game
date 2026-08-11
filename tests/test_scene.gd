@@ -25,6 +25,11 @@ func _ready():
 	if str(SettingsManager.get_value("ui_density",""))!="compact" or not SettingsManager.get_value("colorblind_palette",false) or SettingsManager.get_value("haptics_enabled",true):failed.append("تنظیمات حرفه‌ای تراکم/کوررنگی/لرزش ماندگار نشد")
 	else:print("Professional UX preferences: density + colorblind + haptics persistence OK")
 	SettingsManager.set_value("ui_density",original_density);SettingsManager.set_value("colorblind_palette",original_palette);SettingsManager.set_value("haptics_enabled",original_haptics)
+	# مسیر UI ماه را روزبه‌روز بین فریم‌ها اجرا می‌کند؛ نتیجه باید دقیقاً با مسیر همگام یکسان بماند.
+	var async_base=GameState.state.duplicate(true);EventLog.clear();var async_tick=await GameEngine.tick_async(async_base,0,0,[]);EventLog.clear();var sync_tick=GameEngine.tick(async_base.duplicate(true),0,0,[])
+	if not async_tick.success or not sync_tick.success or JSON.stringify(async_tick.state)!=JSON.stringify(sync_tick.state):failed.append("تیک غیرمسدودکننده با تیک اتمی همگام همسان نیست")
+	else:print("Frame-yielding monthly tick: responsive UI + deterministic parity OK")
+	EventLog.clear()
 	if not TechnologyManager.is_valid():
 		failed.append("درخت فناوری داده‌محور نامعتبر است")
 	if not ScenarioManager.is_valid():

@@ -57,6 +57,8 @@ var _touch_points:Dictionary={}
 var _pinch_distance:=0.0
 var _pinch_center:=Vector2.ZERO
 var _ignore_mouse_until_ms:=0
+var _motion_until_ms:=0
+var _settled_redraw_pending:=false
 var _last_tier := ""
 
 func _ready():
@@ -144,25 +146,19 @@ func get_view_state() -> Dictionary:
 
 func _draw():
 	_update_projection()
+	var low_detail=_motion_active()
 	_draw_ocean()
-	_draw_graticule()
-	_draw_countries()
-	_unit_screen_records.clear()
-	if zoom_level >= ADMIN_ZOOM and selected_country != "":
-		_draw_admin_detail(selected_country)
-	_drawn_routes.clear()
-	_draw_routes()
-	if zoom_level >= NETWORK_ZOOM and overlays.get("transport", true) and selected_country != "":
-		_draw_national_network(selected_country)
-	_draw_hubs()
-	_draw_country_labels()
-	_city_screen_records.clear()
-	if zoom_level >= CITY_ZOOM and overlays.get("cities", true) and selected_country != "":
-		_draw_cities(selected_country)
-	_draw_selected_outline()
-	_draw_map_hud()
-	if bool(SettingsManager.get_value("tooltips_enabled",true)) and (hovered_country != "" or hovered_unit != "" or not hovered_city.is_empty() or not hovered_route.is_empty()):
-		_draw_tooltip()
+	if not low_detail:_draw_graticule()
+	_draw_countries(low_detail)
+	_unit_screen_records.clear();_drawn_routes.clear();_city_screen_records.clear()
+	if not low_detail:
+		if zoom_level>=ADMIN_ZOOM and selected_country!="":_draw_admin_detail(selected_country)
+		_draw_routes()
+		if zoom_level>=NETWORK_ZOOM and overlays.get("transport",true) and selected_country!="":_draw_national_network(selected_country)
+		_draw_hubs();_draw_country_labels()
+		if zoom_level>=CITY_ZOOM and overlays.get("cities",true) and selected_country!="":_draw_cities(selected_country)
+	_draw_selected_outline();_draw_map_hud()
+	if not low_detail and bool(SettingsManager.get_value("tooltips_enabled",true)) and (hovered_country!="" or hovered_unit!="" or not hovered_city.is_empty() or not hovered_route.is_empty()):_draw_tooltip()
 
 func _update_projection():
 	_viewport = Rect2(Vector2(6, 6), Vector2(max(1.0, size.x - 12.0), max(1.0, size.y - 12.0)))
@@ -192,7 +188,7 @@ func _draw_graticule():
 			points.append(_geo_point(float(longitude), float(latitude)))
 		_draw_visible_polyline(points, Color(0.36, 0.68, 0.78, alpha), 0.7)
 
-func _draw_countries():
+func _draw_countries(low_detail:bool=false):
 	for code in countries.keys():
 		var code_string = str(code)
 		var fill = _country_fill(code_string)
@@ -208,12 +204,11 @@ func _draw_countries():
 			var outer = _screen_ring(polygon.outer)
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
-			if polygon.get("fillable", true) and not Geometry2D.triangulate_polygon(outer).is_empty():
-				draw_colored_polygon(outer, fill)
-			for hole in polygon.holes:
-				var screen_hole = _screen_ring(hole)
-				if screen_hole.size() >= 3 and _polygon_visible(screen_hole) and not Geometry2D.triangulate_polygon(screen_hole).is_empty():
-					draw_colored_polygon(screen_hole, OCEAN_TOP)
+			if not low_detail and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():draw_colored_polygon(outer,fill)
+			if not low_detail:
+				for hole in polygon.holes:
+					var screen_hole=_screen_ring(hole)
+					if screen_hole.size()>=3 and _polygon_visible(screen_hole) and not Geometry2D.triangulate_polygon(screen_hole).is_empty():draw_colored_polygon(screen_hole,OCEAN_TOP)
 			var ring = outer.duplicate(); ring.append(outer[0])
 			draw_polyline(ring, border, width, true)
 
@@ -550,16 +545,23 @@ func _handle_manual_pinch():
 		if center_delta.length()>0.1:_pan_pixels(center_delta)
 	_pinch_distance=new_distance;_pinch_center=new_center;_dragged=true;_pan_velocity=Vector2.ZERO
 
+func _mark_motion():
+	_motion_until_ms=Time.get_ticks_msec()+170;_settled_redraw_pending=true
+
+func _motion_active()->bool:
+	return Time.get_ticks_msec()<_motion_until_ms
+
 func _process(delta:float):
+	if _settled_redraw_pending and not _motion_active():_settled_redraw_pending=false;queue_redraw()
 	if _drag_active or bool(SettingsManager.get_value("reduce_motion",false)) or _pan_velocity.length()<4.0:return
 	var move=_pan_velocity*delta
 	camera_center.x-=move.x/max(1.0,_base_scale*zoom_level*2.0);camera_center.y-=move.y/max(1.0,_base_scale*zoom_level)
-	_pan_velocity*=exp(-6.5*delta);_clamp_camera();_emit_view();queue_redraw()
+	_pan_velocity*=exp(-6.5*delta);_mark_motion();_clamp_camera();_emit_view();queue_redraw()
 
 func _pan_pixels(delta: Vector2):
 	camera_center.x -= delta.x / max(1.0, _base_scale * zoom_level * 2.0)
 	camera_center.y -= delta.y / max(1.0, _base_scale * zoom_level)
-	_clamp_camera(); _emit_view(); queue_redraw()
+	_mark_motion();_clamp_camera();_emit_view();queue_redraw()
 
 func _zoom_at(screen_point: Vector2, target_zoom: float):
 	var before = _screen_to_normalized(screen_point)
@@ -569,7 +571,7 @@ func _zoom_at(screen_point: Vector2, target_zoom: float):
 	if dx > 0.5: dx -= 1.0
 	elif dx < -0.5: dx += 1.0
 	camera_center += Vector2(dx, before.y - after.y)
-	_clamp_camera(); _emit_view(); queue_redraw()
+	_mark_motion();_clamp_camera();_emit_view();queue_redraw()
 
 func _clamp_camera():
 	camera_center.x = fposmod(camera_center.x, 1.0)

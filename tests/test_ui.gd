@@ -125,6 +125,11 @@ func _init():
 	print("UI diplomacy cmd: %s" % ("OK" if ok else "FAIL"))
 	if not ok:
 		fails.append("فرمان دیپلماسی UI شکست خورد")
+	# مسیر واقعی غیرمسدودکننده UI: Overlay و Progress روزانه تا Commit فعال می‌مانند.
+	var async_before=root.get_node("GameState").tick;scene._set_simulation_busy(true)
+	await scene._execute_tick_async([load("res://scripts/core/command.gd").create_next_tick()])
+	if scene.simulation_busy or root.get_node("GameState").tick<=async_before or scene.simulation_progress.value<=0:fails.append("مسیر UI غیرمسدودکننده/Progress کامل نشد")
+	else:print("UI async month: overlay + daily progress + responsive frames OK")
 	print("")
 	if fails.size() == 0:
 		print("=== ✅ UI SMOKE TEST PASSED ===")

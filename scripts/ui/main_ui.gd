@@ -46,6 +46,10 @@ var map_overlay_grid: GridContainer
 var map_control_flow: HFlowContainer
 var command_palette: Control
 var toast_stack: VBoxContainer
+var simulation_overlay: Control
+var simulation_progress: ProgressBar
+var simulation_status_lbl: Label
+var simulation_busy := false
 var page_generation := 0
 
 # ---------- ارجاع‌های گره ----------
@@ -165,11 +169,19 @@ func _ready():
 	_refresh_header()
 	GameEngine.tick_completed.connect(_on_tick_completed)
 	GameEngine.tick_failed.connect(_on_tick_failed)
+	GameEngine.tick_progress.connect(_on_tick_progress)
 	P2PManager.state_snapshot_received.connect(_on_network_state_snapshot)
 	P2PManager.campaign_lobby_received.connect(_on_campaign_lobby)
 	P2PManager.network_status_changed.connect(_on_network_status_changed)
 	P2PManager.network_error.connect(_on_network_error)
 	print("رابط کاربری اصلی لود شد - شبیه‌ساز کشور")
+
+func _notification(what:int):
+	if what!=NOTIFICATION_WM_GO_BACK_REQUEST:return
+	if is_instance_valid(command_palette) and command_palette.visible:command_palette.close_palette();return
+	if simulation_busy:get_tree().quit();return
+	if current_tab!="map":_switch_tab("map")
+	else:get_tree().quit()
 
 # ============================================================
 # قاب کلی: هدر + تب‌بار + محتوا + فوتر
@@ -246,6 +258,28 @@ func _build_chrome():
 
 	toast_stack = ToastStackClass.new(); toast_stack.anchor_left=0.48;toast_stack.anchor_right=0.98;toast_stack.anchor_top=0.10;toast_stack.anchor_bottom=0.42;toast_stack.offset_left=0;toast_stack.offset_right=0;toast_stack.offset_top=0;toast_stack.offset_bottom=0;add_child(toast_stack)
 	command_palette = CommandPaletteClass.new(); command_palette.item_chosen.connect(_on_palette_item_chosen); add_child(command_palette); command_palette.set_entries(_build_command_entries())
+	_build_simulation_overlay()
+
+func _build_simulation_overlay():
+	simulation_overlay=ColorRect.new();simulation_overlay.set_anchors_preset(Control.PRESET_FULL_RECT);simulation_overlay.color=Color(0.0,0.01,0.018,0.88);simulation_overlay.mouse_filter=Control.MOUSE_FILTER_STOP;simulation_overlay.z_index=300;add_child(simulation_overlay)
+	var panel=PanelContainer.new();panel.set_anchors_preset(Control.PRESET_CENTER);panel.anchor_left=0.12;panel.anchor_right=0.88;panel.anchor_top=0.36;panel.anchor_bottom=0.64;panel.offset_left=0;panel.offset_right=0;panel.offset_top=0;panel.offset_bottom=0;panel.theme_type_variation="CommandPanel";simulation_overlay.add_child(panel)
+	var box=VBoxContainer.new();box.alignment=BoxContainer.ALIGNMENT_CENTER;box.add_theme_constant_override("separation",18);panel.add_child(box)
+	var title=Label.new();title.text="در حال شبیه‌سازی ماه";title.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;title.add_theme_font_size_override("font_size",34);box.add_child(title)
+	simulation_status_lbl=Label.new();simulation_status_lbl.text="آماده‌سازی…";simulation_status_lbl.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;simulation_status_lbl.add_theme_font_size_override("font_size",25);simulation_status_lbl.modulate=Color(0.68,0.86,0.91);box.add_child(simulation_status_lbl)
+	simulation_progress=ProgressBar.new();simulation_progress.min_value=0;simulation_progress.max_value=30;simulation_progress.value=0;simulation_progress.show_percentage=false;simulation_progress.custom_minimum_size=Vector2(0,46);box.add_child(simulation_progress)
+	var hint=Label.new();hint.text="محاسبات روزبه‌روز انجام می‌شود تا رابط گوشی پاسخ‌گو بماند.";hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;hint.modulate=Color(0.62,0.75,0.81);box.add_child(hint)
+	simulation_overlay.hide()
+
+func _set_simulation_busy(active:bool):
+	simulation_busy=active
+	if not is_instance_valid(simulation_overlay):return
+	simulation_overlay.visible=active
+	if active:
+		simulation_progress.value=0;simulation_status_lbl.text="آماده‌سازی…"
+
+func _on_tick_progress(day:int,total_days:int,phase:String):
+	if not simulation_busy:return
+	simulation_progress.max_value=max(1,total_days);simulation_progress.value=day;simulation_status_lbl.text=phase
 
 func _build_professional_theme() -> Theme:
 	var result = Theme.new()
@@ -2207,45 +2241,51 @@ func _on_load_pressed():
 # هسته تیک
 # ============================================================
 func _run_tick_with(player_cmds: Array) -> bool:
+	if simulation_busy:
+		_toast("شبیه‌سازی ماه قبلی هنوز در حال اجراست")
+		return false
 	# کلاینت فقط فرمان را می‌فرستد؛ محاسبه و Commit منحصراً روی میزبان انجام می‌شود.
 	if P2PManager.is_network_active() and not P2PManager.can_advance_tick():
 		if player_cmds.is_empty():
-			_toast("⏳ فقط میزبان می‌تواند روز بعد را اجرا کند")
+			_toast("فقط میزبان می‌تواند ماه بعد را اجرا کند")
 			return true
 		for cmd in player_cmds:
-			if not P2PManager.send_command(cmd):
-				return false
-		_toast("📡 تصمیم برای تأیید به میزبان ارسال شد")
+			if not P2PManager.send_command(cmd):return false
+		_toast("تصمیم برای تأیید به میزبان ارسال شد")
 		return true
 
 	if P2PManager.competitive_mode and P2PManager.is_host and MultiplayerCampaignManager.started:
 		var campaign_result=P2PManager.advance_competitive_month(player_cmds)
-		if not campaign_result.success:_toast("⚠️ "+str(campaign_result.reason));return false
+		if not campaign_result.success:_toast("خطا: "+str(campaign_result.reason));return false
 		var campaign_state:Dictionary=campaign_result.state
 		GameState.set_state(campaign_state,int(campaign_state.get("version",0)),int(campaign_state.get("tick",0)))
 		SaveManager.maybe_autosave(GameState.tick);_refresh_header();_render_events();_engagement_pulse();FeedbackManager.play_success();return true
 
-	var cmds: Array = []
-	cmds.append_array(P2PManager.get_pending_commands())
-	cmds.append_array(player_cmds)
-	cmds.append(GameCommandClass.create_next_tick())
+	var cmds:Array=[];cmds.append_array(P2PManager.get_pending_commands());cmds.append_array(player_cmds);cmds.append(GameCommandClass.create_next_tick())
+	# تست‌های هدلس همان API همگام قطعی را نگه می‌دارند؛ اجرای واقعی UI روزبه‌روز Yield می‌کند.
+	if DisplayServer.get_name()=="headless" or OS.has_feature("server"):
+		return _finish_tick_result(GameEngine.tick(GameState.state,GameState.version,GameState.tick,cmds),false)
+	_set_simulation_busy(true)
+	call_deferred("_execute_tick_async",cmds)
+	return true
 
-	var result = GameEngine.tick(GameState.state, GameState.version, GameState.tick, cmds)
+func _execute_tick_async(cmds:Array):
+	await get_tree().process_frame
+	var result=await GameEngine.tick_async(GameState.state,GameState.version,GameState.tick,cmds)
+	var ok=_finish_tick_result(result,true)
+	_set_simulation_busy(false)
+	if ok:_toast("شبیه‌سازی ماه با موفقیت کامل شد")
+
+func _finish_tick_result(result:Dictionary,refresh_page:bool)->bool:
 	if result.success:
-		GameState.set_state(result.state, result.version, result.tick)
-		if not P2PManager.is_network_active() or P2PManager.is_host:
-			SaveManager.maybe_autosave(result.tick)
-		P2PManager.broadcast_state(result.state, result.version, result.tick)
-		_refresh_header()
-		_render_events()
-		# بازخورد دیداری و صوتی رویه‌ای (۳.۲۳۴)
-		_engagement_pulse()
-		FeedbackManager.play_success()
+		GameState.set_state(result.state,result.version,result.tick)
+		if not P2PManager.is_network_active() or P2PManager.is_host:SaveManager.maybe_autosave(result.tick)
+		P2PManager.broadcast_state(result.state,result.version,result.tick)
+		_refresh_header();_render_events();_engagement_pulse();FeedbackManager.play_success()
+		if refresh_page:_switch_tab(current_tab)
 		return true
-	else:
-		FeedbackManager.play_alert()
-		_toast("⚠️ " + str(result.get("reason", "خطا")))
-		return false
+	FeedbackManager.play_alert();_toast("خطا: "+str(result.get("reason","محاسبه ناموفق بود")))
+	return false
 
 func _engagement_pulse():
 	if bool(SettingsManager.get_value("reduce_motion", false)):
@@ -2255,7 +2295,7 @@ func _engagement_pulse():
 	tw.tween_property(engagement_lbl, "scale", Vector2(1.0, 1.0), 0.15)
 
 func _process(delta):
-	if auto_tick:
+	if auto_tick and not simulation_busy:
 		tick_timer += delta
 		if tick_timer >= float(SettingsManager.get_value("auto_tick_interval", 1.0)):
 			tick_timer = 0.0

@@ -15,6 +15,7 @@ const MAX_COMMAND_RECEIPTS = 512
 
 signal tick_completed(new_state, events)
 signal tick_failed(reason)
+signal tick_progress(day, total_days, phase)
 
 # ترتیب سیستم‌ها برای اجرای دترمینستیک - 33 سیستم اصلی
 var system_order = [
@@ -135,7 +136,7 @@ func _load_remaining_systems():
 		systems["settlements"] = load("res://scripts/systems/settlements_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/transport_roads_system.gd"):
 		systems["transport_roads"] = load("res://scripts/systems/transport_roads_system.gd").new()
-	
+
 	if ResourceLoader.exists("res://scripts/systems/retail_market_system.gd"):
 		systems["retail"] = load("res://scripts/systems/retail_market_system.gd").new()
 	if ResourceLoader.exists("res://scripts/systems/fuel_stations_system.gd"):
@@ -214,7 +215,7 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 	var snapshot = current_state.duplicate(true)
 	var snapshot_version = current_version
 	var snapshot_tick = current_tick + 1
-	
+
 	# ست seed برای دترمینستیک بودن
 	var seed_val = snapshot.get("seed", 12345) + snapshot_tick
 	Deterministic.set_seed(seed_val)
@@ -229,6 +230,78 @@ func tick(current_state: Dictionary, current_version: int, current_tick: int, co
 
 	# ۳. اجرای همه معادلات و هوش سیستم‌ها به‌صورت اتمی در یک ماه کامل
 	var compute_result = _compute_all_systems(snapshot, snapshot_tick)
+	if not compute_result.success:
+		# ۴. Rollback - نه وضعیت و نه رویدادهای میانی اعمال نمی‌شوند.
+		EventLog.rollback_transaction()
+		EventLog.log_event("tick_rollback", {"reason": compute_result.reason, "tick": snapshot_tick}, current_tick, current_version)
+		emit_signal("tick_failed", compute_result.reason)
+		return {"success": false, "reason": compute_result.reason, "state": current_state, "version": current_version, "tick": current_tick}
+
+	snapshot = compute_result.state
+	# برخی رویدادها به تصمیم چندگزینه‌ای تبدیل می‌شوند؛ انقضا نیز پیامد پیش‌فرض دارد.
+	snapshot = DecisionManagerClass.update_pending(snapshot, compute_result.get("events", []), snapshot_tick)
+
+	# ۵. Commit - اعمال اتمی نتیجه
+	snapshot["version"] = snapshot_version + 1
+	snapshot["tick"] = snapshot_tick
+	snapshot["seed"] = Deterministic.get_state()
+	_record_command_receipts(snapshot, commands)
+	snapshot = AuditManager.record_turn(current_state, snapshot, commands)
+
+	# لاگ رویداد موفق و انتشار یک‌جای تمام رویدادهای تراکنش
+	EventLog.log_event("tick_success", {
+		"tick": snapshot_tick,
+		"version": snapshot["version"],
+		"commands_count": commands.size(),
+		"chain_hash": snapshot.get("audit", {}).get("chain_head", ""),
+		"gdp_change": snapshot["economy"]["gdp"] - current_state["economy"]["gdp"] if current_state.has("economy") else 0
+	}, snapshot_tick, snapshot["version"])
+	EventLog.commit_transaction()
+
+	emit_signal("tick_completed", snapshot, EventLog.get_last(5))
+
+	return {
+		"success": true,
+		"state": snapshot,
+		"version": snapshot["version"],
+		"tick": snapshot_tick
+	}
+
+func tick_async(current_state: Dictionary, current_version: int, current_tick: int, commands: Array) -> Dictionary:
+	# ۱. تکمیل فراداده و اعتبارسنجی ورودی‌ها
+	_prepare_command_metadata(commands, current_tick + 1, current_version + 1)
+	var validation = _validate_commands(commands, current_state, current_tick + 1, current_version + 1)
+	if not validation.valid:
+		EventLog.log_event("tick_failed_validation", {"reason": validation.reason}, current_tick, current_version)
+		emit_signal("tick_failed", validation.reason)
+		return {"success": false, "reason": validation.reason, "state": current_state, "version": current_version, "tick": current_tick}
+
+	# تمام رویدادهای محاسبه نیز بخشی از تراکنش‌اند؛ Rollback نباید رد کاذب باقی بگذارد.
+	if not EventLog.begin_transaction():
+		var tx_reason = "تراکنش رویداد دیگری هنوز باز است"
+		emit_signal("tick_failed", tx_reason)
+		return {"success": false, "reason": tx_reason, "state": current_state, "version": current_version, "tick": current_tick}
+
+	# ۲. محاسبه روی Snapshot (کپی)
+	var snapshot = current_state.duplicate(true)
+	var snapshot_version = current_version
+	var snapshot_tick = current_tick + 1
+
+	# ست seed برای دترمینستیک بودن
+	var seed_val = snapshot.get("seed", 12345) + snapshot_tick
+	Deterministic.set_seed(seed_val)
+	snapshot["seed"] = seed_val
+
+	# اعمال فرمان‌ها روی snapshot
+	for cmd in commands:
+		_apply_command_to_snapshot(snapshot, cmd)
+
+	# نوبت ماهانه آغاز می‌شود و روزهای داخلی آن در موتور اجرا خواهند شد.
+	snapshot = TimeManager.begin_turn(snapshot, snapshot_tick)
+
+	# ۳. اجرای همه معادلات و هوش سیستم‌ها به‌صورت اتمی در یک ماه کامل
+	emit_signal("tick_progress", 0, int(snapshot.get("time", {}).get("days_in_month", 30)), "آماده‌سازی")
+	var compute_result = await _compute_all_systems_async(snapshot, snapshot_tick)
 	if not compute_result.success:
 		# ۴. Rollback - نه وضعیت و نه رویدادهای میانی اعمال نمی‌شوند.
 		EventLog.rollback_transaction()
@@ -568,6 +641,103 @@ func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 			generated_events.append(wrapped_policy)
 			EventLog.log_event("policy_event", policy_event, turn, snapshot.get("version", 0))
 		snapshot = TimeManager.finish_simulation_day(snapshot)
+
+	var military_result = MilitaryManager.simulate_month(snapshot, turn)
+	snapshot = military_result.state
+	for military_event in military_result.events:
+		var wrapped_military = {"system":"military_development", "event":military_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_military)
+		EventLog.log_event("military_event", military_event, turn, snapshot.get("version", 0))
+
+	var national_result = NationalProjectManager.simulate_month(snapshot, turn)
+	snapshot = national_result.state
+	for national_event in national_result.events:
+		var wrapped_project = {"system":"national_projects", "event":national_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_project)
+		EventLog.log_event("national_project_event", national_event, turn, snapshot.get("version", 0))
+
+	var cabinet_result = CabinetManager.simulate_month(snapshot, turn)
+	snapshot = cabinet_result.state
+	for cabinet_event in cabinet_result.events:
+		var wrapped_cabinet = {"system":"cabinet", "event":cabinet_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_cabinet)
+		EventLog.log_event("cabinet_event", cabinet_event, turn, snapshot.get("version", 0))
+
+	var law_result = LawManager.simulate_month(snapshot, turn)
+	snapshot = law_result.state
+	for law_event in law_result.events:
+		var wrapped_law = {"system":"legislation", "event":law_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_law)
+		EventLog.log_event("law_event", law_event, turn, snapshot.get("version", 0))
+
+	var intelligence_result = IntelligenceOperationManager.simulate_month(snapshot,turn)
+	snapshot = intelligence_result.state
+	for intelligence_event in intelligence_result.events:
+		var wrapped_intelligence={"system":"intelligence_operations","event":intelligence_event.duplicate(true),"simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_intelligence)
+		EventLog.log_event("intelligence_operation_event",intelligence_event,turn,snapshot.get("version",0))
+
+	snapshot = MapLayerManager.update_network_metrics(snapshot)
+
+	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
+	snapshot = _compute_indicators(snapshot)
+	var progression_result = ProgressionManagerClass.update(snapshot, turn)
+	snapshot = progression_result.state
+	for achievement in progression_result.unlocked:
+		EventLog.log_event("achievement_unlocked", {
+			"message": "دستاورد «%s» باز شد" % achievement.get("title", ""),
+			"achievement": achievement
+		}, turn, snapshot.get("version", 0))
+
+	var scenario_result = ScenarioManager.update(snapshot, turn)
+	snapshot = scenario_result.state
+	for scenario_event in scenario_result.events:
+		var wrapped_scenario = {"system":"scenario", "event":scenario_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_scenario)
+		EventLog.log_event("scenario_event", scenario_event, turn, snapshot.get("version", 0))
+
+	snapshot = AnalyticsManager.update(snapshot, turn)
+	snapshot = ReportManager.build(snapshot, generated_events, turn)
+	EventLog.log_event("monthly_summary", {
+		"message": ReportManager.summary_message(snapshot["monthly_report"]),
+		"report": snapshot["monthly_report"].duplicate(true)
+	}, turn, snapshot.get("version", 0))
+	snapshot = TimeManager.finish_turn(snapshot)
+
+	var integrity = _check_integrity(snapshot)
+	if not integrity.valid:
+		return {"success": false, "reason": integrity.reason, "state": snapshot}
+	return {"success": true, "state": snapshot, "events": generated_events}
+
+func _compute_all_systems_async(snapshot: Dictionary, turn: int) -> Dictionary:
+	# هر فرمان بازیکن یک ماه است؛ معادلات قدیمی و عمیق در روزهای داخلی ماه اجرا می‌شوند.
+	var generated_events: Array = []
+	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
+	snapshot = seasonal_result.state
+	for seasonal_event in seasonal_result.events:
+		var wrapped_seasonal = {"system":"seasonal", "event":seasonal_event.duplicate(true), "simulation_day":TimeManager.get_total_days(snapshot)}
+		generated_events.append(wrapped_seasonal)
+		EventLog.log_event("seasonal_event", seasonal_event, turn, snapshot.get("version", 0))
+
+	var days = int(snapshot.get("time", {}).get("days_in_month", 30))
+	for day in range(1, days + 1):
+		snapshot = TimeManager.set_simulation_day(snapshot, day)
+		var simulation_day = TimeManager.get_total_days(snapshot) + 1
+		var daily_result = _compute_daily_systems(snapshot, turn, simulation_day)
+		if not daily_result.success:
+			return daily_result
+		snapshot = daily_result.state
+		generated_events.append_array(daily_result.events)
+
+		var policy_simulation = PolicyManager.simulate(snapshot, simulation_day)
+		snapshot = policy_simulation.state
+		for policy_event in policy_simulation.events:
+			var wrapped_policy = {"system":"policies", "event":policy_event.duplicate(true), "simulation_day":simulation_day}
+			generated_events.append(wrapped_policy)
+			EventLog.log_event("policy_event", policy_event, turn, snapshot.get("version", 0))
+		snapshot = TimeManager.finish_simulation_day(snapshot)
+		emit_signal("tick_progress", day, days, "شبیه‌سازی روز %d از %d" % [day, days])
+		await get_tree().process_frame
 
 	var military_result = MilitaryManager.simulate_month(snapshot, turn)
 	snapshot = military_result.state
