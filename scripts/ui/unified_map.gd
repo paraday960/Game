@@ -43,6 +43,7 @@ var overlays: Dictionary = {
 	"wars": true, "alliances": true, "trade": true,
 	"air": false, "sea": false, "land": false,
 	"cities": true, "transport": true, "intelligence": false,
+	"supply": true, "battle_plans": true, "constructions": true,
 }
 var camera_center := Vector2(0.5, 0.50)
 var zoom_level := 1.0
@@ -284,6 +285,13 @@ func _draw_admin_detail(code: String):
 func _country_fill(code: String) -> Color:
 	var profile = countries.get(code, WorldManager.get_country(code))
 	var value = _country_layer_value(code, profile)
+	# لایه‌ی روی‌هم «اطلاعاتی»: رنگ‌آمیزی کشورها بر پایه‌ی آمادگی سایبری
+	if overlays.get("intelligence", false):
+		var previous_layer := base_layer
+		base_layer = "intelligence"
+		var intel_value = _country_layer_value(code, profile)
+		base_layer = previous_layer
+		return _status_gradient(intel_value)
 	match base_layer:
 		"relations": return _status_gradient(value).darkened(0.18)
 		"population": return Color(0.06, 0.15, 0.22).lerp(Color(0.12, 0.82, 0.96), value)
@@ -294,12 +302,15 @@ func _country_fill(code: String) -> Color:
 		"weather": return Color(0.10, 0.39, 0.60).lerp(Color(0.90, 0.20, 0.14), value)
 		"resources": return Color(0.16, 0.14, 0.21).lerp(Color(0.91, 0.64, 0.17), value)
 		"military": return Color(0.13, 0.16, 0.21).lerp(Color(0.82, 0.18, 0.22), value)
-	var palette = {
-		"Asia": Color(0.15, 0.34, 0.38), "Europe": Color(0.20, 0.30, 0.47),
-		"Africa": Color(0.39, 0.29, 0.18), "Americas": Color(0.13, 0.38, 0.29),
-		"Oceania": Color(0.34, 0.23, 0.42),
-	}
-	return palette.get(str(profile.get("region", "")), Color(0.25, 0.31, 0.33))
+	if base_layer == "political":
+		var palette = {
+			"Asia": Color(0.15, 0.34, 0.38), "Europe": Color(0.20, 0.30, 0.47),
+			"Africa": Color(0.39, 0.29, 0.18), "Americas": Color(0.13, 0.38, 0.29),
+			"Oceania": Color(0.34, 0.23, 0.42),
+		}
+		return palette.get(str(profile.get("region", "")), Color(0.25, 0.31, 0.33))
+	# هر لنز دیگری: گرادیان وضعیتی، تا تغییر لنز همیشه روی نقشه دیده شود
+	return _status_gradient(value)
 
 func _country_layer_value(code: String, profile: Dictionary) -> float:
 	var current_tick = int(full_state.get("tick", 0))
@@ -377,7 +388,8 @@ func _admin_fill(code: String, unit: Dictionary) -> Color:
 		"weather": return Color(0.11, 0.44, 0.66).lerp(Color(0.96, 0.22, 0.13), value)
 		"resources": return Color(0.17, 0.14, 0.22).lerp(Color(0.98, 0.70, 0.16), value)
 		"military": return Color(0.14, 0.16, 0.22).lerp(Color(0.91, 0.18, 0.23), value)
-	return Color(0.21, 0.31, 0.32)
+	# لنزهای بدون نگاشت اختصاصی: گرادیان وضعیتی تا تغییر همیشه دیده شود
+	return _status_gradient(value)
 
 func _draw_routes():
 	# لایه‌های عادی + لایه ویژه مسیرهای مختل (همیشه اگر حمله فعال باشد نمایش داده می‌شود)
@@ -613,6 +625,8 @@ func _draw_war_fronts():
 
 func _draw_supply_lines():
 	# رسم خطوط تدارکات از پایتخت به جبهه - رنگ بر اساس آسیب‌پذیری
+	if not overlays.get("supply", true):
+		return
 	var mil = full_state.get("military", {})
 	var logi = mil.get("logistics_detail", {})
 	if logi.is_empty():
@@ -659,6 +673,8 @@ func _draw_supply_lines():
 
 func _draw_battle_plans():
 	# رسم طرح‌های نبرد ترسیمی کاربر - فلش‌های HOI4 مانند
+	if not overlays.get("battle_plans", true):
+		return
 	var adv = full_state.get("map_advanced", {})
 	var plans = adv.get("battle_plans", [])
 	if plans.is_empty():
@@ -739,6 +755,8 @@ func _draw_battle_plans():
 
 func _draw_constructions():
 	# رسم ساخت‌وساز نقشه‌محور - جاده، راه‌آهن، سنگر، انبار، باند
+	if not overlays.get("constructions", true):
+		return
 	var adv = full_state.get("map_advanced", {})
 	var constructions = adv.get("constructions", [])
 	var buildings = adv.get("buildings", [])
