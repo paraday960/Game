@@ -2029,6 +2029,7 @@ func _build_network_panel():
 func _build_unified_map():
 	_sync_world_map()
 	if is_instance_valid(current_unified_map):current_unified_map.queue_redraw()
+	var state = GameState.state
 
 	# برگه کنترل شناور پایین نقشه — لنزها و لایه‌های تحلیلی.
 	var controls = _card("◉ لنزها و لایه‌های نقشه")
