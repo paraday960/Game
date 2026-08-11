@@ -281,7 +281,7 @@ func _tick_setup(current_state: Dictionary, current_version: int, current_tick: 
 
 	# اعمال فرمان‌ها روی snapshot
 	for cmd in commands:
-		_apply_command_to_snapshot(snapshot, cmd)
+		snapshot = _apply_command_to_snapshot(snapshot, cmd)
 
 	# نوبت ماهانه آغاز می‌شود و روزهای داخلی آن در موتور اجرا خواهند شد.
 	snapshot = TimeManager.begin_turn(snapshot, snapshot_tick)
@@ -537,9 +537,9 @@ func _is_finite_number(value) -> bool:
 		return not is_nan(value) and not is_inf(value)
 	return true
 
-func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
+func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 	if not cmd is GameCommandClass:
-		return
+		return snapshot
 	if cmd.type == "budget_allocate":
 		var allocs = cmd.payload.get("allocations", {})
 		for k in allocs.keys():
@@ -729,6 +729,8 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 
 # === Fallback ساده برای حملات مسیر تجاری اگر سیستم جدید لود نشده باشد ===
+	return snapshot
+
 func _apply_trade_route_attack_simple(snapshot: Dictionary, route_id: String, route_type: String, operation: String, from_c: String, to_c: String, tick: int) -> Dictionary:
 	var trade_warfare = snapshot.get("trade_route_warfare", {})
 	trade_warfare["attacks"] = trade_warfare.get("attacks", [])
