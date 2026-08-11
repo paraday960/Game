@@ -13,8 +13,8 @@ func push_message(message:String,severity:String="info"):
 		get_child(0).queue_free()
 	var panel=PanelContainer.new();panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	var color={"success":Color(0.18,0.88,0.59),"warning":Color(1.0,0.72,0.22),"danger":Color(1.0,0.30,0.36),"info":Color(0.25,0.78,0.94)}.get(severity,Color(0.25,0.78,0.94))
-	var style=StyleBoxFlat.new();style.bg_color=Color(0.012,0.043,0.063,0.97);style.border_color=Color(color.r,color.g,color.b,0.88);style.set_border_width_all(1);style.border_width_right=5;style.set_corner_radius_all(9);style.content_margin_left=12;style.content_margin_right=12;style.content_margin_top=9;style.content_margin_bottom=9;style.shadow_color=Color(0,0,0,0.38);style.shadow_size=6;style.shadow_offset=Vector2(0,3);panel.add_theme_stylebox_override("panel",style)
-	var label=Label.new();label.text=message;label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_font_size_override("font_size",15);label.modulate=Color(0.92,0.97,0.98);label.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(label)
+	var style=StyleBoxFlat.new();style.bg_color=Color(0.012,0.043,0.063,0.97);style.border_color=Color(color.r,color.g,color.b,0.88);style.set_border_width_all(1);style.border_width_right=5;style.set_corner_radius_all(9);style.content_margin_left=18;style.content_margin_right=18;style.content_margin_top=14;style.content_margin_bottom=14;style.shadow_color=Color(0,0,0,0.38);style.shadow_size=6;style.shadow_offset=Vector2(0,3);panel.add_theme_stylebox_override("panel",style)
+	var label=Label.new();label.text=message;label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_font_size_override("font_size",24);label.modulate=Color(0.92,0.97,0.98);label.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(label)
 	add_child(panel)
 	if not bool(SettingsManager.get_value("reduce_motion",false)):
 		panel.modulate.a=0.0;panel.position.x=45.0

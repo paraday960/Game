@@ -5,6 +5,7 @@ signal item_chosen(kind, id)
 signal closed
 
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
+const TouchScrollClass = preload("res://scripts/ui/touch_scroll_container.gd")
 var entries: Array = []
 var search_edit: LineEdit
 var results_box: VBoxContainer
@@ -47,12 +48,12 @@ func _build():
 	panel = PanelContainer.new(); panel.set_anchors_preset(Control.PRESET_CENTER); panel.anchor_left=0.08;panel.anchor_right=0.92;panel.anchor_top=0.10;panel.anchor_bottom=0.82;panel.offset_left=0;panel.offset_right=0;panel.offset_top=0;panel.offset_bottom=0; panel.theme_type_variation="CommandPanel"; add_child(panel)
 	var box = VBoxContainer.new(); box.add_theme_constant_override("separation",10); panel.add_child(box)
 	var header = HBoxContainer.new(); box.add_child(header)
-	var title = Label.new(); title.text="فرمان سریع"; title.add_theme_font_size_override("font_size",23); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(title)
+	var title = Label.new(); title.text="فرمان سریع"; title.add_theme_font_size_override("font_size",34); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(title)
 	var shortcut = Label.new(); shortcut.text="Ctrl + K"; shortcut.modulate=Color(0.52,0.68,0.75); header.add_child(shortcut)
-	var close = Button.new(); close.text="بستن"; close.custom_minimum_size=Vector2(92,42); close.pressed.connect(close_palette); header.add_child(close)
-	search_edit = LineEdit.new(); search_edit.placeholder_text="جست‌وجوی کشور، سامانه یا بخش مدیریتی…"; search_edit.custom_minimum_size=Vector2(0,52); search_edit.add_theme_font_size_override("font_size",18); search_edit.text_changed.connect(_refresh_results); search_edit.text_submitted.connect(_on_submit); box.add_child(search_edit)
-	var help = Label.new(); help.text="نام را بنویسید؛ نخستین نتیجه با Enter اجرا می‌شود."; help.modulate=Color(0.57,0.72,0.79); help.add_theme_font_size_override("font_size",13); box.add_child(help)
-	var scroll = ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; box.add_child(scroll)
+	var close = Button.new(); close.text="بستن"; close.custom_minimum_size=Vector2(125,62);close.add_theme_font_size_override("font_size",24); close.pressed.connect(close_palette); header.add_child(close)
+	search_edit = LineEdit.new(); search_edit.placeholder_text="جست‌وجوی کشور، سامانه یا بخش مدیریتی…"; search_edit.custom_minimum_size=Vector2(0,72); search_edit.add_theme_font_size_override("font_size",28); search_edit.text_changed.connect(_refresh_results); search_edit.text_submitted.connect(_on_submit); box.add_child(search_edit)
+	var help = Label.new(); help.text="نام را بنویسید؛ نخستین نتیجه با Enter اجرا می‌شود."; help.modulate=Color(0.57,0.72,0.79); help.add_theme_font_size_override("font_size",20); box.add_child(help)
+	var scroll = TouchScrollClass.new();scroll.allow_vertical=true;scroll.allow_horizontal=false; scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; box.add_child(scroll)
 	results_box = VBoxContainer.new(); results_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL; results_box.add_theme_constant_override("separation",5); scroll.add_child(results_box)
 	empty_label = Label.new(); empty_label.text="نتیجه‌ای پیدا نشد"; empty_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; empty_label.modulate=Color(0.75,0.55,0.52); empty_label.hide(); box.add_child(empty_label)
 
@@ -70,7 +71,7 @@ func _refresh_results(query: String):
 	var shown = min(14,matches.size())
 	for index in range(shown):
 		var entry:Dictionary=matches[index]
-		var button=Button.new(); button.text="%s  ·  %s"%[entry.get("group","فرمان"),entry.get("title","")];button.alignment=HORIZONTAL_ALIGNMENT_LEFT;button.custom_minimum_size=Vector2(0,48);button.tooltip_text=str(entry.get("description","")) if bool(SettingsManager.get_value("tooltips_enabled",true)) else "";button.pressed.connect(_choose.bind(str(entry.get("kind","")),str(entry.get("id",""))));results_box.add_child(button)
+		var button=Button.new(); button.text="%s  ·  %s"%[entry.get("group","فرمان"),entry.get("title","")];button.alignment=HORIZONTAL_ALIGNMENT_LEFT;button.custom_minimum_size=Vector2(0,68);button.add_theme_font_size_override("font_size",25);button.tooltip_text=str(entry.get("description","")) if bool(SettingsManager.get_value("tooltips_enabled",true)) else "";button.pressed.connect(_choose.bind(str(entry.get("kind","")),str(entry.get("id",""))));results_box.add_child(button)
 	empty_label.visible = shown == 0
 
 func _on_submit(_text:String):

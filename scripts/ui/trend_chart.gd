@@ -32,10 +32,10 @@ func _draw():
 	for i in range(5):
 		var y = _plot.position.y + _plot.size.y * float(i) / 4.0
 		draw_line(Vector2(_plot.position.x, y), Vector2(_plot.end.x, y), Color(0.35, 0.62, 0.70, 0.18), 1.0)
-		draw_string(PersianFont, Vector2(8, y + 5), "%s٪" % _fa(str(100-i*25)), HORIZONTAL_ALIGNMENT_LEFT, 45, 12, Color(0.57,0.70,0.77))
+		draw_string(PersianFont, Vector2(8, y + 5), "%s٪" % _fa(str(100-i*25)), HORIZONTAL_ALIGNMENT_LEFT, 52, 18, Color(0.57,0.70,0.77))
 	draw_rect(_plot,Color(0.25,0.68,0.75,0.58),false,1.2)
 	if history.size()<2:
-		draw_string(PersianFont,_plot.get_center()+Vector2(-145,4),"نمودار پس از نخستین ماه شکل می‌گیرد",HORIZONTAL_ALIGNMENT_CENTER,290,16,Color(0.76,0.84,0.88));_draw_legend();return
+		draw_string(PersianFont,_plot.get_center()+Vector2(-145,4),"نمودار پس از نخستین ماه شکل می‌گیرد",HORIZONTAL_ALIGNMENT_CENTER,360,23,Color(0.76,0.84,0.88));_draw_legend();return
 	for definition in SERIES:
 		var points:=PackedVector2Array()
 		for i in range(history.size()):
@@ -55,18 +55,18 @@ func _draw_hover_card(x:float):
 	var title=str(record.get("label",record.get("month_name","ماه %s"%_fa(str(hovered_index+1)))))
 	var values=[]
 	for definition in SERIES:values.append("%s %s٪"%[definition.name,_fa(str(int(_normalized_value(str(definition.key),record.get(definition.key,0))*100)))])
-	draw_string(PersianFont,pos+Vector2(8,21),title+" · "+" | ".join(values),HORIZONTAL_ALIGNMENT_LEFT,width-16,11,Color(0.94,0.98,1.0))
+	draw_string(PersianFont,pos+Vector2(8,21),title+" · "+" | ".join(values),HORIZONTAL_ALIGNMENT_LEFT,width-16,16,Color(0.94,0.98,1.0))
 
 func _draw_axis_dates():
 	if history.is_empty():return
 	var first=str(history[0].get("label","شروع"));var last=str(history[-1].get("label","اکنون"))
-	draw_string(PersianFont,Vector2(_plot.position.x,_plot.end.y+20),first,HORIZONTAL_ALIGNMENT_LEFT,120,11,Color(0.53,0.66,0.73))
-	draw_string(PersianFont,Vector2(_plot.end.x-120,_plot.end.y+20),last,HORIZONTAL_ALIGNMENT_RIGHT,120,11,Color(0.53,0.66,0.73))
+	draw_string(PersianFont,Vector2(_plot.position.x,_plot.end.y+20),first,HORIZONTAL_ALIGNMENT_LEFT,160,17,Color(0.53,0.66,0.73))
+	draw_string(PersianFont,Vector2(_plot.end.x-120,_plot.end.y+20),last,HORIZONTAL_ALIGNMENT_RIGHT,160,17,Color(0.53,0.66,0.73))
 
 func _draw_legend():
 	var legend_x=_plot.position.x
 	for definition in SERIES:
-		draw_circle(Vector2(legend_x+6,size.y-22),5.0,definition.color);draw_string(PersianFont,Vector2(legend_x+16,size.y-16),str(definition.name),HORIZONTAL_ALIGNMENT_LEFT,105,13,Color.WHITE);legend_x+=125
+		draw_circle(Vector2(legend_x+6,size.y-22),5.0,definition.color);draw_string(PersianFont,Vector2(legend_x+16,size.y-16),str(definition.name),HORIZONTAL_ALIGNMENT_LEFT,125,19,Color.WHITE);legend_x+=125
 
 func _gui_input(event):
 	if history.size()<2:return

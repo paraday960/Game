@@ -48,6 +48,13 @@ func _init():
 		var iran_point = unified_map._geo_point(float(iran_profile.get("lon",0)),float(iran_profile.get("lat",0)))
 		if unified_map._country_at(iran_point) != "IRN": fails.append("انتخاب کشور روی نقشه واحد شکست خورد")
 		unified_map.focus_country("IRN"); await process_frame
+		# Pinch واقعی: بازشدن فاصله دو انگشت باید زوم را افزایش دهد.
+		var pinch_before=unified_map.zoom_level
+		var p1=InputEventScreenTouch.new();p1.index=0;p1.position=Vector2(320,360);p1.pressed=true;unified_map._gui_input(p1)
+		var p2=InputEventScreenTouch.new();p2.index=1;p2.position=Vector2(700,360);p2.pressed=true;unified_map._gui_input(p2)
+		var pd=InputEventScreenDrag.new();pd.index=0;pd.position=Vector2(250,360);pd.relative=Vector2(-70,0);unified_map._gui_input(pd)
+		p1.pressed=false;p1.position=Vector2(250,360);unified_map._gui_input(p1);p2.pressed=false;unified_map._gui_input(p2)
+		if unified_map.zoom_level<=pinch_before:fails.append("Pinch دو‌انگشتی نقشه را زوم نکرد")
 		for layer in ["political","relations","population","economy","infrastructure","satisfaction","security","weather","resources","military"]:
 			unified_map.set_base_layer(layer)
 			await process_frame
@@ -56,7 +63,7 @@ func _init():
 		var persistent_map_id=unified_map.get_instance_id();scene._on_unified_country_selected("TUR");await process_frame;await process_frame
 		if scene.current_unified_map.get_instance_id()!=persistent_map_id:fails.append("نقشه هنگام انتخاب کشور بی‌دلیل بازسازی شد")
 		if scene.map_context_host==null or scene.map_context_host.get_child_count()==0:fails.append("پنل زمینه‌ای پایدار نقشه خالی است")
-		print("  ✓ unified map: continuous zoom + 10 lenses + persistent context")
+		print("  ✓ unified map: manual two-finger pinch + 10 lenses + persistent context")
 	# فرمان سریع باید همه ۱۱ بخش، ۶۵ سامانه و ۱۹۵ کشور را جست‌وجو کند.
 	if scene.command_palette==null or scene.command_palette.entries.size()<271:fails.append("فرمان سریع پوشش کامل ندارد")
 	else:
@@ -75,6 +82,14 @@ func _init():
 	var original_size=scene.size;scene.size=Vector2(700,1600);scene._apply_responsive_layout()
 	if scene.status_grid.columns!=2 or scene.map_overlay_grid.columns!=3:fails.append("چیدمان واکنش‌گرای موبایل فعال نشد")
 	scene.size=original_size;scene._apply_responsive_layout();print("  ✓ responsive command center: 2-column mobile adaptation")
+	# ScrollContainer سفارشی باید با کشیدن انگشت واقعاً جابه‌جا شود.
+	var touch_scroll=load("res://scripts/ui/touch_scroll_container.gd").new();touch_scroll.size=Vector2(420,420);touch_scroll.custom_minimum_size=Vector2(420,420);root.add_child(touch_scroll)
+	var tall=VBoxContainer.new();tall.custom_minimum_size=Vector2(400,1400);touch_scroll.add_child(tall);await process_frame
+	var scroll_press=InputEventScreenTouch.new();scroll_press.index=7;scroll_press.position=touch_scroll.get_global_rect().position+Vector2(100,250);scroll_press.pressed=true;touch_scroll._input(scroll_press)
+	var scroll_drag=InputEventScreenDrag.new();scroll_drag.index=7;scroll_drag.position=scroll_press.position+Vector2(0,-180);scroll_drag.relative=Vector2(0,-180);touch_scroll._input(scroll_drag)
+	scroll_press.pressed=false;scroll_press.position=scroll_drag.position;touch_scroll._input(scroll_press)
+	if touch_scroll.scroll_vertical<=0:fails.append("اسکرول با Drag انگشت حرکت نکرد")
+	touch_scroll.queue_free();print("  ✓ finger drag scrolling + inertia")
 	# بازکردن صفحه جزئیات تک‌تک ۶۵ سامانه
 	var engine = root.get_node("GameEngine")
 	var inspected = 0

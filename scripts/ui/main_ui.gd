@@ -7,6 +7,7 @@ const UnifiedMapClass = preload("res://scripts/ui/unified_map.gd")
 const CommandBackgroundClass = preload("res://scripts/ui/command_background.gd")
 const CommandPaletteClass = preload("res://scripts/ui/command_palette.gd")
 const ToastStackClass = preload("res://scripts/ui/toast_stack.gd")
+const TouchScrollClass = preload("res://scripts/ui/touch_scroll_container.gd")
 const TrendChartClass = preload("res://scripts/ui/trend_chart.gd")
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 
@@ -194,33 +195,33 @@ func _build_chrome():
 	root.add_child(command_panel)
 	var command_box = VBoxContainer.new(); command_box.add_theme_constant_override("separation", 7); command_panel.add_child(command_box)
 	var identity_row = HBoxContainer.new(); identity_row.add_theme_constant_override("separation", 12); command_box.add_child(identity_row)
-	var emblem = Label.new(); emblem.text = "◆"; emblem.add_theme_font_size_override("font_size", 30); emblem.modulate = Color(0.22,0.86,0.92); identity_row.add_child(emblem)
+	var emblem = Label.new(); emblem.text = "◆"; emblem.add_theme_font_size_override("font_size", 40); emblem.modulate = Color(0.22,0.86,0.92); identity_row.add_child(emblem)
 	header_title = Label.new()
 	header_title.text = "مرکز فرماندهی ملی"
 	header_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header_title.add_theme_font_size_override("font_size", 25)
+	header_title.add_theme_font_size_override("font_size", 34)
 	identity_row.add_child(header_title)
-	var quick_command = Button.new(); quick_command.text = "فرمان سریع"; quick_command.tooltip_text = "جست‌وجوی همه بخش‌ها، سامانه‌ها و کشورها (Ctrl+K)"; quick_command.custom_minimum_size=Vector2(132,42); quick_command.pressed.connect(_open_command_palette); identity_row.add_child(quick_command)
-	date_lbl = Label.new(); date_lbl.add_theme_font_size_override("font_size", 16); date_lbl.modulate = Color(0.72,0.84,0.90); identity_row.add_child(date_lbl)
+	var quick_command = Button.new(); quick_command.text = "فرمان سریع"; quick_command.tooltip_text = "جست‌وجوی همه بخش‌ها، سامانه‌ها و کشورها (Ctrl+K)"; quick_command.custom_minimum_size=Vector2(185,62); quick_command.add_theme_font_size_override("font_size",24);quick_command.pressed.connect(_open_command_palette); identity_row.add_child(quick_command)
+	date_lbl = Label.new(); date_lbl.add_theme_font_size_override("font_size", 23); date_lbl.modulate = Color(0.72,0.84,0.90); identity_row.add_child(date_lbl)
 
 	status_grid = GridContainer.new(); status_grid.columns = 4; status_grid.add_theme_constant_override("h_separation", 8); status_grid.add_theme_constant_override("v_separation",6); command_box.add_child(status_grid)
 	gdp_status_lbl = _status_chip(status_grid, "اقتصاد", Color(0.24,0.88,0.54),"economy")
 	approval_status_lbl = _status_chip(status_grid, "رضایت", Color(0.25,0.78,1.0),"population")
 	stability_status_lbl = _status_chip(status_grid, "ثبات", Color(1.0,0.73,0.24),"government")
 	alert_status_lbl = _status_chip(status_grid, "هشدارها", Color(1.0,0.36,0.32),"dashboard")
-	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 13); engagement_lbl.modulate = Color(0.61,0.73,0.80); command_box.add_child(engagement_lbl)
+	engagement_lbl = Label.new(); engagement_lbl.add_theme_font_size_override("font_size", 19); engagement_lbl.modulate = Color(0.61,0.73,0.80); command_box.add_child(engagement_lbl)
 
 	# ناوبری افقی قابل اسکرول؛ در موبایل هیچ گزینه‌ای بریده نمی‌شود.
 	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavPanel"; root.add_child(nav_panel)
-	var nav_scroll = ScrollContainer.new(); nav_scroll.custom_minimum_size = Vector2(0,52); nav_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; nav_panel.add_child(nav_scroll)
+	var nav_scroll = TouchScrollClass.new(); nav_scroll.allow_vertical=false;nav_scroll.allow_horizontal=true;nav_scroll.custom_minimum_size = Vector2(0,76); nav_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; nav_panel.add_child(nav_scroll)
 	var tabs_hbox = HBoxContainer.new(); tabs_hbox.add_theme_constant_override("separation", 6); nav_scroll.add_child(tabs_hbox)
 	for tab_def in TABS:
 		var key = tab_def[0]
-		var btn = Button.new(); btn.text = tab_def[1]; btn.custom_minimum_size = Vector2(118,44); btn.add_theme_font_size_override("font_size",15)
+		var btn = Button.new(); btn.text = tab_def[1]; btn.custom_minimum_size = Vector2(174,64); btn.add_theme_font_size_override("font_size",23)
 		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_switch_tab.bind(key)); tabs_hbox.add_child(btn); tab_buttons[key] = btn
 
 	# محتوای اصلی؛ نقشه و پنل‌های مدیریتی از همین فضای مشترک استفاده می‌کنند.
-	content_scroll = ScrollContainer.new(); content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(content_scroll)
+	content_scroll = TouchScrollClass.new(); content_scroll.allow_vertical=true;content_scroll.allow_horizontal=false;content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(content_scroll)
 	content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; content.add_theme_constant_override("separation", 10); content_scroll.add_child(content)
 
 	# Label پنهان فقط برای سازگاری تست/کد قدیمی؛ اعلان واقعی در ToastStack نمایش داده می‌شود.
@@ -234,7 +235,7 @@ func _build_chrome():
 
 	# داک عملیات پرتکرار؛ تصمیم اصلی برجسته و بقیه ثانویه‌اند.
 	var footer_panel = PanelContainer.new(); footer_panel.theme_type_variation = "DockPanel"; root.add_child(footer_panel)
-	var footer_scroll = ScrollContainer.new(); footer_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; footer_scroll.custom_minimum_size = Vector2(0,58); footer_panel.add_child(footer_scroll)
+	var footer_scroll = TouchScrollClass.new();footer_scroll.allow_vertical=false;footer_scroll.allow_horizontal=true; footer_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; footer_scroll.custom_minimum_size = Vector2(0,78); footer_panel.add_child(footer_scroll)
 	var footer = HBoxContainer.new(); footer.add_theme_constant_override("separation",7); footer_scroll.add_child(footer)
 	_mk_btn(footer, "اجرای ماه بعد", Vector2(174,50), _on_next_tick_pressed, "PrimaryAction")
 	_mk_btn(footer, "خودکار: خاموش", Vector2(160,50), _on_auto_pressed, "AutoBtn")
@@ -250,10 +251,10 @@ func _build_professional_theme() -> Theme:
 	var result = Theme.new()
 	var compact = str(SettingsManager.get_value("ui_density","comfortable")) == "compact"
 	var high_contrast = bool(SettingsManager.get_value("high_contrast",false))
-	var padding = 9 if compact else 14
-	var button_padding = 7 if compact else 9
+	var padding = 15 if compact else 20
+	var button_padding = 12 if compact else 16
 	result.default_font = PersianFont
-	result.default_font_size = int((16.0 if compact else 17.0) * float(SettingsManager.get_value("text_scale", 1.0)))
+	result.default_font_size = int((24.0 if compact else 28.0) * float(SettingsManager.get_value("text_scale", 1.0)))
 	result.set_color("font_color", "Label", Color.WHITE if high_contrast else Color(0.88,0.93,0.96))
 	result.set_color("font_shadow_color", "Label", Color(0.0,0.0,0.0,0.42))
 	result.set_constant("shadow_offset_x", "Label", 1); result.set_constant("shadow_offset_y", "Label", 1)
@@ -292,8 +293,8 @@ func _style_box(background: Color, border: Color, radius: int, width: int, paddi
 func _status_chip(parent: Control, title_text: String, accent: Color, target_tab:String) -> Label:
 	var panel = PanelContainer.new(); panel.theme_type_variation = "StatusChip"; panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL;panel.mouse_filter=Control.MOUSE_FILTER_STOP;panel.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND;panel.tooltip_text="بازکردن "+title_text;panel.gui_input.connect(_on_status_chip_input.bind(target_tab)); parent.add_child(panel)
 	var box = VBoxContainer.new(); box.add_theme_constant_override("separation",1); panel.add_child(box)
-	var title = Label.new(); title.text = title_text; title.add_theme_font_size_override("font_size",12); title.modulate = Color(0.58,0.71,0.77); box.add_child(title)
-	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",17); value.modulate = accent;value.mouse_filter=Control.MOUSE_FILTER_IGNORE; box.add_child(value)
+	var title = Label.new(); title.text = title_text; title.add_theme_font_size_override("font_size",18); title.modulate = Color(0.58,0.71,0.77); box.add_child(title)
+	var value = Label.new(); value.text = "—"; value.add_theme_font_size_override("font_size",25); value.modulate = accent;value.mouse_filter=Control.MOUSE_FILTER_IGNORE; box.add_child(value)
 	title.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	return value
 
@@ -326,14 +327,14 @@ func _focus_palette_country(country_id:String):
 
 func _apply_responsive_layout():
 	if not is_instance_valid(chrome_root):return
-	var narrow=size.x<820.0 or float(SettingsManager.get_value("text_scale",1.0))>1.10
+	var narrow=size.x<1200.0 or float(SettingsManager.get_value("text_scale",1.0))>1.10
 	var margin=8.0 if narrow else 16.0
 	chrome_root.offset_left=margin;chrome_root.offset_right=-margin;chrome_root.offset_top=8.0 if narrow else 12.0;chrome_root.offset_bottom=-8.0 if narrow else -12.0
 	if is_instance_valid(status_grid):status_grid.columns=2 if narrow else 4
 	if is_instance_valid(toast_stack):
 		toast_stack.anchor_left=0.06 if narrow else 0.48;toast_stack.anchor_right=0.94 if narrow else 0.98;toast_stack.anchor_top=0.08;toast_stack.anchor_bottom=0.42
 	if is_instance_valid(map_overlay_grid):map_overlay_grid.columns=3 if narrow else 5
-	if is_instance_valid(current_unified_map):current_unified_map.custom_minimum_size.y=560.0 if narrow else 760.0
+	if is_instance_valid(current_unified_map):current_unified_map.custom_minimum_size.y=700.0 if narrow else 820.0
 
 func _apply_tooltip_preferences():
 	var enabled=bool(SettingsManager.get_value("tooltips_enabled",true));_apply_tooltip_recursive(self,enabled)
@@ -367,8 +368,8 @@ func _unhandled_key_input(event:InputEvent):
 func _mk_btn(parent, text, minsize, handler, node_name = ""):
 	var btn = Button.new()
 	btn.text = text
-	btn.custom_minimum_size = minsize
-	btn.add_theme_font_size_override("font_size", 17)
+	btn.custom_minimum_size = Vector2(minsize.x,max(62.0,float(minsize.y)))
+	btn.add_theme_font_size_override("font_size", 25)
 	btn.pressed.connect(FeedbackManager.play_click)
 	btn.pressed.connect(handler)
 	if node_name != "":
@@ -441,7 +442,7 @@ func _switch_tab(tab_key: String):
 func _card(title: String, parent_override = null) -> VBoxContainer:
 	var panel = PanelContainer.new(); panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 5 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 7); panel.add_child(vbox)
-	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 18 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 19); t.modulate = Color(0.91,0.97,0.98); vbox.add_child(t)
+	var t = Label.new(); t.text = title; t.add_theme_font_size_override("font_size", 25 if str(SettingsManager.get_value("ui_density","comfortable"))=="compact" else 29); t.modulate = Color(0.91,0.97,0.98); vbox.add_child(t)
 	var accent = ColorRect.new(); accent.color = Color(0.28,0.70,1.0,0.75) if bool(SettingsManager.get_value("colorblind_palette",false)) else Color(0.18,0.70,0.74,0.66); accent.custom_minimum_size = Vector2(0,2); accent.mouse_filter = Control.MOUSE_FILTER_IGNORE; vbox.add_child(accent)
 	var target = parent_override if parent_override != null and is_instance_valid(parent_override) else content
 	target.add_child(panel)
@@ -453,11 +454,11 @@ func _row(parent, key: String, value: String, value_color = null):
 	var kl = Label.new()
 	kl.text = key
 	kl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	kl.add_theme_font_size_override("font_size", 16)
+	kl.add_theme_font_size_override("font_size", 24)
 	h.add_child(kl)
 	var vl = Label.new()
 	vl.text = value
-	vl.add_theme_font_size_override("font_size", 16)
+	vl.add_theme_font_size_override("font_size", 24)
 	if value_color != null:
 		vl.modulate = value_color
 	h.add_child(vl)
@@ -467,21 +468,21 @@ func _bar(parent, title: String, ratio: float):
 	parent.add_child(h)
 	var lbl = Label.new()
 	lbl.text = title
-	lbl.custom_minimum_size = Vector2(170, 0)
-	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.custom_minimum_size = Vector2(245, 0)
+	lbl.add_theme_font_size_override("font_size", 22)
 	h.add_child(lbl)
 	var bar = ProgressBar.new()
 	bar.min_value = 0
 	bar.max_value = 100
 	bar.value = clamp(ratio * 100.0, 0, 100)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.custom_minimum_size = Vector2(0, 26)
+	bar.custom_minimum_size = Vector2(0, 34)
 	bar.show_percentage = false
 	h.add_child(bar)
 	var pct = Label.new()
 	pct.text = PersianFormatter.to_persian_digits("%d٪" % int(ratio * 100.0))
-	pct.custom_minimum_size = Vector2(70, 0)
-	pct.add_theme_font_size_override("font_size", 15)
+	pct.custom_minimum_size = Vector2(92, 0)
+	pct.add_theme_font_size_override("font_size", 22)
 	pct.modulate = _color_for(ratio)
 	h.add_child(pct)
 
@@ -2085,7 +2086,7 @@ func _render_events():
 	for e in last:
 		var l = Label.new()
 		l.text = "• " + PersianFormatter.to_persian_digits(_event_text_fa(e))
-		l.add_theme_font_size_override("font_size", 14)
+		l.add_theme_font_size_override("font_size", 22)
 		l.modulate = Color(0.85, 0.88, 0.95)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		event_list.add_child(l)

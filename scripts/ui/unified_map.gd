@@ -53,10 +53,15 @@ var _press_position := Vector2.ZERO
 var _dragged := false
 var _drag_active := false
 var _pan_velocity := Vector2.ZERO
+var _touch_points:Dictionary={}
+var _pinch_distance:=0.0
+var _pinch_center:=Vector2.ZERO
+var _ignore_mouse_until_ms:=0
 var _last_tier := ""
 
 func _ready():
-	custom_minimum_size = Vector2(0, 760)
+	custom_minimum_size = Vector2(0, 820)
+	set_meta("block_parent_touch_scroll",true)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_ALL
 	clip_contents = true
@@ -318,7 +323,7 @@ func _draw_hubs():
 			var radius = 3.0 + min(3.0, log(zoom_level + 1.0))
 			draw_circle(point, radius + 2.0, Color(0.01, 0.03, 0.05, 0.92)); draw_circle(point, radius, color)
 			if zoom_level >= 4.0:
-				draw_string(PersianFont, point + Vector2(8, 4), str(hub.get("name_fa", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.84, 0.91, 0.97))
+				draw_string(PersianFont, point + Vector2(8, 4), str(hub.get("name_fa", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(0.84, 0.91, 0.97))
 	if overlays.get("sea", false):
 		for choke in MapLayerManager.get_chokepoints():
 			var point = _geo_point(float(choke.get("lon", 0.0)), float(choke.get("lat", 0.0)))
@@ -335,7 +340,7 @@ func _draw_country_labels():
 		var point = _geo_point(float(profile.get("lon", 0.0)), float(profile.get("lat", 0.0)))
 		if not _viewport.grow(-10).has_point(point): continue
 		var label = str(profile.get("name_fa", code))
-		var font_size = int(clamp(12.0 + log(zoom_level) * 1.8 + strategic * 2.0, 12.0, 18.0))
+		var font_size = int(clamp(20.0 + log(zoom_level) * 2.0 + strategic * 3.0, 20.0, 30.0)*float(SettingsManager.get_value("text_scale",1.0)))
 		var rect = Rect2(point - Vector2(label.length() * font_size * 0.28, font_size), Vector2(max(42.0, label.length() * font_size * 0.58), font_size + 7.0))
 		if _overlaps_any(rect, occupied) and code != player_country and code != selected_country: continue
 		occupied.append(rect)
@@ -349,7 +354,7 @@ func _draw_admin_labels(code: String):
 		var point = _normalized_to_screen(unit.center)
 		if not _viewport.grow(-8).has_point(point): continue
 		var name = str(unit.get("name_fa", ""))
-		var font_size = int(clamp(11.0 + log(zoom_level), 12.0, 17.0))
+		var font_size = int(clamp(18.0 + log(zoom_level)*1.4, 18.0, 26.0)*float(SettingsManager.get_value("text_scale",1.0)))
 		var rect = Rect2(point - Vector2(name.length() * 3.1, 12), Vector2(max(34.0, name.length() * 6.2), 21))
 		if _overlaps_any(rect, occupied) and not unit.get("capital", false) and str(unit.id) != selected_unit: continue
 		occupied.append(rect)
@@ -371,7 +376,7 @@ func _draw_cities(code: String):
 		_city_screen_records.append({"city": city, "point": point, "radius": radius + 8.0})
 		if capital or zoom_level >= DETAIL_ZOOM or index < 4:
 			var label = ("پایتخت · " if capital else "") + str(city.get("name_fa", "شهر"))
-			draw_string(PersianFont, point + Vector2(9, -7), label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(clamp(12 + log(zoom_level), 12, 17)), Color(1.0, 0.91, 0.58) if capital else Color(0.86, 0.92, 0.96))
+			draw_string(PersianFont, point + Vector2(9, -7), label, HORIZONTAL_ALIGNMENT_LEFT, -1, int(clamp(19+log(zoom_level)*1.5,19,27)*float(SettingsManager.get_value("text_scale",1.0))), Color(1.0, 0.91, 0.58) if capital else Color(0.86, 0.92, 0.96))
 
 func _draw_national_network(code: String):
 	var cities = CountryGeographyManager.get_cities(code)
@@ -404,23 +409,23 @@ func _draw_map_hud():
 	var tier = _zoom_tier()
 	if tier != _last_tier:
 		_last_tier = tier; emit_signal("zoom_tier_changed", tier)
-	var panel = Rect2(14, 14, 235, 62)
-	draw_rect(panel, Color(0.006, 0.022, 0.039, 0.90), true)
-	draw_rect(panel, Color(0.25, 0.69, 0.78, 0.55), false, 1.0)
-	draw_string(PersianFont, Vector2(26, 38), tier, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.90, 0.96, 0.98))
-	draw_string(PersianFont, Vector2(26, 61), "بزرگ‌نمایی ×" + PersianFormatter.to_persian_digits("%.1f" % zoom_level), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.58, 0.77, 0.84))
+	var panel = Rect2(14, 14, 320, 92)
+	draw_rect(panel, Color(0.006, 0.022, 0.039, 0.92), true)
+	draw_rect(panel, Color(0.25, 0.69, 0.78, 0.62), false, 1.5)
+	draw_string(PersianFont, Vector2(28, 50), tier, HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color(0.90, 0.96, 0.98))
+	draw_string(PersianFont, Vector2(28, 80), "بزرگ‌نمایی ×" + PersianFormatter.to_persian_digits("%.1f" % zoom_level), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.64, 0.80, 0.86))
 	var scale_km = _nice_scale_km()
 	var scale_pixels = float(scale_km) / 40075.0 * 2.0 * _base_scale * zoom_level
 	var scale_y = size.y - 26.0
 	draw_line(Vector2(20, scale_y), Vector2(20 + scale_pixels, scale_y), Color.WHITE, 2.0)
 	draw_line(Vector2(20, scale_y - 5), Vector2(20, scale_y + 2), Color.WHITE, 1.5)
 	draw_line(Vector2(20 + scale_pixels, scale_y - 5), Vector2(20 + scale_pixels, scale_y + 2), Color.WHITE, 1.5)
-	draw_string(PersianFont, Vector2(22, scale_y - 8), PersianFormatter.to_persian_digits(str(scale_km)) + " کیلومتر", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.84, 0.91, 0.95))
+	draw_string(PersianFont, Vector2(22, scale_y - 10), PersianFormatter.to_persian_digits(str(scale_km)) + " کیلومتر", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.84, 0.91, 0.95))
 	var layer_label = _layer_name(base_layer)
-	var width = max(150.0, layer_label.length() * 9.0 + 32.0)
-	var layer_panel = Rect2(size.x - width - 14, 14, width, 36)
-	draw_rect(layer_panel, Color(0.006, 0.022, 0.039, 0.90), true)
-	draw_string(PersianFont, layer_panel.position + Vector2(14, 24), "لایه · " + layer_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.81, 0.30))
+	var width = max(205.0, layer_label.length() * 13.0 + 42.0)
+	var layer_panel = Rect2(size.x - width - 14, 14, width, 52)
+	draw_rect(layer_panel, Color(0.006, 0.022, 0.039, 0.92), true)
+	draw_string(PersianFont, layer_panel.position + Vector2(16, 35), "لایه · " + layer_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color(1.0, 0.81, 0.30))
 
 func _draw_tooltip():
 	var text := ""
@@ -437,15 +442,16 @@ func _draw_tooltip():
 		text = "%s | پایتخت %s | جمعیت %s | GDP %s" % [profile.get("name_fa", hovered_country), profile.get("capital_fa", ""), PersianFormatter.format_large(float(profile.get("population", 0))), PersianFormatter.format_money(float(profile.get("gdp", 0)))]
 	if text == "": return
 	var mouse = get_local_mouse_position() + Vector2(14, -14)
-	var width = min(600.0, max(220.0, 70.0 + text.length() * 7.0))
+	var width = min(820.0, max(300.0, 90.0 + text.length() * 10.5))
 	if mouse.x + width > size.x: mouse.x -= width + 28.0
-	if mouse.y < 42: mouse.y += 56
-	var rect = Rect2(mouse - Vector2(7, 23), Vector2(width, 37))
-	draw_rect(rect, Color(0.004, 0.017, 0.030, 0.97), true)
-	draw_rect(rect, Color(0.29, 0.76, 0.84, 0.58), false, 1.0)
-	draw_string(PersianFont, mouse, text, HORIZONTAL_ALIGNMENT_LEFT, width - 12, 14, Color.WHITE)
+	if mouse.y < 58: mouse.y += 72
+	var rect = Rect2(mouse - Vector2(10, 32), Vector2(width, 52))
+	draw_rect(rect, Color(0.004, 0.017, 0.030, 0.98), true)
+	draw_rect(rect, Color(0.29, 0.76, 0.84, 0.68), false, 1.5)
+	draw_string(PersianFont, mouse, text, HORIZONTAL_ALIGNMENT_LEFT, width - 18, 21, Color.WHITE)
 
 func _gui_input(event):
+	if (event is InputEventMouseButton or event is InputEventMouseMotion) and Time.get_ticks_msec()<_ignore_mouse_until_ms:return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			_zoom_at(event.position, zoom_level * 1.32); accept_event(); return
@@ -465,16 +471,30 @@ func _gui_input(event):
 		else:
 			_update_hover(event.position)
 	elif event is InputEventScreenTouch:
+		_ignore_mouse_until_ms=Time.get_ticks_msec()+350
 		if event.pressed:
-			_press_position=event.position;_dragged=false;_drag_active=true;_pan_velocity=Vector2.ZERO
+			_touch_points[event.index]=event.position;_pan_velocity=Vector2.ZERO
+			if _touch_points.size()==1:_press_position=event.position;_dragged=false;_drag_active=true
+			elif _touch_points.size()>=2:_dragged=true;_drag_active=true;_reset_pinch_reference()
 		else:
-			_drag_active=false
-			if not _dragged:_handle_selection(event.position,event.double_tap)
+			var was_pinching=_touch_points.size()>=2
+			_touch_points.erase(event.index)
+			if _touch_points.is_empty():
+				_drag_active=false
+				if not _dragged and not was_pinching:_handle_selection(event.position,event.double_tap)
+			elif _touch_points.size()==1:
+				var remaining:Vector2=_touch_points.values()[0];_press_position=remaining;_pinch_distance=0.0;_dragged=true
 	elif event is InputEventScreenDrag:
-		if event.position.distance_to(_press_position)>8.0:_dragged=true
-		_pan_velocity=event.relative*42.0;_pan_pixels(event.relative)
+		_ignore_mouse_until_ms=Time.get_ticks_msec()+350
+		if not _touch_points.has(event.index):return
+		_touch_points[event.index]=event.position
+		if _touch_points.size()>=2:
+			_handle_manual_pinch()
+		else:
+			if event.position.distance_to(_press_position)>8.0:_dragged=true
+			_pan_velocity=event.relative*42.0;_pan_pixels(event.relative)
 	elif event is InputEventMagnifyGesture:
-		_zoom_at(event.position, zoom_level * event.factor)
+		if _touch_points.size()<2:_zoom_at(event.position,zoom_level*event.factor)
 	elif event is InputEventPanGesture:
 		_pan_pixels(-event.delta * 18.0)
 	elif event is InputEventKey and event.pressed:
@@ -514,6 +534,21 @@ func _update_hover(position: Vector2):
 		hovered_city = next_city; hovered_unit = next_unit; hovered_route = next_route; hovered_country = next_country
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not next_city.is_empty() or next_unit != "" or not next_route.is_empty() or next_country != "" else Control.CURSOR_ARROW
 		queue_redraw()
+
+func _reset_pinch_reference():
+	if _touch_points.size()<2:return
+	var points:Array=_touch_points.values();var a:Vector2=points[0];var b:Vector2=points[1]
+	_pinch_distance=max(1.0,a.distance_to(b));_pinch_center=(a+b)*0.5
+
+func _handle_manual_pinch():
+	var points:Array=_touch_points.values();if points.size()<2:return
+	var a:Vector2=points[0];var b:Vector2=points[1];var new_distance=max(1.0,a.distance_to(b));var new_center=(a+b)*0.5
+	if _pinch_distance>0.0:
+		var factor=clamp(new_distance/_pinch_distance,0.72,1.38)
+		if abs(factor-1.0)>0.002:_zoom_at(new_center,zoom_level*factor)
+		var center_delta=new_center-_pinch_center
+		if center_delta.length()>0.1:_pan_pixels(center_delta)
+	_pinch_distance=new_distance;_pinch_center=new_center;_dragged=true;_pan_velocity=Vector2.ZERO
 
 func _process(delta:float):
 	if _drag_active or bool(SettingsManager.get_value("reduce_motion",false)) or _pan_velocity.length()<4.0:return

@@ -4,7 +4,7 @@ extends Node
 const SETTINGS_PATH = "user://settings.json"
 const SPEEDS = [2.0, 1.0, 0.5, 0.25]
 const SPEED_LABELS = ["۰٫۵×", "۱×", "۲×", "۴×"]
-const TEXT_SCALES = [0.90, 1.0, 1.15, 1.30]
+const TEXT_SCALES = [1.0, 1.15, 1.30, 1.50]
 const UI_DENSITIES = ["comfortable", "compact"]
 const DEFAULTS = {
 	"auto_tick_interval": 1.0,
