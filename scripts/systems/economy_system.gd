@@ -49,11 +49,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	econ["government_spending"] = spending
 
 	# د) کسری/مازاد و بدهی
+	# درآمد و هزینه در مقیاس «ماهانه» تعریف شده‌اند؛ بدهی باید متناسبِ روزانه تغییر کند
+	# و مازاد واقعی نیز بدهی را کم کند (قبلاً مازاد هرگز بدهی را نمی‌کاست).
+	var days_in_month = max(float(BalanceConfig.get_value("simulation.days_per_month", 30)), 1.0)
 	var surplus = econ["government_revenue"] - econ["government_spending"]
-	econ["deficit"] = -surplus if surplus < 0 else 0
+	# قرارداد واحد در کل پروژه: deficit مثبت یعنی کسری، صفر یعنی تراز یا مازاد
+	econ["deficit"] = max(-surplus, 0.0)
 	var interest = econ["national_debt"] * float(BalanceConfig.get_value("economy.debt_interest", 0.03)) / 365.0
-	econ["national_debt"] += -surplus + interest if surplus < 0 else interest
-	econ["national_debt"] = max(econ["national_debt"], 0.0)
+	econ["national_debt"] = max(econ["national_debt"] - surplus / days_in_month + interest, 0.0)
 	econ["debt_to_gdp"] = econ["national_debt"] / max(econ["gdp"], 1.0)
 
 	# قانون سقف بدهی - ۲۰۰٪ GDP
@@ -67,17 +70,19 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# تورم با چاپ پول و کسری بالا می‌رود
 	var money_supply_effect = central_bank["money_supply"] - 1.0
 	var demand_pull = real_growth * 0.5
-	econ["inflation"] += (money_supply_effect * 0.01 + demand_pull * 0.01 - 0.001)
+	# این تغییرات در مقیاس ماهانه تعریف شده‌اند؛ در هر روز داخلی ماه باید به نرخ روزانه اعمال شوند
+	# (قبلاً روزانه اعمال می‌شدند و تورم در چند روز به سقف/کف محدوده می‌چسبید).
+	econ["inflation"] += (money_supply_effect * 0.01 + demand_pull * 0.01 - 0.001) / days_in_month
 	econ["inflation"] = clamp(econ["inflation"], -0.02, 0.30)
 
-	# منحنی فیلیپس ساده
+	# منحنی فیلیپس ساده - اثر ماهانه تقسیم بر روزهای ماه
 	if econ["unemployment"] < 0.05:
-		econ["inflation"] += 0.005
+		econ["inflation"] += 0.005 / days_in_month
 	elif econ["unemployment"] > 0.10:
-		econ["inflation"] -= 0.003
+		econ["inflation"] -= 0.003 / days_in_month
 
-	# بیکاری
-	econ["unemployment"] += (-real_growth * 0.5 + Deterministic.next_range(-0.001, 0.001))
+	# بیکاری - چرخه کار در مقیاس ماهانه است و روزانه اعمال می‌شود
+	econ["unemployment"] += (-real_growth * 0.5 + Deterministic.next_range(-0.0005, 0.0005)) / days_in_month
 	econ["unemployment"] = clamp(econ["unemployment"], 0.02, 0.35)
 
 	# و) تجارت
