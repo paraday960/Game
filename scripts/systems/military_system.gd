@@ -201,7 +201,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# قطعات یدکی - فرسایش با سن تجهیزات
 	logistics["spare_parts"] = clamp(logistics["spare_parts"] - equipment["avg_age_years"]*0.001 - consumption_mult*0.002 + prod_capacity*0.01, 10.0, 100.0)
 	equipment["operational_rate"] = clamp(0.40 + logistics["spare_parts"]/100.0*0.40 + (1.0 - equipment["maintenance_backlog"])*0.20, 0.20, 0.95)
-	equipment["maintenance_backlog"] = clamp(equipment["maintenance_backlog"] + consumption_mult*0.001 - budget_share*0.002, 0.05, 0.70)
+	equipment["maintenance_backlog"] = clamp(equipment["maintenance_backlog"] + consumption_mult*0.001 - float(state.get("economy",{}).get("budget_allocations",{}).get("ارتش",0.12))*0.002, 0.05, 0.70)
 	equipment["avg_age_years"] += 1.0/365.0
 
 	# خطوط تدارکات - آسیب‌پذیری در برابر پهپاد و پارتیزان
@@ -259,7 +259,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# C4ISR با فناوری دیجیتال و ماهواره و آموزش
 	var sat_recon = float(equipment["satellites_recon"])
-	var c4isr_target = digital*0.35 + tech.get("branches",{}).get("صنعت",0.20)*0.15 + personnel["training_level"]*0.20 + sat_recon*0.05 + 0.25
+	var c4isr_target = float(state.get("technology",{}).get("branches",{}).get("دیجیتال",0.20))*0.35 + tech.get("branches",{}).get("صنعت",0.20)*0.15 + personnel["training_level"]*0.20 + sat_recon*0.05 + 0.25
 	command["c4isr_level"] = clamp(command["c4isr_level"]*0.97 + c4isr_target*0.03, 0.15, 0.97)
 
 	# جنگ الکترونیک - تجهیزات + سایبر
@@ -270,7 +270,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# عملیات مشترک - ستاد کل
 	command["joint_operations"] = clamp(command["joint_operations"]*0.992 + (command["c4isr_level"]*0.4 + personnel["leadership_quality"]*0.3 + 0.3)*0.008, 0.15, 0.95)
-	command["general_staff_quality"] = clamp(command["general_staff_quality"] + personnel["experience"]*0.0002 + edu.get("quality",0.55)*0.0001, 0.20, 0.95)
+	command["general_staff_quality"] = clamp(command["general_staff_quality"] + personnel["experience"]*0.0002 + state.get("education",{}).get("quality",0.55)*0.0001, 0.20, 0.95)
 
 	# چرخه تصمیم OODA - کوتاه‌تر بهتر (آمریکا ~12 ساعت، روسیه ~24-48)
 	command["decision_cycle"] = 48.0 - command["c4isr_level"]*20.0 - command["general_staff_quality"]*10.0 - personnel["training_level"]*5.0
@@ -390,7 +390,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if is_at_war:
 		info_war["propaganda_level"] = clamp(info_war["propaganda_level"] + 0.005, 0.20, 0.95)
 		info_war["censorship"] = clamp(info_war["censorship"] + 0.003, 0.10, 0.90)
-		info_war["public_support_war"] = clamp(info_war["public_support_war"] + (happiness*0.1 + pol.get("trust",0.55)*0.1 - mil["war_exhaustion"]*0.15) - 0.02, 0.10, 0.90)
+		info_war["public_support_war"] = clamp(info_war["public_support_war"] + (float(state.get("population",{}).get("happiness",0.60))*0.1 + pol.get("trust",0.55)*0.1 - mil["war_exhaustion"]*0.15) - 0.02, 0.10, 0.90)
 		info_war["cyber_attacks_daily"] = 5.0 + float(equipment["cyber_units"])*1.5 + command["ew_capability"]*5.0
 		info_war["electronic_warfare_success"] = clamp(command["ew_capability"]*0.6 + float(equipment["ew_systems"])/40.0*0.3 + 0.1, 0.10, 0.95)
 		if info_war["public_support_war"] < 0.35 and Deterministic.chance(0.012):

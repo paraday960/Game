@@ -49,7 +49,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ترس = تنش + ناامنی + بحران غذا/انرژی + فساد
 	var food_crisis = state.get("resources",{}).get("food_crisis", false)
 	var energy_crisis = state.get("resources",{}).get("energy_crisis", false)
-	var fear_target = tension*0.35 + (1.0 - security.get("public_security",0.70))*0.25 + (food_crisis and 0.20 or 0.0) + (energy_crisis and 0.10 or 0.0) + 0.10
+	var fear_target = tension*0.35 + (1.0 - security.get("public_security",0.70))*0.25 + (0.20 if food_crisis else 0.0) + (0.10 if energy_crisis else 0.0) + 0.10
 	human["fear"] = clamp(human["fear"]*0.92 + fear_target*0.08, 0.03, 0.95)
 
 	# خشم = ناشادی + تنش + فساد + فقر
@@ -127,7 +127,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	
 	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
 	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("human_states", {}) if state.has("human_states") else sys if 'sys' in locals() else {}
+	var _sys_extra = state.get("human_states", {})
 	var _econ_extra = state.get("economy", {})
 	var _pop_extra = state.get("population", {})
 	var _pol_extra = state.get("politics", {})
@@ -217,12 +217,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var _extra_tech = state.get("technology",{})
 	var _extra_culture = state.get("culture",{})
 
-	var _trust = float(_extra_politics.get("trust",0.55))
-	var _corruption = float(_extra_politics.get("corruption",0.30))
-	var _stability = float(_extra_politics.get("stability",0.60))
-	var _happiness = float(_extra_pop.get("happiness",0.60))
-	var _gini = float(state.get("welfare",{}).get("gini",0.38))
-	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	_trust = float(_extra_politics.get("trust",0.55))
+	_corruption = float(_extra_politics.get("corruption",0.30))
+	_stability = float(_extra_politics.get("stability",0.60))
+	_happiness = float(_extra_pop.get("happiness",0.60))
+	_gini = float(state.get("welfare",{}).get("gini",0.38))
+	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
 	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
 
 	# اثر اعتماد بر کارآمدی
@@ -252,30 +252,30 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type":"low_social_capital_human_states","capital": _social_capital, "message":"سرمایه اجتماعی پایین در human_states"})
 
 	# اثر تورمی بر هزینه نگهداری
-	var _inflation = float(_extra_econ.get("inflation",0.08))
+	_inflation = float(_extra_econ.get("inflation",0.08))
 	if state.has("human_states") and state["human_states"] is Dictionary and state["human_states"].has("maintenance_cost"):
 		state["human_states"]["maintenance_cost"] = float(state["human_states"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
 
 
 	
 	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
+	_extra_politics = state.get("politics",{})
+	_extra_econ = state.get("economy",{})
+	_extra_pop = state.get("population",{})
+	_extra_env = state.get("environment",{})
+	_extra_tech = state.get("technology",{})
+	_extra_culture = state.get("culture",{})
 
-	var _trust = float(_extra_politics.get("trust",0.55))
-	var _corruption = float(_extra_politics.get("corruption",0.30))
-	var _stability = float(_extra_politics.get("stability",0.60))
-	var _happiness = float(_extra_pop.get("happiness",0.60))
-	var _gini = float(state.get("welfare",{}).get("gini",0.38))
-	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
+	_trust = float(_extra_politics.get("trust",0.55))
+	_corruption = float(_extra_politics.get("corruption",0.30))
+	_stability = float(_extra_politics.get("stability",0.60))
+	_happiness = float(_extra_pop.get("happiness",0.60))
+	_gini = float(state.get("welfare",{}).get("gini",0.38))
+	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	_green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
 
 	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
+	_sys_q = 0.60
 	if state.has("human_states") and state["human_states"] is Dictionary:
 		_sys_q = float(state["human_states"].get("quality",0.60) if state["human_states"].has("quality") else state["human_states"].get("efficiency",0.60) if state["human_states"].has("efficiency") else 0.60)
 	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
@@ -291,40 +291,40 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type":"dual_use_tech_human_states","digital": _digital, "message":"فناوری دوگانه در human_states - کاربرد نظامی و غیرنظامی"})
 
 	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
+	_climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
 	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
 		events.append({"type":"climate_vulnerability_human_states","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی human_states"})
 
 	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
+	_social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
 	if _social_capital < 0.40 and Deterministic.chance(0.006):
 		events.append({"type":"low_social_capital_human_states","capital": _social_capital, "message":"سرمایه اجتماعی پایین در human_states"})
 
 	# اثر تورمی بر هزینه نگهداری
-	var _inflation = float(_extra_econ.get("inflation",0.08))
+	_inflation = float(_extra_econ.get("inflation",0.08))
 	if state.has("human_states") and state["human_states"] is Dictionary and state["human_states"].has("maintenance_cost"):
 		state["human_states"]["maintenance_cost"] = float(state["human_states"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
 
 
 	
 	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
+	_extra_politics = state.get("politics",{})
+	_extra_econ = state.get("economy",{})
+	_extra_pop = state.get("population",{})
+	_extra_env = state.get("environment",{})
+	_extra_tech = state.get("technology",{})
+	_extra_culture = state.get("culture",{})
 
-	var _trust = float(_extra_politics.get("trust",0.55))
-	var _corruption = float(_extra_politics.get("corruption",0.30))
-	var _stability = float(_extra_politics.get("stability",0.60))
-	var _happiness = float(_extra_pop.get("happiness",0.60))
-	var _gini = float(state.get("welfare",{}).get("gini",0.38))
-	var _digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
+	_trust = float(_extra_politics.get("trust",0.55))
+	_corruption = float(_extra_politics.get("corruption",0.30))
+	_stability = float(_extra_politics.get("stability",0.60))
+	_happiness = float(_extra_pop.get("happiness",0.60))
+	_gini = float(state.get("welfare",{}).get("gini",0.38))
+	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
+	_green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
 
 	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
+	_sys_q = 0.60
 	if state.has("human_states") and state["human_states"] is Dictionary:
 		_sys_q = float(state["human_states"].get("quality",0.60) if state["human_states"].has("quality") else state["human_states"].get("efficiency",0.60) if state["human_states"].has("efficiency") else 0.60)
 	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
@@ -340,17 +340,17 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type":"dual_use_tech_human_states","digital": _digital, "message":"فناوری دوگانه در human_states - کاربرد نظامی و غیرنظامی"})
 
 	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
+	_climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
 	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
 		events.append({"type":"climate_vulnerability_human_states","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی human_states"})
 
 	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
+	_social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
 	if _social_capital < 0.40 and Deterministic.chance(0.006):
 		events.append({"type":"low_social_capital_human_states","capital": _social_capital, "message":"سرمایه اجتماعی پایین در human_states"})
 
 	# اثر تورمی بر هزینه نگهداری
-	var _inflation = float(_extra_econ.get("inflation",0.08))
+	_inflation = float(_extra_econ.get("inflation",0.08))
 	if state.has("human_states") and state["human_states"] is Dictionary and state["human_states"].has("maintenance_cost"):
 		state["human_states"]["maintenance_cost"] = float(state["human_states"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
 

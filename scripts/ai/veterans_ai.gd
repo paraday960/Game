@@ -95,24 +95,24 @@ func decide(state: Dictionary, tick: int) -> Array:
 
 
 	# --- لایه عمیق دوم: تحلیل چندسناریویی و پیش‌بینی ---
-	var _future_risk = 0.0
-	var _trend = 0.0
-	var _diag = diagnose(state)
-	var _health = float(_diag.get("health",0.5))
-	var _urgency = float(_diag.get("urgency",0.0))
+	_future_risk = 0.0
+	_trend = 0.0
+	_diag = diagnose(state)
+	_health = float(_diag.get("health",0.5))
+	_urgency = float(_diag.get("urgency",0.0))
 
 	# پیش‌بینی ۳ ماه آینده با نرخ فعلی
-	var _current_val = float(_diag.get("value",0.5))
-	var _target = float(_diag.get("target",0.6))
+	_current_val = float(_diag.get("value",0.5))
+	_target = float(_diag.get("target",0.6))
 	if _health < 0.45:
 		_future_risk = _urgency * 1.5 + (1.0 - _health)*0.5
 		_trend = -0.02 if _current_val < _target else 0.01
 
 	# تحلیل ریشه‌ای - چرا شاخص پایین است؟
-	var _root_causes = []
-	var _econ = state.get("economy",{})
-	var _pol = state.get("politics",{})
-	var _infra = state.get("infrastructure",{})
+	_root_causes = []
+	_econ = state.get("economy",{})
+	_pol = state.get("politics",{})
+	_infra = state.get("infrastructure",{})
 	if float(_pol.get("corruption",0.30)) > 0.50:
 		_root_causes.append("فساد")
 	if float(_infra.get("quality",0.55)) < 0.45:
@@ -129,7 +129,7 @@ func decide(state: Dictionary, tick: int) -> Array:
 			cmds.append(_preventive)
 
 	# تحلیل هزینه-فایده - آیا بودجه دادن به این سیستم ROI دارد؟
-	var _roi = _health * 0.5 + _urgency*0.5
+	_roi = _health * 0.5 + _urgency*0.5
 	if _roi < 0.35 and cmds.is_empty():
 		# حتی اگر ROI کم، اگر بحران انسانی است اقدام کن
 		if "veterans" in ["health","education","welfare","food_security","citizens"]:
@@ -138,7 +138,7 @@ func decide(state: Dictionary, tick: int) -> Array:
 				cmds.append(_emergency)
 
 	# هم‌افزایی با سیستم‌های دیگر - اگر این سیستم وابسته به دیگری است
-	var _interdependency = state.get("interdependency",{})
+	_interdependency = state.get("interdependency",{})
 	if not _interdependency.is_empty() and _interdependency.get("bottlenecks",[]).size() > 2:
 		# گلوگاه چندگانه - اولویت به رفع گلوگاه اصلی
 		if _diag.get("metric_path","").begins_with("infrastructure") or _diag.get("metric_path","").begins_with("energy"):
