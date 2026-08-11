@@ -135,6 +135,55 @@ const SYSTEM_FA := {
 	"foreign_affairs": "امور خارجی", "interdependency": "اثرگذاری متقابل", "quantitative": "دقیق‌سازی کمی"
 }
 
+# ================= معماری اطلاعاتی یکپارچه (۸ حوزه اصلی) =================
+# همه اطلاعات نمایشی (سامانه‌ها، لنزهای نقشه، جست‌وجو) از همین ساختار پیروی می‌کنند
+# تا نمایش و دسترسی در کل بازی منطقی، منسجم و سریع باشد.
+const SYSTEM_GROUPS := [
+	["🏛️ حاکمیت و سیاست", [
+		"politics", "judicial", "elections", "administration", "statistics", "prison", "political_career", "quantitative"]],
+	["💰 اقتصاد و دارایی", [
+		"economy", "central_bank", "stock_market", "trade", "tourism", "hospitality", "retail",
+		"financial_services", "industry", "agriculture", "fisheries", "fuel_stations"]],
+	["👥 جامعه و رفاه", [
+		"population", "health", "education", "welfare", "family", "sports_youth", "ethnicity",
+		"culture", "veterans", "migration_detail", "households_detail_full", "human_states"]],
+	["🏗️ زیرساخت و توسعه", [
+		"infrastructure", "technology", "space", "settlements", "transport_roads", "urban_facilities",
+		"public_services", "industry_sites", "government_buildings", "public_transport", "heritage", "physical"]],
+	["🛡️ دفاع و امنیت", [
+		"military", "security", "intelligence", "security_forces_detail", "trade_route_warfare", "map_advanced"]],
+	["🌍 دیپلماسی و بین‌الملل", [
+		"diplomacy", "international_orgs", "foreign_affairs", "interdependency"]],
+	["🌱 محیط‌زیست و منابع", [
+		"environment", "resources", "emergency"]],
+	["👤 مردم و نهادها", [
+		"people", "citizens_detail", "workforce_detail", "officials", "politicians_detail",
+		"public_employees", "private_sector", "elites_detail", "religious_leaders", "public_religious"]]
+]
+
+# نگاشت سریع: نام سامانه ← نام حوزه (برای فرمان‌پالت و فیلترها)
+const SYSTEM_DOMAIN := {
+	"politics":"🏛️ حاکمیت", "judicial":"🏛️ حاکمیت", "elections":"🏛️ حاکمیت", "administration":"🏛️ حاکمیت",
+	"statistics":"🏛️ حاکمیت", "prison":"🏛️ حاکمیت", "political_career":"🏛️ حاکمیت", "quantitative":"🏛️ حاکمیت",
+	"economy":"💰 اقتصاد", "central_bank":"💰 اقتصاد", "stock_market":"💰 اقتصاد", "trade":"💰 اقتصاد",
+	"tourism":"💰 اقتصاد", "hospitality":"💰 اقتصاد", "retail":"💰 اقتصاد", "financial_services":"💰 اقتصاد",
+	"industry":"💰 اقتصاد", "agriculture":"💰 اقتصاد", "fisheries":"💰 اقتصاد", "fuel_stations":"💰 اقتصاد",
+	"population":"👥 جامعه", "health":"👥 جامعه", "education":"👥 جامعه", "welfare":"👥 جامعه",
+	"family":"👥 جامعه", "sports_youth":"👥 جامعه", "ethnicity":"👥 جامعه", "culture":"👥 جامعه",
+	"veterans":"👥 جامعه", "migration_detail":"👥 جامعه", "households_detail_full":"👥 جامعه", "human_states":"👥 جامعه",
+	"infrastructure":"🏗️ زیرساخت", "technology":"🏗️ زیرساخت", "space":"🏗️ زیرساخت", "settlements":"🏗️ زیرساخت",
+	"transport_roads":"🏗️ زیرساخت", "urban_facilities":"🏗️ زیرساخت", "public_services":"🏗️ زیرساخت",
+	"industry_sites":"🏗️ زیرساخت", "government_buildings":"🏗️ زیرساخت", "public_transport":"🏗️ زیرساخت",
+	"heritage":"🏗️ زیرساخت", "physical":"🏗️ زیرساخت",
+	"military":"🛡️ دفاع", "security":"🛡️ دفاع", "intelligence":"🛡️ دفاع", "security_forces_detail":"🛡️ دفاع",
+	"trade_route_warfare":"🛡️ دفاع", "map_advanced":"🛡️ دفاع",
+	"diplomacy":"🌍 دیپلماسی", "international_orgs":"🌍 دیپلماسی", "foreign_affairs":"🌍 دیپلماسی", "interdependency":"🌍 دیپلماسی",
+	"environment":"🌱 محیط", "resources":"🌱 محیط", "emergency":"🌱 محیط",
+	"people":"👤 مردم", "citizens_detail":"👤 مردم", "workforce_detail":"👤 مردم", "officials":"👤 مردم",
+	"politicians_detail":"👤 مردم", "public_employees":"👤 مردم", "private_sector":"👤 مردم",
+	"elites_detail":"👤 مردم", "religious_leaders":"👤 مردم", "public_religious":"👤 مردم"
+}
+
 const SYSTEM_STATE_ALIASES = {
 	"settlements": "settlements_detail", "transport_roads": "transport_detail",
 	"public_services": "public_services_detail", "industry_sites": "industry_sites_detail",
@@ -638,7 +687,7 @@ func _build_command_entries() -> Array:
 	for tab in TABS:
 		result.append({"kind":"tab","id":str(tab[0]),"title":str(tab[1]),"group":"بخش","keywords":"مدیریت صفحه مرکز"})
 	for system_id in GameEngine.system_order:
-		result.append({"kind":"system","id":str(system_id),"title":str(SYSTEM_FA.get(system_id,"سامانه")),"group":"سامانه","keywords":str(system_id),"description":"بازکردن پایش و جزئیات سامانه"})
+		result.append({"kind":"system","id":str(system_id),"title":str(SYSTEM_FA.get(system_id,"سامانه")),"group":str(SYSTEM_DOMAIN.get(system_id,"سامانه")),"keywords":str(system_id),"description":"بازکردن پایش و جزئیات سامانه"})
 	for country_id in WorldManager.get_country_ids():
 		var profile=WorldManager.get_country(str(country_id));result.append({"kind":"country","id":str(country_id),"title":str(profile.get("name_fa",country_id)),"group":"کشور","keywords":"%s %s %s"%[country_id,profile.get("capital_fa",""),profile.get("subregion","")],"description":"انتخاب و فوکوس روی نقشه"})
 	return result
@@ -878,6 +927,16 @@ func _fmt_pct(v) -> String:
 # ============================================================
 # تب داشبورد
 # ============================================================
+# سرتیتر بخش در داشبورد — برای گروه‌بندی منطقی کارت‌ها (معماری اطلاعاتی ۸ حوزه)
+func _dashboard_section(title: String) -> Label:
+	var lbl = Label.new()
+	lbl.text = title
+	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.modulate = Color(1.0, 0.81, 0.30, 0.95)
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_child(lbl)
+	return lbl
+
 func _build_dashboard():
 	var st = GameState.state
 	var econ = st.get("economy", {})
@@ -926,18 +985,21 @@ func _build_dashboard():
 		for recommendation in recommendations:
 			_add_ai_recommendation(advisor_card, recommendation)
 
+	_dashboard_section("🏛️ وضعیت کلان کشور")
 	var c1 = _card("📊 شاخص‌های کلان")
 	_bar(c1, "شادی مردم", ind.get("happiness", 0.6))
 	_bar(c1, "ثبات کشور", ind.get("stability", 0.6))
 	_bar(c1, "رضایت عمومی", pop.get("satisfaction", 0.6))
 	_bar(c1, "توسعه انسانی (HDI)", ind.get("hdi", 0.75))
 
+	_dashboard_section("💰 اقتصاد و دارایی")
 	var c2 = _card("💵 وضعیت اقتصادی")
 	_row(c2, "تولید ناخالص داخلی", PersianFormatter.format_money(econ.get("gdp", 0)))
 	_row(c2, "تورم", _fmt_pct(econ.get("inflation", 0)), _color_for(1.0 - econ.get("inflation", 0) * 2.0))
 	_row(c2, "بیکاری", _fmt_pct(econ.get("unemployment", 0)), _color_for(1.0 - econ.get("unemployment", 0) * 5.0))
 	_row(c2, "نرخ مالیات", _fmt_pct(econ.get("tax_rate", 0.2)))
 
+	_dashboard_section("🌱 منابع و انرژی")
 	var c3 = _card("📦 منابع حیاتی")
 	var inv = res.get("inventory", {})
 	for rname in ["غذا", "آب", "برق", "نفت"]:
@@ -945,11 +1007,13 @@ func _build_dashboard():
 			var cap = res.get("capacity", {}).get(rname, 150.0)
 			_bar(c3, rname, inv[rname] / cap)
 
+	_dashboard_section("🛡️ قدرت و راهبرد")
 	var c4 = _card("🏅 قدرت و اعتبار")
 	_row(c4, "شاخص قدرت", PersianFormatter.format_number(int(ind.get("power_score", 0))))
 	_row(c4, "سطح رهبری", PersianFormatter.to_persian_digits(str(st.get("level", 1))))
 
 	var progress = st.get("progression", {})
+	_dashboard_section("🏆 پیشرفت و میراث")
 	var c5 = _card("🏆 پیشرفت و دستاوردها")
 	_row(c5, "مرحله کشور", str(progress.get("stage", "دولت نوپا")))
 	_row(c5, "بهترین استریک", "%s روز" % PersianFormatter.to_persian_digits(str(progress.get("best_streak", 0))))
@@ -2059,25 +2123,26 @@ func _build_unified_map():
 	# چیپ‌های لنز (تک‌انتخابی) — جابه‌جایی سریع نگاه تحلیلی روی نقشه.
 	map_control_flow = HFlowContainer.new(); map_control_flow.add_theme_constant_override("h_separation",7); map_control_flow.add_theme_constant_override("v_separation",6); controls.add_child(map_control_flow)
 	# لنزها در گروه‌های مفهومی مرتب می‌شوند تا دسترسی منطقی و سریع باشد
+	# لنزها هم‌راستا با معماری اطلاعاتی ۸ حوزه (SYSTEM_GROUPS) — نمایش منسجم در کل بازی
 	var lens_groups = [
-		["🏛 پایه و کلی", [
-			["political","سیاسی"],["relations","روابط"],["population","جمعیت"],["economy","اقتصاد"],
-			["infrastructure","زیرساخت"],["satisfaction","رضایت"],["security","امنیت"],["weather","اقلیم"],
-			["resources","منابع"],["military","نظامی"]]],
-		["💰 اقتصاد و تجارت", [
-			["agriculture","کشاورزی"],["industry","صنعت"],["trade_layer","تجارت"],["tourism","گردشگری"],
-			["central_bank","بانک مرکزی"],["stock_market","بورس"],["retail","خرده‌فروشی"],["fuel_stations","سوخت"]]],
-		["👥 جامعه و رفاه", [
-			["health","بهداشت"],["education","آموزش"],["welfare","رفاه"],["family","خانواده"],
-			["sports_youth","ورزش"],["ethnicity","قومیت"],["culture","فرهنگ"]]],
-		["⚖️ سیاست و امنیت", [
-			["judicial","قضایی"],["intelligence","اطلاعات"],["administration","اداره"],["elections","انتخابات"],
+		["🏛️ حاکمیت و سیاست", [
+			["political","سیاسی"],["judicial","قضایی"],["administration","اداره"],["elections","انتخابات"],
 			["politics","سیاست"],["statistics","آمار"],["emergency","بحران"]]],
-		["🏗 زیرساخت و محیط", [
-			["environment","محیط‌زیست"],["urban_facilities","تاسیسات شهری"],["public_services","خدمات عمومی"],
-			["transport_roads","راه‌ها"],["settlements","سکونتگاه‌ها"]]],
-		["🛡 دفاع و راهبرد", [
-			["military_power","قدرت نظامی"],["trade_route_warfare","جنگ تجاری"]]]
+		["💰 اقتصاد و دارایی", [
+			["economy","اقتصاد"],["resources","منابع"],["agriculture","کشاورزی"],["industry","صنعت"],
+			["trade_layer","تجارت"],["tourism","گردشگری"],["central_bank","بانک مرکزی"],["stock_market","بورس"],
+			["retail","خرده‌فروشی"],["fuel_stations","سوخت"]]],
+		["👥 جامعه و رفاه", [
+			["population","جمعیت"],["satisfaction","رضایت"],["health","بهداشت"],["education","آموزش"],
+			["welfare","رفاه"],["family","خانواده"],["sports_youth","ورزش"],["ethnicity","قومیت"],["culture","فرهنگ"]]],
+		["🏗️ زیرساخت و محیط", [
+			["infrastructure","زیرساخت"],["urban_facilities","تاسیسات شهری"],["public_services","خدمات عمومی"],
+			["transport_roads","راه‌ها"],["settlements","سکونتگاه‌ها"],["environment","محیط‌زیست"],["weather","اقلیم"]]],
+		["🛡️ دفاع و امنیت", [
+			["military","نظامی"],["security","امنیت"],["intelligence","اطلاعات"],["military_power","قدرت نظامی"],
+			["trade_route_warfare","جنگ تجاری"]]],
+		["🌍 دیپلماسی و بین‌الملل", [
+			["relations","روابط"]]]
 	]
 	for group in lens_groups:
 		var group_header = Label.new(); group_header.text = str(group[0])
@@ -2111,24 +2176,33 @@ func _build_unified_map():
 		pill.button_pressed = bool(map_overlays.get(definition[0],false))
 		pill.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0])))
 		map_overlay_grid.add_child(pill)
-	# دسته «پیشرفته» — لایه‌های تخصصی نقشه‌محور
+	# دسته «پیشرفته» — لایه‌های تخصصی نقشه‌محور، با زیرگروه‌های موضوعی
 	var advanced_overlay_caption = Label.new(); advanced_overlay_caption.text = "لایه‌های پیشرفته"; advanced_overlay_caption.add_theme_font_size_override("font_size", 17); advanced_overlay_caption.modulate = Color(1.0, 0.81, 0.30, 0.75); controls.add_child(advanced_overlay_caption)
-	var map_overlay_grid_adv = GridContainer.new(); map_overlay_grid_adv.columns = 5; map_overlay_grid_adv.add_theme_constant_override("h_separation",7); map_overlay_grid_adv.add_theme_constant_override("v_separation",6); controls.add_child(map_overlay_grid_adv)
-	var overlay_defs_adv = [
-		["units","یگان‌ها ⚔️"],
-		["resources_detail","معادن و چاه ⛏️"],
-		["population_heatmap","تراکم جمعیت 👥"],
-		["weather_live","هواشناسی زنده 🌦️"],
-		["supply","تدارکات 📦"],
-		["battle_plans","طرح نبرد 📋"],
-		["constructions","ساخت‌وساز 🏗️"]
+	var overlay_adv_groups = [
+		["🛡️ نظامی", [
+			["units","یگان‌ها ⚔️"],
+			["supply","تدارکات 📦"],
+			["battle_plans","طرح نبرد 📋"]]],
+		["🏗️ زیرساخت", [
+			["constructions","ساخت‌وساز 🏗️"]]],
+		["📊 تحلیلی", [
+			["resources_detail","معادن و چاه ⛏️"],
+			["population_heatmap","تراکم جمعیت 👥"],
+			["weather_live","هواشناسی زنده 🌦️"]]]
 	]
-	for definition in overlay_defs_adv:
-		var pill = Button.new(); pill.text = definition[1]; pill.toggle_mode = true; pill.custom_minimum_size = Vector2(0,46); pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL; pill.add_theme_font_size_override("font_size",19)
-		pill.theme_type_variation = "PillToggle"
-		pill.button_pressed = bool(map_overlays.get(definition[0],false))
-		pill.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0])))
-		map_overlay_grid_adv.add_child(pill)
+	for adv_group in overlay_adv_groups:
+		var sub_caption = Label.new(); sub_caption.text = str(adv_group[0])
+		sub_caption.add_theme_font_size_override("font_size", 15)
+		sub_caption.modulate = Color(0.62, 0.80, 0.92, 0.85)
+		sub_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		controls.add_child(sub_caption)
+		var map_overlay_grid_adv = GridContainer.new(); map_overlay_grid_adv.columns = 5; map_overlay_grid_adv.add_theme_constant_override("h_separation",7); map_overlay_grid_adv.add_theme_constant_override("v_separation",6); controls.add_child(map_overlay_grid_adv)
+		for definition in adv_group[1]:
+			var pill = Button.new(); pill.text = definition[1]; pill.toggle_mode = true; pill.custom_minimum_size = Vector2(0,46); pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL; pill.add_theme_font_size_override("font_size",19)
+			pill.theme_type_variation = "PillToggle"
+			pill.button_pressed = bool(map_overlays.get(definition[0],false))
+			pill.toggled.connect(_on_unified_overlay_toggled.bind(str(definition[0])))
+			map_overlay_grid_adv.add_child(pill)
 	var usage = Label.new(); usage.text = "◉ کشیدن جابه‌جا می‌کند · دو انگشت زوم · لمس کشور را انتخاب و دوبار لمس وارد کشور می‌شود؛ با زوم، استان‌ها و شبکه‌ها آشکار می‌گردند."; usage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; usage.modulate = TEXT_FAINT; usage.add_theme_font_size_override("font_size",19); controls.add_child(usage)
 
 	# === حالت‌های پیشرفته نقشه‌محور - طرح نبرد، ساخت‌وساز ===
@@ -3175,22 +3249,57 @@ func _build_systems():
 	var health_by_ai: Dictionary = {}
 	for diagnosis in diagnoses:
 		health_by_ai[str(diagnosis.get("system", ""))] = float(diagnosis.get("health", 0.5))
-	var grid = GridContainer.new()
-	grid.columns = 2
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	directory.add_child(grid)
-	for sys_name in GameEngine.system_order:
-		if not GameEngine.systems.has(sys_name):
+
+	# فیلتر حوزه: دسترسی سریع به گروه‌های موضوعی (معماری اطلاعاتی ۸ حوزه)
+	var filter_row = HBoxContainer.new(); filter_row.add_theme_constant_override("separation", 6); directory.add_child(filter_row)
+	var all_filter = Button.new(); all_filter.text = "همه"; all_filter.toggle_mode = true
+	all_filter.button_pressed = systems_domain_filter == ""
+	all_filter.custom_minimum_size = Vector2(0, 40); all_filter.add_theme_font_size_override("font_size", 17)
+	all_filter.theme_type_variation = "LensChipActive" if systems_domain_filter == "" else "LensChip"
+	all_filter.pressed.connect(_on_system_domain_filter.bind(""))
+	filter_row.add_child(all_filter)
+	for group_def in SYSTEM_GROUPS:
+		var domain_name: String = str(group_def[0])
+		var fbtn = Button.new(); fbtn.text = domain_name; fbtn.toggle_mode = true
+		fbtn.button_pressed = systems_domain_filter == domain_name
+		fbtn.custom_minimum_size = Vector2(0, 40); fbtn.add_theme_font_size_override("font_size", 17)
+		fbtn.theme_type_variation = "LensChipActive" if systems_domain_filter == domain_name else "LensChip"
+		fbtn.pressed.connect(_on_system_domain_filter.bind(domain_name))
+		filter_row.add_child(fbtn)
+
+	# فهرست گروه‌بندی‌شده سامانه‌ها — هر حوزه با سرتیتر و سامانه‌های رنگی (سلامت)
+	for group_def in SYSTEM_GROUPS:
+		var domain_name: String = str(group_def[0])
+		if systems_domain_filter != "" and systems_domain_filter != domain_name:
 			continue
-		var ai_key = SYSTEM_AI_ALIASES.get(sys_name, sys_name)
-		var health = float(health_by_ai.get(ai_key, 0.5))
-		var button = Button.new()
-		button.text = ("◀ " if sys_name == selected_system else "") + SYSTEM_FA.get(sys_name, "سامانه تخصصی")
-		button.custom_minimum_size = Vector2(0, 48)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.modulate = _color_for(health)
-		button.pressed.connect(_on_system_selected.bind(sys_name))
-		grid.add_child(button)
+		var group_header = Label.new()
+		group_header.text = domain_name
+		group_header.add_theme_font_size_override("font_size", 18)
+		group_header.modulate = Color(1.0, 0.81, 0.30, 0.95)
+		group_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		directory.add_child(group_header)
+		var grid = GridContainer.new()
+		grid.columns = 2
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		directory.add_child(grid)
+		for sys_name in group_def[1]:
+			if not GameEngine.systems.has(sys_name):
+				continue
+			var ai_key = SYSTEM_AI_ALIASES.get(sys_name, sys_name)
+			var health = float(health_by_ai.get(ai_key, 0.5))
+			var button = Button.new()
+			button.text = ("◀ " if sys_name == selected_system else "") + SYSTEM_FA.get(sys_name, "سامانه تخصصی")
+			button.custom_minimum_size = Vector2(0, 48)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.modulate = _color_for(health)
+			button.pressed.connect(_on_system_selected.bind(sys_name))
+			grid.add_child(button)
+
+var systems_domain_filter := ""
+
+func _on_system_domain_filter(domain_name: String):
+	systems_domain_filter = domain_name
+	_switch_tab("systems")
 
 func _on_system_selected(system_name: String):
 	selected_system = system_name
