@@ -89,9 +89,22 @@ func _generated_access_routes(layer:String,allowed:Array)->Array:
 
 func get_dynamic_routes(state:Dictionary,layer:String,allowed:Array=[])->Array:
 	var world:Dictionary=state.get("world",{});var player=str(world.get("player_country",""));var result:Array=[]
+	# حملات مسیرهای تجاری برای نمایش نقشه‌محور
+	var trade_warfare:Dictionary = state.get("trade_route_warfare",{})
+	var attacks:Array = trade_warfare.get("attacks",[])
+	var chokepoints_state:Dictionary = trade_warfare.get("chokepoints",{})
+
 	if layer=="wars":
 		for target in world.get("wars",{}).keys():_append_country_route(result,"wars",player,str(target),"جنگ فعال",1.0,allowed)
 		for war in world.get("npc_wars",{}).values():_append_country_route(result,"wars",str(war.get("a","")),str(war.get("b","")),"جنگ کشورهای دیگر",0.85,allowed)
+		# مسیرهای تجاری تحت حمله نظامی هم به عنوان جنگ نمایش داده می‌شود
+		for atk in attacks:
+			var op = str(atk.get("operation","raid"))
+			if op in ["raid","blockade","drone_strike","mine"] and atk.has("from") and atk.has("to"):
+				var from_c = str(atk.get("from",""))
+				var to_c = str(atk.get("to",""))
+				if from_c != "" and to_c != "":
+					_append_country_route(result,"wars",from_c,to_c,"حمله به مسیر تجاری (%s)" % op,0.9,allowed)
 	elif layer=="alliances":
 		for target in world.get("alliances",[]):_append_country_route(result,"alliances",player,str(target),"اتحاد",0.9,allowed)
 		for key in world.get("npc_alliances",[]):
@@ -100,6 +113,30 @@ func get_dynamic_routes(state:Dictionary,layer:String,allowed:Array=[])->Array:
 		for target in world.get("trade_agreements",[]):_append_country_route(result,"trade",player,str(target),"توافق تجاری",0.9,allowed)
 		for key in world.get("npc_trade_agreements",[]):
 			var pair=str(key).split("|");if pair.size()==2:_append_country_route(result,"trade",pair[0],pair[1],"کریدور تجاری",0.55,allowed)
+		# مسیرهای تجاری مختل شده - قرمز و چشمک‌زن
+		for atk in attacks:
+			var op = str(atk.get("operation",""))
+			if op in ["raid","blockade","sabotage","mine","drone_strike"] and atk.has("from") and atk.has("to"):
+				var from_c = str(atk.get("from",""))
+				var to_c = str(atk.get("to",""))
+				if from_c != "" and to_c != "":
+					# حجم منفی برای نمایش مختل
+					var vol = -0.8 if op == "blockade" else -0.6
+					_append_country_route(result,"trade_disrupted",from_c,to_c,"⚠️ مسیر مختل (%s)" % op,vol,allowed)
+		# گلوگاه‌های مسدود
+		for cp_id in chokepoints_state.keys():
+			var cp_action = str(chokepoints_state[cp_id].get("action","blockade"))
+			if cp_action in ["blockade","mine"]:
+				# گلوگاه‌ها به عنوان مسیر تجاری مختل نمایش
+				var cp_info = get_chokepoint_info(cp_id)
+				if not cp_info.is_empty():
+					result.append({"type":"trade_disrupted","from_country":cp_info.get("from_country",""),"to_country":cp_info.get("to_country",""),"from_lat":cp_info.get("lat",0),"from_lon":cp_info.get("lon",0),"to_lat":cp_info.get("lat",0)+0.5,"to_lon":cp_info.get("lon",0)+0.5,"label":"🚫 %s مسدود (%s)" % [cp_info.get("name_fa",cp_id), cp_action],"volume":-1.0,"chokepoint":true,"chokepoint_id":cp_id})
+	elif layer=="trade_disrupted":
+		# لایه ویژه برای مسیرهای مختل - برای رنگ قرمز
+		for atk in attacks:
+			var op = str(atk.get("operation",""))
+			if op in ["raid","blockade","sabotage","mine","drone_strike"] and atk.has("from") and atk.has("to"):
+				_append_country_route(result,"trade_disrupted",str(atk.get("from","")),str(atk.get("to","")),"⚠️ مختل (%s)" % op,-0.8,allowed)
 	elif layer=="land":
 		var ids=allowed if not allowed.is_empty() else get_regional_country_ids(player)
 		var seen:Dictionary={}
@@ -110,6 +147,21 @@ func get_dynamic_routes(state:Dictionary,layer:String,allowed:Array=[])->Array:
 				if seen.has(key):continue
 				seen[key]=true;_append_country_route(result,"land",str(a),str(b),"مسیر زمینی مرزی",0.45,allowed)
 	return result
+
+func get_chokepoint_info(chokepoint_id: String) -> Dictionary:
+	for cp in chokepoints:
+		if str(cp.get("id","")) == chokepoint_id:
+			return cp.duplicate(true)
+	# fallback برای ۶ گلوگاه اصلی
+	var fallbacks = {
+		"hormuz":{"id":"hormuz","name_fa":"تنگه هرمز","lat":26.5,"lon":56.2,"from_country":"IRN","to_country":"OMN"},
+		"suez":{"id":"suez","name_fa":"کانال سوئز","lat":30.0,"lon":32.5,"from_country":"EGY","to_country":"EGY"},
+		"bab_el_mandeb":{"id":"bab_el_mandeb","name_fa":"باب‌المندب","lat":12.5,"lon":43.3,"from_country":"YEM","to_country":"DJI"},
+		"malacca":{"id":"malacca","name_fa":"تنگه مالاکا","lat":2.5,"lon":101.0,"from_country":"MYS","to_country":"IDN"},
+		"panama":{"id":"panama","name_fa":"کانال پاناما","lat":9.0,"lon":-79.5,"from_country":"PAN","to_country":"PAN"},
+		"gibraltar":{"id":"gibraltar","name_fa":"جبل‌الطارق","lat":36.0,"lon":-5.5,"from_country":"ESP","to_country":"MAR"}
+	}
+	return fallbacks.get(chokepoint_id, {}).duplicate(true) if fallbacks.has(chokepoint_id) else {}
 
 func get_chokepoints(allowed:Array=[])->Array:
 	# نقاط دریایی جهانی حتی در نمای منطقه‌ای، فقط اگر داخل قاب باشند توسط Map رسم می‌شوند.

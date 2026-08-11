@@ -195,6 +195,19 @@ func init_default_state():
 		"veterans": {"count": 500000, "pension": 0.70, "health_care": 0.65, "fund_balance": 500_000_000.0},
 		"fisheries": {"catch": 500000.0, "fleet_size": 1000, "sustainability": 0.60, "stock_health": 0.65},
 		"statistics": {"accuracy": 0.75, "coverage": 0.85, "digital": 0.60, "id_coverage": 0.92},
+		"trade_route_warfare": {
+			"attacks": [],
+			"chokepoints": {},
+			"protected_routes": [],
+			"convoy_escorts": [],
+			"disrupted_volume": 0.0,
+			"piracy_level": 0.10,
+			"blockade_effectiveness": 0.0,
+			"total_raids": 0,
+			"total_blockades": 0,
+			"economic_damage": 0.0
+		},
+		"map_network": {"air_connectivity":0.5,"sea_connectivity":0.5,"land_connectivity":0.5,"disrupted_routes":0,"updated_turn":0},
 		# لایه‌ی اماکن فیزیکی و مردم و ...
 		"physical": {
 			"settlements": 1200,

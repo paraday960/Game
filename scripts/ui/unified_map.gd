@@ -21,6 +21,7 @@ const ROUTE_COLORS := {
 	"wars": Color(1.0, 0.22, 0.18, 0.96),
 	"alliances": Color(0.26, 0.62, 1.0, 0.88),
 	"trade": Color(0.24, 0.93, 0.55, 0.82),
+	"trade_disrupted": Color(1.0, 0.18, 0.18, 0.95),
 	"air": Color(0.22, 0.88, 1.0, 0.78),
 	"sea": Color(0.20, 0.48, 1.0, 0.80),
 	"land": Color(1.0, 0.67, 0.20, 0.78),
@@ -322,12 +323,24 @@ func _admin_fill(code: String, unit: Dictionary) -> Color:
 	return Color(0.21, 0.31, 0.32)
 
 func _draw_routes():
-	for layer in ["trade", "alliances", "wars", "land", "air", "sea"]:
-		if not overlays.get(layer, false):
-			continue
-		var route_list = MapLayerManager.get_dynamic_routes(full_state, layer)
+	# لایه‌های عادی + لایه ویژه مسیرهای مختل (همیشه اگر حمله فعال باشد نمایش داده می‌شود)
+	var layers_to_draw = ["trade", "alliances", "wars", "land", "air", "sea", "trade_disrupted"]
+	for layer in layers_to_draw:
+		# لایه trade_disrupted حتی اگر trade خاموش باشد هم اگر حمله باشد نمایش داده شود
+		if layer == "trade_disrupted":
+			var warfare = full_state.get("trade_route_warfare", {})
+			if warfare.get("attacks", []).is_empty() and warfare.get("chokepoints", {}).is_empty():
+				continue
+		elif not overlays.get(layer if layer != "trade_disrupted" else "trade", false) and layer != "trade_disrupted":
+			# برای trade_disrupted از overlay trade استفاده می‌کنیم اما اگر حمله باشد حتی بدون overlay هم نشان داده می‌شود
+			if layer != "trade_disrupted" and not overlays.get(layer, false):
+				continue
+		var route_list = MapLayerManager.get_dynamic_routes(full_state, layer if layer != "trade_disrupted" else "trade_disrupted")
 		if layer in ["air", "sea"]:
 			route_list.append_array(MapLayerManager.get_static_routes(layer))
+		elif layer == "trade_disrupted":
+			# مسیرهای تجاری عادی هم به عنوان پس‌زمینه برای مقایسه
+			route_list.append_array(MapLayerManager.get_dynamic_routes(full_state, "trade_disrupted"))
 		for route in route_list:
 			var start = _geo_point(float(route.get("from_lon", 0.0)), float(route.get("from_lat", 0.0)))
 			var finish = _geo_point(float(route.get("to_lon", 0.0)), float(route.get("to_lat", 0.0)))
@@ -335,9 +348,25 @@ func _draw_routes():
 				continue
 			var points = _curve_points(start, finish, layer)
 			var color: Color = _route_color(layer)
-			var width = clamp(1.2 + float(route.get("volume", 0.5)) * 1.8 + log(zoom_level) * 0.12, 1.2, 3.6)
-			if layer == "wars": _draw_dashed(points, color, width)
-			else: draw_polyline(points, color, width, true)
+			var width = clamp(1.2 + abs(float(route.get("volume", 0.5))) * 1.8 + log(zoom_level) * 0.12, 1.2, 4.5)
+			# مسیرهای مختل = قرمز چشمک‌زن + نقطه‌چین ضخیم + سایه
+			if layer == "trade_disrupted" or float(route.get("volume", 0.5)) < 0:
+				color = Color(1.0, 0.25, 0.25, 0.92) # قرمز هشدار
+				if route.get("chokepoint", false):
+					color = Color(1.0, 0.15, 0.15, 0.98)
+					width = clamp(width + 2.0, 2.5, 6.0)
+				# سایه تیره برای تاکید
+				draw_polyline(points, Color(0.0,0.0,0.0,0.45), width+2.5, true)
+				_draw_dashed(points, color, width)
+				# نقطه انفجار در وسط مسیر برای حمله
+				if points.size() > 2:
+					var mid = points[points.size()/2]
+					draw_circle(mid, 5.0 + sin(Time.get_ticks_msec()*0.005)*2.0, Color(1.0,0.30,0.10,0.85))
+					draw_circle(mid, 2.5, Color(1.0,0.85,0.2,0.95))
+			elif layer == "wars":
+				_draw_dashed(points, color, width)
+			else:
+				draw_polyline(points, color, width, true)
 			var record = route.duplicate(true); record["points"] = points; record["type"] = layer
 			_drawn_routes.append(record)
 
@@ -352,11 +381,31 @@ func _draw_hubs():
 			draw_circle(point, radius + 2.0, Color(0.01, 0.03, 0.05, 0.92)); draw_circle(point, radius, color)
 			if zoom_level >= 4.0:
 				draw_string(PersianFont, point + Vector2(8, 4), str(hub.get("name_fa", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(0.84, 0.91, 0.97))
-	if overlays.get("sea", false):
+	if overlays.get("sea", false) or true: # گلوگاه‌ها همیشه مهم‌اند - حتی بدون لایه دریا نمایش هشدار
+		var warfare = full_state.get("trade_route_warfare", {})
+		var chokepoints_state = warfare.get("chokepoints", {})
 		for choke in MapLayerManager.get_chokepoints():
 			var point = _geo_point(float(choke.get("lon", 0.0)), float(choke.get("lat", 0.0)))
-			if _viewport.has_point(point):
-				draw_rect(Rect2(point - Vector2(4, 4), Vector2(8, 8)), Color(1.0, 0.78, 0.18), true)
+			if not _viewport.grow(20).has_point(point):
+				continue
+			var choke_id = str(choke.get("id",""))
+			var is_blocked = chokepoints_state.has(choke_id)
+			var is_critical = bool(choke.get("critical",false))
+			if is_blocked:
+				var action = str(chokepoints_state[choke_id].get("action","blockade"))
+				var blocked_color = Color(1.0, 0.18, 0.18, 0.95) if action == "blockade" else Color(1.0, 0.45, 0.05, 0.90) if action == "mine" else Color(0.25, 0.85, 0.35, 0.85)
+				# انیمیشن ضربان برای مسدود
+				var pulse = 1.0 + sin(Time.get_ticks_msec()*0.004)*0.3
+				draw_circle(point, (8.0 + (3.0 if is_critical else 0.0))*pulse, Color(0.0,0.0,0.0,0.55))
+				draw_circle(point, (6.0 + (2.0 if is_critical else 0.0))*pulse, blocked_color)
+				draw_circle(point, 2.5, Color(1.0,1.0,1.0,0.90))
+				# علامت ممنوع
+				if zoom_level >= 1.5:
+					draw_string(PersianFont, point + Vector2(12, 4), "🚫 %s (%s)" % [str(choke.get("name_fa","")), action], HORIZONTAL_ALIGNMENT_LEFT, -1, 20, blocked_color)
+			else:
+				var normal_color = Color(1.0, 0.78, 0.18, 0.85) if is_critical else Color(0.85, 0.65, 0.25, 0.70)
+				draw_rect(Rect2(point - Vector2(4, 4), Vector2(8, 8)), normal_color, true)
+				draw_rect(Rect2(point - Vector2(5, 5), Vector2(10, 10)), Color(0.0,0.0,0.0,0.35), false, 1.2)
 
 func _draw_country_labels():
 	var occupied: Array = []
@@ -741,7 +790,11 @@ func _overlay_name(layer: String) -> String:
 
 func _route_color(layer:String)->Color:
 	if bool(SettingsManager.get_value("colorblind_palette",false)):
-		return {"wars":Color(0.94,0.30,0.82,0.96),"alliances":Color(0.25,0.70,1.0,0.90),"trade":Color(0.20,0.91,0.86,0.86),"air":Color(0.72,0.82,1.0,0.82),"sea":Color(0.34,0.55,1.0,0.84),"land":Color(1.0,0.76,0.18,0.82)}.get(layer,Color.WHITE)
+		return {"wars":Color(0.94,0.30,0.82,0.96),"alliances":Color(0.25,0.70,1.0,0.90),"trade":Color(0.20,0.91,0.86,0.86),"trade_disrupted":Color(1.0,0.25,0.25,0.95),"air":Color(0.72,0.82,1.0,0.82),"sea":Color(0.34,0.55,1.0,0.84),"land":Color(1.0,0.76,0.18,0.82)}.get(layer,Color.WHITE)
+	if layer == "trade_disrupted":
+		# چشمک زن قرمز - با زمان
+		var blink = 0.75 + sin(Time.get_ticks_msec()*0.006)*0.25
+		return Color(1.0, 0.20, 0.20, 0.80 + blink*0.15)
 	return ROUTE_COLORS.get(layer,Color.WHITE)
 
 func _percent(value: float) -> String:

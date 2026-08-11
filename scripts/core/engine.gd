@@ -9,7 +9,8 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
-	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve"
+	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
+	"trade_route_attack", "chokepoint_action", "map_operation"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -83,7 +84,8 @@ var system_order = [
 	"international_orgs",# 3.68
 	"foreign_affairs",   # 3.71
 	"interdependency",   # 3.63 مدل اثرگذاری متقابل
-	"quantitative"       # 3.64 دقیق‌سازی کمّی و زمانی
+	"quantitative",      # 3.64 دقیق‌سازی کمّی و زمانی
+	"trade_route_warfare" # 3.80 جنگ مسیرهای تجاری - نقشه‌محور
 ]
 
 # سیستم‌های لود شده
@@ -107,6 +109,7 @@ func _ready():
 	systems["environment"] = load("res://scripts/systems/environment_system.gd").new()
 	systems["culture"] = load("res://scripts/systems/culture_system.gd").new()
 	systems["intelligence"] = load("res://scripts/systems/intelligence_system.gd").new()
+	systems["trade_route_warfare"] = load("res://scripts/systems/trade_route_warfare_system.gd").new()
 	systems["central_bank"] = load("res://scripts/systems/central_bank_system.gd").new()
 	systems["trade"] = load("res://scripts/systems/trade_system.gd").new()
 	systems["tourism"] = load("res://scripts/systems/tourism_system.gd").new()
@@ -436,6 +439,32 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				return {"valid": false, "reason": "شناسه تصمیم یا گزینه نامعتبر است"}
 			if not DecisionManagerClass.validate_choice(state, decision_id, choice_id):
 				return {"valid": false, "reason": "تصمیم یا گزینه انتخابی دیگر معتبر نیست"}
+		elif cmd.type == "trade_route_attack":
+			var route_id = str(cmd.payload.get("route_id", ""))
+			var route_type = str(cmd.payload.get("route_type", ""))
+			var operation = str(cmd.payload.get("operation", ""))
+			if route_id.is_empty() and route_type.is_empty():
+				return {"valid": false, "reason": "شناسه مسیر تجاری نامعتبر است"}
+			if not ["raid","blockade","sabotage","cyber","drone_strike","protect","escort","mine"].has(operation):
+				return {"valid": false, "reason": "نوع عملیات مسیر تجاری نامعتبر است"}
+			if float(state.get("military",{}).get("readiness",0.6)) < 0.35:
+				return {"valid": false, "reason": "آمادگی نظامی کم - حداقل ۳۵٪ لازم است"}
+		elif cmd.type == "chokepoint_action":
+			var chokepoint_id = str(cmd.payload.get("chokepoint_id", ""))
+			var action = str(cmd.payload.get("action", ""))
+			if chokepoint_id.is_empty():
+				return {"valid": false, "reason": "شناسه گلوگاه نامعتبر است"}
+			if not ["blockade","mine","secure","patrol","sabotage"].has(action):
+				return {"valid": false, "reason": "اقدام گلوگاه نامعتبر است"}
+		elif cmd.type == "map_operation":
+			var op_type = str(cmd.payload.get("operation_type", ""))
+			var target = str(cmd.payload.get("target_country", ""))
+			if op_type.is_empty():
+				return {"valid": false, "reason": "نوع عملیات نقشه‌محور نامشخص است"}
+			if not ["airstrike","naval_blockade","sabotage_infrastructure","drone_swarm","cyber_attack","propaganda","humanitarian"].has(op_type):
+				return {"valid": false, "reason": "عملیات نقشه‌محور نامعتبر است"}
+			if target.is_empty():
+				return {"valid": false, "reason": "کشور هدف عملیات نقشه مشخص نیست"}
 	return {"valid": true, "reason": ""}
 
 func _record_command_receipts(snapshot: Dictionary, commands: Array):
@@ -566,8 +595,68 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd):
 				"decision_id": cmd.payload.get("decision_id", ""),
 				"choice_id": cmd.payload.get("choice_id", "")
 			}, cmd.tick, cmd.version)
+	elif cmd.type == "trade_route_attack":
+		var route_id = str(cmd.payload.get("route_id", ""))
+		var route_type = str(cmd.payload.get("route_type", "trade"))
+		var operation = str(cmd.payload.get("operation", "raid"))
+		var from_c = str(cmd.payload.get("from_country", ""))
+		var to_c = str(cmd.payload.get("to_country", ""))
+		# سیستم جنگ مسیرهای تجاری را صدا بزن
+		if systems.has("trade_route_warfare"):
+			var result = systems["trade_route_warfare"].apply_attack(snapshot, route_id, route_type, operation, from_c, to_c, cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("trade_route_event", ev, cmd.tick, cmd.version)
+		else:
+			# fallback ساده اگر سیستم جدید هنوز لود نشده
+			snapshot = _apply_trade_route_attack_simple(snapshot, route_id, route_type, operation, from_c, to_c, cmd.tick)
+	elif cmd.type == "chokepoint_action":
+		var chokepoint_id = str(cmd.payload.get("chokepoint_id", ""))
+		var action = str(cmd.payload.get("action", "blockade"))
+		if systems.has("trade_route_warfare"):
+			var result = systems["trade_route_warfare"].apply_chokepoint(snapshot, chokepoint_id, action, cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("chokepoint_event", ev, cmd.tick, cmd.version)
+		else:
+			snapshot = _apply_chokepoint_simple(snapshot, chokepoint_id, action, cmd.tick)
+	elif cmd.type == "map_operation":
+		var target_country = str(cmd.payload.get("target_country", ""))
+		var op_type = str(cmd.payload.get("operation_type", ""))
+		if systems.has("trade_route_warfare"):
+			var result = systems["trade_route_warfare"].apply_map_operation(snapshot, target_country, op_type, cmd.payload, cmd.tick)
+			if result.success:
+				snapshot = result.state
+				for ev in result.events:
+					EventLog.log_event("map_operation_event", ev, cmd.tick, cmd.version)
 	# تمام انواع فرمان در همان تراکنش و با فراداده نسخه مقصد ثبت می‌شوند.
 	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
+
+# === Fallback ساده برای حملات مسیر تجاری اگر سیستم جدید لود نشده باشد ===
+func _apply_trade_route_attack_simple(snapshot: Dictionary, route_id: String, route_type: String, operation: String, from_c: String, to_c: String, tick: int) -> Dictionary:
+	var trade_warfare = snapshot.get("trade_route_warfare", {})
+	trade_warfare["attacks"] = trade_warfare.get("attacks", [])
+	trade_warfare["attacks"].append({"route_id": route_id, "route_type": route_type, "operation": operation, "from": from_c, "to": to_c, "tick": tick, "status": "active"})
+	snapshot["trade_route_warfare"] = trade_warfare
+	# اثر اقتصادی ساده
+	var trade = snapshot.get("trade", {})
+	if operation in ["blockade","raid","sabotage","mine"]:
+		trade["exports"] = float(trade.get("exports", 80e9)) * 0.98
+		trade["imports"] = float(trade.get("imports", 70e9)) * 0.99
+		snapshot["trade"] = trade
+		snapshot["economy"]["gdp"] = float(snapshot["economy"].get("gdp", 500e9)) * 0.9995
+	return snapshot
+
+func _apply_chokepoint_simple(snapshot: Dictionary, chokepoint_id: String, action: String, tick: int) -> Dictionary:
+	var trade_warfare = snapshot.get("trade_route_warfare", {})
+	trade_warfare["chokepoints"] = trade_warfare.get("chokepoints", {})
+	trade_warfare["chokepoints"][chokepoint_id] = {"action": action, "tick": tick, "level": 0.5}
+	snapshot["trade_route_warfare"] = trade_warfare
+	if action == "blockade":
+		snapshot["economy"]["gdp"] = float(snapshot["economy"].get("gdp", 500e9)) * 0.998
+	return snapshot
 
 func _compute_all_systems(snapshot: Dictionary, turn: int) -> Dictionary:
 	# هر فرمان بازیکن یک ماه است؛ معادلات و هوش سیستم‌ها در روزهای داخلی ماه اجرا می‌شوند.

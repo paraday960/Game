@@ -2005,8 +2005,128 @@ func _refresh_map_context_panel():
 	for child in map_context_host.get_children():map_context_host.remove_child(child);child.queue_free()
 	var state=GameState.state;var player_id=str(state.get("world",{}).get("player_country",WorldManager.default_country))
 	if not selected_map_route.is_empty():
-		var route_card=_card("کریدور انتخابی",map_context_host);_row(route_card,"نوع",_map_overlay_name(str(selected_map_route.get("type",""))));_row(route_card,"مسیر",str(selected_map_route.get("label","مسیر راهبردی")));_bar(route_card,"ظرفیت نسبی",float(selected_map_route.get("volume",0.5)))
-		var route_hint=Label.new();route_hint.text="جنگ و اختلال مسیر می‌تواند صادرات، واردات و اتصال ملی را کاهش دهد.";route_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;route_hint.modulate=Color(0.72,0.81,0.87);route_card.add_child(route_hint)
+		var route_type = str(selected_map_route.get("type",""))
+		var is_disrupted = route_type == "trade_disrupted" or float(selected_map_route.get("volume",0.5)) < 0
+		var route_card=_card("🗺️ کریدور انتخابی%s" % (" ⚠️ مختل" if is_disrupted else ""),map_context_host)
+		_row(route_card,"نوع",_map_overlay_name(route_type))
+		_row(route_card,"مسیر",str(selected_map_route.get("label","مسیر راهبردی")))
+		_bar(route_card,"ظرفیت نسبی",abs(float(selected_map_route.get("volume",0.5))))
+		if is_disrupted:
+			_row(route_card,"وضعیت","🚫 مختل شده - حمله فعال",Color(1.0,0.3,0.3))
+		# اطلاعات گلوگاه اگر باشد
+		if selected_map_route.has("chokepoint") and bool(selected_map_route.get("chokepoint",false)):
+			_row(route_card,"گلوگاه","⭐ %s - ۶ گلوگاه جهانی" % str(selected_map_route.get("chokepoint_id","")),Color(1.0,0.78,0.18))
+		var route_hint=Label.new()
+		route_hint.text="جنگ و اختلال مسیر می‌تواند صادرات، واردات و اتصال ملی را کاهش دهد. روی نقشه کلیک کن و عملیات را انتخاب کن - همه عملیات نقشه‌محور و قابل مشاهده است."
+		route_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;route_hint.modulate=Color(0.72,0.81,0.87);route_card.add_child(route_hint)
+
+		# === پنل عملیات نقشه‌محور - حمله به مسیر تجاری ===
+		var ops_card = _card("⚔️ عملیات نقشه‌محور - حمله به مسیر",map_context_host)
+		var ops_hint = Label.new()
+		ops_hint.text="مثل دنیای واقعی: محاصره دریایی، شبیخون، مین‌گذاری، خرابکاری، حمله پهپادی، سایبری، اسکورت محافظتی - همه روی نقشه قابل اجرا و مشاهده است."
+		ops_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		ops_hint.modulate=Color(0.85,0.75,0.55)
+		ops_card.add_child(ops_hint)
+
+		var ops_grid = GridContainer.new()
+		ops_grid.columns = 2
+		ops_grid.add_theme_constant_override("h_separation",8)
+		ops_grid.add_theme_constant_override("v_separation",8)
+		ops_card.add_child(ops_grid)
+
+		# استخراج کشورهای مسیر
+		var from_c = str(selected_map_route.get("from_country",""))
+		var to_c = str(selected_map_route.get("to_country",""))
+		var route_id = str(selected_map_route.get("label", selected_map_route.get("from_country","") + "_" + selected_map_route.get("to_country","")))
+		var r_type = route_type if route_type != "trade_disrupted" else "trade"
+
+		# دکمه‌های حمله - بر اساس نوع مسیر
+		var attack_ops = []
+		if r_type == "trade" or r_type == "trade_disrupted":
+			attack_ops = [
+				["raid","🏴‍☠️ شبیخون تجاری","حمله سریع به کاروان - غنیمت و اختلال ۱۵ روزه"],
+				["blockade","🚫 محاصره","بستن کامل مسیر ۹۰ روزه - نیاز به ناوگان"],
+				["sabotage","💣 خرابکاری","انفجار پل/خط لوله - ۳۰ روز"],
+				["drone_strike","🛸 پهپاد انتحاری","حمله دقیق پهپادی - کم‌هزینه"],
+				["cyber","💻 سایبری","اخلال سیستم ردیابی - ۱۰ روز"],
+				["protect","🛡️ اسکورت محافظتی","محافظت از مسیر خودی +۱۰٪ تجارت"]
+			]
+		elif r_type == "sea":
+			attack_ops = [
+				["blockade","⚓ محاصره دریایی","ناوگان دریایی مسیر را می‌بندد"],
+				["mine","💥 مین‌گذاری","مین دریایی - ۱۸۰ روز خطر"],
+				["raid","🏴‍☠️ دزدی دریایی","حمله قایق تندرو"],
+				["protect","🛡️ اسکورت دریایی","ناوچه اسکورت"]
+			]
+		elif r_type == "land":
+			attack_ops = [
+				["sabotage","💣 خرابکاری زمینی","انفجار ریل/جاده"],
+				["raid","🏴‍☠️ کمین","کمین به کاروان زمینی"],
+				["blockade","🚧 ایست بازرسی","بستن مرز"],
+				["protect","🛡️ گشت مرزی","گشت و حفاظت"]
+			]
+		elif r_type == "air":
+			attack_ops = [
+				["cyber","💻 اخلال رادار","اخلال GPS و رادار"],
+				["drone_strike","🛸 رهگیری هوایی","پهپاد رهگیر"],
+				["protect","🛡️ اسکورت هوایی","جنگنده اسکورت"]
+			]
+		else:
+			attack_ops = [
+				["raid","⚔️ حمله","عملیات نظامی"],
+				["sabotage","💣 خرابکاری","خرابکاری"],
+				["protect","🛡️ حفاظت","حفاظت"]
+			]
+
+		for op in attack_ops:
+			var op_id = str(op[0])
+			var op_title = str(op[1])
+			var op_desc = str(op[2])
+			var btn = Button.new()
+			btn.text = op_title
+			btn.custom_minimum_size = Vector2(210, 48)
+			btn.tooltip_text = op_desc
+			# بررسی امکان اجرا - آمادگی نظامی
+			var can_attack = float(state.get("military",{}).get("readiness",0.6)) >= 0.35
+			btn.disabled = not can_attack
+			if not can_attack:
+				btn.tooltip_text += " - آمادگی نظامی کم (حداقل ۳۵٪)"
+			btn.pressed.connect(FeedbackManager.play_click)
+			btn.pressed.connect(_on_trade_route_attack.bind(route_id, r_type, op_id, from_c, to_c, op_title))
+			ops_grid.add_child(btn)
+
+		# گلوگاه‌های ۶گانه - عملیات ویژه
+		if selected_map_route.has("chokepoint_id") or r_type == "sea":
+			var choke_card = _card("🌊 گلوگاه‌های جهانی - ۶ نقطه راهبردی",map_context_host)
+			var choke_hint = Label.new()
+			choke_hint.text="هرمز، سوئز، باب‌المندب، مالاکا، پاناما، جبل‌الطارق - کنترل این تنگه‌ها = کنترل تجارت جهانی. حمله به این نقاط تورم جهانی ایجاد می‌کند."
+			choke_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+			choke_hint.modulate=Color(0.72,0.81,0.87)
+			choke_card.add_child(choke_hint)
+			var choke_grid = GridContainer.new()
+			choke_grid.columns = 2
+			choke_card.add_child(choke_grid)
+			var choke_ops = [
+				["hormuz","هرمز - ۲۰٪ نفت جهان"],
+				["suez","سوئز - ۱۲٪ تجارت"],
+				["bab_el_mandeb","باب‌المندب - دریای سرخ"],
+				["malacca","مالاکا - آسیا-اروپا"],
+				["panama","پاناما - اقیانوس اطلس/آرام"],
+				["gibraltar","جبل‌الطارق - مدیترانه"]
+			]
+			for choke_def in choke_ops:
+				var choke_id = choke_def[0]
+				var choke_name = choke_def[1]
+				var choke_btn = Button.new()
+				choke_btn.text = "🚫 محاصره %s" % choke_name
+				choke_btn.custom_minimum_size = Vector2(230, 42)
+				choke_btn.pressed.connect(FeedbackManager.play_click)
+				choke_btn.pressed.connect(_on_chokepoint_attack.bind(choke_id, "blockade", choke_name))
+				choke_grid.add_child(choke_btn)
+
+		var route_actions = HBoxContainer.new()
+		route_card.add_child(route_actions)
+		_mk_btn(route_actions, "🗺️ تمرکز روی مسیر", Vector2(160,40), _on_map_camera_route_focus)
 	if selected_world_country==player_id:_build_map_player_context(state,player_id,map_context_host)
 	else:_build_selected_country_card(state,selected_world_country,map_context_host)
 	if not bool(SettingsManager.get_value("reduce_motion",false)):
@@ -2091,6 +2211,32 @@ func _refresh_unified_map_context():
 func _on_map_municipal_action(action: String, title: String):
 	if _run_tick_with([GameCommandClass.create_municipal_action(action)]):
 		_toast("اقدام نقشه اجرا شد · " + title); _switch_tab("map")
+
+func _on_trade_route_attack(route_id: String, route_type: String, operation: String, from_c: String, to_c: String, title: String):
+	var cmd = GameCommandClass.create_trade_route_attack(route_id, route_type, operation, from_c, to_c)
+	if _run_tick_with([cmd]):
+		_toast("⚔️ %s بر مسیر %s → %s اجرا شد" % [title, from_c, to_c])
+		_switch_tab("map")
+	else:
+		_toast("⚠️ عملیات مسیر تجاری ممکن نشد")
+
+func _on_chokepoint_attack(chokepoint_id: String, action: String, title: String):
+	var cmd = GameCommandClass.create_chokepoint_action(chokepoint_id, action)
+	if _run_tick_with([cmd]):
+		_toast("🌊 عملیات %s در %s اجرا شد" % [action, title])
+		_switch_tab("map")
+
+func _on_map_camera_route_focus():
+	if is_instance_valid(current_unified_map) and not selected_map_route.is_empty():
+		var from_lat = float(selected_map_route.get("from_lat", 0.0))
+		var from_lon = float(selected_map_route.get("from_lon", 0.0))
+		var to_lat = float(selected_map_route.get("to_lat", 0.0))
+		var to_lon = float(selected_map_route.get("to_lon", 0.0))
+		var center_lat = (from_lat + to_lat) / 2.0
+		var center_lon = (from_lon + to_lon) / 2.0
+		# تبدیل به نقطه نقشه
+		current_unified_map.focus_world() # ساده‌سازی - بعدا focus به مسیر
+		_toast("🗺️ تمرکز روی مسیر %s" % str(selected_map_route.get("label","")))
 
 func _map_overlay_name(layer: String) -> String:
 	return {"wars":"جنگ","alliances":"اتحاد","trade":"تجارت","air":"هوایی","sea":"دریایی","land":"زمینی"}.get(layer,"راهبردی")

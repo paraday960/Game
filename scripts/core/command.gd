@@ -107,6 +107,22 @@ static func create_decision_resolve(decision_id: String, choice_id: String):
 static func create_next_tick():
 	return _self_script().new("next_tick", {})
 
+# === نقشه‌محور: حمله به مسیرهای تجاری ===
+static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
+	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
+	return _self_script().new("trade_route_attack", {"route_id": route_id, "route_type": route_type, "operation": operation, "from_country": from_country, "to_country": to_country})
+
+static func create_chokepoint_action(chokepoint_id: String, action: String):
+	# action: blockade, mine, secure, patrol
+	return _self_script().new("chokepoint_action", {"chokepoint_id": chokepoint_id, "action": action})
+
+static func create_map_operation(target_country: String, operation_type: String, payload: Dictionary = {}):
+	# عملیات نقشه‌محور کلی: airstrike, naval_blockade, sabotage_infrastructure, etc
+	var p = payload.duplicate(true)
+	p["target_country"] = target_country
+	p["operation_type"] = operation_type
+	return _self_script().new("map_operation", p)
+
 
 # --- لایه عمیق: اعتبارسنجی، کش، لاگ، نسخه‌بندی، دترمینستیک، بازیابی خطا ---
 
