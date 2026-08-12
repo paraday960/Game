@@ -204,9 +204,10 @@ func _update_projection():
 	_base_scale = min(_viewport.size.x / 2.0, _viewport.size.y)
 
 func _draw_ocean():
-	for index in range(24):
-		var ratio = float(index) / 23.0
-		var band = Rect2(0, size.y * ratio, size.x, size.y / 23.0 + 1.0)
+	# گرادیان عمق — اقیانوس باز تیره، عمق‌های کم روشن‌تر (سبک نقشه ناوبری)
+	for index in range(32):
+		var ratio = float(index) / 31.0
+		var band = Rect2(0, size.y * ratio, size.x, size.y / 31.0 + 1.0)
 		draw_rect(band, OCEAN_TOP.lerp(OCEAN_BOTTOM, ratio), true)
 	var world_top_left = _normalized_to_screen(Vector2(0.0, 0.0), false)
 	var world_bottom_right = _normalized_to_screen(Vector2(1.0, 1.0), false)
@@ -215,6 +216,14 @@ func _draw_ocean():
 	# استخر نور ملایم مرکزی — عمق سینمایی ثابت بدون هزینه فریم.
 	for ring_index in range(5):
 		draw_circle(Vector2(size.x * 0.5, size.y * 0.32), 250.0 + float(ring_index) * 95.0, Color(0.10, 0.34, 0.46, 0.022))
+	# درخشش گرم افق — حس عمق اتمسفریک
+	for glow in range(6):
+		var gy = size.y * (0.04 + float(glow) * 0.008)
+		draw_rect(Rect2(0, gy, size.x, 26.0), Color(0.35, 0.55, 0.72, 0.012 * float(glow + 1)), true)
+	# خط استوا — نشان راهبردی کم‌رنگ
+	var equator_y = _normalized_to_screen(Vector2(0.5, 0.5), false).y
+	if equator_y > -50.0 and equator_y < size.y + 50.0:
+		draw_line(Vector2(0, equator_y), Vector2(size.x, equator_y), Color(0.35, 0.60, 0.70, 0.10), 1.0, true)
 
 func _draw_graticule():
 	var alpha = clamp(0.10 + log(zoom_level) * 0.035, 0.10, 0.24)
@@ -247,7 +256,16 @@ func _draw_countries(low_detail:bool=false):
 			var outer = _screen_ring(polygon.outer)
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
-			if (not low_detail or is_focus) and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():draw_colored_polygon(outer,fill)
+			if (not low_detail or is_focus) and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():
+				draw_colored_polygon(outer,fill)
+				# سایه توپوگرافی: نوار تیره لبه پایین هر چندضلعی (حس برجستگی ۳بعدی)
+				if not low_detail or is_focus:
+					var shade_pts := PackedVector2Array()
+					for v in outer:
+						shade_pts.append(v)
+					# فقط برای چندضلعی‌های بزرگ‌تر از یک حد — صرفه‌جویی
+					if _polygon_area(outer) > 4200.0:
+						draw_polyline(shade_pts, Color(0.0, 0.01, 0.02, 0.10), 5.0, true)
 			if not low_detail or is_focus:
 				for hole in polygon.holes:
 					var screen_hole=_screen_ring(hole)
@@ -441,6 +459,15 @@ func _draw_routes():
 			_drawn_routes.append(record)
 
 # مختصات (lon, lat) یک شهر/واحد مشخص؛ در نبود آن Vector2.ZERO برمی‌گرداند
+func _polygon_area(points: PackedVector2Array) -> float:
+	if points.size() < 3:
+		return 0.0
+	var area := 0.0
+	for i in range(points.size()):
+		var j := (i + 1) % points.size()
+		area += points[i].x * points[j].y - points[j].x * points[i].y
+	return absf(area) * 0.5
+
 func _settlement_point(code: String, unit_id: String) -> Vector2:
 	if unit_id == "" or code == "":
 		return Vector2.ZERO
