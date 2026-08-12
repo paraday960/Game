@@ -200,6 +200,21 @@ static func create_migration_action(action: String):
 static func create_culture_action(action: String, kind: String = ""):
 	return _self_script().new("culture_action", {"action": action, "kind": kind})
 
+static func create_education_action(action: String):
+	return _self_script().new("education_action", {"action": action})
+
+static func create_agriculture_action(action: String):
+	return _self_script().new("agriculture_action", {"action": action})
+
+static func create_tourism_action(action: String, value: String = ""):
+	return _self_script().new("tourism_action", {"action": action, "value": value})
+
+static func create_urban_action(action: String):
+	return _self_script().new("urban_action", {"action": action})
+
+static func create_security_action(action: String):
+	return _self_script().new("security_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
