@@ -327,11 +327,19 @@ func _tick_finish(prep: Dictionary, current_state: Dictionary, commands: Array, 
 
 	emit_signal("tick_completed", snapshot, EventLog.get_last(5))
 
+	# رویدادهای این تیک (شامل جشن‌ها) به UI برمی‌گردند؛ جشن‌ها در state ذخیره
+	# نمی‌شوند تا دترمینیسم state حفظ شود.
+	var tick_events: Array = []
+	for ev in compute_result.get("events", []):
+		if ev is Dictionary and str(ev.get("type", "")) == "celebration":
+			tick_events.append(ev)
+
 	return {
 		"success": true,
 		"state": snapshot,
 		"version": snapshot["version"],
-		"tick": snapshot_tick
+		"tick": snapshot_tick,
+		"events": tick_events
 	}
 
 func _tick_failure(reason: String, state: Dictionary, version: int, turn: int) -> Dictionary:
@@ -583,6 +591,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		snapshot = ScenarioManager.apply_scenario(snapshot, scenario_id, snapshot.get("tick", 0))
 		snapshot = PolicyManager.reset(snapshot)
 		snapshot = AnalyticsManager.reset(snapshot)
+		CelebrationManager.reset_tracking(snapshot)
 		EventLog.log_event("country_selected", {
 			"message": "کشور %s و سناریوی «%s» برای آغاز بازی انتخاب شدند" % [
 				WorldManager.get_country_name(country_id), ScenarioManager.get_scenario_name(scenario_id)],
@@ -889,6 +898,13 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var scenario_result = ScenarioManager.update(snapshot, turn)
 	snapshot = scenario_result.state
 	_collect_events(scenario_result, "scenario", snapshot, turn, generated_events, "scenario_event")
+
+	# لحظه‌های هیجان‌انگیز: تشخیص دستاورد/مرحله/رکورد برای جشن UI
+	# (بعد از به‌روزرسانی progression تا دستاوردها/مرحله دیده شوند؛
+	# از طریق events تا دترمینیسم state حفظ شود)
+	var celebrations: Array = CelebrationManager.detect_celebrations(snapshot)
+	for celebration in celebrations:
+		generated_events.append({"type": "celebration", "celebration": celebration})
 
 	snapshot = AnalyticsManager.update(snapshot, turn)
 	snapshot = ReportManager.build(snapshot, generated_events, turn)
