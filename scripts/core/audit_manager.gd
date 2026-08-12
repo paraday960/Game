@@ -37,7 +37,9 @@ func record_turn(previous_state: Dictionary, new_state: Dictionary, commands: Ar
 				"payload":raw.get("payload",{}).duplicate(true)
 			})
 	var previous_chain = str(audit.get("chain_head", audit.get("genesis_hash", "")))
-	var command_json = JSON.stringify(command_data)
+	# نرمال‌سازی اعداد: JSON.parse_string در Godot همه اعداد را float می‌کند؛
+	# برای پایداری هش در چرخه ذخیره/بازیابی، اعداد صحیح به int بازگردانده می‌شوند.
+	var command_json = JSON.stringify(_normalize_numbers(command_data))
 	var chain_hash = (previous_chain + pre_hash + post_hash + command_json).sha256_text()
 	var record = {
 		"turn":int(new_state.get("tick",0)), "version":int(new_state.get("version",0)),
@@ -66,7 +68,7 @@ func verify_chain(state: Dictionary) -> Dictionary:
 	for record in records:
 		if str(record.get("previous_chain", "")) != previous:
 			return {"valid":false,"records":records.size(),"reason":"پیوند زنجیره تاریخچه شکسته است"}
-		var expected = (previous + str(record.get("pre_hash","")) + str(record.get("post_hash","")) + JSON.stringify(record.get("commands",[]))).sha256_text()
+		var expected = (previous + str(record.get("pre_hash","")) + str(record.get("post_hash","")) + JSON.stringify(_normalize_numbers(record.get("commands",[])))).sha256_text()
 		if expected != str(record.get("chain_hash", "")):
 			return {"valid":false,"records":records.size(),"reason":"هش یکی از نوبت‌ها نامعتبر است"}
 		previous = expected
@@ -97,6 +99,25 @@ func rewind(state: Dictionary, months: int = 1) -> Dictionary:
 	audit["chain_head"] = str(kept_records[-1].get("chain_hash", audit.get("genesis_hash", ""))) if not kept_records.is_empty() else str(audit.get("genesis_hash", ""))
 	restored["audit"] = audit
 	return {"success":true,"state":restored,"target_turn":target_turn}
+
+# اعداد شناور با مقدار صحیح را به int تبدیل می‌کند تا JSON.stringify در ساخت و
+# تأیید زنجیره (پس از ذخیره/بازیابی که همه اعداد float می‌شوند) یکسان بماند.
+func _normalize_numbers(value) -> Variant:
+	if value is Dictionary:
+		var out := {}
+		for key in value.keys():
+			out[key] = _normalize_numbers(value[key])
+		return out
+	elif value is Array:
+		var out := []
+		for item in value:
+			out.append(_normalize_numbers(item))
+		return out
+	elif value is float:
+		if is_equal_approx(value, round(value)):
+			return int(value)
+		return value
+	return value
 
 func _state_json_without_audit(state: Dictionary) -> String:
 	var clean = state.duplicate(true)
