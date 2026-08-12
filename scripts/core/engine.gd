@@ -20,7 +20,8 @@ const SUPPORTED_COMMANDS = [
 	"court_action", "energy_action", "industry_action", "succession_action", "labor_action",
 	"epidemic_action", "arms_action", "cyber_action", "migration_action", "culture_action",
 	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action",
-	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action"
+	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action",
+	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -560,6 +561,23 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "trade_policy_action":
 			if not str(cmd.payload.get("action", "")) in ["diversify", "imports", "mission", "supply"]:
 				return {"valid": false, "reason": "اقدام تجاری نامعتبر است"}
+		elif cmd.type == "banking_action":
+			if not str(cmd.payload.get("action", "")) in ["reserve", "supervision", "bailout", "market"]:
+				return {"valid": false, "reason": "اقدام بانکی نامعتبر است"}
+		elif cmd.type == "fdi_action":
+			if not str(cmd.payload.get("action", "")) in ["zone", "ip", "restrictions", "diplomacy"]:
+				return {"valid": false, "reason": "اقدام سرمایه‌گذاری نامعتبر است"}
+		elif cmd.type == "ambassador_action":
+			if not str(cmd.payload.get("action", "")) in ["send", "recall", "negotiate"]:
+				return {"valid": false, "reason": "اقدام دیپلماتیک نامعتبر است"}
+			if not AmbassadorManager.KEY_COUNTRIES.has(str(cmd.payload.get("country", ""))):
+				return {"valid": false, "reason": "کشور در فهرست سفارت‌ها نیست"}
+		elif cmd.type == "digital_action":
+			if not str(cmd.payload.get("action", "")) in ["internet", "egovernment", "cbdc", "privacy"]:
+				return {"valid": false, "reason": "اقدام دیجیتال نامعتبر است"}
+		elif cmd.type == "sports_action":
+			if not str(cmd.payload.get("action", "")) in ["grassroots", "league", "doping", "host"]:
+				return {"valid": false, "reason": "اقدام ورزشی نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -1078,6 +1096,66 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in trade_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("trade_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "banking_action":
+		var bank_act := str(cmd.payload.get("action", ""))
+		var bank_result: Dictionary
+		match bank_act:
+			"reserve": bank_result = BankingManager.set_reserve(snapshot, float(cmd.payload.get("value", 0.12)))
+			"supervision": bank_result = BankingManager.strengthen_supervision(snapshot)
+			"bailout": bank_result = BankingManager.bailout(snapshot)
+			_: bank_result = BankingManager.support_market(snapshot)
+		snapshot = bank_result.state
+		for ev in bank_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("banking_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "fdi_action":
+		var fdi_act := str(cmd.payload.get("action", ""))
+		var fdi_result: Dictionary
+		match fdi_act:
+			"zone": fdi_result = FdiManager.special_zone(snapshot)
+			"ip": fdi_result = FdiManager.ip_protection(snapshot)
+			"restrictions": fdi_result = FdiManager.fdi_restrictions(snapshot, float(cmd.payload.get("value", 0.3)))
+			_: fdi_result = FdiManager.fdi_diplomacy(snapshot)
+		snapshot = fdi_result.state
+		for ev in fdi_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("fdi_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "ambassador_action":
+		var amb_act := str(cmd.payload.get("action", ""))
+		var amb_country := str(cmd.payload.get("country", ""))
+		var amb_result: Dictionary
+		match amb_act:
+			"send": amb_result = AmbassadorManager.send_ambassador(snapshot, amb_country)
+			"recall": amb_result = AmbassadorManager.recall_ambassador(snapshot, amb_country)
+			_: amb_result = AmbassadorManager.diplomatic_negotiation(snapshot, amb_country)
+		snapshot = amb_result.state
+		for ev in amb_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("diplomacy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "digital_action":
+		var dig_act := str(cmd.payload.get("action", ""))
+		var dig_result: Dictionary
+		match dig_act:
+			"internet": dig_result = DigitalManager.expand_internet(snapshot)
+			"egovernment": dig_result = DigitalManager.e_government(snapshot)
+			"cbdc": dig_result = DigitalManager.cbdc_launch(snapshot)
+			_: dig_result = DigitalManager.privacy_law(snapshot)
+		snapshot = dig_result.state
+		for ev in dig_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("digital_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "sports_action":
+		var sport_act := str(cmd.payload.get("action", ""))
+		var sport_result: Dictionary
+		match sport_act:
+			"grassroots": sport_result = SportsManager.grassroots_sports(snapshot)
+			"league": sport_result = SportsManager.pro_league_invest(snapshot)
+			"doping": sport_result = SportsManager.anti_doping(snapshot)
+			_: sport_result = SportsManager.host_major_event(snapshot, cmd.tick)
+		snapshot = sport_result.state
+		for ev in sport_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("sports_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1372,6 +1450,11 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = WelfareManager.ensure(snapshot)
 	snapshot = SpaceManager.ensure(snapshot)
 	snapshot = TradePolicyManager.ensure(snapshot)
+	snapshot = BankingManager.ensure(snapshot)
+	snapshot = FdiManager.ensure(snapshot)
+	snapshot = AmbassadorManager.ensure(snapshot)
+	snapshot = DigitalManager.ensure(snapshot)
+	snapshot = SportsManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1584,6 +1667,26 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var trade_policy_result = TradePolicyManager.simulate_month(snapshot, turn)
 	snapshot = trade_policy_result.state
 	_collect_events(trade_policy_result, "trade_policy", snapshot, turn, generated_events, "trade_event")
+	# بانکداری و بازار سرمایه: ذخیره، سهام و بحران بانکی
+	var banking_result = BankingManager.simulate_month(snapshot, turn)
+	snapshot = banking_result.state
+	_collect_events(banking_result, "banking", snapshot, turn, generated_events, "banking_event")
+	# سرمایه‌گذاری خارجی: جذب و مناطق ویژه
+	var fdi_result = FdiManager.simulate_month(snapshot, turn)
+	snapshot = fdi_result.state
+	_collect_events(fdi_result, "fdi", snapshot, turn, generated_events, "fdi_event")
+	# سفیران و دیپلماسی: روابط دوجانبه
+	var ambassador_result = AmbassadorManager.simulate_month(snapshot, turn)
+	snapshot = ambassador_result.state
+	_collect_events(ambassador_result, "diplomacy_policy", snapshot, turn, generated_events, "diplomacy_event")
+	# اقتصاد دیجیتال: پوشش اینترنت و CBDC
+	var digital_result = DigitalManager.simulate_month(snapshot, turn)
+	snapshot = digital_result.state
+	_collect_events(digital_result, "digital", snapshot, turn, generated_events, "digital_event")
+	# ورزش و سلامت عمومی
+	var sports_result = SportsManager.simulate_month(snapshot, turn)
+	snapshot = sports_result.state
+	_collect_events(sports_result, "sports", snapshot, turn, generated_events, "sports_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
