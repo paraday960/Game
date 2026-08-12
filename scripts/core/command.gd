@@ -170,6 +170,21 @@ static func create_rivalry_action(action: String):
 static func create_shadow_action(action: String):
 	return _self_script().new("shadow_action", {"action": action})
 
+static func create_court_action(action: String):
+	return _self_script().new("court_action", {"action": action})
+
+static func create_energy_action(action: String):
+	return _self_script().new("energy_action", {"action": action})
+
+static func create_industry_action(action: String, value: String = ""):
+	return _self_script().new("industry_action", {"action": action, "value": value})
+
+static func create_succession_action(action: String):
+	return _self_script().new("succession_action", {"action": action})
+
+static func create_labor_action(action: String):
+	return _self_script().new("labor_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
