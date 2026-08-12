@@ -185,6 +185,21 @@ static func create_succession_action(action: String):
 static func create_labor_action(action: String):
 	return _self_script().new("labor_action", {"action": action})
 
+static func create_epidemic_action(action: String):
+	return _self_script().new("epidemic_action", {"action": action})
+
+static func create_arms_action(action: String, target: String = "", amount: float = 0.0):
+	return _self_script().new("arms_action", {"action": action, "target": target, "amount": amount})
+
+static func create_cyber_action(action: String, target: String = "", kind: String = ""):
+	return _self_script().new("cyber_action", {"action": action, "target": target, "kind": kind})
+
+static func create_migration_action(action: String):
+	return _self_script().new("migration_action", {"action": action})
+
+static func create_culture_action(action: String, kind: String = ""):
+	return _self_script().new("culture_action", {"action": action, "kind": kind})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
