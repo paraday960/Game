@@ -868,6 +868,12 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	snapshot = news_result.state
 	_collect_events(news_result, "newsroom", snapshot, turn, generated_events, "news_event")
 
+	# مأموریت‌های ماهانه + بازار جهانی منابع (World Empire style)
+	var mission_result = MissionManager.simulate_month(snapshot, turn)
+	snapshot = mission_result.state
+	var market_result = MarketManager.simulate_month(snapshot, turn)
+	snapshot = market_result.state
+
 	snapshot = MapLayerManager.update_network_metrics(snapshot)
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
