@@ -407,6 +407,13 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				total += float(value)
 			if abs(total - 1.0) > 0.001:
 				return {"valid": false, "reason": "مجموع بودجه باید دقیقاً ۱۰۰٪ باشد، اکنون %.1f٪ است" % (total * 100.0)}
+		elif cmd.type == "assassinate":
+			var target_a = str(cmd.payload.get("target", ""))
+			if not WorldManager.countries.has(target_a):
+				return {"valid": false, "reason": "کشور هدف ترور نامعتبر است"}
+		elif cmd.type == "leader_hidden":
+			if not (cmd.payload.get("hidden", false) is bool):
+				return {"valid": false, "reason": "مقدار وضعیت رهبر نامعتبر است"}
 		elif cmd.type == "research_start":
 			var tech_id = str(cmd.payload.get("tech_id", ""))
 			var technology_check = TechnologyManager.can_start(state, tech_id)
@@ -571,6 +578,19 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 	elif cmd.type == "tariff_set":
 		snapshot["trade"]["tariff_rate"] = float(cmd.payload.get("rate", 0.15))
 		snapshot["diplomacy"]["influence"] = clamp(float(snapshot["diplomacy"].get("influence", 40.0)) - abs(float(snapshot["trade"]["tariff_rate"]) - 0.15) * 2.0, 0.0, 100.0)
+	elif cmd.type == "assassinate":
+		var a_target = str(cmd.payload.get("target", ""))
+		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
+		snapshot = a_result.state
+		for ev in a_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("world_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "leader_hidden":
+		var hide_result = LeaderManager.set_hidden(snapshot, bool(cmd.payload.get("hidden", false)), cmd.tick)
+		snapshot = hide_result.state
+		for ev in hide_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("world_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "research_start":
 		var tech_id = cmd.payload.get("tech_id", "")
 		snapshot["technology"]["in_progress"] = tech_id
@@ -820,6 +840,8 @@ func _compute_all_systems_async(snapshot: Dictionary, turn: int) -> Dictionary:
 # آغاز ماه: شبیه‌سازی فصلی و اقلیمی پیش از روزهای شبیه‌سازی
 func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	var generated_events: Array = []
+	snapshot = LeaderManager.ensure(snapshot)
+	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
 	_collect_events(seasonal_result, "seasonal", snapshot, turn, generated_events, "seasonal_event")
@@ -915,6 +937,19 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	for celebration in celebrations:
 		generated_events.append({"type": "celebration", "celebration": celebration})
 
+	# رهبر: محبوبیت جهانی، شورش‌ها، پیشروی/حل کودتا و تلاش دشمنان برای ترور
+	var leader_result = LeaderManager.simulate_month(snapshot, turn)
+	snapshot = leader_result.state
+	_collect_events(leader_result, "leadership", snapshot, turn, generated_events, "leadership_event")
+	var npc_assassination = LeaderManager.npc_assassination_attempt(snapshot, turn)
+	snapshot = npc_assassination.state
+	_collect_events(npc_assassination, "leadership", snapshot, turn, generated_events, "leadership_event")
+	# پیروزی: سه شاخه اصلی در سطح ۳۰ → عصر طلایی
+	var victory_result = TechnologyManager.check_victory(snapshot, turn)
+	snapshot = victory_result.state
+	if victory_result.achieved:
+		generated_events.append({"type": "victory", "message": "🏆 سه شاخه فناوری به سطح ۳۰ رسید؛ کشور وارد عصر طلایی شد!"})
+		EventLog.log_event("victory", {"message": "عصر طلایی — سه شاخه فناوری در سطح ۳۰"}, turn, snapshot.get("version", 0))
 	snapshot = AnalyticsManager.update(snapshot, turn)
 	snapshot = ReportManager.build(snapshot, generated_events, turn)
 	EventLog.log_event("monthly_summary", {
