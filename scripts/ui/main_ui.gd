@@ -114,6 +114,9 @@ var turn_report_overlay: Control
 var _show_report_after_tick := false
 var _last_turn_labels: Array = []
 var _report_open := false
+var remote_code_edit: LineEdit
+var remote_code_lbl: Label
+var remote_upnp_lbl: Label
 
 # مقادیر میانی فرمان‌های تعاملی
 var tax_slider: HSlider
@@ -4659,6 +4662,7 @@ func _build_network_panel():
 	_mk_btn(direct_grid,"اتصال",Vector2(150,48),_on_join_network)
 	_mk_btn(direct_grid,"بازکردن پورت",Vector2(165,48),_on_enable_upnp)
 	_mk_btn(direct_grid,"قطع اتصال",Vector2(150,48),_on_disconnect_network)
+	_build_remote_card()
 	var campaign = _card("کمپین رقابتی کشورهای مستقل")
 	campaign_lobby_lbl = Label.new(); campaign_lobby_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; campaign.add_child(campaign_lobby_lbl)
 	var campaign_grid = GridContainer.new(); campaign_grid.columns = 4; campaign.add_child(campaign_grid)
@@ -5918,6 +5922,71 @@ func _on_random_port():
 		_toast("🎲 پورت پیشنهادی: " + PersianFormatter.to_persian_digits(str(chosen)))
 	else:
 		_toast("🎲 پورت پیشنهادی: " + PersianFormatter.to_persian_digits(str(chosen)))
+
+# ── اتصال رایگان از راه دور (اینترنت): میزبانی راه دور با کد اتصال ──
+func _build_remote_card():
+	var card = _card("🌐 اتصال رایگان از راه دور (اینترنت)")
+	var hint = Label.new()
+	hint.text = "بدون سرور و بدون هزینه: با UPnP و کشف آدرس عمومی، دوستانتان حتی از شهر دیگر می‌توانند وصل شوند. اگر روتر اجازه ندهد، از VPN رایگان استفاده کنید (راهنما)."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 15); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+	# میزبانی راه دور
+	var host_btn = Button.new(); host_btn.text = "🚀 شروع میزبانی راه دور"
+	host_btn.custom_minimum_size = Vector2(0, 48); host_btn.add_theme_font_size_override("font_size", 17)
+	host_btn.theme_type_variation = "PrimaryButton"
+	host_btn.pressed.connect(FeedbackManager.play_click); host_btn.pressed.connect(_on_host_remote)
+	card.add_child(host_btn)
+	remote_upnp_lbl = Label.new()
+	remote_upnp_lbl.add_theme_font_size_override("font_size", 15); remote_upnp_lbl.modulate = TEXT_MUTED
+	card.add_child(remote_upnp_lbl)
+	remote_code_lbl = Label.new()
+	remote_code_lbl.add_theme_font_size_override("font_size", 22); remote_code_lbl.modulate = ACCENT_GOLD
+	remote_code_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.add_child(remote_code_lbl)
+	var sep = HSeparator.new(); card.add_child(sep)
+	# اتصال با کد
+	var join_lbl = Label.new(); join_lbl.text = "اتصال با کد میزبان:"
+	join_lbl.add_theme_font_size_override("font_size", 16); card.add_child(join_lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 6); card.add_child(row)
+	remote_code_edit = LineEdit.new()
+	remote_code_edit.placeholder_text = "مثال: 84.32.15.7:23991"
+	remote_code_edit.custom_minimum_size = Vector2(0, 46); remote_code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(remote_code_edit)
+	var join_btn = Button.new(); join_btn.text = "اتصال راه دور"
+	join_btn.custom_minimum_size = Vector2(150, 46); join_btn.add_theme_font_size_override("font_size", 15)
+	join_btn.pressed.connect(FeedbackManager.play_click); join_btn.pressed.connect(_on_join_remote)
+	row.add_child(join_btn)
+
+func _on_host_remote():
+	_toast("🌐 در حال آماده‌سازی میزبانی راه دور… (چند ثانیه)")
+	if is_instance_valid(remote_upnp_lbl):
+		remote_upnp_lbl.text = "در حال جست‌وجوی روتر و آدرس عمومی…"
+	var result: Dictionary = await P2PManager.host_remote(int(network_port_spin.value))
+	if not result.success:
+		_toast("⚠️ " + str(result.reason))
+		return
+	var pub := str(result.get("public_address", ""))
+	if bool(result.get("upnp", false)):
+		remote_upnp_lbl.text = "✅ پورت روی روتر باز شد (UPnP)"
+	else:
+		remote_upnp_lbl.text = "⚠️ UPnP فعال نشد؛ اگر اتصال راه دور برقرار نشد، پورت را دستی باز کنید یا VPN بزنید"
+	if pub.is_empty():
+		remote_code_lbl.text = "آدرس عمومی یافت نشد (اینترنت؟)"
+		_toast("🌐 میزبانی راه دور شروع شد ولی آدرس عمومی پیدا نشد")
+	else:
+		remote_code_lbl.text = "📋 کد اتصال: " + pub
+		_toast("🌐 کد اتصال راه دور آماده است — برای دوستت بفرست")
+	_refresh_network_status()
+
+func _on_join_remote():
+	_toast("🌐 در حال اتصال راه دور… (چند ثانیه)")
+	var result: Dictionary = await P2PManager.join_remote(remote_code_edit.text)
+	if result.success:
+		_toast("🌐 درخواست اتصال راه دور ارسال شد — چند ثانیه صبر کن")
+	else:
+		_toast("⚠️ " + str(result.reason))
+	_refresh_network_status()
 
 func _on_host_network():
 	var result = P2PManager.host_game(int(network_port_spin.value))
