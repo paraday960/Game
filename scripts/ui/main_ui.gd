@@ -4648,6 +4648,11 @@ func _build_network_panel():
 	var address_row = HBoxContainer.new(); identity_grid.add_child(address_row)
 	network_address_edit = LineEdit.new(); network_address_edit.placeholder_text = "نشانی میزبان"; network_address_edit.text = "127.0.0.1"; network_address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL; address_row.add_child(network_address_edit)
 	network_port_spin = SpinBox.new(); network_port_spin.min_value = 1024; network_port_spin.max_value = 65535; network_port_spin.value = P2PManager.DEFAULT_PORT; network_port_spin.custom_minimum_size = Vector2(145,44); address_row.add_child(network_port_spin)
+	var rand_port_btn = Button.new(); rand_port_btn.text = "🎲 پورت آزاد"; rand_port_btn.custom_minimum_size = Vector2(110, 40)
+	rand_port_btn.add_theme_font_size_override("font_size", 14)
+	rand_port_btn.tooltip_text = "اگر پورت پیش‌فرض اشغال است، یک پورت تصادفی آزاد انتخاب کنید"
+	rand_port_btn.pressed.connect(FeedbackManager.play_click); rand_port_btn.pressed.connect(_on_random_port)
+	address_row.add_child(rand_port_btn)
 	var direct = _card("اتصال مستقیم و همکارانه")
 	var direct_grid = GridContainer.new(); direct_grid.columns = 4; direct.add_child(direct_grid)
 	_mk_btn(direct_grid,"میزبانی",Vector2(150,48),_on_host_network,"PrimaryAction")
@@ -5898,12 +5903,29 @@ func _on_campaign_lobby(lobby:Dictionary):
 	for player in lobby.get("players",{}).values():names.append("%s: %s %s"%[player.get("name","بازیکن"),WorldManager.get_country_name(str(player.get("country_id",""))),"✅" if player.get("ready",false) else "⏳"])
 	campaign_lobby_lbl.text="لابی رقابتی: "+(" | ".join(names) if not names.is_empty() else "غیرفعال")
 
+func _on_random_port():
+	# پورت تصادفی در بازه امن (شبیه‌سازی چند تلاش برای یافتن پورت آزاد)
+	var chosen := P2PManager.DEFAULT_PORT
+	for attempt in range(20):
+		var candidate := 20000 + (int(Time.get_unix_time_from_system()) * 7 + attempt * 13) % 40000
+		var probe = ENetMultiplayerPeer.new()
+		if probe.create_server(candidate, 4) == OK:
+			probe.close()
+			chosen = candidate
+			break
+	if network_port_spin != null:
+		network_port_spin.value = chosen
+		_toast("🎲 پورت پیشنهادی: " + PersianFormatter.to_persian_digits(str(chosen)))
+	else:
+		_toast("🎲 پورت پیشنهادی: " + PersianFormatter.to_persian_digits(str(chosen)))
+
 func _on_host_network():
 	var result = P2PManager.host_game(int(network_port_spin.value))
 	if result.success:
-		_toast("🌐 میزبان چندنفره فعال شد؛ پورت " + PersianFormatter.to_persian_digits(str(result.port)))
+		_toast("🌐 میزبان چندنفره فعال شد؛ پورت " + PersianFormatter.to_persian_digits(str(result.port)) + " — دوستان با همین پورت و نشانی شما وصل شوند")
 	else:
 		_toast("⚠️ " + str(result.reason))
+		_toast("💡 دکمه «پورت آزاد» را بزنید یا پورت دیگری وارد کنید")
 	_refresh_network_status()
 
 func _on_join_network():
