@@ -1402,6 +1402,18 @@ func _build_leader_card(st: Dictionary):
 	var pop := clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
 	_row(card, "محبوبیت جهانی", PersianFormatter.to_persian_digits("%.0f / ۱۰۰" % pop), _color_for(pop / 100.0))
 	_bar(card, "محبوبیت جهانی", pop / 100.0)
+	# ویژگی‌های رهبر (از کنش‌های بزرگ به دست می‌آیند)
+	var traits: Array = leader.get("traits", [])
+	if not traits.is_empty():
+		var traits_row = HBoxContainer.new(); traits_row.add_theme_constant_override("separation", 6); card.add_child(traits_row)
+		var traits_lbl = Label.new(); traits_lbl.text = "ویژگی‌ها:"; traits_lbl.add_theme_font_size_override("font_size", 17); traits_lbl.modulate = TEXT_MUTED; traits_row.add_child(traits_lbl)
+		for trait_id in traits:
+			var info: Dictionary = LeaderManager.TRAIT_INFO.get(str(trait_id), {"name": str(trait_id), "desc": ""})
+			var chip = Button.new(); chip.text = str(info.get("name", str(trait_id)))
+			chip.disabled = true; chip.custom_minimum_size = Vector2(0, 40)
+			chip.add_theme_font_size_override("font_size", 15); chip.tooltip_text = str(info.get("desc", ""))
+			chip.theme_type_variation = "LensChip"
+			traits_row.add_child(chip)
 	var hint = Label.new()
 	hint.text = "جنگ تجاوزکارانه، تحریم و ترور محبوبیت را می‌سوزاند؛ صلح، تجارت و رشد آن را بالا می‌برد. رهبر محبوبِ ترورشده، شهرهایی را به شورش می‌کشاند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2234,6 +2246,66 @@ func _active_crises(st: Dictionary) -> Array:
 # ============================================================
 # تب قوانین — تصویب، اجرا، حمایت و نظارت قضایی
 # ============================================================
+# ── فراکسیون‌های سیاسی: نفوذ و وفاداری + آشتی/رویارویی/هم‌پیمانی ──
+func _build_factions_card(state: Dictionary):
+	var factions: Dictionary = state.get("factions", {})
+	if factions.is_empty():
+		return
+	var card = _card("🏛️ فراکسیون‌های سیاسی — نفوذ و وفاداری")
+	var hint = Label.new()
+	hint.text = "وفاداری پایین بحران می‌آفریند (کودتا، اعتراض، فرار سرمایه)؛ نفوذ بالا اثر واقعی بر کشور دارد (فساد، ارتش، ثبات). آشتی وفاداری را بالا می‌برد ولی نفوذ را هم؛ رویارویی نفوذ را می‌شکند ولی خطرناک است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 16)
+	hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+	for fid in FactionManager.FACTIONS:
+		var f: Dictionary = factions.get(fid, {})
+		if f.is_empty():
+			continue
+		var loyalty := clampf(float(f.get("loyalty", 50.0)), 0.0, 100.0)
+		var power := clampf(float(f.get("power", 40.0)), 0.0, 100.0)
+		var panel = PanelContainer.new(); panel.add_theme_stylebox_override("panel", null)
+		card.add_child(panel)
+		var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 4); panel.add_child(box)
+		var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); box.add_child(head)
+		var title = Label.new()
+		var status := "🔴 " if loyalty < 22.0 else ("🟠 " if loyalty < 40.0 else ("🟢 " if loyalty > 70.0 else "🔵 "))
+		title.text = "%s%s — %s" % [status, fid, _faction_status_fa(loyalty)]
+		title.add_theme_font_size_override("font_size", 19)
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(title)
+		var pow_lbl = Label.new()
+		pow_lbl.text = "نفوذ %s" % PersianFormatter.to_persian_digits(str(int(power)))
+		pow_lbl.add_theme_font_size_override("font_size", 16)
+		pow_lbl.modulate = TEXT_MUTED
+		head.add_child(pow_lbl)
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 10); box.add_child(row)
+		var loyalty_col = VBoxContainer.new(); loyalty_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; loyalty_col.add_theme_constant_override("separation", 2); row.add_child(loyalty_col)
+		var l_lbl = Label.new(); l_lbl.text = "وفاداری"; l_lbl.add_theme_font_size_override("font_size", 14); l_lbl.modulate = TEXT_MUTED; loyalty_col.add_child(l_lbl)
+		var l_bar = ProgressBar.new(); l_bar.max_value = 100.0; l_bar.value = loyalty; l_bar.show_percentage = false; l_bar.custom_minimum_size = Vector2(0, 10); loyalty_col.add_child(l_bar)
+		var btn_row = HBoxContainer.new(); btn_row.add_theme_constant_override("separation", 5); box.add_child(btn_row)
+		for act in [["appease", "🤝 آشتی (۱)"], ["confront", "⚔ رویارویی"], ["ally", "👥 هم‌پیمانی (۱.۵)"]]:
+			var btn = Button.new(); btn.text = act[1]; btn.custom_minimum_size = Vector2(0, 38)
+			btn.add_theme_font_size_override("font_size", 15)
+			btn.pressed.connect(FeedbackManager.play_click)
+			btn.pressed.connect(_on_faction_action.bind(fid, act[0], act[1]))
+			btn_row.add_child(btn)
+
+func _faction_status_fa(loyalty: float) -> String:
+	if loyalty < 22.0:
+		return "بحرانی"
+	if loyalty < 40.0:
+		return "ناراضی"
+	if loyalty > 70.0:
+		return "وفادار"
+	return "متوازن"
+
+func _on_faction_action(faction: String, action: String, label: String):
+	var cmd = GameCommandClass.create_faction_action(faction, action)
+	if _queue_decision(cmd, "🏛️ " + label + " با «" + faction + "»"):
+		_toast("اقدام بر «%s» ثبت شد — با پایان نوبت اعمال می‌شود" % faction)
+		_switch_tab("government")
+
 func _build_laws():
 	var state = GameState.state
 	var legislation: Dictionary = state.get("legislation", {})
@@ -2290,6 +2362,7 @@ func _build_government():
 	_row(summary, "رسوایی‌های ثبت‌شده", PersianFormatter.to_persian_digits(str(cabinet.get("scandal_count", 0))), _color_for(0.75 if int(cabinet.get("scandal_count", 0)) == 0 else 0.25))
 	var hint = Label.new(); hint.text = "وزیر کارآمد خروجی وزارتخانه را بهتر می‌کند؛ پاکدستی پایین خطر رسوایی دارد و وفاداری بیشتر انسجام کابینه را حفظ می‌کند. هر انتصاب سرمایه سیاسی مصرف می‌کند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75, 0.82, 0.92); summary.add_child(hint)
+	_build_factions_card(state)
 
 	for ministry_id in CabinetManager.get_ministry_ids():
 		var ministry = CabinetManager.get_ministry(ministry_id)
@@ -2400,6 +2473,7 @@ func _build_economy():
 	_row(macro, "تعرفه فعلی", PersianFormatter.format_percent(float(trade.get("tariff_rate", 0.15))))
 	tariff_slider = HSlider.new(); tariff_slider.min_value = 0; tariff_slider.max_value = 60; tariff_slider.step = 1; tariff_slider.value = float(trade.get("tariff_rate", 0.15)) * 100.0; macro.add_child(tariff_slider)
 	_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff)
+	_build_cycle_card(st)
 	_build_policy_center()
 
 func _on_apply_manual_rate():
@@ -2420,6 +2494,25 @@ func _on_apply_tariff():
 	var rate = float(tariff_slider.value) / 100.0
 	if _queue_decision(GameCommandClass.create_tariff_set(rate), "🚢 تعرفه گمرکی: " + PersianFormatter.format_percent(rate)):
 		_toast("🚢 تعرفه گمرکی %s ثبت شد — با پایان نوبت اعمال می‌شود" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
+
+# ── چرخه اقتصادی: رونق/رشد/رکود/رکود عمیق + اعتماد سرمایه‌گذاران ──
+func _build_cycle_card(st: Dictionary):
+	var cycle: Dictionary = st.get("economy", {}).get("cycle", {})
+	if cycle.is_empty():
+		return
+	var phase: String = str(cycle.get("phase", "growth"))
+	var phase_fa: String = String({"boom": "🔥 رونق", "growth": "📈 رشد", "stagnation": "📉 رکود خفیف", "recession": "🛑 رکود عمیق"}.get(phase, phase))
+	var card = _card("🔄 چرخه اقتصادی — " + phase_fa)
+	var confidence: float = clampf(float(cycle.get("confidence", 55.0)), 0.0, 100.0)
+	_bar(card, "اعتماد سرمایه‌گذاران", confidence / 100.0)
+	_row(card, "مدت باقی‌مانده فاز", "~%s ماه" % PersianFormatter.to_persian_digits(str(max(1, int(ceil(float(cycle.get("months_left", 1.0))))))))
+	var effect: String = String({"boom": "+۱.۲٪ رشد", "growth": "+۰.۴٪ رشد", "stagnation": "−۰.۶٪ رشد", "recession": "−۱.۴٪ رشد و بیکاری فزاینده"}.get(phase, ""))
+	var eff_lbl = Label.new(); eff_lbl.text = "اثر فاز: " + effect
+	eff_lbl.add_theme_font_size_override("font_size", 17); eff_lbl.modulate = TEXT_MUTED; card.add_child(eff_lbl)
+	var hint = Label.new()
+	hint.text = "ثبات، فساد پایین، مالیات متعادل و تورم کنترل‌شده اعتماد سرمایه‌گذاران را می‌سازند و شانس رونق را بالا می‌برند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 16); hint.modulate = TEXT_FAINT; card.add_child(hint)
 
 func _build_policy_center():
 	var policy_state: Dictionary = GameState.state.get("policies", {})
@@ -2588,6 +2681,46 @@ func _on_assassinate(target: String):
 	var cmd = GameCommandClass.create_assassinate(target)
 	if _queue_decision(cmd, "☠ ترور رهبر " + WorldManager.get_country_name(target)):
 		_toast("☠ عملیات ترور «%s» ثبت شد — با پایان نوبت اجرا می‌شود" % WorldManager.get_country_name(target))
+		_switch_tab("military")
+
+# ── اهداف جنگی: هر جنگ هدفی دارد که نتیجه‌اش را متفاوت می‌کند ──
+func _build_war_goals_card(st: Dictionary):
+	var world: Dictionary = st.get("world", {})
+	var wars: Dictionary = world.get("wars", {})
+	if wars.is_empty():
+		return
+	var card = _card("🎯 اهداف جنگی — نتیجه جنگ به هدف بستگی دارد")
+	for target in wars.keys():
+		var war: Dictionary = wars[target]
+		var goal := str(war.get("goal", "reparations"))
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); card.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; info.add_theme_constant_override("separation", 2); row.add_child(info)
+		var title = Label.new()
+		title.text = "⚔ جنگ با %s — هدف: %s" % [WorldManager.get_country_name(str(target)), WorldManager.get_war_goal_name(goal)]
+		title.add_theme_font_size_override("font_size", 19)
+		info.add_child(title)
+		var desc = Label.new()
+		desc.text = {"reparations": "پیروزی: غرامت سنگین از دشمن • شکست: پرداخت غرامت", "annexation": "پیروزی: الحاق خاک یا حاکم دست‌نشانده • جنگ طاقت‌فرسا و کاهنده محبوبیت", "humiliation": "پیروزی: تحقیر دشمن و نفوذ بسیار • شکست: از دست رفتن نفوذ", "liberation": "پیروزی: محبوبیت جهانی و اعتبار • بدون غنیمت مالی"}.get(goal, "")
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.add_theme_font_size_override("font_size", 14)
+		desc.modulate = TEXT_FAINT
+		info.add_child(desc)
+		var goal_btn = Button.new(); goal_btn.text = "تغییر هدف"; goal_btn.custom_minimum_size = Vector2(120, 44)
+		goal_btn.add_theme_font_size_override("font_size", 16)
+		goal_btn.pressed.connect(FeedbackManager.play_click)
+		goal_btn.pressed.connect(_on_cycle_war_goal.bind(str(target)))
+		row.add_child(goal_btn)
+
+var _war_goal_cycle := {}
+
+func _on_cycle_war_goal(target: String):
+	var goals: Array = ["reparations", "annexation", "humiliation", "liberation"]
+	var current: int = int(_war_goal_cycle.get(target, 0))
+	var next_goal: String = goals[(current + 1) % goals.size()]
+	_war_goal_cycle[target] = (current + 1) % goals.size()
+	var cmd = GameCommandClass.create_set_war_goal(target, next_goal)
+	if _queue_decision(cmd, "🎯 هدف جنگ با " + WorldManager.get_country_name(target) + ": " + WorldManager.get_war_goal_name(next_goal)):
+		_toast("هدف جنگ با %s به «%s» تغییر کرد — با پایان نوبت اعمال می‌شود" % [WorldManager.get_country_name(target), WorldManager.get_war_goal_name(next_goal)])
 		_switch_tab("military")
 
 func _build_technology():
@@ -2765,6 +2898,7 @@ func _build_military():
 	_bar(c3, "قدرت اطلاعاتی", intel.get("power", 50) / 100.0)
 	_bar(c3, "آمادگی سایبری", intel.get("cyber_readiness", 0.5))
 	_build_assassination_card(st, c3)
+	_build_war_goals_card(st)
 
 	var development: Dictionary = st.get("military_development", {})
 	var doctrine_card = _card("🧭 دکترین نظامی")
@@ -4445,6 +4579,8 @@ func _command_queue_key(cmd) -> String:
 		"trade_route_attack": return "tradeatt:" + str(p.get("route_id", "")) + ":" + str(p.get("route_type", ""))
 		"chokepoint_action": return "choke:" + str(p.get("chokepoint_id", ""))
 		"decision_resolve": return "dec:" + str(p.get("decision_id", ""))
+		"faction_action": return "fac:" + str(p.get("faction", "")) + ":" + str(p.get("action", ""))
+		"set_war_goal": return "wargoal:" + str(p.get("target", "")) + ":" + str(p.get("goal", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
