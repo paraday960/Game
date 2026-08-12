@@ -417,6 +417,9 @@ func _build_persistent_world_map():
 	_sync_world_map()
 	# ستون شناور دوربین — لبه‌ی در دسترس شست (موقعیت در _on_map_wrap_resized).
 	map_fab_col = VBoxContainer.new()
+	# حالت راست‌به‌چپِ سراسری، position را نسبت به لبه راست آینه می‌کند؛
+	# با LTR، ستون شناور دوربین دقیقاً با offset (18, …) از لبه چپ می‌ماند و از قاب گوشی بیرون نمی‌زند.
+	map_fab_col.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	map_fab_col.add_theme_constant_override("separation", 10)
 	map_fab_col.mouse_filter = Control.MOUSE_FILTER_PASS
 	map_wrap.add_child(map_fab_col)
@@ -578,7 +581,7 @@ func _build_simulation_overlay():
 	var title=Label.new();title.text="در حال شبیه‌سازی ماه";title.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;title.add_theme_font_size_override("font_size",34);box.add_child(title)
 	simulation_status_lbl=Label.new();simulation_status_lbl.text="آماده‌سازی…";simulation_status_lbl.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;simulation_status_lbl.add_theme_font_size_override("font_size",25);simulation_status_lbl.modulate=Color(0.68,0.86,0.91);box.add_child(simulation_status_lbl)
 	simulation_progress=ProgressBar.new();simulation_progress.min_value=0;simulation_progress.max_value=30;simulation_progress.value=0;simulation_progress.show_percentage=false;simulation_progress.custom_minimum_size=Vector2(0,46);box.add_child(simulation_progress)
-	var hint=Label.new();hint.text="محاسبات روزبه‌روز انجام می‌شود تا رابط گوشی پاسخ‌گو بماند.";hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;hint.modulate=Color(0.62,0.75,0.81);box.add_child(hint)
+	var hint=Label.new();hint.text="محاسبات روزبه‌روز انجام می‌شود تا رابط گوشی پاسخ‌گو بماند.";hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;hint.custom_minimum_size=Vector2(540,0);hint.modulate=Color(0.62,0.75,0.81);box.add_child(hint)
 	simulation_overlay.hide()
 
 func _set_simulation_busy(active:bool):
@@ -1066,8 +1069,8 @@ func _build_news():
 	count_lbl.add_theme_font_size_override("font_size", 18); count_lbl.modulate = ACCENT_GOLD
 	top_row.add_child(count_lbl)
 
-	# ── فیلترها ──
-	var filter_row = HBoxContainer.new(); filter_row.add_theme_constant_override("separation", 6); masthead.add_child(filter_row)
+	# ── فیلترها (HFlow: در صفحات باریک به خط بعد می‌شکنند) ──
+	var filter_row = HFlowContainer.new(); filter_row.add_theme_constant_override("h_separation", 6); filter_row.add_theme_constant_override("v_separation", 6); masthead.add_child(filter_row)
 	for filter_def in [["all", "🌐 همه"], ["domestic", "🏛 داخلی"], ["international", "🌍 بین‌المللی"]]:
 		var fbtn = Button.new(); fbtn.text = str(filter_def[1]); fbtn.toggle_mode = true
 		fbtn.button_pressed = news_filter_mode == str(filter_def[0])
@@ -3951,7 +3954,8 @@ func _build_systems():
 		health_by_ai[str(diagnosis.get("system", ""))] = float(diagnosis.get("health", 0.5))
 
 	# فیلتر حوزه: دسترسی سریع به گروه‌های موضوعی (معماری اطلاعاتی ۸ حوزه)
-	var filter_row = HBoxContainer.new(); filter_row.add_theme_constant_override("separation", 6); directory.add_child(filter_row)
+	# HFlow: اگر عرض چیپ‌ها از صفحه بیشتر شود، به خط بعد می‌شکنند و قاب گوشی بیرون نمی‌زند.
+	var filter_row = HFlowContainer.new(); filter_row.add_theme_constant_override("h_separation", 6); filter_row.add_theme_constant_override("v_separation", 6); directory.add_child(filter_row)
 	var all_filter = Button.new(); all_filter.text = "همه"; all_filter.toggle_mode = true
 	all_filter.button_pressed = systems_domain_filter == ""
 	all_filter.custom_minimum_size = Vector2(0, 40); all_filter.add_theme_font_size_override("font_size", 17)
