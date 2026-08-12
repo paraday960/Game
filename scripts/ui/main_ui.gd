@@ -1434,6 +1434,7 @@ func _build_leader_card(st: Dictionary):
 		toggle.add_theme_font_size_override("font_size", 19)
 		toggle.pressed.connect(FeedbackManager.play_click)
 		toggle.pressed.connect(_on_leader_hidden_toggle.bind(not hidden))
+		_mark_decision_button(toggle, "leader_hidden:" + ("true" if hidden else "false"))
 		row.add_child(toggle)
 		var why = Label.new()
 		why.text = "پنهان: امن‌تر در برابر ترور ولی افت روحیه و محبوبیت — آشکار: محبوب‌تر ولی آسیب‌پذیرتر"
@@ -1876,6 +1877,7 @@ func _build_weather_and_municipal_card(state: Dictionary):
 		button.tooltip_text = "" if check.valid else str(check.reason)
 		button.pressed.connect(FeedbackManager.play_click)
 		button.pressed.connect(_on_municipal_action.bind(str(action_def[0]), str(action_def[1])))
+		_mark_decision_button(button, "muni:" + str(action_def[0]))
 		grid.add_child(button)
 
 func _on_municipal_action(action: String, title: String):
@@ -2160,6 +2162,7 @@ func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
 		button.custom_minimum_size = Vector2(220, 48)
 		button.pressed.connect(_on_decision_choice.bind(
 			str(decision.get("id", "")), str(choice.get("id", "")), str(choice.get("text", ""))))
+		_mark_decision_button(button, "dec:" + str(decision.get("id", "")))
 		choice_row.add_child(button)
 		var consequence = Label.new()
 		consequence.text = str(choice.get("consequence", ""))
@@ -2198,6 +2201,8 @@ func _add_ai_recommendation(parent: VBoxContainer, recommendation: Dictionary):
 		apply.custom_minimum_size = Vector2(145, 48)
 		apply.pressed.connect(_on_apply_ai_recommendation.bind(
 			recommendation["command"], str(recommendation.get("title", "پیشنهاد"))))
+		var ai_cmd = GameCommandClass.from_dict(recommendation["command"])
+		_mark_decision_button(apply, _command_queue_key(ai_cmd))
 		box.add_child(apply)
 
 func _on_apply_ai_recommendation(command_data: Dictionary, title: String):
@@ -2289,6 +2294,7 @@ func _build_factions_card(state: Dictionary):
 			btn.add_theme_font_size_override("font_size", 15)
 			btn.pressed.connect(FeedbackManager.play_click)
 			btn.pressed.connect(_on_faction_action.bind(fid, act[0], act[1]))
+			_mark_decision_button(btn, "fac:" + fid + ":" + act[0])
 			btn_row.add_child(btn)
 
 func _faction_status_fa(loyalty: float) -> String:
@@ -2330,7 +2336,7 @@ func _build_laws():
 		_bar(box,"حمایت عمومی",float(record.get("support",0.5)))
 		_row(box,"چالش قضایی",PersianFormatter.to_persian_digits(str(record.get("challenges",0))))
 		var repeal = Button.new(); repeal.text = "لغو قانون"; repeal.modulate = Color(1.0,0.58,0.55)
-		repeal.pressed.connect(FeedbackManager.play_click); repeal.pressed.connect(_on_law_change.bind(str(law_id),"repeal")); box.add_child(repeal)
+		repeal.pressed.connect(FeedbackManager.play_click); repeal.pressed.connect(_on_law_change.bind(str(law_id),"repeal")); _mark_decision_button(repeal, "law:" + str(law_id) + ":repeal"); box.add_child(repeal)
 
 	var available = _card("📚 لوایح قابل تصویب")
 	for law_id in LawManager.get_law_ids():
@@ -2342,7 +2348,7 @@ func _build_laws():
 		var desc = Label.new(); desc.text = PersianFormatter.to_persian_digits("%s\nحمایت پایه %.0f٪ | مناقشه‌برانگیزی %.0f٪ | هزینه سیاسی %.1f" % [definition.get("description",""),float(definition.get("public_support",0.5))*100.0,float(definition.get("controversy",0.5))*100.0,float(definition.get("political_cost",1.0))]); desc.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; desc.modulate=Color(0.72,0.78,0.88); info.add_child(desc)
 		var check = LawManager.can_enact(state,law_id)
 		var enact = Button.new(); enact.text="تصویب"; enact.disabled=not check.valid; enact.tooltip_text="" if check.valid else str(check.reason)
-		enact.pressed.connect(FeedbackManager.play_click); enact.pressed.connect(_on_law_change.bind(str(law_id),"enact")); row.add_child(enact)
+		enact.pressed.connect(FeedbackManager.play_click); enact.pressed.connect(_on_law_change.bind(str(law_id),"enact")); _mark_decision_button(enact, "law:" + str(law_id) + ":enact"); row.add_child(enact)
 
 func _on_law_change(law_id: String, action: String):
 	if _queue_decision(GameCommandClass.create_law_change(law_id,action), "⚖️ قانون «" + LawManager.get_law_name(law_id) + "» " + ("تصویب" if action == "enact" else "لغو")):
@@ -2378,7 +2384,7 @@ func _build_government():
 			_bar(card, "پاکدستی", float(current.get("integrity", 0.5)))
 			_bar(card, "وفاداری", float(current.get("loyalty", 0.5)))
 			var dismiss = Button.new(); dismiss.text = "برکناری وزیر"; dismiss.modulate = Color(1.0, 0.58, 0.55)
-			dismiss.pressed.connect(FeedbackManager.play_click); dismiss.pressed.connect(_on_cabinet_dismiss.bind(str(ministry_id))); card.add_child(dismiss)
+			dismiss.pressed.connect(FeedbackManager.play_click); dismiss.pressed.connect(_on_cabinet_dismiss.bind(str(ministry_id))); _mark_decision_button(dismiss, "cabx:" + str(ministry_id)); card.add_child(dismiss)
 		var candidates_title = Label.new(); candidates_title.text = "نامزدهای معرفی‌شده"; candidates_title.add_theme_font_size_override("font_size", 16); card.add_child(candidates_title)
 		for candidate in ministry.get("candidates", []):
 			var candidate_id = str(candidate.get("id", ""))
@@ -2387,7 +2393,7 @@ func _build_government():
 			info.text = PersianFormatter.to_persian_digits("%s | شایستگی %.0f٪ | پاکدستی %.0f٪ | وفاداری %.0f٪" % [candidate.get("name_fa", ""), float(candidate.get("competence", 0.0)) * 100.0, float(candidate.get("integrity", 0.0)) * 100.0, float(candidate.get("loyalty", 0.0)) * 100.0]); row.add_child(info)
 			var check = CabinetManager.can_appoint(state, ministry_id, candidate_id)
 			var appoint = Button.new(); appoint.text = "انتصاب"; appoint.disabled = not check.valid; appoint.tooltip_text = "" if check.valid else str(check.reason)
-			appoint.pressed.connect(FeedbackManager.play_click); appoint.pressed.connect(_on_cabinet_appoint.bind(str(ministry_id), candidate_id, str(candidate.get("name_fa", "نامزد")))); row.add_child(appoint)
+			appoint.pressed.connect(FeedbackManager.play_click); appoint.pressed.connect(_on_cabinet_appoint.bind(str(ministry_id), candidate_id, str(candidate.get("name_fa", "نامزد")))); _mark_decision_button(appoint, "cab:" + str(ministry_id)); row.add_child(appoint)
 
 func _on_cabinet_appoint(ministry_id: String, candidate_id: String, candidate_name: String):
 	if _queue_decision(GameCommandClass.create_cabinet_appointment(ministry_id, candidate_id), "👔 انتصاب وزیر: " + candidate_name):
@@ -2420,7 +2426,7 @@ func _build_economy():
 	tax_value_lbl.text = _fmt_pct(econ.get("tax_rate", 0.2))
 	tax_value_lbl.custom_minimum_size = Vector2(80, 0)
 	h.add_child(tax_value_lbl)
-	var apply_tax = _mk_btn(c1, "✅ اعمال مالیات جدید (یک ماه می‌گذرد)", Vector2(280, 52), _on_apply_tax)
+	var apply_tax = _mk_btn(c1, "✅ اعمال مالیات جدید (یک ماه می‌گذرد)", Vector2(280, 52), _on_apply_tax); _mark_decision_button(apply_tax, "tax")
 	apply_tax.add_theme_font_size_override("font_size", 16)
 
 	# --- بودجه ---
@@ -2449,7 +2455,7 @@ func _build_economy():
 		vl.name = "BudgetVal_" + str(k)
 		row.add_child(vl)
 		budget_sliders[k] = s
-	_mk_btn(c2, "✅ اعمال بودجه (یک ماه می‌گذرد)", Vector2(280, 52), _on_apply_budget)
+	var apply_budget = _mk_btn(c2, "✅ اعمال بودجه (یک ماه می‌گذرد)", Vector2(280, 52), _on_apply_budget); _mark_decision_button(apply_budget, "budget")
 
 	# --- آمار مالی ---
 	var c3 = _card("📈 آمار مالی")
@@ -2466,13 +2472,13 @@ func _build_economy():
 	_row(macro, "حالت بانک مرکزی", {"independent":"مستقل/قاعده تیلور", "manual_rate":"نرخ دستوری", "inflation_target":"هدف‌گذاری تورم"}.get(str(cb.get("policy_mode", "independent")), "مستقل"))
 	_row(macro, "نرخ بهره فعلی", PersianFormatter.format_percent(float(cb.get("interest_rate", 0.15))))
 	interest_slider = HSlider.new(); interest_slider.min_value = 0; interest_slider.max_value = 40; interest_slider.step = 0.5; interest_slider.value = float(cb.get("manual_rate", cb.get("interest_rate", 0.15))) * 100.0; macro.add_child(interest_slider)
-	_mk_btn(macro, "اعمال نرخ بهره دستوری", Vector2(250, 46), _on_apply_manual_rate)
+	_mark_decision_button(_mk_btn(macro, "اعمال نرخ بهره دستوری", Vector2(250, 46), _on_apply_manual_rate), "money:manual_rate")
 	inflation_target_slider = HSlider.new(); inflation_target_slider.min_value = 0; inflation_target_slider.max_value = 20; inflation_target_slider.step = 0.5; inflation_target_slider.value = float(cb.get("inflation_target", 0.05)) * 100.0; macro.add_child(inflation_target_slider)
-	_mk_btn(macro, "اعمال هدف تورم", Vector2(220, 46), _on_apply_inflation_target)
-	_mk_btn(macro, "بازگرداندن استقلال بانک مرکزی", Vector2(280, 46), _on_restore_central_bank_independence)
+	_mark_decision_button(_mk_btn(macro, "اعمال هدف تورم", Vector2(220, 46), _on_apply_inflation_target), "money:inflation_target")
+	_mark_decision_button(_mk_btn(macro, "بازگرداندن استقلال بانک مرکزی", Vector2(280, 46), _on_restore_central_bank_independence), "money:independent")
 	_row(macro, "تعرفه فعلی", PersianFormatter.format_percent(float(trade.get("tariff_rate", 0.15))))
 	tariff_slider = HSlider.new(); tariff_slider.min_value = 0; tariff_slider.max_value = 60; tariff_slider.step = 1; tariff_slider.value = float(trade.get("tariff_rate", 0.15)) * 100.0; macro.add_child(tariff_slider)
-	_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff)
+	_mark_decision_button(_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff), "tariff")
 	_build_cycle_card(st)
 	_build_policy_center()
 
@@ -2553,6 +2559,7 @@ func _build_policy_center():
 		button.tooltip_text = "" if check.valid else str(check.reason)
 		button.pressed.connect(FeedbackManager.play_click)
 		button.pressed.connect(_on_policy_change.bind(policy_id, not enabled, str(definition.get("name_fa", "سیاست"))))
+		_mark_decision_button(button, "policy:" + str(policy_id))
 		row.add_child(button)
 
 func _on_policy_change(policy_id: String, enabled: bool, policy_name: String):
@@ -2590,7 +2597,7 @@ func _build_national_projects():
 		_row(box, "هزینه تا امروز", PersianFormatter.format_money(float(record.get("spent", 0.0))))
 		_row(box, "اضافه‌هزینه", PersianFormatter.format_money(float(record.get("overrun", 0.0))), _color_for(0.25))
 		var cancel = Button.new(); cancel.text = "لغو پروژه"; cancel.modulate = Color(1.0, 0.58, 0.55)
-		cancel.pressed.connect(FeedbackManager.play_click); cancel.pressed.connect(_on_cancel_national_project.bind(str(project_id))); box.add_child(cancel)
+		cancel.pressed.connect(FeedbackManager.play_click); cancel.pressed.connect(_on_cancel_national_project.bind(str(project_id))); _mark_decision_button(cancel, "projx:" + str(project_id)); box.add_child(cancel)
 
 	var available_card = _card("📋 طرح‌های قابل آغاز")
 	for project_id in NationalProjectManager.get_project_ids():
@@ -2603,7 +2610,7 @@ func _build_national_projects():
 		var desc = Label.new(); desc.text = PersianFormatter.to_persian_digits("%s\nمدت پایه: %s ماه | بودجه پایه: %.1f٪ تولید داخلی" % [definition.get("description", ""), str(definition.get("duration_months", 1)), float(definition.get("cost_gdp_ratio", 0.0)) * 100.0]); desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; desc.modulate = Color(0.72, 0.78, 0.88); info.add_child(desc)
 		var check = NationalProjectManager.can_start(state, project_id)
 		var start = Button.new(); start.text = "آغاز ساخت"; start.custom_minimum_size = Vector2(125, 48); start.disabled = not check.valid; start.tooltip_text = "" if check.valid else str(check.reason)
-		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_start_national_project.bind(str(project_id), str(definition.get("name_fa", "پروژه")))); row.add_child(start)
+		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_start_national_project.bind(str(project_id), str(definition.get("name_fa", "پروژه")))); _mark_decision_button(start, "proj:" + str(project_id)); row.add_child(start)
 
 func _on_start_national_project(project_id: String, title: String):
 	if _queue_decision(GameCommandClass.create_national_project(project_id), "🏗️ آغاز پروژه: " + title):
@@ -2675,6 +2682,7 @@ func _build_assassination_card(st: Dictionary, parent: VBoxContainer):
 		btn.add_theme_font_size_override("font_size", 18); btn.theme_type_variation = "DangerButton" if chance >= 0.5 else ""
 		btn.pressed.connect(FeedbackManager.play_click)
 		btn.pressed.connect(_on_assassinate.bind(str(target)))
+		_mark_decision_button(btn, "assassinate:" + str(target))
 		row.add_child(btn)
 
 func _on_assassinate(target: String):
@@ -2709,6 +2717,7 @@ func _build_war_goals_card(st: Dictionary):
 		goal_btn.add_theme_font_size_override("font_size", 16)
 		goal_btn.pressed.connect(FeedbackManager.play_click)
 		goal_btn.pressed.connect(_on_cycle_war_goal.bind(str(target)))
+		_mark_decision_button(goal_btn, "wargoal:" + str(target))
 		row.add_child(goal_btn)
 
 var _war_goal_cycle := {}
@@ -2791,6 +2800,7 @@ func _build_technology():
 			_row(body, "پیش‌نیاز", "، ".join(prerequisite_names))
 		var start_button = _mk_btn(body, "آغاز پژوهش", Vector2(180, 46),
 			_on_start_research.bind(str(technology.get("id", "")), str(technology.get("name_fa", ""))))
+		_mark_decision_button(start_button, "res:" + str(technology.get("id", "")))
 		start_button.disabled = current != null
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
@@ -2909,6 +2919,7 @@ func _build_military():
 		doctrine_button.disabled = str(development.get("doctrine", "balanced")) == doctrine_id
 		doctrine_button.pressed.connect(FeedbackManager.play_click)
 		doctrine_button.pressed.connect(_on_military_doctrine.bind(str(doctrine_id)))
+		_mark_decision_button(doctrine_button, "doc:" + str(doctrine_id))
 		doctrine_grid.add_child(doctrine_button)
 
 	var programs_card = _card("🏗️ برنامه‌های توسعه دفاعی")
@@ -2925,6 +2936,7 @@ func _build_military():
 		var check = MilitaryManager.can_start(st, program_id)
 		var start = Button.new(); start.text = "آغاز"; start.custom_minimum_size = Vector2(100, 44); start.disabled = not check.valid; start.tooltip_text = "" if check.valid else str(check.reason)
 		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_military_program.bind(str(program_id), str(definition.get("name_fa", "برنامه"))))
+		_mark_decision_button(start, "milprog:" + str(program_id))
 		row.add_child(start)
 
 	var operations_state: Dictionary = st.get("intelligence_operations", {})
@@ -2942,7 +2954,7 @@ func _build_military():
 		var active_label = Label.new(); active_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		active_label.text = "در حال اجرا: %s — %s ماه" % [IntelligenceOperationManager.get_operation_name(str(record.get("operation_id", ""))), PersianFormatter.to_persian_digits(str(record.get("remaining_months", 0)))]
 		active_row.add_child(active_label)
-		var cancel = Button.new(); cancel.text = "لغو"; cancel.pressed.connect(FeedbackManager.play_click); cancel.pressed.connect(_on_intelligence_cancel.bind(str(operation_key))); active_row.add_child(cancel)
+		var cancel = Button.new(); cancel.text = "لغو"; cancel.pressed.connect(FeedbackManager.play_click); cancel.pressed.connect(_on_intelligence_cancel.bind(str(operation_key))); _mark_decision_button(cancel, "intelx:" + str(operation_key)); active_row.add_child(cancel)
 	for operation_id in IntelligenceOperationManager.get_operation_ids():
 		var operation = IntelligenceOperationManager.get_operation(operation_id)
 		var operation_target = target if operation.get("scope", "domestic") == "foreign" else ""
@@ -2951,7 +2963,7 @@ func _build_military():
 		var op_title = Label.new(); op_title.text = "%s — %s" % [operation.get("name_fa", operation_id), "خارجی" if operation.get("scope", "domestic") == "foreign" else "داخلی"]; op_title.add_theme_font_size_override("font_size", 16); op_info.add_child(op_title)
 		var op_desc = Label.new(); op_desc.text = PersianFormatter.to_persian_digits("%s | مدت %s ماه | خطر افشا %.0f٪" % [operation.get("description", ""), str(operation.get("duration_months", 1)), float(operation.get("detection_risk", 0.0)) * 100.0]); op_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; op_desc.modulate = Color(0.72, 0.78, 0.88); op_info.add_child(op_desc)
 		var op_check = IntelligenceOperationManager.can_start(st, operation_id, operation_target)
-		var op_start = Button.new(); op_start.text = "آغاز"; op_start.disabled = not op_check.valid; op_start.tooltip_text = "" if op_check.valid else str(op_check.reason); op_start.pressed.connect(FeedbackManager.play_click); op_start.pressed.connect(_on_intelligence_start.bind(str(operation_id), operation_target)); op_row.add_child(op_start)
+		var op_start = Button.new(); op_start.text = "آغاز"; op_start.disabled = not op_check.valid; op_start.tooltip_text = "" if op_check.valid else str(op_check.reason); op_start.pressed.connect(FeedbackManager.play_click); op_start.pressed.connect(_on_intelligence_start.bind(str(operation_id), operation_target)); _mark_decision_button(op_start, "intel:" + str(operation_id) + ":" + str(operation_target)); op_row.add_child(op_start)
 	var reports: Array = operations_state.get("reports", [])
 	for i in range(max(0, reports.size() - 4), reports.size()):
 		var report = reports[i]
@@ -3343,6 +3355,7 @@ func _refresh_map_context_panel():
 				btn.tooltip_text += " - آمادگی نظامی کم (حداقل ۳۵٪)"
 			btn.pressed.connect(FeedbackManager.play_click)
 			btn.pressed.connect(_on_trade_route_attack.bind(route_id, r_type, op_id, from_c, to_c, op_title))
+			_mark_decision_button(btn, "tradeatt:" + str(route_id) + ":" + str(r_type))
 			ops_grid.add_child(btn)
 
 		# گلوگاه‌های ۶گانه - عملیات ویژه
@@ -3372,6 +3385,7 @@ func _refresh_map_context_panel():
 				choke_btn.custom_minimum_size = Vector2(230, 42)
 				choke_btn.pressed.connect(FeedbackManager.play_click)
 				choke_btn.pressed.connect(_on_chokepoint_attack.bind(choke_id, "blockade", choke_name))
+				_mark_decision_button(choke_btn, "choke:" + str(choke_id))
 				choke_grid.add_child(choke_btn)
 
 		var route_actions = HBoxContainer.new()
@@ -3436,7 +3450,7 @@ func _build_map_player_context(state: Dictionary, player_id: String, parent_over
 	var action_grid = GridContainer.new(); action_grid.columns = 3; action_card.add_child(action_grid)
 	var actions = [["road_maintenance","نگهداری راه‌ها"],["improve_drainage","تقویت زهکشی"],["buy_snowplows","خرید برف‌روب"],["stock_road_salt","ذخیره نمک جاده"],["winter_training","رزمایش زمستانی"],["cooling_centers","مراکز خنک‌کننده"]]
 	for action in actions:
-		var check = SeasonalManager.can_action(state, action[0]); var button = Button.new(); button.text = action[1]; button.custom_minimum_size = Vector2(190,46); button.disabled = not check.valid; button.tooltip_text = "" if check.valid else str(check.reason); button.pressed.connect(FeedbackManager.play_click); button.pressed.connect(_on_map_municipal_action.bind(str(action[0]),str(action[1]))); action_grid.add_child(button)
+		var check = SeasonalManager.can_action(state, action[0]); var button = Button.new(); button.text = action[1]; button.custom_minimum_size = Vector2(190,46); button.disabled = not check.valid; button.tooltip_text = "" if check.valid else str(check.reason); button.pressed.connect(FeedbackManager.play_click); button.pressed.connect(_on_map_municipal_action.bind(str(action[0]),str(action[1]))); _mark_decision_button(button, "muni:" + str(action[0])); action_grid.add_child(button)
 	var open_row = HBoxContainer.new(); action_card.add_child(open_row)
 	_mk_btn(open_row, "مرکز پروژه‌های ملی", Vector2(220,46), _switch_tab.bind("projects"))
 	_mk_btn(open_row, "مدیریت دفاع", Vector2(180,46), _switch_tab.bind("military"))
@@ -4023,6 +4037,7 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 			reply_button.tooltip_text = "" if reply_check.valid else str(reply_check.reason)
 			reply_button.pressed.connect(FeedbackManager.play_click)
 			reply_button.pressed.connect(_on_world_action.bind(target, reply_def[0], reply_def[1]))
+			_mark_decision_button(reply_button, "dip:" + str(target) + ":" + str(reply_def[0]))
 			offer_buttons.add_child(reply_button)
 	# === بخش نقشه‌محور: اطلاعات جبهه و تدارکات ===
 	if wars.has(target):
@@ -4111,6 +4126,7 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 			button.theme_type_variation = "SuccessButton"
 		button.pressed.connect(FeedbackManager.play_click)
 		button.pressed.connect(_on_world_action.bind(target, action_def[0], action_def[1]))
+		_mark_decision_button(button, "dip:" + str(target) + ":" + str(action_def[0]))
 		action_grid.add_child(button)
 
 # ─── انتخابگر لمسی سناریو (جایگزین OptionButton غیرقابل اسکرول در اندروید) ───
@@ -4562,25 +4578,28 @@ func _command_queue_key(cmd) -> String:
 		"tariff_set": return "tariff"
 		"policy_change": return "policy:" + str(p.get("policy_id", ""))
 		"law_change": return "law:" + str(p.get("law_id", "")) + ":" + str(p.get("action", ""))
-		"cabinet_appointment": return "cab:" + str(p.get("ministry_id", ""))
-		"cabinet_dismissal": return "cabx:" + str(p.get("ministry_id", ""))
-		"national_project": return "proj:" + str(p.get("project_id", ""))
-		"project_cancel": return "projx:" + str(p.get("project_id", ""))
-		"research_start": return "res:" + str(p.get("technology_id", ""))
-		"intelligence_operation": return "intel:" + str(p.get("operation_id", "")) + ":" + str(p.get("target", ""))
-		"intelligence_cancel": return "intelx:" + str(p.get("operation_key", ""))
-		"military_doctrine": return "doc:" + str(p.get("doctrine_id", ""))
+		"cabinet_change":
+			return ("cabx:" if str(p.get("action", "")) == "dismiss" else "cab:") + str(p.get("ministry_id", ""))
+		"national_project":
+			return ("projx:" if str(p.get("action", "")) == "cancel" else "proj:") + str(p.get("project_id", ""))
+		"research_start": return "res:" + str(p.get("tech_id", ""))
+		"intelligence_operation":
+			if str(p.get("action", "")) == "cancel":
+				return "intelx:" + str(p.get("operation_key", ""))
+			return "intel:" + str(p.get("operation_id", "")) + ":" + str(p.get("target", ""))
+		"military_doctrine": return "doc:" + str(p.get("doctrine", ""))
 		"military_program": return "milprog:" + str(p.get("program_id", ""))
 		"municipal_action": return "muni:" + str(p.get("action", ""))
-		"diplomacy_action": return "dip:" + str(p.get("target", "")) + ":" + str(p.get("action", ""))
-		"construction": return "con:" + str(p.get("from_c", "")) + ":" + str(p.get("to_c", "")) + ":" + str(p.get("build_type", ""))
-		"battle_plan": return "battle:" + str(p.get("from_c", "")) + ":" + str(p.get("to_c", "")) + ":" + str(p.get("plan_type", ""))
+		"diplomacy": return "dip:" + str(p.get("target", "")) + ":" + str(p.get("action", ""))
+		"construction": return "con:" + str(p.get("from_country", "")) + ":" + str(p.get("to_country", "")) + ":" + str(p.get("build_type", ""))
+		"battle_plan": return "battle:" + str(p.get("from_country", "")) + ":" + str(p.get("to_country", "")) + ":" + str(p.get("plan_type", ""))
 		"map_operation": return "mapop:" + str(p.get("target", "")) + ":" + str(p.get("operation_type", ""))
+		"map_building": return "mapbuild:" + str(p.get("building_type", "")) + ":" + str(p.get("unit_id", ""))
 		"trade_route_attack": return "tradeatt:" + str(p.get("route_id", "")) + ":" + str(p.get("route_type", ""))
 		"chokepoint_action": return "choke:" + str(p.get("chokepoint_id", ""))
 		"decision_resolve": return "dec:" + str(p.get("decision_id", ""))
 		"faction_action": return "fac:" + str(p.get("faction", "")) + ":" + str(p.get("action", ""))
-		"set_war_goal": return "wargoal:" + str(p.get("target", "")) + ":" + str(p.get("goal", ""))
+		"set_war_goal": return "wargoal:" + str(p.get("target", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
@@ -4597,6 +4616,7 @@ func _queue_decision(cmd, label: String) -> bool:
 	queued_commands.append(cmd)
 	queued_labels.append(label)
 	_update_queue_chip()
+	call_deferred("_refresh_once_buttons")
 	return true
 
 func _update_queue_chip():
@@ -4608,8 +4628,42 @@ func _clear_decision_queue():
 	queued_commands.clear()
 	queued_labels.clear()
 	_update_queue_chip()
+	call_deferred("_refresh_once_buttons")
 	if is_instance_valid(queue_panel) and queue_panel.visible:
 		_render_queue_panel()
+
+# آیا کلیدی در صف تصمیم‌های این نوبت هست؟
+func _queue_has_key(key: String) -> bool:
+	for cmd in queued_commands:
+		if _command_queue_key(cmd) == key:
+			return true
+	return false
+
+# ── غیرفعال‌سازی خودکار دکمه‌های «یک‌بار در نوبت» ──
+# هر دکمه عملیات که فقط یک بار در نوبت قابل انجام است، هنگام ساخت متادیتای
+# cmd_key می‌گیرد؛ پس از کلیک (ثبت در صف) غیرفعال می‌شود و اگر تصمیم از صف
+# حذف شد، دوباره فعال می‌گردد.
+func _mark_decision_button(btn: Button, cmd_key: String) -> Button:
+	btn.set_meta("cmd_key", cmd_key)
+	btn.set_meta("natural_disabled", btn.disabled)
+	# اگر تصمیم این عملیات در صف نوبت جاری است، دکمه از ابتدا غیرفعال ساخته می‌شود
+	# (بعد از کلیک، تب بازسازی می‌شود و دکمه تازه باید غیرفعال باشد)
+	if _queue_has_key(cmd_key):
+		btn.disabled = true
+	return btn
+
+func _refresh_once_buttons():
+	if not is_inside_tree():
+		return
+	_refresh_once_buttons_recursive(self)
+
+func _refresh_once_buttons_recursive(node: Node):
+	if node is Button and node.has_meta("cmd_key"):
+		var key := str(node.get_meta("cmd_key"))
+		var natural: bool = bool(node.get_meta("natural_disabled", false))
+		node.disabled = natural or _queue_has_key(key)
+	for child in node.get_children():
+		_refresh_once_buttons_recursive(child)
 
 func _remove_queued_decision(index: int):
 	if index < 0 or index >= queued_commands.size():
@@ -4617,6 +4671,7 @@ func _remove_queued_decision(index: int):
 	queued_commands.remove_at(index)
 	queued_labels.remove_at(index)
 	_update_queue_chip()
+	call_deferred("_refresh_once_buttons")
 	_render_queue_panel()
 
 func _on_queue_pressed():
@@ -4893,6 +4948,7 @@ func _finish_tick_result(result:Dictionary,refresh_page:bool)->bool:
 		# صف تصمیم‌های این نوبت اجرا شد؛ برای گزارش نوبت نگه می‌داریم و صف را خالی می‌کنیم.
 		_last_turn_labels = queued_labels.duplicate()
 		_clear_decision_queue()
+		call_deferred("_refresh_once_buttons")
 		if _show_report_after_tick:
 			_show_report_after_tick = false
 			call_deferred("_show_turn_report")
