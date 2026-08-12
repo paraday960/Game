@@ -3,6 +3,10 @@ extends Node
 
 const TECHNOLOGIES_PATH = "res://data/technologies.json"
 const INITIAL_UNLOCKS = ["industry_basic", "agriculture_basic"]
+# ارتقاهای اصلی: هر شاخه فناوری ۳۰ سطح دارد (بالانس بازی ~۱ ساعته)؛
+# ارتقاهای متفرقه (قوانین/پروژه‌ها/دکترین‌ها) بدون سطح یا سطح کم هستند.
+const BRANCH_MAX_LEVEL := 30
+const BRANCH_IDS := ["صنعت", "انرژی_پاک", "پزشکی", "نظامی", "دیجیتال", "فضا"]
 const LEGACY_IDS = {
 	"صنعت_پایه":"industry_basic", "کشاورزی_پایه":"agriculture_basic",
 	"صنعت_پیشرفته":"advanced_manufacturing", "انرژی_خورشیدی":"solar_grid",
@@ -103,6 +107,13 @@ func migrate_state(state: Dictionary) -> Dictionary:
 	if tech_state.get("in_progress", null) != null:
 		var current = LEGACY_IDS.get(str(tech_state["in_progress"]), str(tech_state["in_progress"]))
 		tech_state["in_progress"] = current if technologies.has(current) and not migrated.has(current) else null
+	# سطوح شاخه‌ها (۰ تا ۳۰): از مقادیر قدیمی ۰..۱ مهاجرت می‌شود
+	var levels: Dictionary = tech_state.get("branch_levels", {})
+	if levels.is_empty():
+		var branches: Dictionary = tech_state.get("branches", {})
+		for branch in BRANCH_IDS:
+			levels[branch] = clampi(int(round(float(branches.get(branch, 0.15)) * float(BRANCH_MAX_LEVEL))), 0, BRANCH_MAX_LEVEL)
+	tech_state["branch_levels"] = levels
 	tech_state["tree_version"] = data_version
 	state["technology"] = tech_state
 	return state
@@ -115,8 +126,13 @@ func apply_unlock(state: Dictionary, id: String) -> Dictionary:
 	if not tech_state["unlocked"].has(id):
 		tech_state["unlocked"].append(id)
 	var branch = str(technology.get("branch", ""))
-	if tech_state.get("branches", {}).has(branch):
-		tech_state["branches"][branch] = clamp(float(tech_state["branches"][branch]) + 0.06, 0.0, 1.0)
+	if branch != "":
+		var levels: Dictionary = tech_state.get("branch_levels", {})
+		if not levels.has(branch):
+			levels[branch] = 0
+		levels[branch] = clampi(int(levels[branch]) + 1, 0, BRANCH_MAX_LEVEL)
+		tech_state["branch_levels"] = levels
+		_sync_branch_float(tech_state, branch)
 	state["technology"] = tech_state
 	for effect in technology.get("effects", []):
 		_apply_effect(state, effect)
@@ -127,6 +143,71 @@ func progress_ratio(state: Dictionary) -> float:
 	if current == null:
 		return 0.0
 	return clamp(float(state["technology"].get("research_points", 0.0)) / max(get_cost(str(current)), 0.001), 0.0, 1.0)
+
+# ── سیستم سطوح ۳۰: ارتقای دستی شاخه‌های اصلی با امتیاز پژوهش ──
+func get_branch_level(state: Dictionary, branch: String) -> int:
+	var levels: Dictionary = state.get("technology", {}).get("branch_levels", {})
+	return clampi(int(levels.get(branch, 0)), 0, BRANCH_MAX_LEVEL)
+
+func _sync_branch_float(tech_state: Dictionary, branch: String):
+	# مقدار سازگاری ۰..۱ (سیستم‌های قدیمی از branches استفاده می‌کنند)
+	var levels: Dictionary = tech_state.get("branch_levels", {})
+	var branches: Dictionary = tech_state.get("branches", {})
+	if not branches.has(branch):
+		branches[branch] = 0.0
+	branches[branch] = float(clampi(int(levels.get(branch, 0)), 0, BRANCH_MAX_LEVEL)) / float(BRANCH_MAX_LEVEL)
+	tech_state["branches"] = branches
+
+func sync_all_branch_floats(tech_state: Dictionary) -> Dictionary:
+	for branch in BRANCH_IDS:
+		_sync_branch_float(tech_state, branch)
+	return tech_state
+
+# هزینه ارتقا از سطح جاری به سطح بعد: سطح+۱ امتیاز (مسیر کامل یک شاخه ≈ ۴۶۵ امتیاز)
+func branch_upgrade_cost(current_level: int) -> float:
+	return float(clampi(current_level, 0, BRANCH_MAX_LEVEL - 1) + 1)
+
+func can_upgrade_branch(state: Dictionary, branch: String) -> Dictionary:
+	var tech_state: Dictionary = state.get("technology", {})
+	var levels: Dictionary = tech_state.get("branch_levels", {})
+	var level := clampi(int(levels.get(branch, 0)), 0, BRANCH_MAX_LEVEL)
+	if level >= BRANCH_MAX_LEVEL:
+		return {"valid": false, "reason": "این شاخه به حداکثر سطح ۳۰ رسیده است"}
+	var cost := branch_upgrade_cost(level)
+	var points := float(tech_state.get("research_points", 0.0))
+	if points < cost:
+		return {"valid": false, "reason": "امتیاز پژوهش کافی نیست (%s از %s)" % [PersianFormatter.to_persian_digits(str(int(points))), PersianFormatter.to_persian_digits(str(int(cost)))]}
+	return {"valid": true, "reason": "", "cost": cost}
+
+func upgrade_branch(state: Dictionary, branch: String) -> Dictionary:
+	var tech_state: Dictionary = state.get("technology", {})
+	var check := can_upgrade_branch(state, branch)
+	if not check.valid:
+		return {"state": state, "success": false, "reason": check.reason}
+	var levels: Dictionary = tech_state.get("branch_levels", {})
+	var level := clampi(int(levels.get(branch, 0)), 0, BRANCH_MAX_LEVEL)
+	var cost := float(check.cost)
+	tech_state["research_points"] = float(tech_state.get("research_points", 0.0)) - cost
+	levels[branch] = level + 1
+	tech_state["branch_levels"] = levels
+	_sync_branch_float(tech_state, branch)
+	state["technology"] = tech_state
+	return {"state": state, "success": true, "level": level + 1, "cost": cost}
+
+# پیروزی: سه شاخه اصلی در سطح ۳۰ → «عصر طلایی» (بازی در ~۱ ساعت قابل اتمام است)
+func check_victory(state: Dictionary, turn: int) -> Dictionary:
+	var tech_state: Dictionary = state.get("technology", {})
+	if state.get("victory", {}).get("achieved", false):
+		return {"state": state, "achieved": false}
+	var levels: Dictionary = tech_state.get("branch_levels", {})
+	var maxed: Array = []
+	for branch in BRANCH_IDS:
+		if clampi(int(levels.get(branch, 0)), 0, BRANCH_MAX_LEVEL) >= BRANCH_MAX_LEVEL:
+			maxed.append(branch)
+	if maxed.size() >= 3:
+		state["victory"] = {"achieved": true, "turn": turn, "branches": maxed}
+		return {"state": state, "achieved": true, "branches": maxed}
+	return {"state": state, "achieved": false}
 
 func _apply_effect(state: Dictionary, effect: Dictionary):
 	var parts = str(effect.get("path", "")).split(".")
