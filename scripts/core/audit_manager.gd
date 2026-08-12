@@ -2,7 +2,7 @@ extends Node
 # خط زمانی حسابرسی‌شده: هش زنجیره فرمان‌ها و Snapshot محدود برای بازگشت امن
 
 const MAX_RECORDS = 500
-const MAX_SNAPSHOTS = 13
+const MAX_SNAPSHOTS = 9
 
 func reset(state: Dictionary) -> Dictionary:
 	var clean_json = _state_json_without_audit(state)
