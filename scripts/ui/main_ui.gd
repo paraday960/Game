@@ -3,6 +3,7 @@ extends Control
 # همه‌ی اعداد با ارقام فارسی، همه‌ی فرمان‌ها از طریق موتور اتمی (۳.۶)
 
 const GameCommandClass = preload("res://scripts/core/command.gd")
+const NpcTurnManagerClass = preload("res://scripts/core/npc_turn_manager.gd")
 const UnifiedMapClass = preload("res://scripts/ui/unified_map.gd")
 const CommandBackgroundClass = preload("res://scripts/ui/command_background.gd")
 const CommandPaletteClass = preload("res://scripts/ui/command_palette.gd")
@@ -102,6 +103,17 @@ var hero_overlay: Control
 var map_mode := false
 var ticker_panel: PanelContainer
 var time_dock: PanelContainer
+
+# ── صف تصمیم‌های نوبت: همه تصمیم‌های بازیکن ثبت می‌شوند و با «پایان نوبت» یکجا اجرا می‌شوند ──
+var queued_commands: Array = []
+var queued_labels: Array = []
+var queue_btn: Button
+var queue_panel: Control
+var queue_panel_visible := false
+var turn_report_overlay: Control
+var _show_report_after_tick := false
+var _last_turn_labels: Array = []
+var _report_open := false
 
 # مقادیر میانی فرمان‌های تعاملی
 var tax_slider: HSlider
@@ -378,9 +390,10 @@ func _build_chrome():
 	# ── داک زمان (سبک HOI4): اقدام اصلی رهبر + جریان خودکار ──
 	time_dock = PanelContainer.new(); time_dock.theme_type_variation = "TimeDockPanel"; time_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(time_dock)
 	var time_row = HBoxContainer.new(); time_row.alignment = BoxContainer.ALIGNMENT_CENTER; time_row.add_theme_constant_override("separation",9); time_dock.add_child(time_row)
-	_mk_btn(time_row, "▶ ماه بعد", Vector2(215,54), _on_next_tick_pressed, "PrimaryAction")
-	_mk_btn(time_row, "خودکار: خاموش", Vector2(170,54), _on_auto_pressed, "AutoBtn")
-	_mk_btn(time_row, "⚡ " + SettingsManager.get_speed_label(), Vector2(106,54), _on_speed_pressed, "SpeedBtn")
+	queue_btn = _mk_btn(time_row, "☑ تصمیم‌ها: ۰", Vector2(172,54), _on_queue_pressed, "QueueBtn")
+	_mk_btn(time_row, "▶ پایان نوبت", Vector2(218,54), _on_next_tick_pressed, "PrimaryAction")
+	_mk_btn(time_row, "خودکار: خاموش", Vector2(166,54), _on_auto_pressed, "AutoBtn")
+	_mk_btn(time_row, "⚡ " + SettingsManager.get_speed_label(), Vector2(104,54), _on_speed_pressed, "SpeedBtn")
 
 	# ── ناوبری پایانی ثابت: پنج بخش اصلی همیشه در دسترس ──
 	var nav_panel = PanelContainer.new(); nav_panel.theme_type_variation = "NavBarPanel"; nav_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(nav_panel)
@@ -1106,7 +1119,7 @@ func _build_news():
 		shown += 1
 	if shown == 0:
 		var empty = Label.new()
-		empty.text = "خبری برای نمایش نیست. ماه بعد اخبار جدید منتشر می‌شود."
+		empty.text = "خبری برای نمایش نیست. پس از پایان نوبت اخبار جدید منتشر می‌شود."
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty.add_theme_font_size_override("font_size", 19)
 		empty.modulate = TEXT_FAINT
@@ -1762,8 +1775,8 @@ func _build_weather_and_municipal_card(state: Dictionary):
 
 func _on_municipal_action(action: String, title: String):
 	var command = GameCommandClass.create_municipal_action(action)
-	if _run_tick_with([command]):
-		_toast("🏙️ اقدام شهرداری «%s» اجرا شد" % title)
+	if _queue_decision(command, "🏙️ اقدام شهرداری: " + title):
+		_toast("🏙️ اقدام شهرداری «%s» ثبت شد — با پایان نوبت اجرا می‌شود" % title)
 		_switch_tab("dashboard")
 
 func _build_settings_card():
@@ -2052,8 +2065,8 @@ func _add_pending_decision(parent: VBoxContainer, decision: Dictionary):
 
 func _on_decision_choice(decision_id: String, choice_id: String, choice_title: String):
 	var cmd = GameCommandClass.create_decision_resolve(decision_id, choice_id)
-	if _run_tick_with([cmd]):
-		_toast("⚖️ گزینه «%s» اجرا شد" % choice_title)
+	if _queue_decision(cmd, "⚖️ تصمیم فوری: " + choice_title):
+		_toast("⚖️ گزینه «%s» ثبت شد — با پایان نوبت اجرا می‌شود" % choice_title)
 		_switch_tab("dashboard")
 
 func _add_ai_recommendation(parent: VBoxContainer, recommendation: Dictionary):
@@ -2087,8 +2100,8 @@ func _on_apply_ai_recommendation(command_data: Dictionary, title: String):
 	# فراداده در زمان اجرا و مطابق نسخه جاری توسط موتور تکمیل می‌شود.
 	cmd.tick = 0
 	cmd.version = 0
-	if _run_tick_with([cmd]):
-		_toast("🧠 پیشنهاد «%s» اجرا شد" % title)
+	if _queue_decision(cmd, "🧠 پیشنهاد هوش مصنوعی: " + title):
+		_toast("🧠 پیشنهاد «%s» ثبت شد — با پایان نوبت اجرا می‌شود" % title)
 		_switch_tab("dashboard")
 
 func _active_crises(st: Dictionary) -> Array:
@@ -2167,8 +2180,8 @@ func _build_laws():
 		enact.pressed.connect(FeedbackManager.play_click); enact.pressed.connect(_on_law_change.bind(str(law_id),"enact")); row.add_child(enact)
 
 func _on_law_change(law_id: String, action: String):
-	if _run_tick_with([GameCommandClass.create_law_change(law_id,action)]):
-		_toast("⚖️ قانون «%s» %s" % [LawManager.get_law_name(law_id),"تصویب شد" if action=="enact" else "لغو شد"]); _switch_tab("laws")
+	if _queue_decision(GameCommandClass.create_law_change(law_id,action), "⚖️ قانون «" + LawManager.get_law_name(law_id) + "» " + ("تصویب" if action == "enact" else "لغو")):
+		_toast("⚖️ قانون «%s» %s — با پایان نوبت اجرا می‌شود" % [LawManager.get_law_name(law_id), "تصویب" if action == "enact" else "لغو"]); _switch_tab("laws")
 
 # ============================================================
 # تب دولت — وزیران، شایستگی، فساد و انسجام کابینه
@@ -2211,12 +2224,12 @@ func _build_government():
 			appoint.pressed.connect(FeedbackManager.play_click); appoint.pressed.connect(_on_cabinet_appoint.bind(str(ministry_id), candidate_id, str(candidate.get("name_fa", "نامزد")))); row.add_child(appoint)
 
 func _on_cabinet_appoint(ministry_id: String, candidate_id: String, candidate_name: String):
-	if _run_tick_with([GameCommandClass.create_cabinet_appointment(ministry_id, candidate_id)]):
-		_toast("👔 %s به کابینه منصوب شد" % candidate_name); _switch_tab("government")
+	if _queue_decision(GameCommandClass.create_cabinet_appointment(ministry_id, candidate_id), "👔 انتصاب وزیر: " + candidate_name):
+		_toast("👔 %s با پایان نوبت به کابینه منصوب می‌شود" % candidate_name); _switch_tab("government")
 
 func _on_cabinet_dismiss(ministry_id: String):
-	if _run_tick_with([GameCommandClass.create_cabinet_dismissal(ministry_id)]):
-		_toast("⛔ وزیر برکنار شد؛ وزارتخانه تا انتصاب بعدی جریمه عملکرد دارد"); _switch_tab("government")
+	if _queue_decision(GameCommandClass.create_cabinet_dismissal(ministry_id), "⛔ برکناری وزیر"):
+		_toast("⛔ برکناری وزیر ثبت شد — با پایان نوبت اجرا می‌شود"); _switch_tab("government")
 
 # ============================================================
 # تب اقتصاد — تعاملی (مالیات + بودجه)
@@ -2298,22 +2311,22 @@ func _build_economy():
 
 func _on_apply_manual_rate():
 	var rate = float(interest_slider.value) / 100.0
-	if _run_tick_with([GameCommandClass.create_monetary_policy("manual_rate", rate)]):
-		_toast("🏦 نرخ بهره دستوری %s اعمال شد" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
+	if _queue_decision(GameCommandClass.create_monetary_policy("manual_rate", rate), "🏦 نرخ بهره دستوری: " + PersianFormatter.format_percent(rate)):
+		_toast("🏦 نرخ بهره دستوری %s ثبت شد — با پایان نوبت اعمال می‌شود" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
 
 func _on_apply_inflation_target():
 	var target = float(inflation_target_slider.value) / 100.0
-	if _run_tick_with([GameCommandClass.create_monetary_policy("inflation_target", target)]):
-		_toast("🎯 هدف تورم %s ثبت شد" % PersianFormatter.format_percent(target)); _switch_tab("economy")
+	if _queue_decision(GameCommandClass.create_monetary_policy("inflation_target", target), "🎯 هدف تورم: " + PersianFormatter.format_percent(target)):
+		_toast("🎯 هدف تورم %s ثبت شد — با پایان نوبت اعمال می‌شود" % PersianFormatter.format_percent(target)); _switch_tab("economy")
 
 func _on_restore_central_bank_independence():
-	if _run_tick_with([GameCommandClass.create_monetary_policy("independent", 0.0)]):
-		_toast("🏦 بانک مرکزی به قاعده مستقل بازگشت"); _switch_tab("economy")
+	if _queue_decision(GameCommandClass.create_monetary_policy("independent", 0.0), "🏦 بازگشت استقلال بانک مرکزی"):
+		_toast("🏦 بازگشت استقلال بانک مرکزی ثبت شد — با پایان نوبت اعمال می‌شود"); _switch_tab("economy")
 
 func _on_apply_tariff():
 	var rate = float(tariff_slider.value) / 100.0
-	if _run_tick_with([GameCommandClass.create_tariff_set(rate)]):
-		_toast("🚢 تعرفه گمرکی %s اعمال شد" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
+	if _queue_decision(GameCommandClass.create_tariff_set(rate), "🚢 تعرفه گمرکی: " + PersianFormatter.format_percent(rate)):
+		_toast("🚢 تعرفه گمرکی %s ثبت شد — با پایان نوبت اعمال می‌شود" % PersianFormatter.format_percent(rate)); _switch_tab("economy")
 
 func _build_policy_center():
 	var policy_state: Dictionary = GameState.state.get("policies", {})
@@ -2358,8 +2371,8 @@ func _build_policy_center():
 
 func _on_policy_change(policy_id: String, enabled: bool, policy_name: String):
 	var command = GameCommandClass.create_policy_change(policy_id, enabled)
-	if _run_tick_with([command]):
-		_toast("📜 سیاست «%s» %s" % [policy_name, "فعال شد" if enabled else "لغو شد"])
+	if _queue_decision(command, "📜 سیاست «" + policy_name + "» " + ("فعال" if enabled else "لغو")):
+		_toast("📜 سیاست «%s» %s — با پایان نوبت اجرا می‌شود" % [policy_name, "فعال" if enabled else "لغو"])
 		_switch_tab("economy")
 
 # ============================================================
@@ -2407,12 +2420,12 @@ func _build_national_projects():
 		start.pressed.connect(FeedbackManager.play_click); start.pressed.connect(_on_start_national_project.bind(str(project_id), str(definition.get("name_fa", "پروژه")))); row.add_child(start)
 
 func _on_start_national_project(project_id: String, title: String):
-	if _run_tick_with([GameCommandClass.create_national_project(project_id)]):
-		_toast("🏗️ پروژه «%s» آغاز شد" % title); _switch_tab("projects")
+	if _queue_decision(GameCommandClass.create_national_project(project_id), "🏗️ آغاز پروژه: " + title):
+		_toast("🏗️ پروژه «%s» ثبت شد — با پایان نوبت آغاز می‌شود" % title); _switch_tab("projects")
 
 func _on_cancel_national_project(project_id: String):
-	if _run_tick_with([GameCommandClass.create_project_cancel(project_id)]):
-		_toast("⛔ پروژه «%s» لغو شد" % NationalProjectManager.get_project_name(project_id)); _switch_tab("projects")
+	if _queue_decision(GameCommandClass.create_project_cancel(project_id), "⛔ لغو پروژه: " + NationalProjectManager.get_project_name(project_id)):
+		_toast("⛔ پروژه «%s» لغو ثبت شد — با پایان نوبت اجرا می‌شود" % NationalProjectManager.get_project_name(project_id)); _switch_tab("projects")
 
 # ============================================================
 # تب فناوری — درخت پژوهش داده‌محور
@@ -2483,8 +2496,8 @@ func _build_technology():
 
 func _on_start_research(technology_id: String, technology_name: String):
 	var cmd = GameCommandClass.create_research_start(technology_id)
-	if _run_tick_with([cmd]):
-		_toast("🔬 پژوهش «%s» آغاز شد" % technology_name)
+	if _queue_decision(cmd, "🔬 آغاز پژوهش: " + technology_name):
+		_toast("🔬 پژوهش «%s» ثبت شد — با پایان نوبت آغاز می‌شود" % technology_name)
 		_switch_tab("technology")
 
 # ============================================================
@@ -2599,20 +2612,20 @@ func _build_military():
 		_row(operations_card, "گزارش: %s" % WorldManager.get_country_name(str(report.get("target", ""))), "کیفیت %s٪" % PersianFormatter.to_persian_digits(str(int(float(report.get("quality", 0.0)) * 100.0))))
 
 func _on_intelligence_start(operation_id: String, target: String):
-	if _run_tick_with([GameCommandClass.create_intelligence_operation(operation_id, target)]):
-		_toast("🕶️ عملیات «%s» آغاز شد" % IntelligenceOperationManager.get_operation_name(operation_id)); _switch_tab("military")
+	if _queue_decision(GameCommandClass.create_intelligence_operation(operation_id, target), "🕶️ عملیات: " + IntelligenceOperationManager.get_operation_name(operation_id) + " بر " + WorldManager.get_country_name(target)):
+		_toast("🕶️ عملیات «%s» ثبت شد — با پایان نوبت آغاز می‌شود" % IntelligenceOperationManager.get_operation_name(operation_id)); _switch_tab("military")
 
 func _on_intelligence_cancel(operation_key: String):
-	if _run_tick_with([GameCommandClass.create_intelligence_cancel(operation_key)]):
-		_toast("⛔ عملیات اطلاعاتی لغو شد"); _switch_tab("military")
+	if _queue_decision(GameCommandClass.create_intelligence_cancel(operation_key), "⛔ لغو عملیات اطلاعاتی"):
+		_toast("⛔ لغو عملیات اطلاعاتی ثبت شد — با پایان نوبت اجرا می‌شود"); _switch_tab("military")
 
 func _on_military_doctrine(doctrine_id: String):
-	if _run_tick_with([GameCommandClass.create_military_doctrine(doctrine_id)]):
-		_toast("🪖 دکترین «%s» فعال شد" % MilitaryManager.get_doctrine_name(doctrine_id)); _switch_tab("military")
+	if _queue_decision(GameCommandClass.create_military_doctrine(doctrine_id), "🪖 دکترین: " + MilitaryManager.get_doctrine_name(doctrine_id)):
+		_toast("🪖 دکترین «%s» ثبت شد — با پایان نوبت فعال می‌شود" % MilitaryManager.get_doctrine_name(doctrine_id)); _switch_tab("military")
 
 func _on_military_program(program_id: String, title: String):
-	if _run_tick_with([GameCommandClass.create_military_program(program_id)]):
-		_toast("🏗️ برنامه «%s» آغاز شد" % title); _switch_tab("military")
+	if _queue_decision(GameCommandClass.create_military_program(program_id), "🏗️ برنامه نظامی: " + title):
+		_toast("🏗️ برنامه «%s» ثبت شد — با پایان نوبت آغاز می‌شود" % title); _switch_tab("military")
 
 # ============================================================
 # مرکز چندنفره — جدا از نقشه برای حفظ تمرکز و افشای تدریجی
@@ -3389,8 +3402,8 @@ func _on_unified_country_selected(code: String):
 			else:
 				cmd = GameCommandClass.create_map_operation(to_c, mode, {})
 
-			if cmd != null and _run_tick_with([cmd]):
-				_toast("🗺️ %s از %s به %s اجرا شد" % [mode, WorldManager.get_country_name(from_c), WorldManager.get_country_name(to_c)])
+			if cmd != null and _queue_decision(cmd, "🗺️ " + str(mode) + " از " + WorldManager.get_country_name(from_c) + " به " + WorldManager.get_country_name(to_c)):
+				_toast("🗺️ «%s» از %s به %s ثبت شد — با پایان نوبت اجرا می‌شود" % [mode, WorldManager.get_country_name(from_c), WorldManager.get_country_name(to_c)])
 				map_advanced_mode = "select"
 				_switch_tab("map")
 				return
@@ -3435,8 +3448,8 @@ func _on_unified_unit_selected(code: String, unit_id: String):
 			else:
 				cmd = GameCommandClass.create_map_building(mode.replace("build_",""), code, unit_id)
 
-			if cmd != null and _run_tick_with([cmd]):
-				_toast("🗺️ %s از %s به %s" % [mode, from_c, to_c])
+			if cmd != null and _queue_decision(cmd, "🗺️ " + str(mode) + " از " + str(from_c) + " به " + str(to_c)):
+				_toast("🗺️ «%s» از %s به %s ثبت شد — با پایان نوبت اجرا می‌شود" % [mode, from_c, to_c])
 				map_advanced_mode = "select"
 				_switch_tab("map")
 				return
@@ -3454,27 +3467,27 @@ func _refresh_unified_map_context():
 	if current_tab=="map":_refresh_map_context_panel()
 
 func _on_map_municipal_action(action: String, title: String):
-	if _run_tick_with([GameCommandClass.create_municipal_action(action)]):
-		_toast("اقدام نقشه اجرا شد · " + title); _switch_tab("map")
+	if _queue_decision(GameCommandClass.create_municipal_action(action), "🏙️ اقدام نقشه: " + title):
+		_toast("اقدام نقشه «%s» ثبت شد — با پایان نوبت اجرا می‌شود" % title); _switch_tab("map")
 
 func _on_trade_route_attack(route_id: String, route_type: String, operation: String, from_c: String, to_c: String, title: String):
 	var cmd = GameCommandClass.create_trade_route_attack(route_id, route_type, operation, from_c, to_c)
-	if _run_tick_with([cmd]):
-		_toast("⚔️ %s بر مسیر %s → %s اجرا شد" % [title, from_c, to_c])
+	if _queue_decision(cmd, "⚔️ " + title + " بر مسیر " + from_c + " → " + to_c):
+		_toast("⚔️ %s بر مسیر %s → %s ثبت شد — با پایان نوبت اجرا می‌شود" % [title, from_c, to_c])
 		_switch_tab("map")
 	else:
 		_toast("⚠️ عملیات مسیر تجاری ممکن نشد")
 
 func _on_chokepoint_attack(chokepoint_id: String, action: String, title: String):
 	var cmd = GameCommandClass.create_chokepoint_action(chokepoint_id, action)
-	if _run_tick_with([cmd]):
-		_toast("🌊 عملیات %s در %s اجرا شد" % [action, title])
+	if _queue_decision(cmd, "🌊 عملیات " + action + " در " + title):
+		_toast("🌊 عملیات %s در %s ثبت شد — با پایان نوبت اجرا می‌شود" % [action, title])
 		_switch_tab("map")
 
 func _on_map_operation(target_country: String, operation_type: String, title: String):
 	var cmd = GameCommandClass.create_map_operation(target_country, operation_type, {})
-	if _run_tick_with([cmd]):
-		_toast("🗺️ %s روی %s اجرا شد" % [title, _fa_country(target_country)])
+	if _queue_decision(cmd, "🗺️ " + title + " روی " + _fa_country(target_country)):
+		_toast("🗺️ %s روی %s ثبت شد — با پایان نوبت اجرا می‌شود" % [title, _fa_country(target_country)])
 		_switch_tab("map")
 	else:
 		_toast("⚠️ عملیات نقشه‌محور ممکن نشد")
@@ -3831,8 +3844,8 @@ func _on_country_start_selected():
 
 func _on_world_action(country: String, action: String, action_title: String):
 	var cmd = GameCommandClass.create_diplomacy_action(country, action)
-	if _run_tick_with([cmd]):
-		_toast("🌍 «%s» درباره %s اجرا شد" % [action_title, _fa_country(country)])
+	if _queue_decision(cmd, "🌍 " + action_title + " درباره " + _fa_country(country)):
+		_toast("🌍 «%s» درباره %s ثبت شد — با پایان نوبت اجرا می‌شود" % [action_title, _fa_country(country)])
 		_switch_tab("map")
 
 func _fa_geo_name(value:String)->String:
@@ -4151,9 +4164,9 @@ func _on_budget_slider_changed(v: float, key):
 func _on_apply_tax():
 	var rate = tax_slider.value / 100.0
 	var cmd = GameCommandClass.create_tax_set(rate)
-	var ok = _run_tick_with([cmd])
+	var ok = _queue_decision(cmd, "🧾 مالیات: " + PersianFormatter.to_persian_digits("%d٪" % int(tax_slider.value)) + " — با پایان نوبت اعمال می‌شود")
 	if ok:
-		_toast("🧾 مالیات جدید اعمال شد: " + PersianFormatter.to_persian_digits("%d٪" % int(tax_slider.value)))
+		_toast("🧾 مالیات %s ثبت شد — با پایان نوبت اعمال می‌شود" % PersianFormatter.to_persian_digits("%d٪" % int(tax_slider.value)))
 		_switch_tab("economy")
 
 func _on_apply_budget():
@@ -4169,22 +4182,278 @@ func _on_apply_budget():
 	for k in raw.keys():
 		allocs[k] = raw[k] / total
 	var cmd = GameCommandClass.create_budget_allocate(allocs)
-	var ok = _run_tick_with([cmd])
+	var ok = _queue_decision(cmd, "💼 بودجه‌ی جدید — با پایان نوبت اعمال می‌شود")
 	if ok:
-		_toast("💼 بودجه‌ی جدید اعمال شد")
+		_toast("💼 بودجه‌ی جدید ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
 # ============================================================
 # کنترل‌های فوتر
 # ============================================================
 func _on_next_tick_pressed():
-	_run_tick_with([])
+	# پایان نوبت: همه تصمیم‌های ثبت‌شده یکجا اجرا می‌شوند و گزارش نوبت نمایش داده می‌شود.
+	_show_report_after_tick = true
+	_run_tick_with(queued_commands.duplicate())
 
 func _on_auto_pressed():
 	auto_tick = !auto_tick
 	var btn = find_child("AutoBtn", true, false)
 	if btn:
 		btn.text = "▶ خودکار: روشن" if auto_tick else "خودکار: خاموش"
+
+# ============================================================
+# صف تصمیم‌های نوبت — بازی نوبتی: تصمیم‌ها ثبت می‌شوند و با «پایان نوبت» اجرا
+# ============================================================
+func _command_queue_key(cmd) -> String:
+	if not cmd is GameCommandClass:
+		return ""
+	var p: Dictionary = cmd.payload
+	var t := str(cmd.type)
+	match t:
+		"tax_set": return "tax"
+		"budget_allocate": return "budget"
+		"monetary_policy": return "money:" + str(p.get("mode", ""))
+		"tariff_set": return "tariff"
+		"policy_change": return "policy:" + str(p.get("policy_id", ""))
+		"law_change": return "law:" + str(p.get("law_id", "")) + ":" + str(p.get("action", ""))
+		"cabinet_appointment": return "cab:" + str(p.get("ministry_id", ""))
+		"cabinet_dismissal": return "cabx:" + str(p.get("ministry_id", ""))
+		"national_project": return "proj:" + str(p.get("project_id", ""))
+		"project_cancel": return "projx:" + str(p.get("project_id", ""))
+		"research_start": return "res:" + str(p.get("technology_id", ""))
+		"intelligence_operation": return "intel:" + str(p.get("operation_id", "")) + ":" + str(p.get("target", ""))
+		"intelligence_cancel": return "intelx:" + str(p.get("operation_key", ""))
+		"military_doctrine": return "doc:" + str(p.get("doctrine_id", ""))
+		"military_program": return "milprog:" + str(p.get("program_id", ""))
+		"municipal_action": return "muni:" + str(p.get("action", ""))
+		"diplomacy_action": return "dip:" + str(p.get("target", "")) + ":" + str(p.get("action", ""))
+		"construction": return "con:" + str(p.get("from_c", "")) + ":" + str(p.get("to_c", "")) + ":" + str(p.get("build_type", ""))
+		"battle_plan": return "battle:" + str(p.get("from_c", "")) + ":" + str(p.get("to_c", "")) + ":" + str(p.get("plan_type", ""))
+		"map_operation": return "mapop:" + str(p.get("target", "")) + ":" + str(p.get("operation_type", ""))
+		"trade_route_attack": return "tradeatt:" + str(p.get("route_id", "")) + ":" + str(p.get("route_type", ""))
+		"chokepoint_action": return "choke:" + str(p.get("chokepoint_id", ""))
+		"decision_resolve": return "dec:" + str(p.get("decision_id", ""))
+	return t + ":" + str(p)
+
+# ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
+func _queue_decision(cmd, label: String) -> bool:
+	if cmd == null or not cmd is GameCommandClass:
+		return false
+	var key := _command_queue_key(cmd)
+	for i in range(queued_commands.size()):
+		if _command_queue_key(queued_commands[i]) == key:
+			queued_commands[i] = cmd
+			queued_labels[i] = label
+			_update_queue_chip()
+			return true
+	queued_commands.append(cmd)
+	queued_labels.append(label)
+	_update_queue_chip()
+	return true
+
+func _update_queue_chip():
+	if is_instance_valid(queue_btn):
+		queue_btn.text = "☑ تصمیم‌ها: " + PersianFormatter.to_persian_digits(str(queued_commands.size()))
+		queue_btn.theme_type_variation = "PrimaryButton" if queued_commands.size() > 0 else ""
+
+func _clear_decision_queue():
+	queued_commands.clear()
+	queued_labels.clear()
+	_update_queue_chip()
+	if is_instance_valid(queue_panel) and queue_panel.visible:
+		_render_queue_panel()
+
+func _remove_queued_decision(index: int):
+	if index < 0 or index >= queued_commands.size():
+		return
+	queued_commands.remove_at(index)
+	queued_labels.remove_at(index)
+	_update_queue_chip()
+	_render_queue_panel()
+
+func _on_queue_pressed():
+	if not is_instance_valid(queue_panel):
+		_build_queue_panel()
+	if queue_panel_visible:
+		queue_panel.visible = false
+		queue_panel_visible = false
+	else:
+		_render_queue_panel()
+		queue_panel.visible = true
+		queue_panel_visible = true
+		queue_panel.move_to_front()
+
+func _build_queue_panel():
+	queue_panel = Control.new()
+	queue_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	queue_panel.z_index = 260
+	queue_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	queue_panel.visible = false
+	add_child(queue_panel)
+	var dim = ColorRect.new(); dim.color = Color(0.0, 0.0, 0.0, 0.45)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT); dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.gui_input.connect(func(ev):
+		if ev is InputEventScreenTouch and ev.pressed:
+			_on_queue_pressed())
+	queue_panel.add_child(dim)
+	var sheet = PanelContainer.new(); sheet.theme_type_variation = "SheetPanel"
+	sheet.anchor_left = 0.03; sheet.anchor_right = 0.97; sheet.anchor_top = 0.55; sheet.anchor_bottom = 0.985
+	sheet.offset_left = 0; sheet.offset_right = 0; sheet.offset_top = 0; sheet.offset_bottom = 0
+	queue_panel.add_child(sheet)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 8); sheet.add_child(box)
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); box.add_child(head)
+	var title = Label.new(); title.text = "☑ تصمیم‌های این نوبت"; title.add_theme_font_size_override("font_size", 26)
+	title.modulate = ACCENT_GOLD; title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
+	var clear_btn = Button.new(); clear_btn.text = "پاک کردن همه"; clear_btn.theme_type_variation = "GhostButton"
+	clear_btn.add_theme_font_size_override("font_size", 18); clear_btn.pressed.connect(_clear_decision_queue)
+	clear_btn.pressed.connect(FeedbackManager.play_click); head.add_child(clear_btn)
+	var close_btn = Button.new(); close_btn.text = "✕"; close_btn.custom_minimum_size = Vector2(64, 52)
+	close_btn.add_theme_font_size_override("font_size", 22); close_btn.theme_type_variation = "GhostButton"
+	close_btn.pressed.connect(_on_queue_pressed); close_btn.pressed.connect(FeedbackManager.play_click); head.add_child(close_btn)
+	var hint = Label.new(); hint.text = "این تصمیم‌ها هنگام زدن «پایان نوبت» یکجا اجرا می‌شوند."
+	hint.add_theme_font_size_override("font_size", 17); hint.modulate = TEXT_FAINT; box.add_child(hint)
+	var scroll = TouchScrollClass.new(); scroll.allow_vertical = true; scroll.allow_horizontal = false
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.add_child(scroll)
+	queue_panel.set_meta("scroll", scroll)
+	var list = VBoxContainer.new(); list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 5); scroll.add_child(list)
+	queue_panel.set_meta("list", list)
+
+func _render_queue_panel():
+	if not is_instance_valid(queue_panel):
+		return
+	var list: VBoxContainer = queue_panel.get_meta("list")
+	for c in list.get_children():
+		c.queue_free()
+	if queued_commands.is_empty():
+		var empty = Label.new(); empty.text = "هنوز تصمیمی ثبت نکرده‌اید — از بخش‌های بازی تصمیم بگیرید."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; empty.add_theme_font_size_override("font_size", 19)
+		empty.modulate = TEXT_MUTED; list.add_child(empty)
+		return
+	for i in range(queued_commands.size()):
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); list.add_child(row)
+		var lbl = Label.new(); lbl.text = "• " + str(queued_labels[i]); lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.add_theme_font_size_override("font_size", 20); lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lbl.custom_minimum_size = Vector2(0, 52); lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(lbl)
+		var rm = Button.new(); rm.text = "✕"; rm.custom_minimum_size = Vector2(58, 48)
+		rm.add_theme_font_size_override("font_size", 20); rm.theme_type_variation = "GhostButton"
+		var idx := i
+		rm.pressed.connect(func(): _remove_queued_decision(idx))
+		rm.pressed.connect(FeedbackManager.play_click)
+		row.add_child(rm)
+
+# ============================================================
+# گزارش نوبت — پس از «پایان نوبت» نمایش داده می‌شود
+# ============================================================
+func _show_turn_report():
+	if P2PManager.is_network_active() and not P2PManager.is_host:
+		return
+	if _report_open:
+		return
+	_report_open = true
+	var st = GameState.state
+	var turn = int(st.get("tick", 0))
+	var time_d: Dictionary = st.get("time", {})
+	var clock: Dictionary = st.get("clock", {})
+	var overlay = Control.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 280
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(overlay)
+	turn_report_overlay = overlay
+	var dim = ColorRect.new(); dim.color = Color(0.0, 0.01, 0.02, 0.80)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT); dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(dim)
+	var card = PanelContainer.new(); card.theme_type_variation = "CommandPanel"
+	card.anchor_left = 0.04; card.anchor_right = 0.96; card.anchor_top = 0.05; card.anchor_bottom = 0.95
+	card.offset_left = 0; card.offset_right = 0; card.offset_top = 0; card.offset_bottom = 0
+	overlay.add_child(card)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 9); card.add_child(box)
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); box.add_child(head)
+	var title = Label.new()
+	title.text = "📋 گزارش نوبت %s — %s %s" % [
+		PersianFormatter.to_persian_digits(str(turn)),
+		TimeManager.month_name(int(clock.get("month", 1))),
+		PersianFormatter.to_persian_digits(str(clock.get("year", 1404)))]
+	title.add_theme_font_size_override("font_size", 28); title.modulate = ACCENT_GOLD
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
+	var close_btn = Button.new(); close_btn.text = "ادامه ▶"; close_btn.custom_minimum_size = Vector2(140, 52)
+	close_btn.add_theme_font_size_override("font_size", 21); close_btn.theme_type_variation = "PrimaryButton"
+	close_btn.pressed.connect(func():
+		_report_open = false
+		overlay.queue_free())
+	head.add_child(close_btn)
+	var scroll = TouchScrollClass.new(); scroll.allow_vertical = true; scroll.allow_horizontal = false
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.add_child(scroll)
+	var inner = VBoxContainer.new(); inner.add_theme_constant_override("separation", 8)
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL; scroll.add_child(inner)
+
+	# ── ۱) تصمیم‌های شما ──
+	var dec_head = Label.new(); dec_head.text = "🎯 تصمیم‌های شما (%s)" % PersianFormatter.to_persian_digits(str(_last_turn_labels.size()))
+	dec_head.add_theme_font_size_override("font_size", 23); dec_head.modulate = ACCENT_TEAL; inner.add_child(dec_head)
+	if _last_turn_labels.is_empty():
+		var none = Label.new(); none.text = "در این نوبت تصمیمی ثبت نکردید — کشور به مسیر جاری ادامه داد."
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; none.add_theme_font_size_override("font_size", 19)
+		none.modulate = TEXT_MUTED; inner.add_child(none)
+	for lbl_text in _last_turn_labels:
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 6); inner.add_child(row)
+		var dot = Label.new(); dot.text = "✅"; dot.add_theme_font_size_override("font_size", 20); row.add_child(dot)
+		var l = Label.new(); l.text = str(lbl_text); l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.add_theme_font_size_override("font_size", 20); l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+	inner.add_child(HSeparator.new())
+
+	# ── ۲) شاخص‌های کشور ──
+	var idx_head = Label.new(); idx_head.text = "📈 شاخص‌های کشور در این نوبت"
+	idx_head.add_theme_font_size_override("font_size", 23); idx_head.modulate = ACCENT_TEAL; inner.add_child(idx_head)
+	var report: Dictionary = st.get("monthly_report", {})
+	if not report.is_empty():
+		_row(inner, "تغییر تولید ناخالص داخلی", _signed_percent(float(report.get("gdp_change", 0.0))), _color_for(0.75 if float(report.get("gdp_change", 0.0)) >= 0.0 else 0.2))
+		_row(inner, "تغییر رضایت مردم", _signed_percent(float(report.get("happiness_change", 0.0))), _color_for(0.75 if float(report.get("happiness_change", 0.0)) >= 0.0 else 0.2))
+		_row(inner, "تغییر ثبات", _signed_percent(float(report.get("stability_change", 0.0))), _color_for(0.75 if float(report.get("stability_change", 0.0)) >= 0.0 else 0.2))
+		_row(inner, "رویدادهای پردازش‌شده", PersianFormatter.to_persian_digits(str(report.get("total_events", 0))))
+	else:
+		var no = Label.new(); no.text = "گزارش ماهانه پس از نخستین نوبت کامل منتشر می‌شود."
+		no.add_theme_font_size_override("font_size", 19); no.modulate = TEXT_MUTED; inner.add_child(no)
+	inner.add_child(HSeparator.new())
+
+	# ── ۳) تصمیم‌های کشورهای جهان ──
+	var world_head = Label.new(); world_head.text = "🌍 تصمیم‌های کشورهای جهان در این نوبت"
+	world_head.add_theme_font_size_override("font_size", 23); world_head.modulate = ACCENT_TEAL; inner.add_child(world_head)
+	var world: Dictionary = st.get("world", {})
+	var plans: Dictionary = world.get("npc_turn_plans", {})
+	var turn_plans: Array = plans.get(str(turn), [])
+	var npc_count := 0
+	var player_id = str(world.get("player_country", ""))
+	for cid in world.get("countries", {}).keys():
+		if cid != player_id:
+			npc_count += 1
+	var shown_world := 0
+	for plan in turn_plans:
+		if not plan is Array or plan.size() < 2:
+			continue
+		if shown_world >= 24:
+			break
+		var cid := str(plan[0])
+		var cname := WorldManager.get_country_name(cid) if WorldManager.countries.has(cid) else cid
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 6); inner.add_child(row)
+		var dot = Label.new(); dot.text = NpcTurnManagerClass.action_icon(str(plan[1])); dot.add_theme_font_size_override("font_size", 19); row.add_child(dot)
+		var l = Label.new(); l.text = "%s: %s" % [cname, NpcTurnManagerClass.describe(plan)]
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; l.add_theme_font_size_override("font_size", 19)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(l)
+		shown_world += 1
+	var decided_lbl = Label.new()
+	decided_lbl.text = "✔ هر %s کشور جهان در آغاز نوبت تصمیم گرفت؛ این نوبت %s اقدام برجسته ثبت شد" % [
+		PersianFormatter.to_persian_digits(str(npc_count)),
+		PersianFormatter.to_persian_digits(str(shown_world))]
+	decided_lbl.add_theme_font_size_override("font_size", 17); decided_lbl.modulate = TEXT_FAINT; inner.add_child(decided_lbl)
+	if shown_world == 0:
+		var calm = Label.new(); calm.text = "جهان در این نوبت آرام بود؛ کشورها به وضع موجود ادامه دادند."
+		calm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; calm.add_theme_font_size_override("font_size", 19)
+		calm.modulate = TEXT_MUTED; inner.add_child(calm)
 
 func _on_music_pressed():
 	var is_on = AmbientMusic.toggle()
@@ -4241,7 +4510,8 @@ func _run_tick_with(player_cmds: Array) -> bool:
 			return true
 		for cmd in player_cmds:
 			if not P2PManager.send_command(cmd):return false
-		_toast("تصمیم برای تأیید به میزبان ارسال شد")
+		_clear_decision_queue()
+		_toast("تصمیم‌های این نوبت برای اجرا به میزبان ارسال شد")
 		return true
 
 	if P2PManager.competitive_mode and P2PManager.is_host and MultiplayerCampaignManager.started:
@@ -4272,6 +4542,12 @@ func _finish_tick_result(result:Dictionary,refresh_page:bool)->bool:
 		if not P2PManager.is_network_active() or P2PManager.is_host:SaveManager.maybe_autosave(result.tick)
 		P2PManager.broadcast_state(result.state,result.version,result.tick)
 		_refresh_header();_render_events();_engagement_pulse();FeedbackManager.play_success()
+		# صف تصمیم‌های این نوبت اجرا شد؛ برای گزارش نوبت نگه می‌داریم و صف را خالی می‌کنیم.
+		_last_turn_labels = queued_labels.duplicate()
+		_clear_decision_queue()
+		if _show_report_after_tick:
+			_show_report_after_tick = false
+			call_deferred("_show_turn_report")
 		# 🎉 لحظه‌های هیجان‌انگیز: جشن دستاورد/مرحله/رکورد (از events می‌آیند)
 		var celebrations: Array = []
 		for event in result.get("events", []):
@@ -4288,6 +4564,7 @@ func _finish_tick_result(result:Dictionary,refresh_page:bool)->bool:
 				delay += 1.2
 		if refresh_page:_switch_tab(current_tab)
 		return true
+	_show_report_after_tick = false
 	FeedbackManager.play_alert();_toast("خطا: "+str(result.get("reason","محاسبه ناموفق بود")))
 	return false
 
@@ -4303,7 +4580,8 @@ func _process(delta):
 		tick_timer += delta
 		if tick_timer >= float(SettingsManager.get_value("auto_tick_interval", 1.0)):
 			tick_timer = 0.0
-			_run_tick_with([])
+			# در حالت خودکار نیز تصمیم‌های ثبت‌شده در همین نوبت اجرا می‌شوند
+			_run_tick_with(queued_commands.duplicate())
 
 func _on_tick_completed(new_state, events):
 	current_state = new_state.duplicate(true)
