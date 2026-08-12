@@ -63,12 +63,24 @@ func start_local_mode():
 func host_game(port: int = DEFAULT_PORT, max_peers: int = MAX_PEERS) -> Dictionary:
 	if port < 1024 or port > 65535:
 		return _error("شماره پورت باید بین ۱۰۲۴ و ۶۵۵۳۵ باشد")
+	# بستن کامل ترنسپورت قبلی تا پورت واقعاً آزاد شود (مهم در اندروید)
 	_disconnect_transport()
-	var peer = ENetMultiplayerPeer.new()
-	var result = peer.create_server(port, clamp(max_peers, 2, 32))
-	if result != OK:
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer = null
+	# تلاش مجدد خودکار: پورت ممکن است لحظه‌ای در حال استفاده باشد (زمان آزادسازی)
+	var last_error := ERR_CANT_CREATE
+	var peer: ENetMultiplayerPeer = null
+	for attempt in range(3):
+		peer = ENetMultiplayerPeer.new()
+		last_error = peer.create_server(port, clamp(max_peers, 2, 32))
+		if last_error == OK:
+			break
+		peer = null
+		if attempt < 2:
+			OS.delay_msec(150)
+	if last_error != OK:
 		start_local_mode()
-		return _error("ساخت میزبان روی پورت %d ناموفق بود" % port)
+		return _error("ساخت میزبان روی پورت %d ناموفق بود (کد خطا %d)؛ پورت ممکن است در حال استفاده باشد — پورت دیگری امتحان کنید" % [port, last_error])
 	multiplayer.multiplayer_peer = peer
 	mode = NetworkMode.HOST
 	is_host = true
@@ -85,11 +97,21 @@ func join_game(address: String, port: int = DEFAULT_PORT) -> Dictionary:
 	if port < 1024 or port > 65535:
 		return _error("شماره پورت نامعتبر است")
 	_disconnect_transport()
-	var peer = ENetMultiplayerPeer.new()
-	var result = peer.create_client(clean_address, port)
-	if result != OK:
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer = null
+	var last_error := ERR_CANT_CREATE
+	var peer: ENetMultiplayerPeer = null
+	for attempt in range(3):
+		peer = ENetMultiplayerPeer.new()
+		last_error = peer.create_client(clean_address, port)
+		if last_error == OK:
+			break
+		peer = null
+		if attempt < 2:
+			OS.delay_msec(150)
+	if last_error != OK:
 		start_local_mode()
-		return _error("شروع اتصال به میزبان ناموفق بود")
+		return _error("شروع اتصال به میزبان ناموفق بود (کد خطا %d)" % last_error)
 	multiplayer.multiplayer_peer = peer
 	mode = NetworkMode.CLIENT
 	is_host = false
