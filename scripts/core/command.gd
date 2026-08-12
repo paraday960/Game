@@ -143,6 +143,33 @@ static func create_org_toggle(org: String):
 static func create_org_vote(decision: String):
 	return _self_script().new("org_vote", {"decision": decision})
 
+static func create_snap_election():
+	return _self_script().new("snap_election", {})
+
+static func create_campaign_promise(promise_id: String):
+	return _self_script().new("campaign_promise", {"promise_id": promise_id})
+
+static func create_forex_intervene(amount_billion: float):
+	return _self_script().new("forex_intervene", {"amount_billion": amount_billion})
+
+static func create_forex_devalue(percent: float):
+	return _self_script().new("forex_devalue", {"percent": percent})
+
+static func create_capital_control():
+	return _self_script().new("capital_control", {})
+
+static func create_governor_appoint(province_code: String, faction: String):
+	return _self_script().new("governor_appoint", {"province_code": province_code, "faction": faction})
+
+static func create_crisis_stance(stance: String):
+	return _self_script().new("crisis_stance", {"stance": stance})
+
+static func create_rivalry_action(action: String):
+	return _self_script().new("rivalry_action", {"action": action})
+
+static func create_shadow_action(action: String):
+	return _self_script().new("shadow_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
