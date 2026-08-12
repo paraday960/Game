@@ -245,6 +245,10 @@ const TABS := [
 ]
 
 func _ready():
+	# ⏰ پیشرفت آفلاین: اگر بازیکن ساعاتی نبوده، پاداش غیبت بده
+	call_deferred("_check_offline_progress")
+	# ثبت لحظه خروج هنگام بستن بازی
+	get_tree().auto_accept_quit = true
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
 	app_theme = _build_professional_theme()
 	theme = app_theme
@@ -271,6 +275,8 @@ func _ready():
 	print("رابط کاربری اصلی لود شد - شبیه‌ساز کشور")
 
 func _notification(what:int):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		OfflineProgressManager.note_exit()
 	if what!=NOTIFICATION_WM_GO_BACK_REQUEST:return
 	if is_instance_valid(command_palette) and command_palette.visible:command_palette.close_palette();return
 	if drawer_open:_close_drawer();return
@@ -281,6 +287,18 @@ func _notification(what:int):
 # ============================================================
 # قاب کلی: هدر + تب‌بار + محتوا + فوتر
 # ============================================================
+# ⏰ پاداش بازگشت از غیبت (آفلاین)
+func _check_offline_progress():
+	var result = OfflineProgressManager.claim_offline(GameState.state)
+	if result.get("success", false):
+		var state: Dictionary = result.get("state", {})
+		GameState.set_state(state, int(state.get("version", 0)), int(state.get("tick", 0)))
+		var hours: float = float(result.get("hours", 0.0))
+		var bonus: float = float(result.get("bonus", 0.0))
+		_toast("⏰ شما %s ساعت نبودید؛ بازده کشور جمع شد و %s به ذخایر ارزی اضافه شد!" % [
+			PersianFormatter.to_persian_digits("%.1f" % hours), PersianFormatter.format_money(bonus)])
+		FeedbackManager.play_success()
+
 func _build_chrome():
 	background_rect = CommandBackgroundClass.new()
 	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -509,6 +527,7 @@ func _build_drawer():
 	_mk_btn(sys, "▼ ذخیره", Vector2(150,52), _on_save_pressed)
 	_mk_btn(sys, "▲ بارگذاری", Vector2(162,52), _on_load_pressed)
 	_mk_btn(sys, "✕ صدا" if FeedbackManager.muted else "♪ صدا", Vector2(132,52), _on_sound_pressed, "SoundBtn")
+	_mk_btn(sys, "🎵 موزیک" if AmbientMusic.is_enabled() else "🎵✕ موزیک", Vector2(150,52), _on_music_pressed, "MusicBtn")
 
 func _on_drawer_backdrop_input(event: InputEvent):
 	if (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed) or (event is InputEventScreenTouch and event.pressed):
@@ -1241,6 +1260,97 @@ func _on_market(resource: String, action: String, amount: float):
 	else:
 		_toast("⚠️ " + str(result.get("reason", "خطا")))
 
+# 🎁 پاداش روزانه (استریک ورود)
+func _build_daily_reward_card(state: Dictionary):
+	var status: Dictionary = DailyRewardManager.get_status()
+	var can_claim: bool = bool(status.get("can_claim", false))
+	var streak: int = int(status.get("streak", 0))
+	var day_index: int = int(status.get("day_index", 0))
+	var card = _card("🎁 پاداش روزانه")
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); card.add_child(row)
+	var streak_lbl = Label.new()
+	streak_lbl.text = "🔥 استریک: %s روز" % PersianFormatter.to_persian_digits(str(streak))
+	streak_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	streak_lbl.add_theme_font_size_override("font_size", 19)
+	streak_lbl.modulate = ACCENT_GOLD
+	row.add_child(streak_lbl)
+	var today_lbl = Label.new()
+	today_lbl.text = "روز %s از ۷" % PersianFormatter.to_persian_digits(str(day_index + 1))
+	today_lbl.add_theme_font_size_override("font_size", 17)
+	today_lbl.modulate = TEXT_MUTED
+	row.add_child(today_lbl)
+	# نوار ۷ روزه
+	var days_row = HBoxContainer.new(); days_row.add_theme_constant_override("separation", 4); card.add_child(days_row)
+	for d in range(7):
+		var day_box = PanelContainer.new()
+		day_box.theme_type_variation = "LensChipActive" if d == day_index else "LensChip"
+		day_box.custom_minimum_size = Vector2(0, 44)
+		day_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		days_row.add_child(day_box)
+		var day_lbl = Label.new()
+		day_lbl.text = "روز %s" % PersianFormatter.to_persian_digits(str(d + 1))
+		day_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		day_lbl.add_theme_font_size_override("font_size", 15)
+		day_box.add_child(day_lbl)
+	var reward: Dictionary = status.get("reward", {})
+	var reward_lbl = Label.new()
+	reward_lbl.text = "پاداش امروز: " + str(reward.get("label", ""))
+	reward_lbl.add_theme_font_size_override("font_size", 17)
+	reward_lbl.modulate = Color(0.92, 0.85, 0.60)
+	card.add_child(reward_lbl)
+	if can_claim:
+		var claim_btn = Button.new()
+		claim_btn.text = "🎁 دریافت پاداش امروز"
+		claim_btn.theme_type_variation = "SuccessButton"
+		claim_btn.custom_minimum_size = Vector2(0, 50)
+		claim_btn.pressed.connect(_on_claim_daily_reward)
+		card.add_child(claim_btn)
+	else:
+		var done_lbl = Label.new()
+		done_lbl.text = "✅ پاداش امروز دریافت شد — فردا دوباره بیا!"
+		done_lbl.add_theme_font_size_override("font_size", 16)
+		done_lbl.modulate = Color(0.5, 1.0, 0.65)
+		card.add_child(done_lbl)
+
+func _on_claim_daily_reward():
+	var result = DailyRewardManager.claim(GameState.state)
+	if result.get("success", false):
+		var state: Dictionary = result.get("state", {})
+		GameState.set_state(state, int(state.get("version", 0)), int(state.get("tick", 0)))
+		var reward: Dictionary = result.get("reward", {})
+		_toast("🎁 پاداش روز %s دریافت شد: %s" % [PersianFormatter.to_persian_digits(str(result.get("day_index", 0) + 1)), str(reward.get("label", ""))])
+		FeedbackManager.play_celebration()
+		_switch_tab("dashboard")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "خطا")))
+
+# 🎯 رویداد ویژه فصلی
+func _build_special_event_card(state: Dictionary):
+	var events: Array = state.get("special_events", [])
+	if events.is_empty():
+		return
+	var event: Dictionary = events[0]
+	var card = _card("%s رویداد ویژه فصل" % str(event.get("icon", "🎯")))
+	var title = Label.new()
+	title.text = str(event.get("title", ""))
+	title.add_theme_font_size_override("font_size", 22)
+	title.modulate = Color(1.0, 0.81, 0.30)
+	card.add_child(title)
+	var desc = Label.new()
+	desc.text = str(event.get("desc", ""))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.add_theme_font_size_override("font_size", 17)
+	desc.modulate = TEXT_MUTED
+	card.add_child(desc)
+	var until: int = int(event.get("until_tick", 0))
+	var tick: int = int(state.get("tick", 0))
+	var remaining_months: int = maxi(1, (until - tick) / 30)
+	var time_lbl = Label.new()
+	time_lbl.text = "⏳ %s ماه تا پایان رویداد" % PersianFormatter.to_persian_digits(str(remaining_months))
+	time_lbl.add_theme_font_size_override("font_size", 15)
+	time_lbl.modulate = ACCENT_TEAL
+	card.add_child(time_lbl)
+
 func _build_dashboard():
 	var st = GameState.state
 	var econ = st.get("economy", {})
@@ -1252,6 +1362,8 @@ func _build_dashboard():
 	if not bool(SettingsManager.get_value("tutorial_dismissed", false)) and int(st.get("tick", 0)) < 7:
 		_build_onboarding_card(st)
 	_build_command_kpis(st)
+	_build_daily_reward_card(st)
+	_build_special_event_card(st)
 	_build_weather_and_municipal_card(st)
 	_build_monthly_report_card(st)
 	_build_timeline_card(st)
@@ -3997,6 +4109,13 @@ func _on_auto_pressed():
 	var btn = find_child("AutoBtn", true, false)
 	if btn:
 		btn.text = "▶ خودکار: روشن" if auto_tick else "خودکار: خاموش"
+
+func _on_music_pressed():
+	var is_on = AmbientMusic.toggle()
+	var btn = find_child("MusicBtn", true, false)
+	if btn:
+		btn.text = "🎵 موزیک" if is_on else "🎵✕ موزیک"
+	_toast("🎵 موسیقی محیطی روشن شد" if is_on else "🎵 موسیقی محیطی خاموش شد")
 
 func _on_sound_pressed():
 	var is_muted = FeedbackManager.toggle_mute()
