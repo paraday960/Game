@@ -2778,12 +2778,15 @@ func _build_economy():
 	tariff_slider = HSlider.new(); tariff_slider.min_value = 0; tariff_slider.max_value = 60; tariff_slider.step = 1; tariff_slider.value = float(trade.get("tariff_rate", 0.15)) * 100.0; macro.add_child(tariff_slider)
 	_mark_decision_button(_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff), "tariff")
 	_build_cycle_card(st)
+	_build_infrastructure_card(st)
+	_build_climate_card(st)
 	_build_commodities_card(st)
 	_build_forex_card(st)
 	_build_energy_card(st)
 	_build_industry_card(st)
 	_build_agriculture_card(st)
 	_build_tourism_card(st)
+	_build_trade_policy_card(st)
 	_build_shadow_card(st)
 	_build_policy_center()
 
@@ -3139,6 +3142,122 @@ func _on_tourism(action: String, value: String):
 	var cmd = GameCommandClass.create_tourism_action(action, value)
 	var labels := {"visa": "تغییر سیاست ویزا", "hospitality": "سرمایه مهمان‌پذیری", "campaign": "کمپین مقصد", "health": "گردشگری سلامت"}
 	if _queue_decision(cmd, "✈️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── زیرساخت: نگهداری و اولویت توسعه ──
+func _build_infrastructure_card(st: Dictionary):
+	var ip: Dictionary = st.get("infra_policy", {})
+	if ip.is_empty():
+		return
+	var infra: Dictionary = st.get("infrastructure", {})
+	var card = _card("🏗️ زیرساخت و نگهداری")
+	_row(card, "کیفیت کلی", PersianFormatter.to_persian_digits("%.0f٪" % (float(infra.get("quality", 0.6)) * 100.0)))
+	_bar(card, "پوسیدگی زیرساخت", float(ip.get("decay", 0.3)))
+	_row(card, "سهم نگهداری", PersianFormatter.to_persian_digits("%.0f٪" % (float(ip.get("maintenance", 0.4)) * 100.0)))
+	var focus := str(ip.get("focus", "roads"))
+	var focus_names := {"roads": "جاده و حمل‌ونقل", "power": "شبکه برق", "water": "آب و فاضلاب", "telecom": "مخابرات"}
+	_row(card, "اولویت توسعه", str(focus_names.get(focus, focus)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for m in [[0.2, "🟢 کم (۲۰٪)"], [0.5, "🟡 متوسط (۵۰٪)"], [0.8, "🔴 زیاد (۸۰٪)"]]:
+		var btn = Button.new(); btn.text = m[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = absf(float(ip.get("maintenance", 0.4)) - m[0]) < 0.05
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_infra.bind("maintenance", m[0]))
+		_mark_decision_button(btn, "infra:maintenance:" + str(m[0]))
+		row.add_child(btn)
+	var row2 = HBoxContainer.new(); row2.add_theme_constant_override("separation", 4); card.add_child(row2)
+	for f in [["focus_roads", "🛣️ جاده"], ["focus_power", "⚡ برق"], ["focus_water", "💧 آب"], ["focus_telecom", "📡 مخابرات"]]:
+		var btn = Button.new(); btn.text = f[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = focus == f[0].replace("focus_", "")
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_infra.bind(f[0], 0.0))
+		_mark_decision_button(btn, "infra:" + f[0])
+		row2.add_child(btn)
+	var hint = Label.new()
+	hint.text = "بی‌توجهی به نگهداری، زیرساخت را می‌پوساند (خاموشی و تصادفات). نگهداری خوب اقتصاد را روان می‌کند ولی بدهی می‌آورد؛ اولویت، بخش هدف را سریع‌تر رشد می‌دهد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_infra(action: String, value: float):
+	var cmd = GameCommandClass.create_infra_action(action, value)
+	var labels := {"maintenance": "تنظیم نگهداری", "focus_roads": "اولویت جاده", "focus_power": "اولویت برق", "focus_water": "اولویت آب", "focus_telecom": "اولویت مخابرات"}
+	if _queue_decision(cmd, "🏗️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── اقلیم و محیط زیست ──
+func _build_climate_card(st: Dictionary):
+	var cp: Dictionary = st.get("climate_policy", {})
+	if cp.is_empty():
+		return
+	var env: Dictionary = st.get("environment", {})
+	var card = _card("🌍 اقلیم و محیط زیست")
+	_row(card, "آلودگی", PersianFormatter.to_persian_digits("%.0f٪" % (float(cp.get("pollution", 0.5)) * 100.0)), _color_for(1.0 - float(cp.get("pollution", 0.5))))
+	_bar(card, "آلودگی", float(cp.get("pollution", 0.5)))
+	_row(card, "کیفیت هوا", PersianFormatter.to_persian_digits("%.0f٪" % (float(env.get("air_quality", 0.5)) * 100.0)))
+	_bar(card, "مالیات کربن", float(cp.get("carbon_tax", 0.1)))
+	_bar(card, "جنگل‌کاری", float(cp.get("reforestation", 0.2)))
+	_bar(card, "آمادگی بلایا", float(cp.get("disaster_readiness", 0.3)))
+	_row(card, "بلایای مدیریت‌شده", PersianFormatter.to_persian_digits(str(cp.get("disasters_handled", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for c in [[0.0, "🏭 بدون کربن"], [0.3, "🟡 کربن ۳۰٪"], [0.6, "🟢 کربن ۶۰٪"]]:
+		var btn = Button.new(); btn.text = c[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = absf(float(cp.get("carbon_tax", 0.1)) - c[0]) < 0.05
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_climate.bind("carbon", c[0]))
+		_mark_decision_button(btn, "climate:carbon:" + str(c[0]))
+		row.add_child(btn)
+	var row2 = HBoxContainer.new(); row2.add_theme_constant_override("separation", 4); card.add_child(row2)
+	for a in [["reforest", "🌳 جنگل‌کاری"], ["disaster", "🚨 آمادگی بلایا"], ["greencity", "🌿 شهر سبز"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_climate.bind(a[0], 0.0))
+		_mark_decision_button(btn, "climate:" + a[0])
+		row2.add_child(btn)
+	var hint = Label.new()
+	hint.text = "مالیات کربن درآمد و فناوری سبز می‌آورد ولی نخبگان صنعتی را می‌رنجاند؛ آلودگی سلامت را می‌خورد؛ آمادگی بلایا خسارت سیل/زلزله را مهار می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_climate(action: String, value: float):
+	var cmd = GameCommandClass.create_climate_action(action, value)
+	var labels := {"carbon": "تنظیم مالیات کربن", "reforest": "جنگل‌کاری", "disaster": "آمادگی بلایا", "greencity": "شهر سبز"}
+	if _queue_decision(cmd, "🌍 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── تجارت راهبردی و زنجیره تأمین ──
+func _build_trade_policy_card(st: Dictionary):
+	var tp: Dictionary = st.get("trade_policy", {})
+	if tp.is_empty():
+		return
+	var trade: Dictionary = st.get("trade", {})
+	var card = _card("📦 تجارت راهبردی")
+	_row(card, "سهم نفت از صادرات", PersianFormatter.to_persian_digits("%.0f٪" % (float(trade.get("oil_export_share", 0.6)) * 100.0)), _color_for(1.0 - float(trade.get("oil_export_share", 0.6))))
+	_bar(card, "تنوع صادرات", float(tp.get("export_diversity", 0.3)))
+	_bar(card, "ذخیره راهبردی واردات", float(tp.get("strategic_imports", 0.2)))
+	_bar(card, "امنیت زنجیره تأمین", float(tp.get("supply_security", 0.3)))
+	_row(card, "مأموریت‌های تجاری", PersianFormatter.to_persian_digits(str(tp.get("trade_missions", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["diversify", "📦 تنوع صادرات"], ["imports", "📦 ذخیره واردات"], ["mission", "🤝 مأموریت (۱)"], ["supply", "🔗 زنجیره امن"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_trade_policy.bind(a[0]))
+		_mark_decision_button(btn, "trade_pol:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "وابستگی به نفت، درآمد را با نوسان قیمت می‌لرزاند؛ تنوع صادرات آن را مهار می‌کند. ذخیره راهبردی و زنجیره امن، شوک‌های عرضه و تحریم را بی‌اثر می‌کنند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_trade_policy(action: String):
+	var cmd = GameCommandClass.create_trade_policy_action(action)
+	var labels := {"diversify": "تنوع صادرات", "imports": "ذخیره راهبردی", "mission": "مأموریت تجاری", "supply": "امنیت زنجیره"}
+	if _queue_decision(cmd, "📦 " + labels.get(action, action)):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
@@ -3973,6 +4092,85 @@ func _on_urban(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("population")
 
+# ── رفاه و تأمین اجتماعی ──
+func _build_welfare_card(st: Dictionary):
+	var wp: Dictionary = st.get("welfare_policy", {})
+	if wp.is_empty():
+		return
+	var welfare: Dictionary = st.get("welfare", {})
+	var card = _card("👵 رفاه و تأمین اجتماعی")
+	_row(card, "سن بازنشستگی", PersianFormatter.to_persian_digits(str(int(wp.get("pension_age", 65)))) + " سال")
+	_bar(card, "فشار صندوق بازنشستگی", float(welfare.get("pension_pressure", 0.3)))
+	_bar(card, "بیمه بیکاری", float(wp.get("unemployment_benefit", 0.4)))
+	_bar(card, "یارانه فرزند", float(wp.get("child_allowance", 0.2)))
+	_bar(card, "پوشش بیمه سلامت", float(wp.get("health_coverage", 0.6)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for p in [[60, "👵 ۶۰"], [65, "👴 ۶۵"], [70, "🧓 ۷۰"]]:
+		var btn = Button.new(); btn.text = p[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = int(wp.get("pension_age", 65)) == p[0]
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_welfare.bind("pension", p[0]))
+		_mark_decision_button(btn, "welfare:pension:" + str(p[0]))
+		row.add_child(btn)
+	var row2 = HBoxContainer.new(); row2.add_theme_constant_override("separation", 4); card.add_child(row2)
+	for b in [[0.2, "💰 بیمه ۲۰٪"], [0.5, "💰 بیمه ۵۰٪"], [0.8, "💰 بیمه ۸۰٪"]]:
+		var btn = Button.new(); btn.text = b[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = absf(float(wp.get("unemployment_benefit", 0.4)) - b[0]) < 0.05
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_welfare.bind("benefit", b[0]))
+		_mark_decision_button(btn, "welfare:benefit:" + str(b[0]))
+		row2.add_child(btn)
+	var row3 = HBoxContainer.new(); row3.add_theme_constant_override("separation", 4); card.add_child(row3)
+	for a in [["child", "👶 یارانه فرزند"], ["health", "🏥 بیمه سلامت"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_welfare.bind(a[0], 0.0))
+		_mark_decision_button(btn, "welfare:" + a[0])
+		row3.add_child(btn)
+	var hint = Label.new()
+	hint.text = "افزایش سن بازنشستگی صندوق را نجات می‌دهد ولی بازنشستگان و کارگران می‌شورند؛ بیمه بیکاری رفاه می‌آورد ولی بدهی و تنبلی؛ یارانه فرزند جمعیت جوان می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_welfare(action: String, value: float):
+	var cmd = GameCommandClass.create_welfare_action(action, value)
+	var labels := {"pension": "تغییر سن بازنشستگی", "benefit": "تنظیم بیمه بیکاری", "child": "یارانه فرزند", "health": "توسعه بیمه سلامت"}
+	if _queue_decision(cmd, "👵 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+# ── برنامه فضایی: آژانس، ماهواره، پرتاب‌گر ──
+func _build_space_card(st: Dictionary):
+	var sp: Dictionary = st.get("space_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("🚀 برنامه فضایی")
+	_bar(card, "آژانس فضایی", float(sp.get("agency", 0.2)))
+	_bar(card, "ماهواره ارتباطی", float(sp.get("satellites_comm", 0.0)))
+	_bar(card, "ماهواره سنجش", float(sp.get("satellites_obs", 0.0)))
+	_row(card, "پرتاب‌گر بومی", "✔ در مدار" if bool(sp.get("launcher", 0.0)) else "—")
+	_row(card, "پرتاب‌ها / شکست‌ها", "%s / %s" % [PersianFormatter.to_persian_digits(str(sp.get("launches", 0))), PersianFormatter.to_persian_digits(str(sp.get("failures", 0)))])
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["agency", "🛰️ توسعه آژانس"], ["comm", "📡 ماهواره ارتباطی"], ["obs", "🛰️ ماهواره سنجش"], ["launcher", "🚀 پرتاب‌گر بومی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_space.bind(a[0]))
+		_mark_decision_button(btn, "space:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "فضا پرستیژ و قدرت نرم می‌آورد؛ ماهواره ارتباطی مخابرات و ماهواره سنجش، کشاورزی و آمادگی بلایا را تقویت می‌کند. پرتاب‌گر نیازمند شاخه فضا ۱۲+ است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_space(action: String):
+	var cmd = GameCommandClass.create_space_action(action)
+	var labels := {"agency": "توسعه آژانس فضایی", "comm": "ماهواره ارتباطی", "obs": "ماهواره سنجش", "launcher": "پرتاب‌گر بومی"}
+	if _queue_decision(cmd, "🚀 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("technology")
+
 func _build_technology():
 	var state = GameState.state
 	var tech: Dictionary = state.get("technology", {})
@@ -4006,6 +4204,7 @@ func _build_technology():
 	_upgrade_row(upgrades, state, tech, "نظامی", "🪖 نظامی")
 	_upgrade_row(upgrades, state, tech, "دیجیتال", "💻 دیجیتال")
 	_upgrade_row(upgrades, state, tech, "فضا", "🚀 فضا")
+	_build_space_card(state)
 	var up_hint = Label.new()
 	up_hint.text = "با رسیدن سه شاخه به سطح ۳۰، کشور وارد «عصر طلایی» می‌شود و بازی قابل اتمام است (~۱ ساعت)."
 	up_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -4105,6 +4304,7 @@ func _build_population():
 	_build_migration_card(GameState.state)
 	_build_culture_card(GameState.state)
 	_build_urban_card(GameState.state)
+	_build_welfare_card(GameState.state)
 	
 	var st = GameState.state
 	var pop = st.get("population", {})
@@ -5884,6 +6084,11 @@ func _command_queue_key(cmd) -> String:
 		"tourism_action": return "tour:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "visa" else "")
 		"urban_action": return "urban:" + str(p.get("action", ""))
 		"security_action": return "sec:" + str(p.get("action", ""))
+		"infra_action": return "infra:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "maintenance" else "")
+		"climate_action": return "climate:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "carbon" else "")
+		"welfare_action": return "welfare:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) in ["pension", "benefit"] else "")
+		"space_action": return "space:" + str(p.get("action", ""))
+		"trade_policy_action": return "trade_pol:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
