@@ -5,14 +5,14 @@ const COUNTRIES_PATH = "res://data/countries.json"
 const ACTIONS = [
 	"improve_relations", "trade_agreement", "end_trade_agreement",
 	"form_alliance", "leave_alliance", "sanction", "lift_sanction",
-	"declare_war", "offer_peace", "negotiate_sanctions",
+	"declare_war", "offer_peace", "negotiate_sanctions", "ultimatum",
 	"accept_offer", "reject_offer"
 ]
 const ACTION_COSTS = {
 	"improve_relations": 1.0, "trade_agreement": 1.5, "end_trade_agreement": 0.5,
 	"form_alliance": 2.0, "leave_alliance": 1.0, "sanction": 1.0,
-	"lift_sanction": 0.5, "declare_war": 3.0, "offer_peace": 1.0,
-	"negotiate_sanctions": 1.0, "accept_offer": 0.0, "reject_offer": 0.0
+	"lift_sanction": 0.5, "declare_war": 2.0, "offer_peace": 1.0,
+	"negotiate_sanctions": 1.0, "ultimatum": 1.0, "accept_offer": 0.0, "reject_offer": 0.0
 }
 
 var countries: Dictionary = {}
@@ -231,11 +231,15 @@ func can_action(state: Dictionary, target: String, action: String) -> Dictionary
 		"lift_sanction":
 			if not _has_player_sanction(diplomacy, target): return {"valid": false, "reason": "تحریم فعالی برای لغو وجود ندارد"}
 		"declare_war":
-			if relation > 35.0: return {"valid": false, "reason": "اعلام جنگ فقط در رابطه ۳۵ یا کمتر ممکن است"}
+			if relation > 40.0: return {"valid": false, "reason": "اعلام جنگ فقط در رابطه ۴۰ یا کمتر ممکن است؛ با تحریم یا اولتیماتوم رابطه را کاهش دهید"}
 			if alliances.has(target): return {"valid": false, "reason": "برای جنگ ابتدا باید از اتحاد خارج شوید"}
 			if agreements.has(target): return {"valid": false, "reason": "برای جنگ ابتدا توافق تجاری را پایان دهید"}
 			if wars.has(target): return {"valid": false, "reason": "کشور هم‌اکنون در جنگ است"}
 			if float(state["military"].get("readiness", 0.0)) < 0.45: return {"valid": false, "reason": "آمادگی نظامی برای جنگ کافی نیست"}
+		"ultimatum":
+			if relation <= 40.0: return {"valid": false, "reason": "برای اولتیماتوم رابطه بالای ۴۰ لازم است (برای جنگ مستقیم اعلام جنگ بزنید)"}
+			if alliances.has(target): return {"valid": false, "reason": "اولتیماتوم به متحد ممکن نیست؛ ابتدا از اتحاد خارج شوید"}
+			if wars.has(target): return {"valid": false, "reason": "کشور هم‌اکنون در جنگ است"}
 		"offer_peace":
 			if not wars.has(target): return {"valid": false, "reason": "جنگ فعالی با این کشور وجود ندارد"}
 		"accept_offer":
@@ -282,13 +286,17 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int) 
 			events.append(_event("alliance_left", target, "کشور از اتحاد با %s خارج شد" % get_country_name(target)))
 		"sanction":
 			diplomacy["sanctions"].append({"target":target, "by":"player", "tick":tick})
-			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) - 18.0, 0.0, 100.0)
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) - 22.0, 0.0, 100.0)
 			state["trade"]["exports"] *= 0.995
 			events.append(_event("sanction_imposed", target, "%s تحریم شد" % get_country_name(target)))
 		"lift_sanction":
 			_remove_player_sanction(diplomacy, target)
 			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) + 7.0, 0.0, 100.0)
 			events.append(_event("sanction_lifted", target, "تحریم %s لغو شد" % get_country_name(target)))
+		"ultimatum":
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"][target]) - 28.0, 0.0, 100.0)
+			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) + 0.10, 0.0, 1.0)
+			events.append(_event("ultimatum_issued", target, "اولتیماتوم به %s ارسال شد - روابط به شدت تنش یافت" % get_country_name(target)))
 		"declare_war":
 			world["wars"][target] = {"target":target, "started_tick":tick, "progress":0.0, "player_losses":0, "enemy_losses":0}
 			diplomacy["relations"][target] = 0.0
@@ -468,8 +476,20 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		var ally_support = 0.08 * float(world.get("alliances", []).size())
 		var ally_factor = min(1.0 + ally_support, 1.30) # کمی بیشتر از قبل به خاطر عملیات مشترک
 
-		# نیروی نهایی بازیکن - ضرب تمام عوامل (مدل چندضربی واقعی مثل Lanchester + عوامل مدرن)
-		var player_force = player_power * effective_readiness * personnel_factor * equipment_factor * logistics_factor * command_factor * terrain_modifier * weather_modifier * air_factor * (1.0 + recon_bonus) * ally_factor
+		# نیروی نهایی بازیکن - مدل چندضربی متوازن:
+		# هر عامل به صورت (0.5 + f*0.5) اعمال می‌شود تا ضرب عوامل متعدد، نیرو را به‌شدت
+		# له نکند (قبلاً ۷ عامل <1 باعث می‌شد نیروی ایران با قدرت ۳۲ در برابر آذربایجان ۴۸،
+		# فقط ۵٪ نیروی دشمن باشد و بازیکن در ۱-۲ ماه همیشه ببازد).
+		var player_force = player_power * (0.5 + effective_readiness*0.5)
+		player_force *= (0.5 + personnel_factor*0.5)
+		player_force *= (0.5 + equipment_factor*0.5)
+		player_force *= (0.5 + logistics_factor*0.5)
+		player_force *= (0.5 + command_factor*0.5)
+		player_force *= (0.7 + terrain_modifier*0.3)
+		player_force *= (0.8 + weather_modifier*0.2)
+		player_force *= (0.5 + air_factor*0.5)
+		player_force *= (1.0 + recon_bonus)
+		player_force *= ally_factor
 
 		# نیروی دشمن - با نویز و متحدان NPC و قدرت دریایی و هوایی
 		var enemy_base = float(enemy.get("military_power", 50.0))
@@ -497,7 +517,7 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		# اگر تدارکات بحرانی، پیشروی کند یا حتی منفی
 		if fuel_days < 5.0 or ammo_days < 3.0:
 			base_progress -= 1.5
-		var daily_progress = clamp(base_progress, -4.5, 4.5)
+		var daily_progress = clamp(base_progress, -1.4, 1.4)
 		war["progress"] = float(war.get("progress", 0.0)) + daily_progress
 
 		# تلفات واقعی - چندعاملی: قدرت دشمن * آسیب‌پذیری + مهمات + لجستیک + دکترین
@@ -687,7 +707,7 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 		var force_a = float(country_a.get("military_power", 50.0))
 		var force_b = float(country_b.get("military_power", 50.0))
 		var advantage = (force_a - force_b) / max(force_a + force_b, 1.0)
-		war["progress"] = float(war.get("progress", 0.0)) + clamp(advantage * 13.0 + Deterministic.next_range(-5.0, 5.0), -12.0, 12.0)
+		war["progress"] = float(war.get("progress", 0.0)) + clamp(advantage * 4.0 + Deterministic.next_range(-1.5, 1.5), -3.5, 3.5)
 		var loss_a = int(max(20.0, force_b * Deterministic.next_range(4.0, 12.0)))
 		var loss_b = int(max(20.0, force_a * Deterministic.next_range(4.0, 12.0)))
 		war["losses_a"] = int(war.get("losses_a", 0)) + loss_a
