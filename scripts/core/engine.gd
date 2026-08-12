@@ -11,7 +11,8 @@ const ProgressionManagerClass = preload("res://scripts/core/progression_manager.
 const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
-	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building"
+	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
+	"assassinate", "leader_hidden", "faction_action", "set_war_goal"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -407,6 +408,22 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				total += float(value)
 			if abs(total - 1.0) > 0.001:
 				return {"valid": false, "reason": "مجموع بودجه باید دقیقاً ۱۰۰٪ باشد، اکنون %.1f٪ است" % (total * 100.0)}
+		elif cmd.type == "faction_action":
+			var faction_name = str(cmd.payload.get("faction", ""))
+			if not FactionManager.FACTIONS.has(faction_name):
+				return {"valid": false, "reason": "جناح نامعتبر است"}
+			if not str(cmd.payload.get("action", "")) in ["appease", "confront", "ally"]:
+				return {"valid": false, "reason": "اقدام جناحی نامعتبر است"}
+			var faction_check = FactionManager.can_action(state, faction_name, str(cmd.payload.get("action", "")))
+			if not faction_check.valid:
+				return {"valid": false, "reason": faction_check.reason}
+		elif cmd.type == "set_war_goal":
+			var wg_target = str(cmd.payload.get("target", ""))
+			var wg_goal = str(cmd.payload.get("goal", ""))
+			if not WorldManager.countries.has(wg_target) or not state.get("world", {}).get("wars", {}).has(wg_target):
+				return {"valid": false, "reason": "جنگ فعالی با این کشور وجود ندارد"}
+			if not wg_goal in ["reparations", "annexation", "humiliation", "liberation"]:
+				return {"valid": false, "reason": "هدف جنگی نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -578,6 +595,17 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 	elif cmd.type == "tariff_set":
 		snapshot["trade"]["tariff_rate"] = float(cmd.payload.get("rate", 0.15))
 		snapshot["diplomacy"]["influence"] = clamp(float(snapshot["diplomacy"].get("influence", 40.0)) - abs(float(snapshot["trade"]["tariff_rate"]) - 0.15) * 2.0, 0.0, 100.0)
+	elif cmd.type == "faction_action":
+		var faction_result = FactionManager.apply_action(snapshot, str(cmd.payload.get("faction", "")), str(cmd.payload.get("action", "")))
+		snapshot = faction_result.state
+		for ev in faction_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("faction_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "set_war_goal":
+		var wg_target2 = str(cmd.payload.get("target", ""))
+		if snapshot.get("world", {}).get("wars", {}).has(wg_target2):
+			snapshot["world"]["wars"][wg_target2]["goal"] = str(cmd.payload.get("goal", "reparations"))
+			EventLog.log_event("war_goal", {"message": "هدف جنگ با %s به «%s» تغییر کرد" % [WorldManager.get_country_name(wg_target2), WorldManager.get_war_goal_name(str(cmd.payload.get("goal", "reparations")))]}, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -596,7 +624,8 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		snapshot["technology"]["in_progress"] = tech_id
 	elif cmd.type == "diplomacy":
 		var world_result = WorldManager.apply_action(
-			snapshot, str(cmd.payload.get("target", "")), str(cmd.payload.get("action", "")), cmd.tick)
+			snapshot, str(cmd.payload.get("target", "")), str(cmd.payload.get("action", "")), cmd.tick,
+			str(cmd.payload.get("goal", "reparations")))
 		if world_result.success:
 			snapshot = world_result.state
 			for event in world_result.events:
@@ -841,6 +870,7 @@ func _compute_all_systems_async(snapshot: Dictionary, turn: int) -> Dictionary:
 func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	var generated_events: Array = []
 	snapshot = LeaderManager.ensure(snapshot)
+	snapshot = FactionManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -937,6 +967,10 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	for celebration in celebrations:
 		generated_events.append({"type": "celebration", "celebration": celebration})
 
+	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
+	var faction_result = FactionManager.simulate_month(snapshot, turn)
+	snapshot = faction_result.state
+	_collect_events(faction_result, "factions", snapshot, turn, generated_events, "faction_event")
 	# رهبر: محبوبیت جهانی، شورش‌ها، پیشروی/حل کودتا و تلاش دشمنان برای ترور
 	var leader_result = LeaderManager.simulate_month(snapshot, turn)
 	snapshot = leader_result.state
