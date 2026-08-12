@@ -82,6 +82,20 @@ func ensure_world(state: Dictionary) -> Dictionary:
 	world["npc_wars"] = world.get("npc_wars", {})
 	world["npc_alliances"] = world.get("npc_alliances", [])
 	world["npc_trade_agreements"] = world.get("npc_trade_agreements", [])
+	# جنگ‌های اولیه واقعی جهان (تا جهان از ابتدا زنده و درگیر باشد):
+	# فقط وقتی هنوز هیچ جنگی ثبت نشده (اولین ساخت) — جنگ‌های بلوک‌های متضاد
+	if world["npc_wars"].is_empty() and world["war_history"].is_empty():
+		var initial_wars: Array = [
+			["RUS", "UKR"],
+			["USA", "PRK"]
+		]
+		for pair in initial_wars:
+			var a: String = str(pair[0]); var b: String = str(pair[1])
+			if countries.has(a) and countries.has(b):
+				world["npc_wars"][_pair_key(a, b)] = _new_npc_war(a, b, 0)
+				var rel_key = _pair_key(a, b)
+				if world["npc_relations"].has(rel_key):
+					world["npc_relations"][rel_key] = 0.0
 	world["recent_global_events"] = world.get("recent_global_events", [])
 	# رودمپ ۵: پیشنهادهای ورودی از کشورها و موضع فعلی هر کشور نسبت به بازیکن
 	world["incoming_offers"] = world.get("incoming_offers", [])
@@ -373,12 +387,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	var diplomacy: Dictionary = state["diplomacy"]
 	var events: Array = []
 	diplomacy["action_points"] = min(5.0, float(diplomacy.get("action_points", 3.0)) + 0.15)
+	# کشورهای غیربازیکن: فقط نویز روزانه بسیار سبک؛ رشد کامل ماهانه در simulate_npc_month
 	for country_id in world["countries"].keys():
 		if country_id == world["player_country"]:
 			continue
 		var runtime: Dictionary = world["countries"][country_id]
-		runtime["gdp"] = max(1.0, float(runtime.get("gdp", 1.0)) * (1.0 + Deterministic.next_range(-0.00008, 0.00012)))
-		runtime["military_power"] = clamp(float(runtime.get("military_power", 50.0)) + Deterministic.next_range(-0.015, 0.02), 10.0, 120.0)
+		runtime["gdp"] = max(1.0, float(runtime.get("gdp", 1.0)) * (1.0 + Deterministic.next_range(-0.00003, 0.00004)))
 		world["countries"][country_id] = runtime
 	var finished: Array = []
 	for target in world["wars"].keys():
@@ -641,6 +655,33 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 	var events: Array = []
 	var player_id = str(world.get("player_country", default_country))
 
+	# ===== رشد ماهانه کشورهای غیربازیکن (جهان زنده) =====
+	# هر کشور بر پایه سطح فناوری، بلوک و منطقه رشد اقتصادی، جمعیت و قدرت نظامی واقعی دارد.
+	var world_growth_shock = Deterministic.next_range(-0.004, 0.006) # شوک اقتصادی جهانی ماهانه
+	for country_id in world["countries"].keys():
+		if country_id == player_id:
+			continue
+		var runtime: Dictionary = world["countries"][country_id]
+		var base_growth = 0.0012 + float(runtime.get("tech_level", 0.35)) * 0.0018
+		var bloc_growth = {"غربی": 0.0008, "شرقی": 0.0006, "جنوب": 0.0003}.get(str(runtime.get("bloc", "")), 0.0002)
+		var at_war = false
+		for war_key in world.get("npc_wars", {}).keys():
+			if str(war_key).split("|").has(country_id):
+				at_war = true
+				break
+		var growth = base_growth + bloc_growth + world_growth_shock + (-0.006 if at_war else 0.0)
+		growth += Deterministic.next_range(-0.0008, 0.0012)
+		runtime["gdp"] = max(1.0, float(runtime.get("gdp", 1.0)) * (1.0 + growth))
+		var pop_growth = {"Africa": 0.0016, "Americas": 0.0007, "Asia": 0.0009, "Europe": 0.0002, "Oceania": 0.0008}.get(str(runtime.get("region", "")), 0.0008)
+		pop_growth += Deterministic.next_range(-0.0002, 0.0003)
+		if at_war:
+			pop_growth -= 0.001
+		runtime["population"] = max(100_000.0, float(runtime.get("population", 1_000_000.0)) * (1.0 + pop_growth))
+		runtime["military_power"] = clamp(float(runtime.get("military_power", 50.0)) + growth * 30.0 + Deterministic.next_range(-0.08, 0.12), 8.0, 130.0)
+		runtime["tech_level"] = clamp(float(runtime.get("tech_level", 0.35)) + 0.00015 + Deterministic.next_range(-0.00005, 0.0001), 0.05, 0.95)
+		world["countries"][country_id] = runtime
+	state["world"] = world
+
 	# روابط کشورهای غیرِبازیکن با بلوک، فاصله، قدرت و نویز کم ماهانه تغییر می‌کند.
 	for key in relations.keys():
 		var pair = str(key).split("|")
@@ -652,9 +693,14 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 		var profile_b = countries.get(b, {})
 		var drift = Deterministic.next_range(-0.45, 0.45)
 		if str(profile_a.get("bloc", "")) == str(profile_b.get("bloc", "")):
-			drift += (68.0 - relation) * 0.015
+			drift += (78.0 - relation) * 0.015
 		else:
 			drift += (48.0 - relation) * 0.006
+		# بلوک‌های متضاد (غربی-اوراسیا): تنش ساختاری → روابط آرام به سمت آستانه جنگ می‌رود
+		var blocs_a = str(profile_a.get("bloc", "")); var blocs_b = str(profile_b.get("bloc", ""))
+		var opposing = (blocs_a == "غربی" and blocs_b == "اوراسیا") or (blocs_a == "اوراسیا" and blocs_b == "غربی")
+		if opposing:
+			drift += (20.0 - relation) * 0.028
 		if npc_trade.has(key): drift += (72.0 - relation) * 0.02
 		if npc_alliances.has(key): drift += (86.0 - relation) * 0.03
 		if npc_wars.has(key): drift += (0.0 - relation) * 0.08
@@ -668,32 +714,34 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 			relations[forced_key] = 0.0
 			events.append(_global_event("npc_war_started", str(force_pair[0]), str(force_pair[1]), "جنگ میان %s و %s آغاز شد" % [get_country_name(str(force_pair[0])), get_country_name(str(force_pair[1]))]))
 
-	# تصمیم راهبردی محدود: حداکثر یک اقدام جدید در هر ماه تا جهان بیش از حد تصادفی نشود.
-	var acted = not events.is_empty()
-	if not acted:
+	# تصمیم راهبردی محدود: حداکثر ۳ اقدام جدید در هر ماه تا جهان زنده اما قابل‌پیش‌بینی بماند.
+	var acted_count := events.size()
+	if acted_count < 3:
 		var keys = relations.keys()
 		keys.sort()
 		for key in keys:
+			if acted_count >= 3:
+				break
 			var relation = float(relations[key])
 			var pair = str(key).split("|")
 			if pair.size() != 2: continue
 			var a = str(pair[0]); var b = str(pair[1])
-			if relation <= 12.0 and not npc_wars.has(key) and Deterministic.chance(0.045):
+			if relation <= 25.0 and not npc_wars.has(key) and Deterministic.chance(0.10):
 				npc_wars[key] = _new_npc_war(a, b, turn)
 				relations[key] = 0.0
 				events.append(_global_event("npc_war_started", a, b, "جنگ میان %s و %s آغاز شد" % [get_country_name(a), get_country_name(b)]))
-				acted = true
-				break
-			elif relation >= 80.0 and not npc_alliances.has(key) and Deterministic.chance(0.035):
+				acted_count += 1
+				continue
+			elif relation >= 75.0 and not npc_alliances.has(key) and Deterministic.chance(0.08):
 				npc_alliances.append(key)
 				events.append(_global_event("npc_alliance", a, b, "اتحاد تازه‌ای میان %s و %s شکل گرفت" % [get_country_name(a), get_country_name(b)]))
-				acted = true
-				break
-			elif relation >= 58.0 and not npc_trade.has(key) and Deterministic.chance(0.055):
+				acted_count += 1
+				continue
+			elif relation >= 55.0 and not npc_trade.has(key) and Deterministic.chance(0.10):
 				npc_trade.append(key)
 				events.append(_global_event("npc_trade_agreement", a, b, "توافق تجاری تازه میان %s و %s امضا شد" % [get_country_name(a), get_country_name(b)]))
-				acted = true
-				break
+				acted_count += 1
+				continue
 
 	# جنگ‌های AI ماهانه پیش می‌روند و بر اقتصاد جهانی و شرکای بازیکن اثر می‌گذارند.
 	var finished: Array = []
@@ -725,6 +773,14 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 			var winner = a if float(war["progress"]) >= 0.0 else b
 			var loser = b if winner == a else a
 			relations[key] = 18.0
+			# ثبت جنگ تمام‌شده در تاریخچه (برای نمایش و حس جهان زنده)
+			var ended_war: Dictionary = war.duplicate(true)
+			ended_war["winner"] = winner
+			ended_war["loser"] = loser
+			ended_war["ended_turn"] = turn
+			world["war_history"].append(ended_war)
+			while world["war_history"].size() > 50:
+				world["war_history"].pop_front()
 			events.append(_global_event("npc_war_ended", winner, loser, "جنگ %s و %s با برتری %s پایان یافت" % [get_country_name(a), get_country_name(b), get_country_name(winner)]))
 		else:
 			npc_wars[key] = war
