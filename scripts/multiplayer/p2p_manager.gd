@@ -5,6 +5,13 @@ const GameCommandClass = preload("res://scripts/core/command.gd")
 const DEFAULT_PORT = 7777
 const MAX_PEERS = 8
 const MAX_PENDING_PER_PEER = 16
+# سرورهای STUN عمومی رایگان (برای کشف آدرس عمومی و اتصال راه دور بدون سرور)
+const STUN_SERVERS = [
+	["stun.l.google.com", 19302],
+	["stun1.l.google.com", 19302],
+	["stun.cloudflare.com", 3478],
+	["stun.stunprotocol.org", 3478]
+]
 
 enum NetworkMode { LOCAL, HOST, CLIENT }
 
@@ -19,6 +26,7 @@ var current_port: int = 0
 var connected_address: String = ""
 var external_address: String = ""
 var upnp_mapped: bool = false
+var public_address: String = ""  # آدرس عمومی (IP:port) برای اتصال راه دور
 var competitive_mode: bool = false
 var campaign_player_name: String = "بازیکن"
 var campaign_country_id: String = ""
@@ -157,6 +165,119 @@ func advance_competitive_month(local_commands:Array)->Dictionary:
 
 func disconnect_game():
 	start_local_mode()
+
+# ════════════════════════════════════════════════════════════════
+# اتصال رایگان از راه دور (اینترنت): STUN + کد اتصال + سوراخ‌کاری NAT
+# ════════════════════════════════════════════════════════════════
+
+# پرس‌وجوی STUN: آدرس عمومی (نقشه‌شده توسط NAT) را از سرور عمومی می‌گیرد
+func _stun_query(stun_host: String, stun_port: int) -> Dictionary:
+	var sock := PacketPeerUDP.new()
+	if sock.bind(0) != OK:
+		return {}
+	var msg := PackedByteArray()
+	msg.resize(20)
+	msg.encode_u16(0, 0x0001)          # Binding Request
+	msg.encode_u16(2, 0)
+	msg.encode_u32(4, 0x2112A442)      # magic cookie
+	for i in range(12):
+		msg[8 + i] = (randi() & 0xFF)
+	sock.set_dest_address(stun_host, stun_port)
+	sock.put_packet(msg)
+	var deadline := Time.get_ticks_msec() + 1500
+	while Time.get_ticks_msec() < deadline:
+		if sock.get_available_packet_count() > 0:
+			var resp := sock.get_packet()
+			if resp.size() >= 20 and resp.decode_u32(4) == 0x2112A442:
+				var i := 20
+				while i + 4 <= resp.size():
+					var atype := resp.decode_u16(i)
+					var alen := resp.decode_u16(i + 2)
+					if atype == 0x0020 and i + 4 + 8 <= resp.size():  # XOR-MAPPED-ADDRESS
+						var family := resp[i + 4 + 1]
+						if family == 0x01:  # IPv4
+							var xport := resp.decode_u16(i + 4 + 2) ^ 0x2112
+							var ip := "%d.%d.%d.%d" % [
+								resp[i + 4 + 4] ^ msg[8], resp[i + 4 + 5] ^ msg[9],
+								resp[i + 4 + 6] ^ msg[10], resp[i + 4 + 7] ^ msg[11]]
+							sock.close()
+							return {"ip": ip, "port": xport}
+					elif atype == 0x0001 and i + 4 + 8 <= resp.size():  # MAPPED-ADDRESS
+						var family2 := resp[i + 4 + 1]
+						if family2 == 0x01:
+							var port2 := resp.decode_u16(i + 4 + 2)
+							var ip2 := "%d.%d.%d.%d" % [resp[i + 4 + 4], resp[i + 4 + 5], resp[i + 4 + 6], resp[i + 4 + 7]]
+							sock.close()
+							return {"ip": ip2, "port": port2}
+					i += 4 + alen
+		await get_tree().create_timer(0.05).timeout
+	sock.close()
+	return {}
+
+# کشف آدرس عمومی: چند سرور STUN را امتحان می‌کند
+func detect_public_address() -> String:
+	for server in STUN_SERVERS:
+		var result: Dictionary = await _stun_query(str(server[0]), int(server[1]))
+		if not result.is_empty():
+			public_address = "%s:%d" % [str(result.get("ip", "")), int(result.get("port", 0))]
+			return public_address
+	return ""
+
+# میزبانی راه دور: میزبانی + بازکردن خودکار پورت (UPnP) + کشف آدرس عمومی
+func host_remote(port: int = DEFAULT_PORT, max_peers: int = MAX_PEERS) -> Dictionary:
+	var result := host_game(port, max_peers)
+	if not result.success:
+		return result
+	# UPnP و STUN به‌صورت غیرمسدودکننده اجرا می‌شوند تا ENet بتواند اتصال‌ها را بپذیرد
+	var upnp_result := try_upnp_port_mapping()
+	var pub: String = await detect_public_address()
+	return {
+		"success": true, "mode": "host", "peer_id": host_id, "port": port,
+		"public_address": pub, "upnp": bool(upnp_result.get("success", false))
+	}
+
+# ارسال چند بسته به آدرس عمومی میزبان برای بازکردن سوراخ NAT (به‌ترین تلاش)
+func _poke_public(address: String, port: int, local_port: int):
+	var sock := PacketPeerUDP.new()
+	if sock.bind(local_port) != OK:
+		return
+	sock.set_dest_address(address, port)
+	var payload := PackedByteArray([0x43, 0x53, 0x31, 0x00])  # "CS1"
+	for i in range(4):
+		sock.put_packet(payload)
+		await get_tree().create_timer(0.1).timeout
+	sock.close()
+
+# اتصال راه دور با کد: «IP عمومی میزبان:پورت» — پوک + اتصال با همان پورت محلی
+func join_remote(code: String) -> Dictionary:
+	var clean := code.strip_edges()
+	if clean.is_empty():
+		return _error("کد اتصال راه دور وارد نشده است")
+	var parts := clean.split(":")
+	var address := str(parts[0]).strip_edges()
+	if address.is_empty() or not address.contains("."):
+		return _error("کد اتصال نامعتبر است؛ باید به شکل آدرس:پورت باشد")
+	var port := DEFAULT_PORT
+	if parts.size() >= 2:
+		port = int(parts[1])
+	if port < 1024 or port > 65535:
+		return _error("پورت کد اتصال نامعتبر است")
+	# پوکینگ: پورت محلی ثابت انتخاب کن تا نگاشت NAT با ENet یکی بماند
+	var local_port := port + 1
+	await _poke_public(address, port, local_port)
+	var peer := ENetMultiplayerPeer.new()
+	var result := peer.create_client(address, port, local_port)
+	if result != OK:
+		start_local_mode()
+		return _error("شروع اتصال راه دور ناموفق بود (کد خطا %d)" % result)
+	multiplayer.multiplayer_peer = peer
+	mode = NetworkMode.CLIENT
+	is_host = false
+	host_id = "1"
+	current_port = port
+	connected_address = address
+	emit_signal("network_status_changed", get_status())
+	return {"success": true, "mode": "client", "address": address, "port": port, "remote": true}
 
 func try_upnp_port_mapping() -> Dictionary:
 	if mode != NetworkMode.HOST or current_port <= 0:
