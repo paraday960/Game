@@ -232,6 +232,7 @@ const TABS := [
 	["map", "نقشه فرماندهی"],
 	["dashboard", "داشبورد"],
 	["news", "📰 اخبار"],
+	["missions", "🎯 مأموریت‌ها"],
 	["government", "دولت"],
 	["laws", "قوانین"],
 	["economy", "اقتصاد"],
@@ -495,7 +496,7 @@ func _build_drawer():
 	var title = Label.new(); title.text = "☰ منوی بیشتر"; title.add_theme_font_size_override("font_size", 27); title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
 	var close_btn = Button.new(); close_btn.text = "✕"; close_btn.custom_minimum_size = Vector2(64, 54); close_btn.add_theme_font_size_override("font_size", 24); close_btn.theme_type_variation = "GhostButton"; close_btn.pressed.connect(FeedbackManager.play_click); close_btn.pressed.connect(_close_drawer); head.add_child(close_btn)
 	var tiles = GridContainer.new(); tiles.columns = 4; tiles.add_theme_constant_override("h_separation", 7); tiles.add_theme_constant_override("v_separation", 7); box.add_child(tiles)
-	for tile_def in [["news","📰","اخبار"],["laws","⚖","قوانین"],["projects","⚒","توسعه"],["technology","⚛","فناوری"],["population","☺","جامعه"],["military","⚔","دفاع"],["network","◍","چندنفره"],["systems","⚙","سامانه‌ها"]]:
+	for tile_def in [["news","📰","اخبار"],["missions","🎯","مأموریت‌ها"],["laws","⚖","قوانین"],["projects","⚒","توسعه"],["technology","⚛","فناوری"],["population","☺","جامعه"],["military","⚔","دفاع"],["network","◍","چندنفره"],["systems","⚙","سامانه‌ها"]]:
 		_make_drawer_tile(tiles, str(tile_def[0]), str(tile_def[1]), str(tile_def[2]))
 	var sep = HSeparator.new(); box.add_child(sep)
 	var sys = HBoxContainer.new(); sys.alignment = BoxContainer.ALIGNMENT_CENTER; sys.add_theme_constant_override("separation", 8); box.add_child(sys)
@@ -818,6 +819,7 @@ func _switch_tab(tab_key: String):
 		"map": _build_unified_map()
 		"dashboard": _build_dashboard()
 		"news": _build_news()
+		"missions": _build_missions()
 		"government": _build_government()
 		"laws": _build_laws()
 		"economy": _build_economy()
@@ -1078,6 +1080,160 @@ func _add_news_card(item: Dictionary):
 	body.add_theme_font_size_override("font_size", 18)
 	body.modulate = TEXT_MUTED
 	box.add_child(body)
+
+# ============================================================
+# تب 🎯 مأموریت‌ها + 🏆 رتبه‌بندی جهانی + 🛒 بازار منابع (World Empire style)
+# ============================================================
+func _build_missions():
+	var state = GameState.state
+
+	# ── 🏆 رتبه‌بندی جهانی ──
+	var rank_card = _card("🏆 رتبه‌بندی جهانی")
+	var ranking: Dictionary = RankingManager.compute_rankings(state)
+	var player_rank: int = int(ranking.get("player_rank", 0))
+	var total: int = int(ranking.get("total", 195))
+	var rank_lbl = Label.new()
+	rank_lbl.text = "رتبه کشور شما: %s از %s کشور" % [PersianFormatter.to_persian_digits(str(player_rank)), PersianFormatter.to_persian_digits(str(total))]
+	rank_lbl.add_theme_font_size_override("font_size", 24)
+	rank_lbl.modulate = ACCENT_GOLD if player_rank <= 20 else TEXT_MAIN
+	rank_card.add_child(rank_lbl)
+	# برترین‌ها + اطراف رتبه بازیکن
+	var top_codes: Array = ranking.get("ranked", [])
+	var shown := 0
+	for entry in top_codes:
+		if shown >= 12:
+			break
+		var is_me: bool = bool(entry.get("is_player", false))
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); rank_card.add_child(row)
+		var rank_n = Label.new()
+		rank_n.text = PersianFormatter.to_persian_digits(str(entry.get("rank", 0)))
+		rank_n.custom_minimum_size = Vector2(50, 0)
+		rank_n.add_theme_font_size_override("font_size", 19)
+		rank_n.modulate = ACCENT_GOLD if int(entry.get("rank", 0)) <= 3 else TEXT_MUTED
+		row.add_child(rank_n)
+		var name_l = Label.new()
+		name_l.text = str(entry.get("name_fa", ""))
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_l.add_theme_font_size_override("font_size", 19)
+		name_l.modulate = Color(1.0, 0.81, 0.30) if is_me else TEXT_MAIN
+		row.add_child(name_l)
+		var score_l = Label.new()
+		score_l.text = PersianFormatter.to_persian_digits("%.0f" % float(entry.get("score", 0)))
+		score_l.add_theme_font_size_override("font_size", 17)
+		score_l.modulate = TEXT_MUTED
+		row.add_child(score_l)
+		shown += 1
+
+	# ── 🎯 مأموریت‌های ماهانه ──
+	var mission_card = _card("🎯 مأموریت‌های ماه")
+	var missions: Array = state.get("missions", [])
+	if missions.is_empty():
+		var empty = Label.new()
+		empty.text = "مأموریت‌ها پس از نخستین گام ماهانه فعال می‌شوند."
+		empty.modulate = TEXT_FAINT
+		mission_card.add_child(empty)
+	for i in range(missions.size()):
+		var m: Dictionary = missions[i]
+		var done: bool = bool(m.get("done", false))
+		var claimed: bool = bool(m.get("claimed", false))
+		var card = PanelContainer.new()
+		card.theme_type_variation = "CommandPanel"
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mission_card.add_child(card)
+		var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 6); card.add_child(box)
+		var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); box.add_child(head)
+		var icon = Label.new(); icon.text = str(m.get("icon", "🎯")); icon.add_theme_font_size_override("font_size", 22); head.add_child(icon)
+		var title = Label.new()
+		title.text = str(m.get("title", "")) + (" ✅" if done else "")
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.add_theme_font_size_override("font_size", 21)
+		title.modulate = Color(0.55, 1.0, 0.7) if done else TEXT_MAIN
+		head.add_child(title)
+		var reward_l = Label.new()
+		reward_l.text = "اعتبار +%s · سرمایه +%s" % [PersianFormatter.to_persian_digits(str(int(m.get("reward_prestige", 8)))), PersianFormatter.to_persian_digits("%.0f" % (float(m.get("reward_capital", 0.15)) * 100.0))]
+		reward_l.add_theme_font_size_override("font_size", 15)
+		reward_l.modulate = ACCENT_GOLD
+		head.add_child(reward_l)
+		var desc = Label.new()
+		desc.text = str(m.get("desc", ""))
+		desc.add_theme_font_size_override("font_size", 16)
+		desc.modulate = TEXT_MUTED
+		box.add_child(desc)
+		_bar(box, "پیشرفت", float(m.get("progress", 0.0)))
+		if done and not claimed:
+			var claim_btn = Button.new()
+			claim_btn.text = "🎁 دریافت پاداش"
+			claim_btn.theme_type_variation = "SuccessButton"
+			claim_btn.custom_minimum_size = Vector2(0, 46)
+			claim_btn.pressed.connect(_on_claim_mission.bind(i))
+			box.add_child(claim_btn)
+		elif claimed:
+			var got = Label.new()
+			got.text = "🎁 پاداش دریافت شد"
+			got.add_theme_font_size_override("font_size", 15)
+			got.modulate = Color(0.55, 1.0, 0.7)
+			box.add_child(got)
+
+	# ── 🛒 بازار جهانی منابع ──
+	var market_card = _card("🛒 بازار جهانی منابع")
+	var econ = state.get("economy", {})
+	var reserves = float(econ.get("foreign_reserves", 50e9))
+	var res_row = HBoxContainer.new(); market_card.add_child(res_row)
+	var res_lbl = Label.new()
+	res_lbl.text = "ذخایر ارزی: %s" % PersianFormatter.format_money(reserves)
+	res_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	res_lbl.add_theme_font_size_override("font_size", 18)
+	res_lbl.modulate = ACCENT_TEAL
+	res_row.add_child(res_lbl)
+	var prices: Dictionary = state.get("market", {}).get("prices", {})
+	var inv: Dictionary = state.get("resources", {}).get("inventory", {})
+	for r in ["نفت", "گاز", "غذا", "آهن", "مس", "مواد_صنعتی"]:
+		var price = float(prices.get(r, 1.0))
+		var have = float(inv.get(r, 0.0))
+		var card2 = PanelContainer.new()
+		card2.theme_type_variation = "CommandPanel"
+		market_card.add_child(card2)
+		var box2 = VBoxContainer.new(); box2.add_theme_constant_override("separation", 5); card2.add_child(box2)
+		var title2 = Label.new()
+		title2.text = "%s · %s / واحد" % [r, PersianFormatter.to_persian_digits("%.1f" % price)]
+		title2.add_theme_font_size_override("font_size", 18)
+		title2.modulate = TEXT_MAIN
+		box2.add_child(title2)
+		var stock = Label.new()
+		stock.text = "ذخیره: %s" % PersianFormatter.to_persian_digits("%.0f" % have)
+		stock.add_theme_font_size_override("font_size", 15)
+		stock.modulate = TEXT_MUTED
+		box2.add_child(stock)
+		var btns = HBoxContainer.new(); btns.add_theme_constant_override("separation", 6); box2.add_child(btns)
+		var buy_btn = Button.new(); buy_btn.text = "خرید ۱۰"; buy_btn.custom_minimum_size = Vector2(0, 40)
+		buy_btn.pressed.connect(_on_market.bind(r, "buy", 10.0))
+		btns.add_child(buy_btn)
+		var sell_btn = Button.new(); sell_btn.text = "فروش ۱۰"; sell_btn.custom_minimum_size = Vector2(0, 40)
+		sell_btn.pressed.connect(_on_market.bind(r, "sell", 10.0))
+		btns.add_child(sell_btn)
+
+func _on_claim_mission(index: int):
+	var result = MissionManager.claim_reward(GameState.state, index)
+	if result.get("success", false):
+		var m: Dictionary = result.get("mission", {})
+		GameState.set_state(result.state, int(result.state.get("version", 0)), int(result.state.get("tick", 0)))
+		_toast("🎁 پاداش مأموریت «%s» دریافت شد!" % str(m.get("title", "")))
+		_switch_tab("missions")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "خطا")))
+
+func _on_market(resource: String, action: String, amount: float):
+	var result: Dictionary
+	if action == "buy":
+		result = MarketManager.buy(GameState.state, resource, amount)
+	else:
+		result = MarketManager.sell(GameState.state, resource, amount)
+	if result.get("success", false):
+		GameState.set_state(result.state, int(result.state.get("version", 0)), int(result.state.get("tick", 0)))
+		_toast("🛒 " + str(result.get("message", "انجام شد")))
+		_switch_tab("missions")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "خطا")))
 
 func _build_dashboard():
 	var st = GameState.state
