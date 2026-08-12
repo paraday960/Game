@@ -17,6 +17,41 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	var events = []
 
+	# ── چرخه اقتصادی: رونق/رشد/رکود/رکود عمیق با اعتماد سرمایه‌گذاران ──
+	var cycle: Dictionary = econ.get("cycle", {})
+	if cycle.is_empty():
+		cycle = {"phase": "growth", "months_left": 5.0, "confidence": 55.0}
+	cycle["phase"] = str(cycle.get("phase", "growth"))
+	cycle["months_left"] = float(cycle.get("months_left", 5.0))
+	cycle["confidence"] = clampf(float(cycle.get("confidence", 55.0)), 5.0, 95.0)
+	var cycle_effect: float = float({"boom": 0.012, "growth": 0.004, "stagnation": -0.006, "recession": -0.014}.get(str(cycle["phase"]), 0.0))
+	# اعتماد سرمایه‌گذاران: ثبات، فساد، مالیات، تورم، جنگ
+	var inflation_rate: float = float(econ.get("inflation", 0.08))
+	var conf_drift: float = (float(pol.get("stability", 0.6)) - 0.6) * 0.5 - float(pol.get("corruption", 0.3)) * 0.6 - absf(float(econ.get("tax_rate", 0.2)) - 0.2) * 0.4 - inflation_rate * 0.9
+	cycle["confidence"] = clampf(float(cycle["confidence"]) + conf_drift * 0.02 + (50.0 - float(cycle["confidence"])) * 0.004, 5.0, 95.0)
+	# شمارش معکوس فاز؛ هنگام تغییر، فاز تازه با وزن دترمینستیک انتخاب می‌شود
+	cycle["months_left"] = float(cycle["months_left"]) - 1.0 / 30.0
+	if float(cycle["months_left"]) <= 0.0:
+		var conf := float(cycle["confidence"])
+		var weights := {"boom": 0.12 + conf / 100.0 * 0.22, "growth": 0.34, "stagnation": 0.30, "recession": 0.12 + (50.0 - conf) / 100.0 * 0.24}
+		var total_w := 0.0
+		for w in weights.values():
+			total_w += float(w)
+		var roll: float = Deterministic.next_range(0.0, total_w)
+		var new_phase := "growth"
+		for ph in weights.keys():
+			roll -= float(weights[ph])
+			if roll <= 0.0:
+				new_phase = ph
+				break
+		if new_phase != str(cycle["phase"]):
+			var old_phase: String = str(cycle["phase"])
+			cycle["phase"] = new_phase
+			var phase_msg: String = String({"boom": "🔥 رونق اقتصادی! سرمایه‌گذاری‌ها جهش کرد و بازارها در اوج‌اند", "growth": "📈 رشد پایدار اقتصادی ادامه دارد", "stagnation": "📉 رکود خفیف: رشد اقتصادی متوقف شد و سرمایه‌گذاران محتاط‌اند", "recession": "🛑 رکود عمیق! بیکاری و ناامیدی اقتصادی در حال گسترش است"}.get(new_phase, ""))
+			events.append({"type": "business_cycle", "from": old_phase, "to": new_phase, "message": phase_msg})
+		cycle["months_left"] = float(Deterministic.next_int_range(4, 10))
+	econ["cycle"] = cycle
+
 	# ==================== الف) تولید ناخالص داخلی - مدل رشد عمیق ====================
 	var growth_base = econ.get("growth_rate", 0.02)
 	var infra_q = infra.get("quality", 0.55)
@@ -59,7 +94,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var sanctions = state.get("diplomacy", {}).get("sanctions", []).size()
 	var sanction_penalty = sanctions * 0.003
 
-	var real_growth = growth_base + infra_effect + workforce_effect + tech_effect + stability_effect + energy_penalty + food_penalty + war_effect - sanction_penalty
+	var real_growth = growth_base + infra_effect + workforce_effect + tech_effect + stability_effect + energy_penalty + food_penalty + war_effect - sanction_penalty + cycle_effect
 	real_growth = clamp(real_growth, -0.08, 0.10)
 
 	var old_gdp = econ.get("gdp", 500e9)
@@ -68,6 +103,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	econ["gdp_per_capita"] = econ["gdp"] / max(pop.get("total",85_000_000.0), 1.0)
 	econ["growth_rate"] = real_growth
 	econ["real_growth"] = real_growth
+	# بیکاری با فاز چرخه حرکت می‌کند (رونق اشتغال‌زا، رکود بیکارکننده)
+	var unemp: float = float(econ.get("unemployment", 0.08))
+	var unemp_drift: float = float({"boom": -0.00006, "growth": -0.00002, "stagnation": 0.00003, "recession": 0.00012}.get(str(cycle["phase"]), 0.0))
+	econ["unemployment"] = clampf(unemp + unemp_drift, 0.02, 0.30)
 
 	# ==================== ب) درآمد دولت - مالیه عمومی عمیق ====================
 	var monthly_gdp = econ["gdp"] / 12.0
