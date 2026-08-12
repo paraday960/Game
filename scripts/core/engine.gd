@@ -899,6 +899,10 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	snapshot = scenario_result.state
 	_collect_events(scenario_result, "scenario", snapshot, turn, generated_events, "scenario_event")
 
+	# رویدادهای ویژه فصلی (بازار نفت، موج فناوری و...) — دترمینستیک از seed
+	var special_result = SpecialEventManager.simulate_month(snapshot, turn)
+	snapshot = special_result.state
+
 	# لحظه‌های هیجان‌انگیز: تشخیص دستاورد/مرحله/رکورد برای جشن UI
 	# (بعد از به‌روزرسانی progression تا دستاوردها/مرحله دیده شوند؛
 	# از طریق events تا دترمینیسم state حفظ شود)
