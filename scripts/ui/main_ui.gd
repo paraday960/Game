@@ -42,6 +42,8 @@ var country_select_option: OptionButton
 var country_picker_btn: Button
 var country_picker_overlay: Control
 var scenario_select_option: OptionButton
+var scenario_picker_btn: Button
+var scenario_picker_overlay: Control
 var scenario_description_lbl: Label
 var app_theme: Theme
 var background_rect: Control
@@ -2296,12 +2298,21 @@ func _build_hero_overlay():
 	country_picker_btn.pressed.connect(_open_country_picker)
 	row_country.add_child(country_picker_btn)
 	var row_scenario = _chooser_row(setup, "☆ سناریو")
-	scenario_select_option = OptionButton.new(); scenario_select_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# انتخابگر سناریو: دکمه سفارشی لمسی (مثل انتخابگر کشور) — OptionButton در اندروید با لمس اسکرول نمی‌شود
+	scenario_select_option = OptionButton.new(); scenario_select_option.visible = false
 	var active_scenario = str(state.get("scenario", {}).get("id", ScenarioManager.default_scenario)); var scenario_index = 0
 	for scenario_id in ScenarioManager.get_scenario_ids():
 		var definition = ScenarioManager.get_scenario(scenario_id); scenario_select_option.add_item("%s · %s" % [definition.get("name_fa", scenario_id), definition.get("difficulty_fa", "")]); scenario_select_option.set_item_metadata(scenario_select_option.item_count - 1, scenario_id)
 		if scenario_id == active_scenario: scenario_index = scenario_select_option.item_count - 1
-	scenario_select_option.select(scenario_index); scenario_select_option.item_selected.connect(_on_scenario_option_changed); row_scenario.add_child(scenario_select_option)
+	scenario_select_option.select(scenario_index)
+	scenario_picker_btn = Button.new()
+	scenario_picker_btn.text = scenario_select_option.get_item_text(scenario_index)
+	scenario_picker_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scenario_picker_btn.custom_minimum_size = Vector2(0, 56)
+	scenario_picker_btn.add_theme_font_size_override("font_size", 22)
+	scenario_picker_btn.tooltip_text = "لمس کنید و سناریو را با کشیدن انگشت بچرخانید"
+	scenario_picker_btn.pressed.connect(_open_scenario_picker)
+	row_scenario.add_child(scenario_picker_btn)
 	scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = TEXT_MUTED; scenario_description_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
 	var start_button = _mk_btn(setup, "⚑ شروع فرماندهی", Vector2(340,62), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; start_button.add_theme_font_size_override("font_size", 27)
 	_pulse_control(start_button)
@@ -3186,6 +3197,54 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		button.pressed.connect(FeedbackManager.play_click)
 		button.pressed.connect(_on_world_action.bind(target, action_def[0], action_def[1]))
 		action_grid.add_child(button)
+
+# ─── انتخابگر لمسی سناریو (جایگزین OptionButton غیرقابل اسکرول در اندروید) ───
+func _open_scenario_picker():
+	if scenario_picker_overlay != null and is_instance_valid(scenario_picker_overlay):
+		scenario_picker_overlay.queue_free()
+	var overlay = Control.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 500
+	add_child(overlay)
+	scenario_picker_overlay = overlay
+	var dim = ColorRect.new(); dim.color = Color(0.0, 0.01, 0.02, 0.78); dim.set_anchors_preset(Control.PRESET_FULL_RECT); dim.mouse_filter = Control.MOUSE_FILTER_STOP; overlay.add_child(dim)
+	dim.gui_input.connect(func(ev):
+		if ev is InputEventScreenTouch and ev.pressed:
+			overlay.queue_free())
+	var card = PanelContainer.new(); card.theme_type_variation = "CommandPanel"
+	card.anchor_left = 0.12; card.anchor_right = 0.88; card.anchor_top = 0.25; card.anchor_bottom = 0.75
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(card)
+	var vbox = VBoxContainer.new(); vbox.add_theme_constant_override("separation", 10); card.add_child(vbox)
+	var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); vbox.add_child(head)
+	var title = Label.new(); title.text = "☆ انتخاب سناریو"; title.add_theme_font_size_override("font_size", 26); title.modulate = ACCENT_GOLD; title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
+	var close_btn = Button.new(); close_btn.text = "✕"; close_btn.custom_minimum_size = Vector2(60, 50); close_btn.add_theme_font_size_override("font_size", 22); close_btn.theme_type_variation = "GhostButton"; head.add_child(close_btn)
+	close_btn.pressed.connect(func(): overlay.queue_free())
+	var hint = Label.new(); hint.text = "◉ لیست را با کشیدن انگشت اسکرول کنید"
+	hint.add_theme_font_size_override("font_size", 16); hint.modulate = TEXT_FAINT; vbox.add_child(hint)
+	var scroll = TouchScrollClass.new(); scroll.allow_vertical = true; scroll.allow_horizontal = false
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	vbox.add_child(scroll)
+	var list = VBoxContainer.new(); list.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list.add_theme_constant_override("separation", 6); scroll.add_child(list)
+	for i in range(scenario_select_option.item_count):
+		var scenario_id = str(scenario_select_option.get_item_metadata(i))
+		var item = Button.new()
+		item.text = "▸ " + scenario_select_option.get_item_text(i)
+		item.custom_minimum_size = Vector2(0, 58)
+		item.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		item.add_theme_font_size_override("font_size", 21)
+		item.pressed.connect(_on_scenario_picked.bind(i, overlay))
+		list.add_child(item)
+
+func _on_scenario_picked(index: int, overlay: Control):
+	if scenario_select_option != null and index >= 0 and index < scenario_select_option.item_count:
+		scenario_select_option.select(index)
+		if is_instance_valid(scenario_picker_btn):
+			scenario_picker_btn.text = scenario_select_option.get_item_text(index)
+		_on_scenario_option_changed(index)
+	if is_instance_valid(overlay):
+		overlay.queue_free()
+	FeedbackManager.play_click()
 
 func _on_scenario_option_changed(index: int):
 	if scenario_select_option == null or index < 0 or index >= scenario_select_option.item_count:
