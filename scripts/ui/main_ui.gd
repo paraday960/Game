@@ -1378,8 +1378,9 @@ func _build_leader_card(st: Dictionary):
 				PersianFormatter.to_persian_digits(str(total))])
 			_row(rebel_card, "نوبت‌های باقی‌مانده برای تصاحب کامل", PersianFormatter.to_persian_digits(str(turns_left)))
 			_bar(rebel_card, "پیشروی کودتا", float(controlled) / max(total, 1))
+			_row(rebel_card, "محبوبیت رهبر پیشین (اثر بر وفاداری ارتش)", PersianFormatter.to_persian_digits("%.0f / ۱۰۰" % clampf(float(rebellion.get("popularity", 50.0)), 0.0, 100.0)), _color_for(clampf(float(rebellion.get("popularity", 50.0)), 0.0, 100.0) / 100.0))
 			var hint = Label.new()
-			hint.text = "هر نوبت با «پایان نوبت» ژنرال به پیشروی ادامه می‌دهد؛ در ۷ نوبت باید سراسر کشور را تصاحب کند."
+			hint.text = "هر نوبت با «پایان نوبت» ژنرال به پیشروی ادامه می‌دهد؛ در ۷ نوبت باید سراسر کشور را تصاحب کند. محبوبیت رهبر پیشین و رضایت مردم، وفاداری ارتش به کودتا را تعیین می‌کنند."
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			hint.add_theme_font_size_override("font_size", 18)
 			hint.modulate = TEXT_MUTED
