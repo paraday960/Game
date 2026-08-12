@@ -863,6 +863,11 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	snapshot = foreign_result.state
 	_collect_events(foreign_result, "foreign_policy", snapshot, turn, generated_events, "foreign_event")
 
+	# تحریریه خبری: دسته‌بندی حساس/غیرحساس و انتشار اخبار ماهانه (حساس فقط کشور خود بازیکن)
+	var news_result = NewsManager.simulate_month(snapshot, turn)
+	snapshot = news_result.state
+	_collect_events(news_result, "newsroom", snapshot, turn, generated_events, "news_event")
+
 	snapshot = MapLayerManager.update_network_metrics(snapshot)
 
 	# شاخص، پیشرفت، سناریو و تحلیل فقط یک‌بار در پایان نوبت ماهانه محاسبه می‌شوند.
