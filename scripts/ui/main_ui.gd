@@ -251,6 +251,12 @@ func _ready():
 	SettingsManager.settings_changed.connect(_on_setting_changed)
 	current_state = GameState.get_state_copy()
 	_build_chrome()
+	# لایه جشن: بنر + کاغذرنگی برای لحظه‌های مهم (روی همه‌چیز)
+	celebration_layer = load("res://scripts/ui/celebration_layer.gd").new()
+	celebration_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	celebration_layer.z_index = 400
+	celebration_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(celebration_layer)
 	resized.connect(_apply_responsive_layout)
 	call_deferred("_apply_responsive_layout")
 	_switch_tab("map")
@@ -1274,14 +1280,83 @@ func _build_dashboard():
 	# شورای هوش‌های تخصصی: مهم‌ترین مسئله‌ها را با دلیل و اقدام قابل اجرا پیشنهاد می‌دهد.
 	var recommendations = AIAdvisor.get_top_recommendations(st, st.get("tick", 0), 4)
 	var advisor_card = _card("🧠 شورای هوشمند کشور")
+	# مشاوران با شخصیت و لحن مخصوص (مثل مشاوران بازی‌های موفق)
+	var advisor_profiles = [
+		{"name": "مشاور اقتصادی", "icon": "💰", "tone": "اقتصاد زبان مادری من است؛ عددها دروغ نمی‌گویند."},
+		{"name": "مشاور نظامی", "icon": "🛡️", "tone": "قدرت، بهترین زبان دیپلماسی است."},
+		{"name": "مشاور اجتماعی", "icon": "👥", "tone": "مردم راضی، ارتشی شکست‌ناپذیرند."},
+		{"name": "مشاور اطلاعاتی", "icon": "🕵️", "tone": "هر تصمیمی که می‌گیرید، دشمنان شما هم می‌بینند."}
+	]
 	if recommendations.is_empty():
 		var calm = Label.new()
 		calm.text = "در حال حاضر هشدار مهمی از سوی سامانه‌های تخصصی ثبت نشده است."
 		calm.modulate = Color(0.5, 1.0, 0.65)
 		advisor_card.add_child(calm)
 	else:
+		var advisor_idx := 0
 		for recommendation in recommendations:
+			var prof: Dictionary = advisor_profiles[advisor_idx % advisor_profiles.size()]
+			advisor_idx += 1
+			# ردیف مشاور با شخصیت
+			var prof_row = HBoxContainer.new(); prof_row.add_theme_constant_override("separation", 8); advisor_card.add_child(prof_row)
+			var prof_icon = Label.new(); prof_icon.text = str(prof.get("icon", "🧠")); prof_icon.add_theme_font_size_override("font_size", 20); prof_row.add_child(prof_icon)
+			var prof_name = Label.new()
+			prof_name.text = "%s:" % str(prof.get("name", "مشاور"))
+			prof_name.add_theme_font_size_override("font_size", 17)
+			prof_name.modulate = ACCENT_TEAL
+			prof_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			prof_row.add_child(prof_name)
+			var prof_tone = Label.new()
+			prof_tone.text = "«%s»" % str(prof.get("tone", ""))
+			prof_tone.add_theme_font_size_override("font_size", 15)
+			prof_tone.modulate = TEXT_FAINT
+			prof_tone.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			advisor_card.add_child(prof_tone)
 			_add_ai_recommendation(advisor_card, recommendation)
+	# تالار افتخارات: میراث و مقایسه‌های سرگرم‌کننده
+	var hall = _card("🏆 تالار افتخارات")
+	var prog = st.get("progression", {})
+	_row(hall, "بالاترین امتیاز", PersianFormatter.to_persian_digits("%.0f" % float(prog.get("high_score", 0))))
+	_row(hall, "امتیاز میراث", PersianFormatter.to_persian_digits(str(prog.get("legacy_score", 0))))
+	_row(hall, "بهترین استریک", "%s روز" % PersianFormatter.to_persian_digits(str(prog.get("best_streak", 0))))
+	_row(hall, "مرحله کشور", str(prog.get("stage", "دولت نوپا")))
+	# مقایسه‌های سرگرم‌کننده با دنیای واقعی
+	var pop_total = float(st.get("population", {}).get("total", 0.0))
+	var gdp_total = float(st.get("economy", {}).get("gdp", 0.0))
+	var fun_rows: Array = []
+	if pop_total > 0.0:
+		if pop_total > 1_410_000_000.0:
+			fun_rows.append("جمعیت کشور شما از چین هم بیشتر است! 🌏")
+		elif pop_total > 1_400_000_000.0:
+			fun_rows.append("جمعیت شما تقریباً با هند برابری می‌کند! 🌏")
+		elif pop_total > 340_000_000.0:
+			fun_rows.append("جمعیت کشور شما از آمریکا بیشتر است! 🇺🇸")
+		elif pop_total > 85_000_000.0:
+			fun_rows.append("جمعیت شما از آلمان، فرانسه و ایتالیا روی‌هم بیشتر است! 🇪🇺")
+		elif pop_total > 60_000_000.0:
+			fun_rows.append("جمعیت شما از بریتانیا و فرانسه بیشتر است! 🇬🇧")
+		elif pop_total > 30_000_000.0:
+			fun_rows.append("جمعیت شما از کانادا بیشتر است! 🍁")
+	if gdp_total > 0.0:
+		if gdp_total > 27_000_000_000_000.0:
+			fun_rows.append("اقتصاد شما از آمریکا بزرگ‌تر است! اقتصاد جهان از شما حساب می‌برد 🌎")
+		elif gdp_total > 18_000_000_000_000.0:
+			fun_rows.append("اقتصاد شما از چین جلو زده است! 🇨🇳")
+		elif gdp_total > 4_500_000_000_000.0:
+			fun_rows.append("اقتصاد شما از آلمان بزرگ‌تر است! 🇩🇪")
+		elif gdp_total > 3_000_000_000_000.0:
+			fun_rows.append("اقتصاد شما از بریتانیا بزرگ‌تر است! 🇬🇧")
+		elif gdp_total > 2_000_000_000_000.0:
+			fun_rows.append("اقتصاد شما از ایتالیا و کانادا بزرگ‌تر است! 🍁")
+	if fun_rows.is_empty():
+		fun_rows.append("کشور شما تازه راه افتاده؛ با رشد اقتصاد و جمعیت، رکوردهای جهانی در انتظار شماست! 🚀")
+	for fun in fun_rows:
+		var fun_lbl = Label.new()
+		fun_lbl.text = "✨ " + fun
+		fun_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fun_lbl.add_theme_font_size_override("font_size", 17)
+		fun_lbl.modulate = Color(0.92, 0.85, 0.60)
+		hall.add_child(fun_lbl)
 
 	_dashboard_section("🏛️ وضعیت کلان کشور")
 	var c1 = _card("📊 شاخص‌های کلان")
@@ -3739,6 +3814,7 @@ func _build_systems():
 var systems_domain_filter := ""
 var news_filter_mode := "all"   # all | domestic | international
 var news_sensitive_only := false
+var celebration_layer: Control
 
 func _on_system_domain_filter(domain_name: String):
 	systems_domain_filter = domain_name
@@ -4001,6 +4077,20 @@ func _finish_tick_result(result:Dictionary,refresh_page:bool)->bool:
 		if not P2PManager.is_network_active() or P2PManager.is_host:SaveManager.maybe_autosave(result.tick)
 		P2PManager.broadcast_state(result.state,result.version,result.tick)
 		_refresh_header();_render_events();_engagement_pulse();FeedbackManager.play_success()
+		# 🎉 لحظه‌های هیجان‌انگیز: جشن دستاورد/مرحله/رکورد (از events می‌آیند)
+		var celebrations: Array = []
+		for event in result.get("events", []):
+			if str(event.get("type", "")) == "celebration":
+				celebrations.append(event.get("celebration", {}))
+		if celebrations.size() > 0:
+			var delay := 0.4
+			for celebration in celebrations:
+				var c = celebration
+				var timer := get_tree().create_timer(delay)
+				timer.timeout.connect(func():
+					if is_instance_valid(celebration_layer) and celebration_layer.has_method("celebrate"):
+						celebration_layer.call("celebrate", c))
+				delay += 1.2
 		if refresh_page:_switch_tab(current_tab)
 		return true
 	FeedbackManager.play_alert();_toast("خطا: "+str(result.get("reason","محاسبه ناموفق بود")))
