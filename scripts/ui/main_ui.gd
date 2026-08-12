@@ -3181,7 +3181,7 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		["end_trade_agreement", "پایان توافق تجاری"], ["form_alliance", "تشکیل اتحاد"],
 		["leave_alliance", "خروج از اتحاد"], ["sanction", "اعمال تحریم"],
 		["lift_sanction", "لغو تحریم"], ["negotiate_sanctions", "مذاکره تحریم"],
-		["declare_war", "اعلام جنگ"], ["offer_peace", "پیشنهاد صلح"]
+		["ultimatum", "اولتیماتوم"], ["declare_war", "اعلام جنگ"], ["offer_peace", "پیشنهاد صلح"]
 	]
 	for action_def in actions:
 		var check = WorldManager.can_action(state, target, action_def[0])
