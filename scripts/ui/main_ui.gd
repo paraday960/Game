@@ -605,17 +605,32 @@ func _build_professional_theme() -> Theme:
 	var panel_border = Color(0.50,0.80,0.94,0.95) if high_contrast else Color(0.19,0.35,0.46,0.92)
 	result.set_stylebox("panel", "PanelContainer", _style_box(Color(0.014,0.030,0.047,0.99) if high_contrast else Color(0.034,0.070,0.108,0.97), panel_border, 13, 1 if not high_contrast else 2, padding))
 	# نوار بالایی با خط طلایی حکومتی زیرین
-	var topbar_sb = _style_box(Color(0.018,0.040,0.063,0.97) if not high_contrast else Color(0.010,0.024,0.040,1.0), ACCENT_GOLD if not high_contrast else Color(0.95,0.88,0.60,1.0), 14, 0, 13)
+	var topbar_sb = _style_box_gradient(
+		Color(0.035,0.070,0.100,0.98) if not high_contrast else Color(0.012,0.028,0.045,1.0),
+		Color(0.012,0.030,0.050,0.98),
+		ACCENT_GOLD if not high_contrast else Color(0.95,0.88,0.60,1.0), 14, 0, 13)
 	topbar_sb.set_border_width(SIDE_BOTTOM, 3)
 	topbar_sb.set_corner_radius(CORNER_BOTTOM_LEFT, 0); topbar_sb.set_corner_radius(CORNER_BOTTOM_RIGHT, 0)
 	result.set_stylebox("panel", "TopBarPanel", topbar_sb)
-	result.set_stylebox("panel", "CommandPanel", _style_box(Color(0.012,0.027,0.039,1.0) if high_contrast else Color(0.026,0.060,0.090,0.98), Color(0.45,0.94,0.94,1.0) if high_contrast else Color(0.24,0.58,0.66,0.80), 12, 1 if not high_contrast else 2, padding))
+	result.set_stylebox("panel", "CommandPanel", _style_box_gradient(
+		Color(0.045,0.090,0.130,0.99) if not high_contrast else Color(0.020,0.040,0.060,1.0),
+		Color(0.014,0.032,0.050,0.99),
+		Color(0.45,0.94,0.94,1.0) if high_contrast else Color(0.30,0.66,0.74,0.85),
+		12, 1 if not high_contrast else 2, padding))
 	result.set_stylebox("panel", "EmblemChip", _style_box(Color(0.84,0.64,0.22,0.12), Color(0.85,0.66,0.25,0.55), 12, 1, 7))
-	result.set_stylebox("panel", "StatusChip", _style_box(Color(0.052,0.100,0.148,0.95), Color(0.21,0.40,0.52,0.88), 12, 1, 9))
-	result.set_stylebox("panel", "KpiCard", _style_box(Color(0.042,0.088,0.132,0.96), Color(0.22,0.42,0.54,0.92), 14, 1, 13))
-	result.set_stylebox("panel", "HeroCard", _style_box(Color(0.048,0.096,0.142,0.98), Color(0.80,0.63,0.26,0.95), 18, 2, 22))
+	result.set_stylebox("panel", "StatusChip", _style_box_gradient(
+		Color(0.070,0.125,0.170,0.96), Color(0.030,0.062,0.095,0.96),
+		Color(0.24,0.44,0.56,0.90), 12, 1, 9))
+	result.set_stylebox("panel", "KpiCard", _style_box_gradient(
+		Color(0.060,0.110,0.155,0.97), Color(0.020,0.045,0.070,0.97),
+		Color(0.26,0.48,0.60,0.92), 14, 1, 13))
+	result.set_stylebox("panel", "HeroCard", _style_box_gradient(
+		Color(0.070,0.120,0.165,0.99), Color(0.020,0.042,0.066,0.99),
+		Color(0.85,0.68,0.30,0.95), 18, 2, 22))
 	result.set_stylebox("panel", "TickerPanel", _style_box(Color(0.026,0.056,0.084,0.95), Color(0.20,0.37,0.48,0.72), 10, 1, 8))
-	result.set_stylebox("panel", "TimeDockPanel", _style_box(Color(0.022,0.048,0.075,0.88), Color(0.20,0.36,0.47,0.55), 16, 1, 8))
+	result.set_stylebox("panel", "TimeDockPanel", _style_box_gradient(
+		Color(0.040,0.075,0.105,0.92), Color(0.016,0.036,0.058,0.92),
+		Color(0.24,0.42,0.54,0.60), 16, 1, 8))
 	# ناوبری پایانی: شناور روی لبه، آیتم فعال با خط طلایی بالایی
 	result.set_stylebox("panel", "NavBarPanel", _style_box(Color(0.018,0.042,0.066,0.99), Color(0.24,0.42,0.55,0.90), 16, 1, 6))
 	result.set_stylebox("normal", "NavButton", _style_box(Color(0.0,0.0,0.0,0.0), Color(0.0,0.0,0.0,0.0), 8, 0, 4))
@@ -697,6 +712,25 @@ func _style_box(background: Color, border: Color, radius: int, width: int, paddi
 	style.set_border_width_all(width); style.set_corner_radius_all(radius)
 	style.content_margin_left = padding; style.content_margin_right = padding; style.content_margin_top = padding; style.content_margin_bottom = padding
 	style.shadow_color = Color(0.0,0.0,0.0,0.30); style.shadow_size = 5; style.shadow_offset = Vector2(0,2)
+	return style
+
+# نسخه عمقی پنل — هایلایت لبه بالا + سایه عمیق (حس برجستگی و شیشه‌ای، بدون گرادیان)
+func _style_box_gradient(top: Color, bottom: Color, border: Color, radius: int, width: int, padding: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = top
+	style.border_color = border
+	style.set_border_width_all(width)
+	# عمق: سایه عمیق + لبه‌های برجسته (Godot 4.7 فقط border_color کلی دارد)
+	style.border_width_left = maxi(1, width)
+	style.border_width_right = maxi(1, width)
+	style.border_width_top = maxi(1, width + 1)
+	style.border_width_bottom = maxi(1, width + 2)
+	style.set_corner_radius_all(radius)
+	style.content_margin_left = padding; style.content_margin_right = padding
+	style.content_margin_top = padding; style.content_margin_bottom = padding
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.40)
+	style.shadow_size = 9
+	style.shadow_offset = Vector2(0, 4)
 	return style
 
 func _status_chip(parent: Control, title_text: String, accent: Color, target_tab:String) -> Label:
