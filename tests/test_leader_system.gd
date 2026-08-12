@@ -153,8 +153,9 @@ func _init():
 	var r2 = GE.tick(GS.state, GS.version, GS.tick, [])
 	GS2.set_state(r2.state, r2.version, r2.tick)
 	# شبیه‌سازی ترور بازیکن با ارتش ضعیف
-	# مردم از رهبر ناراضی بودند اما ارتش به‌طور کامل به ژنرال نپیوست → شکست کودتا
+	# مردم از رهبر ناراضی بودند و او در جهان منفور بود → ارتش به ژنرال پشت نمی‌کند → شکست کودتا
 	GS2.state["population"]["happiness"] = 0.20
+	GS2.state["leader"]["popularity_world"] = 8.0
 	GS2.state["leader"]["hidden"] = false
 	var death2 = LM._resolve_death(GS2.state, "IRN", "TUR", GS2.tick, "test")
 	GS2.set_state(death2.state, GS2.version, GS2.tick)
@@ -180,6 +181,27 @@ func _init():
 		print("  (ارتش ضعیف هم پیروز شد — با فرض نظامی ضعیف‌تر قابل تکرار است)")
 	else:
 		fails.append("شکست کودتا رخ نداد: " + str(failure_outcome))
+
+	# ── ۷ج) محبوبیت رهبر در موفقیت کودتا مؤثر است ──
+	var st_pop = GS.state.duplicate(true)
+	st_pop["leader"]["mode"] = "leader"
+	st_pop["leader"]["alive"] = true
+	st_pop["leader"]["rebellion"] = {}
+	st_pop["leader"]["popularity_world"] = 90.0
+	st_pop["population"]["happiness"] = 0.6
+	var reb_high = LM._start_rebellion(st_pop, GS.tick).state["leader"]["rebellion"]
+	var st_low = GS.state.duplicate(true)
+	st_low["leader"]["mode"] = "leader"
+	st_low["leader"]["alive"] = true
+	st_low["leader"]["rebellion"] = {}
+	st_low["leader"]["popularity_world"] = 8.0
+	st_low["population"]["happiness"] = 0.6
+	var reb_low = LM._start_rebellion(st_low, GS.tick).state["leader"]["rebellion"]
+	if float(reb_high.get("loyal_power", 0.0)) <= float(reb_low.get("loyal_power", 0.0)):
+		fails.append("محبوبیت بالا وفاداری ارتش به ژنرال را افزایش نداد")
+	else:
+		print("✓ محبوبیت رهبر در وفاداری ارتش مؤثر است: محبوب ۹۰ → وفاداری %.0f در برابر منفور ۸ → %.0f" % [
+			float(reb_high.get("loyal_power", 0.0)), float(reb_low.get("loyal_power", 0.0))])
 
 	# ── ۸) دترمینیسم: دو اجرای یکسان، نتایج یکسان ──
 	var s_a = GS.state.duplicate(true)
