@@ -1,30 +1,402 @@
 {
-  "version": "1.0.0",
-  "technologies": [
-    {"id":"industry_basic","name_fa":"صنعت پایه","branch":"صنعت","cost":0,"prerequisites":[],"description":"زیرساخت اولیه تولید و استانداردسازی صنعتی.","effects":[]},
-    {"id":"agriculture_basic","name_fa":"کشاورزی مکانیزه پایه","branch":"صنعت","cost":0,"prerequisites":[],"description":"ماشین‌آلات و مدیریت پایه تولید غذا.","effects":[]},
-    {"id":"advanced_manufacturing","name_fa":"ساخت پیشرفته","branch":"صنعت","cost":6,"prerequisites":["industry_basic"],"description":"ماشین‌کاری دقیق و زنجیره تولید پیشرفته.","effects":[{"path":"industry.productivity","op":"add","value":0.04,"min":0,"max":1}]},
-    {"id":"industrial_automation","name_fa":"اتوماسیون صنعتی","branch":"صنعت","cost":10,"prerequisites":["advanced_manufacturing"],"description":"رباتیک، کنترل هوشمند و کاهش اتلاف تولید.","effects":[{"path":"industry.capacity_usage","op":"add","value":0.05,"min":0,"max":1}]},
-    {"id":"smart_logistics","name_fa":"لجستیک هوشمند","branch":"صنعت","cost":8,"prerequisites":["advanced_manufacturing"],"description":"رهگیری زنجیره تأمین و بهینه‌سازی حمل کالا.","effects":[{"path":"transport_detail.logistics_efficiency","op":"add","value":0.06,"min":0,"max":1}]},
-
-    {"id":"solar_grid","name_fa":"شبکه خورشیدی","branch":"انرژی_پاک","cost":6,"prerequisites":["industry_basic"],"description":"تولید پراکنده خورشیدی و اتصال پایدار به شبکه.","effects":[{"path":"environment.green_energy_share","op":"add","value":0.06,"min":0,"max":1}]},
-    {"id":"grid_storage","name_fa":"ذخیره‌سازی شبکه برق","branch":"انرژی_پاک","cost":10,"prerequisites":["solar_grid"],"description":"باتری شبکه‌ای و مدیریت بار برای مهار خاموشی.","effects":[{"path":"resources.inventory.برق","op":"add","value":20,"min":0,"max":200}]},
-    {"id":"green_hydrogen","name_fa":"هیدروژن سبز","branch":"انرژی_پاک","cost":14,"prerequisites":["grid_storage"],"description":"سوخت پاک برای صنعت سنگین و صادرات انرژی.","effects":[{"path":"environment.carbon_emission","op":"add","value":-0.08,"min":0,"max":1}]},
-
-    {"id":"modern_vaccines","name_fa":"واکسن‌های نوین","branch":"پزشکی","cost":6,"prerequisites":["agriculture_basic"],"description":"طراحی سریع واکسن و تولید زیستی گسترده.","effects":[{"path":"health.vaccination","op":"add","value":0.06,"min":0,"max":1}]},
-    {"id":"precision_medicine","name_fa":"پزشکی دقیق","branch":"پزشکی","cost":11,"prerequisites":["modern_vaccines"],"description":"درمان شخصی‌سازی‌شده بر پایه داده و ژنتیک.","effects":[{"path":"health.quality","op":"add","value":0.05,"min":0,"max":1}]},
-    {"id":"telemedicine","name_fa":"پزشکی از راه دور","branch":"پزشکی","cost":8,"prerequisites":["modern_vaccines"],"description":"دسترسی مناطق دور به خدمات تخصصی سلامت.","effects":[{"path":"health.coverage","op":"add","value":0.07,"min":0,"max":1}]},
-
-    {"id":"national_ai","name_fa":"هوش مصنوعی ملی","branch":"دیجیتال","cost":9,"prerequisites":["industry_basic"],"description":"زیرساخت محاسباتی و مدل‌های هوشمند بومی.","effects":[{"path":"statistics.accuracy","op":"add","value":0.04,"min":0,"max":1}]},
-    {"id":"cyber_defense","name_fa":"دفاع سایبری پیشرفته","branch":"دیجیتال","cost":10,"prerequisites":["national_ai"],"description":"پایش تهدید و دفاع فعال از زیرساخت حیاتی.","effects":[{"path":"intelligence.cyber_readiness","op":"add","value":0.09,"min":0,"max":1}]},
-    {"id":"digital_government","name_fa":"دولت یکپارچه دیجیتال","branch":"دیجیتال","cost":12,"prerequisites":["national_ai"],"description":"خدمات بدون کاغذ، هویت دیجیتال و شفافیت اداری.","effects":[{"path":"administration.efficiency","op":"add","value":0.06,"min":0,"max":1}]},
-
-    {"id":"defense_drones","name_fa":"پهپادهای دفاعی","branch":"نظامی","cost":8,"prerequisites":["advanced_manufacturing"],"description":"شناسایی و دفاع کم‌هزینه با سامانه بدون‌سرنشین.","effects":[{"path":"military.readiness","op":"add","value":0.05,"min":0,"max":1}]},
-    {"id":"missile_defense","name_fa":"پدافند موشکی چندلایه","branch":"نظامی","cost":13,"prerequisites":["defense_drones","cyber_defense"],"description":"کشف و رهگیری تهدیدات دوربرد.","effects":[{"path":"military.deterrence","op":"add","value":8,"min":0,"max":100}]},
-    {"id":"quantum_radar","name_fa":"رادار کوانتومی","branch":"نظامی","cost":18,"prerequisites":["missile_defense","national_ai"],"description":"حسگرهای نسل آینده برای برتری اطلاعاتی.","effects":[{"path":"intelligence.power","op":"add","value":8,"min":0,"max":100}]},
-
-    {"id":"earth_observation","name_fa":"ماهواره پایش زمین","branch":"فضا","cost":8,"prerequisites":["national_ai"],"description":"پایش آب‌وهوا، کشاورزی و بحران از مدار.","effects":[{"path":"emergency.early_warning","op":"add","value":0.08,"min":0,"max":1}]},
-    {"id":"reusable_rocket","name_fa":"موشک بازاستفاده‌پذیر","branch":"فضا","cost":15,"prerequisites":["earth_observation","advanced_manufacturing"],"description":"کاهش هزینه دسترسی مستقل به مدار.","effects":[{"path":"space.level","op":"add","value":0.12,"min":0,"max":1}]},
-    {"id":"lunar_program","name_fa":"برنامه مأموریت ماه","branch":"فضا","cost":24,"prerequisites":["reusable_rocket","precision_medicine"],"description":"توان اعزام مأموریت علمی بلندمدت به ماه.","effects":[{"path":"space.research","op":"add","value":0.18,"min":0,"max":1}]}
-  ]
+ "version": "1.0.0",
+ "technologies": [
+  {
+   "id": "industry_basic",
+   "name_fa": "صنعت پایه",
+   "branch": "صنعت",
+   "cost": 0,
+   "prerequisites": [],
+   "description": "زیرساخت اولیه تولید و استانداردسازی صنعتی.",
+   "effects": []
+  },
+  {
+   "id": "agriculture_basic",
+   "name_fa": "کشاورزی مکانیزه پایه",
+   "branch": "صنعت",
+   "cost": 0,
+   "prerequisites": [],
+   "description": "ماشین‌آلات و مدیریت پایه تولید غذا.",
+   "effects": []
+  },
+  {
+   "id": "advanced_manufacturing",
+   "name_fa": "ساخت پیشرفته",
+   "branch": "صنعت",
+   "cost": 6,
+   "prerequisites": [
+    "industry_basic"
+   ],
+   "description": "ماشین‌کاری دقیق و زنجیره تولید پیشرفته.",
+   "effects": [
+    {
+     "path": "industry.productivity",
+     "op": "add",
+     "value": 0.04,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "industrial_automation",
+   "name_fa": "اتوماسیون صنعتی",
+   "branch": "صنعت",
+   "cost": 10,
+   "prerequisites": [
+    "advanced_manufacturing"
+   ],
+   "description": "رباتیک، کنترل هوشمند و کاهش اتلاف تولید.",
+   "effects": [
+    {
+     "path": "industry.capacity_usage",
+     "op": "add",
+     "value": 0.05,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "smart_logistics",
+   "name_fa": "لجستیک هوشمند",
+   "branch": "صنعت",
+   "cost": 8,
+   "prerequisites": [
+    "advanced_manufacturing"
+   ],
+   "description": "رهگیری زنجیره تأمین و بهینه‌سازی حمل کالا.",
+   "effects": [
+    {
+     "path": "transport_detail.logistics_efficiency",
+     "op": "add",
+     "value": 0.06,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "solar_grid",
+   "name_fa": "شبکه خورشیدی",
+   "branch": "انرژی_پاک",
+   "cost": 6,
+   "prerequisites": [
+    "industry_basic"
+   ],
+   "description": "تولید پراکنده خورشیدی و اتصال پایدار به شبکه.",
+   "effects": [
+    {
+     "path": "environment.green_energy_share",
+     "op": "add",
+     "value": 0.06,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "grid_storage",
+   "name_fa": "ذخیره‌سازی شبکه برق",
+   "branch": "انرژی_پاک",
+   "cost": 10,
+   "prerequisites": [
+    "solar_grid"
+   ],
+   "description": "باتری شبکه‌ای و مدیریت بار برای مهار خاموشی.",
+   "effects": [
+    {
+     "path": "resources.inventory.برق",
+     "op": "add",
+     "value": 20,
+     "min": 0,
+     "max": 200
+    }
+   ]
+  },
+  {
+   "id": "green_hydrogen",
+   "name_fa": "هیدروژن سبز",
+   "branch": "انرژی_پاک",
+   "cost": 14,
+   "prerequisites": [
+    "grid_storage"
+   ],
+   "description": "سوخت پاک برای صنعت سنگین و صادرات انرژی.",
+   "effects": [
+    {
+     "path": "environment.carbon_emission",
+     "op": "add",
+     "value": -0.08,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "modern_vaccines",
+   "name_fa": "واکسن‌های نوین",
+   "branch": "پزشکی",
+   "cost": 6,
+   "prerequisites": [
+    "agriculture_basic"
+   ],
+   "description": "طراحی سریع واکسن و تولید زیستی گسترده.",
+   "effects": [
+    {
+     "path": "health.vaccination",
+     "op": "add",
+     "value": 0.06,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "precision_medicine",
+   "name_fa": "پزشکی دقیق",
+   "branch": "پزشکی",
+   "cost": 11,
+   "prerequisites": [
+    "modern_vaccines"
+   ],
+   "description": "درمان شخصی‌سازی‌شده بر پایه داده و ژنتیک.",
+   "effects": [
+    {
+     "path": "health.quality",
+     "op": "add",
+     "value": 0.05,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "telemedicine",
+   "name_fa": "پزشکی از راه دور",
+   "branch": "پزشکی",
+   "cost": 8,
+   "prerequisites": [
+    "modern_vaccines"
+   ],
+   "description": "دسترسی مناطق دور به خدمات تخصصی سلامت.",
+   "effects": [
+    {
+     "path": "health.coverage",
+     "op": "add",
+     "value": 0.07,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "national_ai",
+   "name_fa": "هوش مصنوعی ملی",
+   "branch": "دیجیتال",
+   "cost": 9,
+   "prerequisites": [
+    "industry_basic"
+   ],
+   "description": "زیرساخت محاسباتی و مدل‌های هوشمند بومی.",
+   "effects": [
+    {
+     "path": "statistics.accuracy",
+     "op": "add",
+     "value": 0.04,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "cyber_defense",
+   "name_fa": "دفاع سایبری پیشرفته",
+   "branch": "دیجیتال",
+   "cost": 10,
+   "prerequisites": [
+    "national_ai"
+   ],
+   "description": "پایش تهدید و دفاع فعال از زیرساخت حیاتی.",
+   "effects": [
+    {
+     "path": "intelligence.cyber_readiness",
+     "op": "add",
+     "value": 0.09,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "digital_government",
+   "name_fa": "دولت یکپارچه دیجیتال",
+   "branch": "دیجیتال",
+   "cost": 12,
+   "prerequisites": [
+    "national_ai"
+   ],
+   "description": "خدمات بدون کاغذ، هویت دیجیتال و شفافیت اداری.",
+   "effects": [
+    {
+     "path": "administration.efficiency",
+     "op": "add",
+     "value": 0.06,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "defense_drones",
+   "name_fa": "پهپادهای دفاعی",
+   "branch": "نظامی",
+   "cost": 8,
+   "prerequisites": [
+    "advanced_manufacturing"
+   ],
+   "description": "شناسایی و دفاع کم‌هزینه با سامانه بدون‌سرنشین.",
+   "effects": [
+    {
+     "path": "military.readiness",
+     "op": "add",
+     "value": 0.05,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "missile_defense",
+   "name_fa": "پدافند موشکی چندلایه",
+   "branch": "نظامی",
+   "cost": 13,
+   "prerequisites": [
+    "defense_drones",
+    "cyber_defense"
+   ],
+   "description": "کشف و رهگیری تهدیدات دوربرد.",
+   "effects": [
+    {
+     "path": "military.deterrence",
+     "op": "add",
+     "value": 8,
+     "min": 0,
+     "max": 100
+    }
+   ]
+  },
+  {
+   "id": "quantum_radar",
+   "name_fa": "رادار کوانتومی",
+   "branch": "نظامی",
+   "cost": 18,
+   "prerequisites": [
+    "missile_defense",
+    "national_ai"
+   ],
+   "description": "حسگرهای نسل آینده برای برتری اطلاعاتی.",
+   "effects": [
+    {
+     "path": "intelligence.power",
+     "op": "add",
+     "value": 8,
+     "min": 0,
+     "max": 100
+    }
+   ]
+  },
+  {
+   "id": "earth_observation",
+   "name_fa": "ماهواره پایش زمین",
+   "branch": "فضا",
+   "cost": 8,
+   "prerequisites": [
+    "national_ai"
+   ],
+   "description": "پایش آب‌وهوا، کشاورزی و بحران از مدار.",
+   "effects": [
+    {
+     "path": "emergency.early_warning",
+     "op": "add",
+     "value": 0.08,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "reusable_rocket",
+   "name_fa": "موشک بازاستفاده‌پذیر",
+   "branch": "فضا",
+   "cost": 15,
+   "prerequisites": [
+    "earth_observation",
+    "advanced_manufacturing"
+   ],
+   "description": "کاهش هزینه دسترسی مستقل به مدار.",
+   "effects": [
+    {
+     "path": "space.level",
+     "op": "add",
+     "value": 0.12,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "lunar_program",
+   "name_fa": "برنامه مأموریت ماه",
+   "branch": "فضا",
+   "cost": 24,
+   "prerequisites": [
+    "reusable_rocket",
+    "precision_medicine"
+   ],
+   "description": "توان اعزام مأموریت علمی بلندمدت به ماه.",
+   "effects": [
+    {
+     "path": "space.research",
+     "op": "add",
+     "value": 0.18,
+     "min": 0,
+     "max": 1
+    }
+   ]
+  },
+  {
+   "id": "assassination_ops",
+   "name_fa": "عملیات ترور هدفمند",
+   "branch": "نظامی",
+   "cost": 26,
+   "prerequisites": [
+    "defense_drones"
+   ],
+   "description": "شناسایی و ترور دقیق رهبران دشمن؛ نیازمند برتری فناوری بر ضداطلاعات حریف.",
+   "effects": []
+  },
+  {
+   "id": "counter_intel_network",
+   "name_fa": "شبکه ضداطلاعات رهبری",
+   "branch": "دیجیتال",
+   "cost": 26,
+   "prerequisites": [
+    "cyber_defense"
+   ],
+   "description": "حفاظت کامل از رهبر در برابر ترور؛ ترورهای دشمن را خنثی و عاملان را شناسایی می‌کند.",
+   "effects": []
+  },
+  {
+   "id": "leader_tracking",
+   "name_fa": "رهگیری رهبران",
+   "branch": "دیجیتال",
+   "cost": 30,
+   "prerequisites": [
+    "national_ai"
+   ],
+   "description": "رهگیری محل اختفای رهبران حتی در وضعیت پنهان؛ پنهان‌بودن رهبر دشمن را بی‌اثر می‌کند.",
+   "effects": []
+  }
+ ]
 }
