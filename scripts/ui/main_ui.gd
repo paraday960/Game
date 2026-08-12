@@ -2480,6 +2480,7 @@ func _build_economy():
 	tariff_slider = HSlider.new(); tariff_slider.min_value = 0; tariff_slider.max_value = 60; tariff_slider.step = 1; tariff_slider.value = float(trade.get("tariff_rate", 0.15)) * 100.0; macro.add_child(tariff_slider)
 	_mark_decision_button(_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff), "tariff")
 	_build_cycle_card(st)
+	_build_commodities_card(st)
 	_build_policy_center()
 
 func _on_apply_manual_rate():
@@ -2519,6 +2520,65 @@ func _build_cycle_card(st: Dictionary):
 	hint.text = "ثبات، فساد پایین، مالیات متعادل و تورم کنترل‌شده اعتماد سرمایه‌گذاران را می‌سازند و شانس رونق را بالا می‌برند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 16); hint.modulate = TEXT_FAINT; card.add_child(hint)
+
+# ── بازار جهانی کالا: قیمت‌ها، ذخایر راهبردی و فروش ──
+func _build_commodities_card(st: Dictionary):
+	var com: Dictionary = st.get("commodities", {})
+	if com.is_empty():
+		return
+	var prices: Dictionary = com.get("prices", {})
+	var reserves: Dictionary = com.get("reserves", {})
+	var card = _card("📦 بازار جهانی کالا")
+	var shock := str(com.get("shock", ""))
+	if shock != "":
+		var shock_lbl = Label.new()
+		shock_lbl.text = "⚠️ شوک بازار فعال: " + {"oil_boom": "جهش نفت", "oil_crash": "سقوط نفت", "drought": "خشکسالی جهانی", "mineral_strike": "اعتصاب معدن", "gas_dispute": "اختلاف گازی"}.get(shock, shock)
+		shock_lbl.add_theme_font_size_override("font_size", 17); shock_lbl.modulate = ACCENT_ORANGE
+		card.add_child(shock_lbl)
+	for cid in CommodityManager.COMMODITIES:
+		var price := float(prices.get(cid, 0.0))
+		var reserve := float(reserves.get(cid, 0.0))
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); card.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; info.add_theme_constant_override("separation", 2); row.add_child(info)
+		var name = Label.new(); name.text = "%s — قیمت جهانی %s | ذخیره %s واحد" % [cid, PersianFormatter.format_money(price), PersianFormatter.to_persian_digits(str(int(reserve)))]
+		name.add_theme_font_size_override("font_size", 17); info.add_child(name)
+		# روند قیمت: مقایسه با ماه قبل
+		var history: Array = com.get("history", [])
+		if history.size() >= 2:
+			var prev: Dictionary = history[history.size() - 2]
+			var prev_price := float(prev.get("prices", {}).get(cid, price))
+			var trend := price - prev_price
+			var trend_lbl = Label.new()
+			trend_lbl.text = ("▲+" if trend >= 0.0 else "▼") + PersianFormatter.to_persian_digits("%.1f" % absf(trend))
+			trend_lbl.add_theme_font_size_override("font_size", 14)
+			trend_lbl.modulate = Color(0.4, 0.9, 0.55) if trend >= 0.0 else Color(1.0, 0.4, 0.4)
+			info.add_child(trend_lbl)
+		# دکمه فروش ۱۰٪ ذخیره
+		var sell_btn = Button.new(); sell_btn.text = "فروش ۱۰٪"
+		sell_btn.custom_minimum_size = Vector2(110, 40); sell_btn.add_theme_font_size_override("font_size", 15)
+		sell_btn.disabled = reserve < 10.0
+		sell_btn.pressed.connect(FeedbackManager.play_click)
+		sell_btn.pressed.connect(_on_commodity_sell.bind(cid))
+		_mark_decision_button(sell_btn, "com_sell:" + cid)
+		row.add_child(sell_btn)
+	var hint = Label.new()
+	hint.text = "قیمت کالاها هر نوبت با عرضه/تقاضا، جنگ‌ها و شوک‌ها نوسان می‌کند. فروش در قیمت بالا ذخایر ارزی می‌سازد؛ درآمد نفتی نیز هر ماه خودکار به ذخایر اضافه می‌شود."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 15); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_commodity_sell(commodity: String):
+	var com: Dictionary = GameState.state.get("commodities", {})
+	var reserve := float(com.get("reserves", {}).get(commodity, 0.0))
+	var amount := reserve * 0.10
+	var check = CommodityManager.can_trade(GameState.state, commodity, amount)
+	if not check.valid:
+		_toast("⚠️ " + str(check.reason))
+		return
+	var cmd = GameCommandClass.create_commodity_trade(commodity, amount)
+	if _queue_decision(cmd, "📦 فروش ۱۰٪ " + commodity):
+		_toast("فروش %s ثبت شد — با پایان نوبت انجام می‌شود" % commodity)
+		_switch_tab("economy")
 
 func _build_policy_center():
 	var policy_state: Dictionary = GameState.state.get("policies", {})
@@ -2692,6 +2752,9 @@ func _on_assassinate(target: String):
 		_switch_tab("military")
 
 # ── اهداف جنگی: هر جنگ هدفی دارد که نتیجه‌اش را متفاوت می‌کند ──
+func _build_orgs_card_outer(st: Dictionary):
+	_build_orgs_card(st)
+
 func _build_war_goals_card(st: Dictionary):
 	var world: Dictionary = st.get("world", {})
 	var wars: Dictionary = world.get("wars", {})
@@ -2731,6 +2794,231 @@ func _on_cycle_war_goal(target: String):
 	if _queue_decision(cmd, "🎯 هدف جنگ با " + WorldManager.get_country_name(target) + ": " + WorldManager.get_war_goal_name(next_goal)):
 		_toast("هدف جنگ با %s به «%s» تغییر کرد — با پایان نوبت اعمال می‌شود" % [WorldManager.get_country_name(target), WorldManager.get_war_goal_name(next_goal)])
 		_switch_tab("military")
+
+# ── فرماندهان ارتش: استخدام، گماردن به جبهه، تجربه و ارتقا ──
+func _build_generals_card(st: Dictionary):
+	var generals: Dictionary = st.get("generals", {})
+	if generals.is_empty():
+		return
+	var commanders: Dictionary = generals.get("commanders", {})
+	var card = _card("🪖 فرماندهان ارتش")
+	# دکمه استخدام
+	var recruit_check = GeneralsManager.can_recruit(st)
+	var recruit_row = HBoxContainer.new(); recruit_row.add_theme_constant_override("separation", 8); card.add_child(recruit_row)
+	var recruit_btn = Button.new()
+	recruit_btn.text = "➕ استخدام فرمانده (۱ سرمایه سیاسی)"
+	recruit_btn.custom_minimum_size = Vector2(300, 48)
+	recruit_btn.add_theme_font_size_override("font_size", 18)
+	recruit_btn.disabled = not recruit_check.valid
+	recruit_btn.tooltip_text = "" if recruit_check.valid else str(recruit_check.reason)
+	recruit_btn.pressed.connect(FeedbackManager.play_click)
+	recruit_btn.pressed.connect(_on_general_recruit)
+	_mark_decision_button(recruit_btn, "general_recruit")
+	recruit_row.add_child(recruit_btn)
+	var cap_lbl = Label.new()
+	cap_lbl.text = "%s / %s" % [PersianFormatter.to_persian_digits(str(commanders.size())), PersianFormatter.to_persian_digits(str(GeneralsManager.MAX_COMMANDERS))]
+	cap_lbl.add_theme_font_size_override("font_size", 16); cap_lbl.modulate = TEXT_MUTED
+	recruit_row.add_child(cap_lbl)
+	if commanders.is_empty():
+		var empty = Label.new()
+		empty.text = "هنوز فرمانده‌ای ندارید؛ در جنگ‌ها فرمانده منصوب، نیروی جبهه را به‌طور محسوس تقویت می‌کند."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty.add_theme_font_size_override("font_size", 17); empty.modulate = TEXT_MUTED
+		card.add_child(empty)
+		return
+	for cid in commanders.keys():
+		var commander: Dictionary = commanders[cid]
+		var panel = PanelContainer.new(); card.add_child(panel)
+		var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 4); panel.add_child(box)
+		var head = HBoxContainer.new(); head.add_theme_constant_override("separation", 8); box.add_child(head)
+		var title = Label.new()
+		title.text = "%s — سطح %s (%s)" % [str(commander.get("name_fa", "فرمانده")),
+			PersianFormatter.to_persian_digits(str(commander.get("level", 1))),
+			GeneralsManager.get_trait_fa(str(commander.get("trait", "offensive")))]
+		title.add_theme_font_size_override("font_size", 18); title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.tooltip_text = GeneralsManager.get_trait_desc(str(commander.get("trait", "offensive")))
+		head.add_child(title)
+		var assigned := str(commander.get("assigned_war", ""))
+		var status = Label.new()
+		status.text = "⚔ " + WorldManager.get_country_name(assigned) if assigned != "" else "— آماده"
+		status.add_theme_font_size_override("font_size", 15)
+		status.modulate = ACCENT_GOLD if assigned != "" else TEXT_MUTED
+		head.add_child(status)
+		var stats = Label.new()
+		stats.text = "نبردها: %s | پیروزی‌ها: %s | تجربه: %s" % [
+			PersianFormatter.to_persian_digits(str(commander.get("battles", 0))),
+			PersianFormatter.to_persian_digits(str(commander.get("wins", 0))),
+			PersianFormatter.to_persian_digits("%.0f" % float(commander.get("experience", 0.0)))]
+		stats.add_theme_font_size_override("font_size", 15); stats.modulate = TEXT_MUTED
+		box.add_child(stats)
+		# گماردن: لیست جنگ‌ها
+		var wars: Dictionary = st.get("world", {}).get("wars", {})
+		if not wars.is_empty():
+			var assign_row = HBoxContainer.new(); assign_row.add_theme_constant_override("separation", 6); box.add_child(assign_row)
+			var unassign_btn = Button.new(); unassign_btn.text = "برکناری"
+			unassign_btn.custom_minimum_size = Vector2(110, 36); unassign_btn.add_theme_font_size_override("font_size", 14)
+			unassign_btn.disabled = assigned == ""
+			unassign_btn.pressed.connect(FeedbackManager.play_click)
+			unassign_btn.pressed.connect(_on_general_assign.bind(cid, ""))
+			_mark_decision_button(unassign_btn, "gen_assign:" + cid + ":")
+			assign_row.add_child(unassign_btn)
+			for target in wars.keys():
+				if target == str(st.get("world", {}).get("player_country", "")):
+					continue
+				var assign_btn = Button.new()
+				assign_btn.text = "گماردن به %s" % WorldManager.get_country_name(str(target))
+				assign_btn.custom_minimum_size = Vector2(0, 36); assign_btn.add_theme_font_size_override("font_size", 14)
+				assign_btn.disabled = assigned == str(target)
+				assign_btn.pressed.connect(FeedbackManager.play_click)
+				assign_btn.pressed.connect(_on_general_assign.bind(cid, str(target)))
+				_mark_decision_button(assign_btn, "gen_assign:" + cid + ":" + str(target))
+				assign_row.add_child(assign_btn)
+
+func _on_general_recruit():
+	var cmd = GameCommandClass.create_general_recruit()
+	if _queue_decision(cmd, "➕ استخدام فرمانده جدید"):
+		_toast("استخدام فرمانده ثبت شد — با پایان نوبت انجام می‌شود")
+		_switch_tab("military")
+
+func _on_general_assign(commander_id: String, war_target: String):
+	var cmd = GameCommandClass.create_general_assign(commander_id, war_target)
+	var label := "برکناری فرمانده از جبهه" if war_target == "" else "گماردن فرمانده به " + WorldManager.get_country_name(war_target)
+	if _queue_decision(cmd, "🪖 " + label):
+		_toast(label + " ثبت شد — با پایان نوبت انجام می‌شود")
+		_switch_tab("military")
+
+# ── رسانه و افکار عمومی: رضایت گروه‌های جمعیتی + کمپین‌ها ──
+func _build_media_card(st: Dictionary):
+	var media: Dictionary = st.get("media", {})
+	if media.is_empty():
+		return
+	var groups: Dictionary = media.get("groups", {})
+	var card = _card("📺 رسانه و افکار عمومی")
+	var overall := MediaManager.overall_approval(st)
+	_row(card, "شاخص افکار عمومی", PersianFormatter.to_persian_digits("%.0f / ۱۰۰" % overall), _color_for(overall / 100.0))
+	_bar(card, "اعتماد به رسانه‌ها", float(media.get("trust", 0.55)))
+	var policy := str(media.get("policy", "free"))
+	var policy_names := {"free": "آزاد", "state": "دولتی", "populist": "پوپولیستی"}
+	var policy_row = HBoxContainer.new(); policy_row.add_theme_constant_override("separation", 6); card.add_child(policy_row)
+	var pol_lbl = Label.new(); pol_lbl.text = "سیاست رسانه‌ای:"; pol_lbl.add_theme_font_size_override("font_size", 17); pol_lbl.modulate = TEXT_MUTED; policy_row.add_child(pol_lbl)
+	for pkey in ["free", "state", "populist"]:
+		var btn = Button.new(); btn.text = str(policy_names.get(pkey, pkey)); btn.toggle_mode = true
+		btn.button_pressed = policy == pkey
+		btn.custom_minimum_size = Vector2(120, 40); btn.add_theme_font_size_override("font_size", 15)
+		btn.theme_type_variation = "LensChipActive" if policy == pkey else "LensChip"
+		btn.pressed.connect(FeedbackManager.play_click)
+		btn.pressed.connect(_on_media_policy.bind(pkey))
+		_mark_decision_button(btn, "media_policy:" + pkey)
+		policy_row.add_child(btn)
+	# گروه‌ها
+	for gid in groups.keys():
+		var g: Dictionary = groups[gid]
+		var approval := clampf(float(g.get("approval", 50.0)), 0.0, 100.0)
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 10); card.add_child(row)
+		var col = VBoxContainer.new(); col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; col.add_theme_constant_override("separation", 2); row.add_child(col)
+		var lbl = Label.new(); lbl.text = "%s — رضایت %s" % [gid, PersianFormatter.to_persian_digits(str(int(approval)))]
+		lbl.add_theme_font_size_override("font_size", 16); col.add_child(lbl)
+		var bar = ProgressBar.new(); bar.max_value = 100.0; bar.value = approval; bar.show_percentage = false; bar.custom_minimum_size = Vector2(0, 10); col.add_child(bar)
+		# دکمه کمپین
+		var camp_btn = Button.new(); camp_btn.text = "📣 کمپین"
+		camp_btn.custom_minimum_size = Vector2(100, 38); camp_btn.add_theme_font_size_override("font_size", 14)
+		camp_btn.pressed.connect(FeedbackManager.play_click)
+		camp_btn.pressed.connect(_on_media_campaign.bind(gid))
+		_mark_decision_button(camp_btn, "media_camp:" + gid)
+		row.add_child(camp_btn)
+	# کمپین فعال
+	var campaign: Dictionary = media.get("campaign", {})
+	if int(campaign.get("turns_left", 0)) > 0:
+		var active = Label.new()
+		var styles := {"honest": "صادقانه", "emotional": "احساسی", "smear": "تخریبی"}
+		active.text = "📣 کمپین %s برای «%s» — %s نوبت باقی‌مانده" % [
+			styles.get(str(campaign.get("style", "")), str(campaign.get("style", ""))),
+			str(campaign.get("target", "")), PersianFormatter.to_persian_digits(str(campaign.get("turns_left", 0)))]
+		active.add_theme_font_size_override("font_size", 16); active.modulate = ACCENT_GOLD
+		card.add_child(active)
+
+func _on_media_policy(policy: String):
+	var cmd = GameCommandClass.create_media_policy(policy)
+	if _queue_decision(cmd, "📺 سیاست رسانه‌ای: " + {"free": "آزاد", "state": "دولتی", "populist": "پوپولیستی"}.get(policy, policy)):
+		_toast("سیاست رسانه‌ای ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+func _on_media_campaign(target_group: String):
+	var check = MediaManager.can_campaign(GameState.state)
+	if not check.valid:
+		_toast("⚠️ " + str(check.reason))
+		return
+	var style: String = ["honest", "emotional", "smear"][int(randi() % 3)]
+	var cmd = GameCommandClass.create_media_campaign(target_group, style)
+	var styles := {"honest": "صادقانه", "emotional": "احساسی", "smear": "تخریبی"}
+	if _queue_decision(cmd, "📣 کمپین " + styles.get(style, style) + " برای «" + target_group + "»"):
+		_toast("کمپین رسانه‌ای ثبت شد — با پایان نوبت آغاز می‌شود")
+		_switch_tab("population")
+
+# ── سازمان‌های بین‌المللی: عضویت، قطعنامه‌ها و رأی‌گیری ──
+func _build_orgs_card(st: Dictionary):
+	var intl: Dictionary = st.get("intl_orgs", {})
+	if intl.is_empty():
+		return
+	var memberships: Dictionary = intl.get("memberships", {})
+	var card = _card("🏛️ سازمان‌های بین‌المللی")
+	for org in OrgManager.ORGS:
+		var info: Dictionary = OrgManager.ORG_INFO.get(org, {})
+		var member := bool(memberships.get(org, false))
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); card.add_child(row)
+		var col = VBoxContainer.new(); col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; col.add_theme_constant_override("separation", 2); row.add_child(col)
+		var name = Label.new(); name.text = ("✔ " if member else "○ ") + org + (" (عضو)" if member else "")
+		name.add_theme_font_size_override("font_size", 18)
+		name.modulate = ACCENT_GREEN if member else TEXT_MUTED
+		col.add_child(name)
+		var benefit = Label.new(); benefit.text = str(info.get("benefit", "")) + " • هزینه سالانه " + PersianFormatter.format_money(float(info.get("cost", 0.0)))
+		benefit.add_theme_font_size_override("font_size", 14); benefit.modulate = TEXT_FAINT
+		col.add_child(benefit)
+		var btn = Button.new()
+		btn.text = "خروج" if member else "پیوستن"
+		btn.custom_minimum_size = Vector2(100, 40); btn.add_theme_font_size_override("font_size", 15)
+		btn.pressed.connect(FeedbackManager.play_click)
+		btn.pressed.connect(_on_org_toggle.bind(org))
+		_mark_decision_button(btn, "org_toggle:" + org)
+		row.add_child(btn)
+	# قطعنامه در انتظار
+	var pending: Dictionary = intl.get("pending_vote", {})
+	if not pending.is_empty():
+		var vote_card = _card("🗳️ قطعنامه در انتظار رأی")
+		var title = Label.new(); title.text = str(pending.get("title", ""))
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		title.add_theme_font_size_override("font_size", 19); title.modulate = ACCENT_GOLD
+		vote_card.add_child(title)
+		var effects = Label.new(); effects.text = "تأیید: %s | وتو: %s" % [pending.get("yes_effect", ""), pending.get("no_effect", "")]
+		effects.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		effects.add_theme_font_size_override("font_size", 15); effects.modulate = TEXT_MUTED
+		vote_card.add_child(effects)
+		var vote_row = HBoxContainer.new(); vote_row.add_theme_constant_override("separation", 8); vote_card.add_child(vote_row)
+		var yes_btn = Button.new(); yes_btn.text = "✔ تأیید"; yes_btn.custom_minimum_size = Vector2(150, 44)
+		yes_btn.pressed.connect(FeedbackManager.play_click); yes_btn.pressed.connect(_on_org_vote.bind("yes"))
+		_mark_decision_button(yes_btn, "org_vote:yes")
+		vote_row.add_child(yes_btn)
+		var no_btn = Button.new(); no_btn.text = "✖ وتو"; no_btn.custom_minimum_size = Vector2(150, 44)
+		no_btn.pressed.connect(FeedbackManager.play_click); no_btn.pressed.connect(_on_org_vote.bind("no"))
+		_mark_decision_button(no_btn, "org_vote:no")
+		vote_row.add_child(no_btn)
+
+func _on_org_toggle(org: String):
+	var cmd = GameCommandClass.create_org_toggle(org)
+	if _queue_decision(cmd, "🏛️ تغییر عضویت «" + org + "»"):
+		_toast("تغییر عضویت «%s» ثبت شد — با پایان نوبت اعمال می‌شود" % org)
+		_switch_tab("map")
+
+func _on_org_vote(decision: String):
+	var intl: Dictionary = GameState.state.get("intl_orgs", {})
+	var pending: Dictionary = intl.get("pending_vote", {})
+	if pending.is_empty():
+		_toast("قطعنامه‌ای در انتظار رأی نیست")
+		return
+	var cmd = GameCommandClass.create_org_vote(decision)
+	if _queue_decision(cmd, "🗳️ رأی «" + ("تأیید" if decision == "yes" else "وتو") + "» به قطعنامه"):
+		_toast("رأی شما ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("map")
 
 func _build_technology():
 	var state = GameState.state
@@ -2858,6 +3146,8 @@ func _on_start_research(technology_id: String, technology_name: String):
 # تب جمعیت
 # ============================================================
 func _build_population():
+	_build_media_card(GameState.state)
+	
 	var st = GameState.state
 	var pop = st.get("population", {})
 
@@ -2909,6 +3199,7 @@ func _build_military():
 	_bar(c3, "آمادگی سایبری", intel.get("cyber_readiness", 0.5))
 	_build_assassination_card(st, c3)
 	_build_war_goals_card(st)
+	_build_generals_card(st)
 
 	var development: Dictionary = st.get("military_development", {})
 	var doctrine_card = _card("🧭 دکترین نظامی")
@@ -3251,6 +3542,7 @@ func _build_hero_overlay():
 func _build_map_intel_card():
 	var state = GameState.state
 	var world: Dictionary = state.get("world", {})
+	_build_orgs_card(state)
 	var card = _card("❖ گزارش جبهه و دیپلماسی")
 	var wars: Dictionary = world.get("wars", {})
 	var offers: Array = world.get("incoming_offers", [])
@@ -4600,6 +4892,13 @@ func _command_queue_key(cmd) -> String:
 		"decision_resolve": return "dec:" + str(p.get("decision_id", ""))
 		"faction_action": return "fac:" + str(p.get("faction", "")) + ":" + str(p.get("action", ""))
 		"set_war_goal": return "wargoal:" + str(p.get("target", ""))
+		"general_recruit": return "general_recruit"
+		"general_assign": return "gen_assign:" + str(p.get("commander_id", "")) + ":" + str(p.get("war_target", ""))
+		"media_policy": return "media_policy:" + str(p.get("policy", ""))
+		"media_campaign": return "media_camp:" + str(p.get("target_group", ""))
+		"commodity_trade": return "com_sell:" + str(p.get("commodity", ""))
+		"org_toggle": return "org_toggle:" + str(p.get("org", ""))
+		"org_vote": return "org_vote:" + str(p.get("decision", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
