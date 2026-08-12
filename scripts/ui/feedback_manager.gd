@@ -44,6 +44,20 @@ func play_alert():
 	_haptic(90, 0.72)
 	_play_tone(220.0, 0.14, volume * 0.9)
 
+func play_celebration():
+	# فنفار پیروزی: سه نت صعودی (مثل لحظه‌های مهم بازی‌های موفق)
+	_haptic(70, 0.6)
+	_play_tone(523.0, 0.12, volume * 0.8)
+	_play_tone(659.0, 0.12, volume * 0.8)
+	_play_tone(784.0, 0.22, volume)
+
+func play_levelup():
+	_haptic(85, 0.65)
+	_play_tone(392.0, 0.10, volume * 0.7)
+	_play_tone(523.0, 0.10, volume * 0.7)
+	_play_tone(659.0, 0.10, volume * 0.7)
+	_play_tone(1046.0, 0.28, volume)
+
 func play_achievement():
 	_haptic(65, 0.52)
 	if muted or not _available:
