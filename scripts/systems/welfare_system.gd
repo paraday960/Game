@@ -28,8 +28,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# بیکاری = f(رشد اقتصاد، مهارت، سیاست کار)
 	var growth = econ.get("growth_rate", 0.02)
 	var skill_match = education.get("skill_match", 0.60)
+	# قانون اوکان: رشد بالاتر از ۲.۵٪ بالقوه، بیکاری را ملایم کاهش می‌دهد (نرخ‌ها سالانه‌اند)
 	var unemployment = 0.08
-	unemployment -= growth * 2.0
+	unemployment -= (growth - 0.025) * 0.5
 	unemployment += (1.0 - skill_match) * 0.1
 	unemployment += Deterministic.next_range(-0.005, 0.005)
 	unemployment = clamp(unemployment, 0.02, 0.35)
