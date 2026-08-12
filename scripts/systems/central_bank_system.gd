@@ -29,7 +29,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var inflation_gap = inflation - cb["inflation_target"]
 	var growth_gap = growth - 0.025
 	var taylor_rate = cb["inflation_target"] + inflation + 0.5 * inflation_gap + 0.5 * growth_gap
-	taylor_rate = clamp(taylor_rate, 0.01, 0.30)
+	taylor_rate = clamp(taylor_rate, 0.01, 0.60)
 
 	# بانک مرکزی استقلال دارد اما تحت فشار سیاسی
 	var political_pressure = (1.0 - cb["independence"]) * 0.02
@@ -43,19 +43,19 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.98 + float(cb["manual_rate"]) * 0.02, 0.0, 0.50)
 		cb["independence"] = clamp(float(cb["independence"]) - 0.0002, 0.1, 0.95)
 	else:
-		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.995 + (taylor_rate + political_pressure) * 0.005, 0.01, 0.35)
+		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.98 + (taylor_rate + political_pressure) * 0.02, 0.01, 0.60)
 
 	# عرضه پول و نقدینگی
 	# نرخ بهره بالا → عرضه کم، رشد کم؛ پایین → رشد اما ریسک تورم
 	var money_change = (0.15 - cb["interest_rate"]) * 0.01 + growth_gap * 0.005
-	cb["money_supply"] = clamp(cb["money_supply"] + money_change * 0.01, 0.5, 2.5)
+	cb["money_supply"] = clamp(cb["money_supply"] + money_change * 0.01, 0.5, 1.8)
 
 	# تورم هدف با نرخ بهره کنترل می‌شود
 	# تورم = f(عرضه پول، تقاضا، انتظارات)
-	var money_effect = (cb["money_supply"] - 1.0) * 0.05
-	var demand_effect = growth * 0.5
-	# اثر نرخ بهره بر تورم (با تاخیر)
-	var rate_effect = (0.15 - cb["interest_rate"]) * 0.1
+	var money_effect = (cb["money_supply"] - 1.0) * 0.03
+	var demand_effect = growth * 0.35
+	# اثر نرخ بهره بر تورم (با تاخیر): نرخ بالاتر از ۸٪ تورم را مهار می‌کند
+	var rate_effect = (0.08 - cb["interest_rate"]) * 0.12
 	economy["inflation"] = clamp(inflation + (money_effect + demand_effect + rate_effect - 0.01) * 0.001, -0.02, 0.50)
 	state["economy"] = economy
 
