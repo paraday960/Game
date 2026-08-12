@@ -17,7 +17,8 @@ const SUPPORTED_COMMANDS = [
 	"commodity_trade", "org_toggle", "org_vote",
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
 	"capital_control", "governor_appoint", "crisis_stance", "rivalry_action", "shadow_action",
-	"court_action", "energy_action", "industry_action", "succession_action", "labor_action"
+	"court_action", "energy_action", "industry_action", "succession_action", "labor_action",
+	"epidemic_action", "arms_action", "cyber_action", "migration_action", "culture_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -500,6 +501,27 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "labor_action":
 			if not str(cmd.payload.get("action", "")) in ["free", "minimum_up", "wage_control", "negotiate", "suppress"]:
 				return {"valid": false, "reason": "اقدام کارگری نامعتبر است"}
+		elif cmd.type == "epidemic_action":
+			if not str(cmd.payload.get("action", "")) in ["lockdown0", "lockdown1", "lockdown2", "vaccine", "hospitals"]:
+				return {"valid": false, "reason": "اقدام بهداشتی نامعتبر است"}
+		elif cmd.type == "arms_action":
+			if not str(cmd.payload.get("action", "")) in ["invest", "sell", "transfer"]:
+				return {"valid": false, "reason": "اقدام تسلیحاتی نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "sell" and not WorldManager.countries.has(str(cmd.payload.get("target", ""))):
+				return {"valid": false, "reason": "خریدار نامعتبر است"}
+		elif cmd.type == "cyber_action":
+			if not str(cmd.payload.get("action", "")) in ["firewall", "attack"]:
+				return {"valid": false, "reason": "اقدام سایبری نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "attack" and not WorldManager.countries.has(str(cmd.payload.get("target", ""))):
+				return {"valid": false, "reason": "هدف نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "attack" and not str(cmd.payload.get("kind", "")) in ["economy", "infrastructure", "information"]:
+				return {"valid": false, "reason": "نوع حمله نامعتبر است"}
+		elif cmd.type == "migration_action":
+			if not str(cmd.payload.get("action", "")) in ["open", "restricted", "skilled", "integrate", "brain"]:
+				return {"valid": false, "reason": "اقدام مهاجرتی نامعتبر است"}
+		elif cmd.type == "culture_action":
+			if not str(cmd.payload.get("action", "")) in ["heritage", "exchange", "festival", "sports", "film"]:
+				return {"valid": false, "reason": "اقدام فرهنگی نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -840,6 +862,63 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in lab_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("labor_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "epidemic_action":
+		var ep_act := str(cmd.payload.get("action", ""))
+		var ep_result: Dictionary
+		match ep_act:
+			"lockdown0": ep_result = EpidemicManager.set_lockdown(snapshot, 0)
+			"lockdown1": ep_result = EpidemicManager.set_lockdown(snapshot, 1)
+			"lockdown2": ep_result = EpidemicManager.set_lockdown(snapshot, 2)
+			"vaccine": ep_result = EpidemicManager.vaccination_campaign(snapshot)
+			_: ep_result = EpidemicManager.emergency_hospitals(snapshot)
+		snapshot = ep_result.state
+		for ev in ep_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("health_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "arms_action":
+		var arms_act := str(cmd.payload.get("action", ""))
+		var arms_result: Dictionary
+		match arms_act:
+			"invest": arms_result = ArmsManager.invest_capacity(snapshot)
+			"sell": arms_result = ArmsManager.sell_weapons(snapshot, str(cmd.payload.get("target", "")), float(cmd.payload.get("amount", 0.0)))
+			_: arms_result = ArmsManager.transfer_to_army(snapshot, float(cmd.payload.get("amount", 0.0)))
+		snapshot = arms_result.state
+		for ev in arms_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("military_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "cyber_action":
+		var cy_act := str(cmd.payload.get("action", ""))
+		var cy_result: Dictionary
+		if cy_act == "firewall":
+			cy_result = CyberManager.build_firewall(snapshot)
+		else:
+			cy_result = CyberManager.cyber_attack(snapshot, str(cmd.payload.get("target", "")), str(cmd.payload.get("kind", "economy")))
+		snapshot = cy_result.state
+		for ev in cy_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("cyber_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "migration_action":
+		var mig_act := str(cmd.payload.get("action", ""))
+		var mig_result: Dictionary
+		match mig_act:
+			"integrate": mig_result = MigrationManager.integration_program(snapshot)
+			"brain": mig_result = MigrationManager.stem_brain_drain(snapshot)
+			_: mig_result = MigrationManager.set_policy(snapshot, mig_act)
+		snapshot = mig_result.state
+		for ev in mig_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("population_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "culture_action":
+		var cul_act := str(cmd.payload.get("action", ""))
+		var cul_result: Dictionary
+		match cul_act:
+			"heritage": cul_result = CultureManager.invest_heritage(snapshot)
+			"exchange": cul_result = CultureManager.cultural_exchange(snapshot)
+			_: cul_result = CultureManager.host_event(snapshot, cul_act, cmd.tick)
+		snapshot = cul_result.state
+		for ev in cul_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("culture_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1119,6 +1198,11 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = IndustryManager.ensure(snapshot)
 	snapshot = SuccessionManager.ensure(snapshot)
 	snapshot = LaborManager.ensure(snapshot)
+	snapshot = EpidemicManager.ensure(snapshot)
+	snapshot = ArmsManager.ensure(snapshot)
+	snapshot = CyberManager.ensure(snapshot)
+	snapshot = MigrationManager.ensure(snapshot)
+	snapshot = CultureManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1271,6 +1355,26 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var labor_result = LaborManager.simulate_month(snapshot, turn)
 	snapshot = labor_result.state
 	_collect_events(labor_result, "labor", snapshot, turn, generated_events, "labor_event")
+	# بهداشت عمومی و پاندمی: شیوع، قرنطینه و واکسن
+	var epidemic_result = EpidemicManager.simulate_month(snapshot, turn)
+	snapshot = epidemic_result.state
+	_collect_events(epidemic_result, "epidemic", snapshot, turn, generated_events, "health_event")
+	# صنایع دفاعی: تولید، تحریم و صادرات تسلیحات
+	var arms_result = ArmsManager.simulate_month(snapshot, turn)
+	snapshot = arms_result.state
+	_collect_events(arms_result, "arms", snapshot, turn, generated_events, "military_event")
+	# جنگ سایبری: حملات دشمن و دفاع فایروال
+	var cyber_result = CyberManager.simulate_month(snapshot, turn)
+	snapshot = cyber_result.state
+	_collect_events(cyber_result, "cyber", snapshot, turn, generated_events, "cyber_event")
+	# سیاست مهاجرت: جریان جمعیت، پناهندگان و فرار مغزها
+	var migration_result = MigrationManager.simulate_month(snapshot, turn)
+	snapshot = migration_result.state
+	_collect_events(migration_result, "migration", snapshot, turn, generated_events, "population_event")
+	# فرهنگ و قدرت نرم: میراث، رویدادها و نفوذ جهانی
+	var culture_result = CultureManager.simulate_month(snapshot, turn)
+	snapshot = culture_result.state
+	_collect_events(culture_result, "culture", snapshot, turn, generated_events, "culture_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
