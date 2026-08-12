@@ -32,7 +32,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# قیمت‌ها - تابع نفت جهانی + یارانه + ارز + مالیات
 	var subsidy_rate = 0.68
 	var gasoline_target = oil_price * 1050.0 * exchange * (1.0 - subsidy_rate*0.8) + 4000.0
-	fuel["gasoline_price"] = fuel["gasoline_price"]*0.985 + gasoline_target*0.015 + inflation*100.0
+	fuel["gasoline_price"] = fuel["gasoline_price"]*0.985 + gasoline_target*0.015 + inflation*3.0
 	fuel["diesel_price"] = fuel["gasoline_price"]*0.85
 	fuel["cng_price"] = fuel["gasoline_price"]*0.55
 	fuel["electric_price"] = 2000.0 + inflation*500.0
@@ -75,7 +75,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# اثر بر اقتصاد و رضایت
 	var price_effect = (15000.0 - fuel["gasoline_price"])/15000.0
 	state["population"]["happiness"] = clamp(state.get("population",{}).get("happiness",0.60) + price_effect*0.0006 - fuel["smuggling"]*0.0003, 0.05, 0.95)
-	state["economy"]["inflation"] = clamp(state.get("economy",{}).get("inflation",0.08) + (fuel["gasoline_price"]-15000.0)/15000.0*0.00015, -0.02, 0.50)
+	state["economy"]["inflation"] = clamp(state.get("economy",{}).get("inflation",0.08) + (fuel["gasoline_price"]-15000.0)/15000.0*0.00005, -0.02, 0.50)
 
 	# رویدادها
 	if fuel["smuggling"] > 0.42 and Deterministic.chance(0.014):
