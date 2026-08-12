@@ -304,6 +304,13 @@ func _draw_admin_detail(code: String):
 
 func _country_fill(code: String) -> Color:
 	var profile = countries.get(code, WorldManager.get_country(code))
+	# کشورهای ضمیمه‌شده با رنگ برنده و کشورهای دست‌نشانده با رنگ وابسته به ارباب رندر می‌شوند
+	var annexed_by = str(profile.get("annexed_by", ""))
+	if annexed_by != "" and countries.has(annexed_by):
+		return _country_fill(annexed_by).darkened(0.06)
+	var puppet_master = str(profile.get("puppet_master", ""))
+	if puppet_master != "" and countries.has(puppet_master):
+		return _country_fill(puppet_master).darkened(0.32).lightened(0.06)
 	var value = _country_layer_value(code, profile)
 	# لایه‌ی روی‌هم «اطلاعاتی»: رنگ‌آمیزی کشورها بر پایه‌ی آمادگی سایبری
 	if overlays.get("intelligence", false):
