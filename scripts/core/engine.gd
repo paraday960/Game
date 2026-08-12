@@ -12,7 +12,9 @@ const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
 	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
-	"assassinate", "leader_hidden", "faction_action", "set_war_goal"
+	"assassinate", "leader_hidden", "faction_action", "set_war_goal",
+	"general_recruit", "general_assign", "media_policy", "media_campaign",
+	"commodity_trade", "org_toggle", "org_vote"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -424,6 +426,32 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				return {"valid": false, "reason": "جنگ فعالی با این کشور وجود ندارد"}
 			if not wg_goal in ["reparations", "annexation", "humiliation", "liberation"]:
 				return {"valid": false, "reason": "هدف جنگی نامعتبر است"}
+		elif cmd.type == "general_assign":
+			var ga_id = str(cmd.payload.get("commander_id", ""))
+			if not state.get("generals", {}).get("commanders", {}).has(ga_id):
+				return {"valid": false, "reason": "فرمانده نامعتبر است"}
+		elif cmd.type == "media_policy":
+			if not str(cmd.payload.get("policy", "")) in ["free", "state", "populist"]:
+				return {"valid": false, "reason": "سیاست رسانه‌ای نامعتبر است"}
+		elif cmd.type == "media_campaign":
+			if not MediaManager.GROUPS.has(str(cmd.payload.get("target_group", ""))):
+				return {"valid": false, "reason": "گروه جمعیتی نامعتبر است"}
+			if not str(cmd.payload.get("style", "")) in ["honest", "emotional", "smear"]:
+				return {"valid": false, "reason": "سبک کمپین نامعتبر است"}
+			var camp_check = MediaManager.can_campaign(state)
+			if not camp_check.valid:
+				return {"valid": false, "reason": camp_check.reason}
+		elif cmd.type == "commodity_trade":
+			if not CommodityManager.COMMODITIES.has(str(cmd.payload.get("commodity", ""))):
+				return {"valid": false, "reason": "کالا نامعتبر است"}
+			if not _is_finite_number(cmd.payload.get("amount", 0.0)) or float(cmd.payload.get("amount", 0.0)) <= 0.0:
+				return {"valid": false, "reason": "مقدار نامعتبر است"}
+		elif cmd.type == "org_toggle":
+			if not OrgManager.ORGS.has(str(cmd.payload.get("org", ""))):
+				return {"valid": false, "reason": "سازمان نامعتبر است"}
+		elif cmd.type == "org_vote":
+			if not str(cmd.payload.get("decision", "")) in ["yes", "no"]:
+				return {"valid": false, "reason": "رأی نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -606,6 +634,48 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		if snapshot.get("world", {}).get("wars", {}).has(wg_target2):
 			snapshot["world"]["wars"][wg_target2]["goal"] = str(cmd.payload.get("goal", "reparations"))
 			EventLog.log_event("war_goal", {"message": "هدف جنگ با %s به «%s» تغییر کرد" % [WorldManager.get_country_name(wg_target2), WorldManager.get_war_goal_name(str(cmd.payload.get("goal", "reparations")))]}, cmd.tick, cmd.version)
+	elif cmd.type == "general_recruit":
+		var gr_result = GeneralsManager.recruit(snapshot, cmd.tick)
+		snapshot = gr_result.state
+		for ev in gr_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("military_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "general_assign":
+		var ga_result = GeneralsManager.assign(snapshot, str(cmd.payload.get("commander_id", "")), str(cmd.payload.get("war_target", "")))
+		snapshot = ga_result.state
+		for ev in ga_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("military_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "media_policy":
+		var mp_result = MediaManager.set_policy(snapshot, str(cmd.payload.get("policy", "free")), cmd.tick)
+		snapshot = mp_result.state
+		for ev in mp_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("media_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "media_campaign":
+		var mc_result = MediaManager.start_campaign(snapshot, str(cmd.payload.get("target_group", "")), str(cmd.payload.get("style", "honest")))
+		snapshot = mc_result.state
+		for ev in mc_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("media_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "commodity_trade":
+		var ct_result = CommodityManager.trade(snapshot, str(cmd.payload.get("commodity", "")), float(cmd.payload.get("amount", 0.0)))
+		snapshot = ct_result.state
+		for ev in ct_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("trade_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "org_toggle":
+		var ot_result = OrgManager.toggle(snapshot, str(cmd.payload.get("org", "")), cmd.tick)
+		snapshot = ot_result.state
+		for ev in ot_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("diplomacy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "org_vote":
+		var ov_result = OrgManager.resolve_vote(snapshot, str(cmd.payload.get("decision", "yes")), cmd.tick)
+		snapshot = ov_result.state
+		for ev in ov_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("diplomacy_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -871,6 +941,10 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	var generated_events: Array = []
 	snapshot = LeaderManager.ensure(snapshot)
 	snapshot = FactionManager.ensure(snapshot)
+	snapshot = GeneralsManager.ensure(snapshot)
+	snapshot = MediaManager.ensure(snapshot)
+	snapshot = CommodityManager.ensure(snapshot)
+	snapshot = OrgManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -967,6 +1041,22 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	for celebration in celebrations:
 		generated_events.append({"type": "celebration", "celebration": celebration})
 
+	# فرماندهان ارتش: تجربه و ارتقا از نبردهای این ماه
+	var generals_result = GeneralsManager.simulate_month(snapshot, turn)
+	snapshot = generals_result.state
+	_collect_events(generals_result, "generals", snapshot, turn, generated_events, "military_event")
+	# رسانه و افکار عمومی: رضایت گروه‌ها، کمپین‌ها و اثر بر جامعه
+	var media_result = MediaManager.simulate_month(snapshot, turn)
+	snapshot = media_result.state
+	_collect_events(media_result, "media", snapshot, turn, generated_events, "media_event")
+	# بازار جهانی کالا: قیمت‌ها، شوک‌ها و درآمد نفتی
+	var commodity_result = CommodityManager.simulate_month(snapshot, turn)
+	snapshot = commodity_result.state
+	_collect_events(commodity_result, "commodities", snapshot, turn, generated_events, "trade_event")
+	# سازمان‌های بین‌المللی: عضویت، هزینه‌ها و قطعنامه‌ها
+	var org_result = OrgManager.simulate_month(snapshot, turn)
+	snapshot = org_result.state
+	_collect_events(org_result, "intl_orgs", snapshot, turn, generated_events, "diplomacy_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
