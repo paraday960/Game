@@ -2534,6 +2534,76 @@ func _on_succession():
 		_toast("تربیت وارث ثبت شد — با پایان نوبت انجام می‌شود")
 		_switch_tab("government")
 
+# ── سیاست آموزش: فنی، دانشگاه، بورس، دیجیتال ──
+func _build_education_card(st: Dictionary):
+	var ed: Dictionary = st.get("education_policy", {})
+	if ed.is_empty():
+		return
+	var card = _card("🎓 سیاست آموزش")
+	_bar(card, "آموزش فنی‌وحرفه‌ای", float(ed.get("vocational", 0.3)))
+	_bar(card, "استقلال دانشگاه", float(ed.get("university_autonomy", 0.4)))
+	_bar(card, "پوشش بورس تحصیلی", float(ed.get("scholarships", 0.2)))
+	_bar(card, "آموزش دیجیتال", float(ed.get("digital_learning", 0.2)))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	for act in [["vocational", "🔧 فنی‌وحرفه‌ای"], ["university", "🎓 استقلال دانشگاه (۱)"], ["scholarship", "🎓 بورس تحصیلی"], ["digital", "💻 آموزش دیجیتال"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 40); btn.add_theme_font_size_override("font_size", 12)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_education.bind(act[0]))
+		_mark_decision_button(btn, "edu:" + act[0])
+		act_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "فنی‌وحرفه‌ای بیکاری را می‌کاهد؛ استقلال دانشگاه نوآوری می‌آورد ولی سرمایه سیاسی می‌خواهد؛ بورس فرار مغزها را مهار و جوانان را خوشحال می‌کند؛ دیجیتال نیازمند فناوری است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_education(action: String):
+	var cmd = GameCommandClass.create_education_action(action)
+	var labels := {"vocational": "آموزش فنی‌وحرفه‌ای", "university": "اصلاحات دانشگاهی", "scholarship": "بورس تحصیلی", "digital": "آموزش دیجیتال"}
+	if _queue_decision(cmd, "🎓 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+# ── امنیت داخلی: نظم و آزادی ──
+func _build_security_card(st: Dictionary):
+	var sp: Dictionary = st.get("security_policy", {})
+	if sp.is_empty():
+		return
+	var crime := clampf(float(sp.get("crime", 0.35)), 0.0, 1.0)
+	var card = _card("👮 امنیت داخلی")
+	_row(card, "سطح جرم", PersianFormatter.to_persian_digits("%.0f٪" % (crime * 100.0)), _color_for(1.0 - crime))
+	_bar(card, "سطح جرم", crime)
+	var mode := str(sp.get("mode", "civil"))
+	var mode_names := {"civil": "آزادی‌محور", "surveillance": "نظارتی", "tough": "سختگیرانه"}
+	_row(card, "سیاست پلیس", str(mode_names.get(mode, mode)))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 4); card.add_child(act_row)
+	for m in [["civil", "🕊️ آزادی‌محور"], ["surveillance", "📹 نظارتی"], ["tough", "🚨 سختگیرانه"]]:
+		var btn = Button.new(); btn.text = m[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = mode == m[0]
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_security.bind(m[0]))
+		_mark_decision_button(btn, "sec:" + m[0])
+		act_row.add_child(btn)
+	var act_row2 = HBoxContainer.new(); act_row2.add_theme_constant_override("separation", 4); card.add_child(act_row2)
+	for act in [["smuggling", "🚔 مبارزه با قاچاق"], ["community", "👮 پلیس محله"], ["modern", "💻 پلیس هوشمند"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_security.bind(act[0]))
+		_mark_decision_button(btn, "sec:" + act[0])
+		act_row2.add_child(btn)
+	var hint = Label.new()
+	hint.text = "سیاست سختگیرانه جرم را می‌کاهد ولی آزادی مدنی، اعتماد رسانه و استقلال قضایی را می‌آزارد. مبارزه با قاچاق اقتصاد سایه را هم می‌خشکاند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_security(action: String):
+	var cmd = GameCommandClass.create_security_action(action)
+	var labels := {"civil": "پلیس آزادی‌محور", "surveillance": "پلیس نظارتی", "tough": "پلیس سختگیرانه", "smuggling": "مبارزه با قاچاق", "community": "پلیس محله", "modern": "نوسازی پلیس"}
+	if _queue_decision(cmd, "👮 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
 func _build_laws():
 	var state = GameState.state
 	var legislation: Dictionary = state.get("legislation", {})
@@ -2593,6 +2663,8 @@ func _build_government():
 	_build_parliament_card(state)
 	_build_judiciary_card(state)
 	_build_succession_card(state)
+	_build_education_card(state)
+	_build_security_card(state)
 	_build_factions_card(state)
 	_build_governors_card(state)
 
@@ -2710,6 +2782,8 @@ func _build_economy():
 	_build_forex_card(st)
 	_build_energy_card(st)
 	_build_industry_card(st)
+	_build_agriculture_card(st)
+	_build_tourism_card(st)
 	_build_shadow_card(st)
 	_build_policy_center()
 
@@ -2994,6 +3068,77 @@ func _on_industry(action: String, value: String):
 	var cmd = GameCommandClass.create_industry_action(action, value)
 	var labels := {"strategy": "تغییر راهبرد صنعتی", "winner": "انتخاب صنعت برگزیده", "privatize": "خصوصی‌سازی", "nationalize": "ملی‌سازی", "free_zone": "منطقه آزاد"}
 	if _queue_decision(cmd, "🏭 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── کشاورزی و امنیت غذایی ──
+func _build_agriculture_card(st: Dictionary):
+	var ag: Dictionary = st.get("agri_policy", {})
+	if ag.is_empty():
+		return
+	var card = _card("🌾 کشاورزی و امنیت غذایی")
+	_bar(card, "ذخیره راهبردی غلات", float(ag.get("grain_reserve", 0.3)))
+	_bar(card, "یارانه کود", float(ag.get("fertilizer_subsidy", 0.4)))
+	_bar(card, "تنوع کشت", float(ag.get("crop_diversity", 0.3)))
+	_bar(card, "آبیاری هوشمند", float(ag.get("smart_irrigation", 0.2)))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	for act in [["grain", "🌾 ذخیره غلات"], ["fertilizer", "🧪 یارانه کود"], ["diversity", "🌱 تنوع کشت"], ["irrigation", "💧 آبیاری هوشمند"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 40); btn.add_theme_font_size_override("font_size", 12)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_agriculture.bind(act[0]))
+		_mark_decision_button(btn, "agri:" + act[0])
+		act_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "ذخیره غلات تورم خوراک را در شوک‌های قیمت گندم مهار می‌کند؛ تنوع کشت تاب‌آوری خشکسالی می‌آورد؛ آبیاری هوشمند آب را نجات می‌دهد و نیازمند صنعت ۸+ است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_agriculture(action: String):
+	var cmd = GameCommandClass.create_agriculture_action(action)
+	var labels := {"grain": "ذخیره راهبردی غلات", "fertilizer": "یارانه کود", "diversity": "تنوع کشت", "irrigation": "آبیاری هوشمند"}
+	if _queue_decision(cmd, "🌾 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── گردشگری: ویزا، مهمان‌پذیری، کمپین، سلامت ──
+func _build_tourism_card(st: Dictionary):
+	var tp: Dictionary = st.get("tourism_policy", {})
+	if tp.is_empty():
+		return
+	var tourism: Dictionary = st.get("tourism", {})
+	var card = _card("✈️ گردشگری")
+	_row(card, "بازدیدکنندگان", PersianFormatter.format_large(tourism.get("visitors", 0)) + " نفر")
+	_row(card, "درآمد سالانه", PersianFormatter.format_money(tourism.get("revenue", 0.0)))
+	var visa := str(tp.get("visa", "moderate"))
+	var visa_names := {"open": "تسهیل کامل", "moderate": "متوسط", "strict": "سختگیرانه"}
+	_row(card, "سیاست ویزا", str(visa_names.get(visa, visa)))
+	_bar(card, "مهمان‌پذیری", float(tp.get("hospitality", 0.4)))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 4); card.add_child(act_row)
+	for v in [["open", "🛂 ویزا باز"], ["moderate", "🛂 متوسط"], ["strict", "🛂 سخت"]]:
+		var btn = Button.new(); btn.text = v[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = visa == v[0]
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_tourism.bind("visa", v[0]))
+		_mark_decision_button(btn, "tour:visa:" + v[0])
+		act_row.add_child(btn)
+	var act_row2 = HBoxContainer.new(); act_row2.add_theme_constant_override("separation", 4); card.add_child(act_row2)
+	for act in [["hospitality", "🏨 مهمان‌پذیری"], ["campaign", "📣 کمپین مقصد"], ["health", "🏥 گردشگری سلامت"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_tourism.bind(act[0], ""))
+		_mark_decision_button(btn, "tour:" + act[0])
+		act_row2.add_child(btn)
+	var hint = Label.new()
+	hint.text = "جاذبه از قدرت نرم، امنیت و ارز ارزان می‌آید؛ ویزای باز تعداد را می‌برد ولی امنیت را به چالش می‌کشد. گردشگری سلامت نیازمند بهداشت ۷۰٪+ است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_tourism(action: String, value: String):
+	var cmd = GameCommandClass.create_tourism_action(action, value)
+	var labels := {"visa": "تغییر سیاست ویزا", "hospitality": "سرمایه مهمان‌پذیری", "campaign": "کمپین مقصد", "health": "گردشگری سلامت"}
+	if _queue_decision(cmd, "✈️ " + labels.get(action, action)):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
@@ -3797,6 +3942,37 @@ func _on_cyber(action: String, target: String, kind: String):
 		_toast(label + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("military")
 
+# ── شهرسازی و مسکن ──
+func _build_urban_card(st: Dictionary):
+	var up: Dictionary = st.get("urban_policy", {})
+	if up.is_empty():
+		return
+	var card = _card("🏙️ شهرسازی و مسکن")
+	_bar(card, "مسکن اجتماعی", float(up.get("social_housing", 0.25)))
+	_bar(card, "حمل‌ونقل عمومی", float(up.get("public_transit", 0.4)))
+	_bar(card, "شهر هوشمند", float(up.get("smart_city", 0.15)))
+	_bar(card, "کنترل تراکم", float(up.get("density_control", 0.3)))
+	_row(card, "ترافیک", PersianFormatter.to_persian_digits("%.0f٪" % (float(up.get("traffic", 0.45)) * 100.0)), _color_for(1.0 - float(up.get("traffic", 0.45))))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 4); card.add_child(act_row)
+	for act in [["housing", "🏘️ مسکن اجتماعی"], ["transit", "🚇 حمل‌ونقل"], ["smart", "💡 شهر هوشمند"], ["density", "🏗️ کنترل تراکم"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 38); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_urban.bind(act[0]))
+		_mark_decision_button(btn, "urban:" + act[0])
+		act_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "مسکن اجتماعی هزینه مسکن را می‌کاهد؛ حمل‌ونقل ترافیک و آلودگی را؛ شهر هوشمند نیازمند دیجیتال ۱۰+ است؛ کنترل تراکم کیفیت می‌آورد ولی زمین را گران می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_urban(action: String):
+	var cmd = GameCommandClass.create_urban_action(action)
+	var labels := {"housing": "مسکن اجتماعی", "transit": "حمل‌ونقل عمومی", "smart": "شهر هوشمند", "density": "کنترل تراکم"}
+	if _queue_decision(cmd, "🏙️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
 func _build_technology():
 	var state = GameState.state
 	var tech: Dictionary = state.get("technology", {})
@@ -3928,6 +4104,7 @@ func _build_population():
 	_build_epidemic_card(GameState.state)
 	_build_migration_card(GameState.state)
 	_build_culture_card(GameState.state)
+	_build_urban_card(GameState.state)
 	
 	var st = GameState.state
 	var pop = st.get("population", {})
@@ -5702,6 +5879,11 @@ func _command_queue_key(cmd) -> String:
 		"cyber_action": return "cyber:" + str(p.get("action", "")) + (":" + str(p.get("target", "")) + ":" + str(p.get("kind", "")) if str(p.get("action", "")) == "attack" else "")
 		"migration_action": return "mig:" + str(p.get("action", ""))
 		"culture_action": return "cul:" + str(p.get("action", ""))
+		"education_action": return "edu:" + str(p.get("action", ""))
+		"agriculture_action": return "agri:" + str(p.get("action", ""))
+		"tourism_action": return "tour:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "visa" else "")
+		"urban_action": return "urban:" + str(p.get("action", ""))
+		"security_action": return "sec:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
