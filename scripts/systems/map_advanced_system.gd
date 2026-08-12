@@ -28,9 +28,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var progress = float(plan.get("progress", 0.0))
 
 		# پیشرفت طرح بر اساس آمادگی، تدارکات، دکترین
+		# توجه: این سیستم در DAILY_SYSTEMS اجرا می‌شود (هر روز ماه)، پس نرخ‌ها باید
+		# بر تعداد روزهای ماه تقسیم شوند تا پیشرفت واقعاً ماهانه باشد؛
+		# قبلاً هر روز نرخ کامل اضافه می‌شد و طرح در چند روز اجرا می‌شد (۳۰ برابر سریع‌تر).
+		var days_in_month = float(state.get("time", {}).get("days_in_month", 30))
 		var readiness = float(mil.get("readiness", 0.70))
 		var logistics = float(mil.get("logistics_detail", {}).get("supply_line_vulnerability", 0.30)) if mil.has("logistics_detail") else 0.30
-		var planning_speed = readiness*0.02 + (1.0 - logistics)*0.01 + 0.01
+		var planning_speed = (readiness*0.02 + (1.0 - logistics)*0.01 + 0.01) * 4.0 / days_in_month
 		if is_at_war:
 			planning_speed *= 1.5
 
@@ -68,8 +72,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var progress = float(construction.get("progress",0.0))
 
 		# سرعت ساخت بر اساس بودجه زیرساخت، فناوری، نیروی کار
+		# (تقسیم بر روزهای ماه چون این سیستم روزانه اجرا می‌شود — قبلاً جاده در ۲ ماه
+		# کامل می‌شد به‌جای ~۲۰ ماه)
+		var days_in_month2 = float(state.get("time", {}).get("days_in_month", 30))
 		var budget_share = econ.get("budget_allocations",{}).get("زیرساخت",0.18)
-		var build_speed = budget_share*0.05 + infra.get("quality",0.55)*0.02 + 0.01
+		var build_speed = (budget_share*0.20 + infra.get("quality",0.55)*0.08 + 0.05) / days_in_month2
 		# جنگ سرعت را کم می‌کند
 		if is_at_war:
 			build_speed *= 0.7
