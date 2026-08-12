@@ -32,8 +32,8 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var tension := float(riv.get("tension", 40.0))
 
 	# جنگ‌های جهان تنش را بالا می‌برند
-	tension += float(npc_wars.size()) * 0.8
-	tension += float(wars.size()) * 0.5
+	tension += float(npc_wars.size()) * 0.4
+	tension += float(wars.size()) * 0.25
 	# آرامش: بازگشت تدریجی
 	tension += (40.0 - tension) * 0.008
 	# مسابقه تسلیحاتی: در تنش بالا، کشورها هزینه نظامی بیشتری می‌کنند
@@ -113,7 +113,7 @@ func resolve_crisis(state: Dictionary, stance: String) -> Dictionary:
 func de_escalate(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var riv: Dictionary = state["rivalry"]
-	riv["tension"] = clampf(float(riv.get("tension", 40.0)) - 8.0, 0.0, 100.0)
+	riv["tension"] = clampf(float(riv.get("tension", 40.0)) - 12.0, 0.0, 100.0)
 	state["rivalry"] = riv
 	state["diplomacy"]["influence"] = clampf(float(state.get("diplomacy", {}).get("influence", 40.0)) + 2.0, 0.0, 100.0)
 	return {"success": true, "state": state,
@@ -122,7 +122,7 @@ func de_escalate(state: Dictionary) -> Dictionary:
 func escalate(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var riv: Dictionary = state["rivalry"]
-	riv["tension"] = clampf(float(riv.get("tension", 40.0)) + 10.0, 0.0, 100.0)
+	riv["tension"] = clampf(float(riv.get("tension", 40.0)) + 12.0, 0.0, 100.0)
 	riv["arms_race"] = clampf(float(riv.get("arms_race", 0.3)) + 0.1, 0.0, 1.0)
 	state["rivalry"] = riv
 	# تقویت ارتش در مسابقه تسلیحاتی
