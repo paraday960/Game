@@ -497,6 +497,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 					break
 		var air_factor = clamp(0.6 + air_superiority*0.8, 0.3, 1.6) # برتری هوایی ۰ تا ۱.۶ برابر
 
+		# فرمانده منصوب به این جبهه: ویژگی‌ها و تجربه، نیروی تهاجمی/دفاعی، لجستیک و هوا را تغییر می‌دهد
+		var general_bonus: Dictionary = GeneralsManager.front_bonus(state, target)
+		command_factor = clamp(command_factor + float(general_bonus.get("offense", 0.0)) + float(general_bonus.get("defense", 0.0)) * 0.5, 0.4, 1.8)
+		logistics_factor = clamp(logistics_factor + float(general_bonus.get("logistics", 0.0)), 0.15, 1.5)
+		air_factor = clamp(air_factor + float(general_bonus.get("air", 0.0)), 0.3, 1.7)
+
 		# کمک متحدان
 		var ally_support = 0.08 * float(world.get("alliances", []).size())
 		var ally_factor = min(1.0 + ally_support, 1.30) # کمی بیشتر از قبل به خاطر عملیات مشترک
