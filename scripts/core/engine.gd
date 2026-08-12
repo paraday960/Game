@@ -3,6 +3,7 @@ extends Node
 
 # preload مستقیم - بدون وابستگی به کش کلاس سراسری (سازگار با import سرد و CI)
 const GameCommandClass = preload("res://scripts/core/command.gd")
+const NpcTurnManagerClass = preload("res://scripts/core/npc_turn_manager.gd")
 const VersioningClass = preload("res://scripts/core/versioning.gd")
 const DecisionManagerClass = preload("res://scripts/core/decision_manager.gd")
 const ProgressionManagerClass = preload("res://scripts/core/progression_manager.gd")
@@ -285,6 +286,10 @@ func _tick_setup(current_state: Dictionary, current_version: int, current_tick: 
 
 	# نوبت ماهانه آغاز می‌شود و روزهای داخلی آن در موتور اجرا خواهند شد.
 	snapshot = TimeManager.begin_turn(snapshot, snapshot_tick)
+
+	# فاز تصمیم‌گیری نوبت: هر کشور غیربازیکن تصمیم‌های این نوبت را می‌گیرد و ثبت می‌کند؛
+	# اجرای تصمیم‌ها در پایان همان نوبت (simulate_npc_month) انجام می‌شود.
+	snapshot = NpcTurnManagerClass.plan_npc_turn(snapshot, snapshot_tick).state
 
 	return {
 		"success": true, "snapshot": snapshot,
