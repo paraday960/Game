@@ -122,6 +122,27 @@ static func create_faction_action(faction: String, action: String):
 static func create_set_war_goal(target: String, goal: String):
 	return _self_script().new("set_war_goal", {"target": target, "goal": goal})
 
+static func create_general_recruit():
+	return _self_script().new("general_recruit", {})
+
+static func create_general_assign(commander_id: String, war_target: String):
+	return _self_script().new("general_assign", {"commander_id": commander_id, "war_target": war_target})
+
+static func create_media_policy(policy: String):
+	return _self_script().new("media_policy", {"policy": policy})
+
+static func create_media_campaign(target_group: String, style: String):
+	return _self_script().new("media_campaign", {"target_group": target_group, "style": style})
+
+static func create_commodity_trade(commodity: String, amount: float):
+	return _self_script().new("commodity_trade", {"commodity": commodity, "amount": amount})
+
+static func create_org_toggle(org: String):
+	return _self_script().new("org_toggle", {"org": org})
+
+static func create_org_vote(decision: String):
+	return _self_script().new("org_vote", {"decision": decision})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
