@@ -2436,6 +2436,104 @@ func _on_governor_appoint(province_code: String, faction: String):
 		_toast("انتصاب استاندار ثبت شد — با پایان نوبت انجام می‌شود")
 		_switch_tab("government")
 
+# ── قوه قضائیه: استقلال، تراکم پرونده و پرونده‌های بزرگ ──
+func _build_judiciary_card(st: Dictionary):
+	var jud: Dictionary = st.get("judiciary", {})
+	if jud.is_empty():
+		return
+	var independence := clampf(float(jud.get("independence", 0.55)), 0.0, 1.0)
+	var backlog := clampf(float(jud.get("backlog", 0.4)), 0.0, 1.0)
+	var card = _card("⚖️ قوه قضائیه")
+	_row(card, "استقلال قضایی", PersianFormatter.to_persian_digits("%.0f٪" % (independence * 100.0)), _color_for(independence))
+	_bar(card, "استقلال قضایی", independence)
+	_row(card, "تراکم پرونده", PersianFormatter.to_persian_digits("%.0f٪" % (backlog * 100.0)), _color_for(1.0 - backlog))
+	_row(card, "احکام صادره", PersianFormatter.to_persian_digits(str(jud.get("verdicts", 0))))
+	var ruling: Dictionary = jud.get("pending_ruling", {})
+	if not ruling.is_empty():
+		var case_lbl = Label.new()
+		case_lbl.text = "🚨 " + str(ruling.get("title", "")) + " — " + str(ruling.get("desc", ""))
+		case_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		case_lbl.add_theme_font_size_override("font_size", 17); case_lbl.modulate = ACCENT_RED
+		card.add_child(case_lbl)
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 6); card.add_child(row)
+		for act in [["free", "⚖️ حکم آزاد قضایی"], ["mediate", "🤝 میانجیگری"]]:
+			var btn = Button.new(); btn.text = act[1]
+			btn.custom_minimum_size = Vector2(0, 42); btn.add_theme_font_size_override("font_size", 14)
+			btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_court.bind(act[0]))
+			_mark_decision_button(btn, "court:" + act[0])
+			row.add_child(btn)
+		var press_btn = Button.new(); press_btn.text = "📉 فشار به دادگاه"
+		press_btn.custom_minimum_size = Vector2(0, 42); press_btn.add_theme_font_size_override("font_size", 14)
+		press_btn.pressed.connect(FeedbackManager.play_click); press_btn.pressed.connect(_on_court.bind("press"))
+		_mark_decision_button(press_btn, "court:press")
+		row.add_child(press_btn)
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 6); card.add_child(act_row)
+	var fund_btn = Button.new(); fund_btn.text = "💰 بودجه دادگاه‌ها"
+	fund_btn.custom_minimum_size = Vector2(0, 42); fund_btn.add_theme_font_size_override("font_size", 14)
+	fund_btn.pressed.connect(FeedbackManager.play_click); fund_btn.pressed.connect(_on_court.bind("fund"))
+	_mark_decision_button(fund_btn, "court:fund")
+	act_row.add_child(fund_btn)
+	var reform_btn = Button.new(); reform_btn.text = "🔧 اصلاحات قضایی (۲)"
+	reform_btn.custom_minimum_size = Vector2(0, 42); reform_btn.add_theme_font_size_override("font_size", 14)
+	reform_btn.disabled = float(st.get("policies", {}).get("political_capital", 0.0)) < 2.0
+	reform_btn.pressed.connect(FeedbackManager.play_click); reform_btn.pressed.connect(_on_court.bind("reform"))
+	_mark_decision_button(reform_btn, "court:reform")
+	act_row.add_child(reform_btn)
+	var hint = Label.new()
+	hint.text = "استقلال بالا فساد را می‌خشکاند و اعتماد می‌سازد؛ تراکم پرونده دادگستری را فلج می‌کند. پرونده‌های بزرگ را قضایی حل کنید یا با هزینه استقلال، سیاسی!"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 15); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_court(action: String):
+	var cmd = GameCommandClass.create_court_action(action)
+	var labels := {"fund": "بودجه دادگاه‌ها", "press": "فشار به دادگاه", "reform": "اصلاحات قضایی", "free": "حکم آزاد قضایی", "mediate": "میانجیگری"}
+	if _queue_decision(cmd, "⚖️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+# ── جانشینی رهبر: تربیت وارث و بحران‌های جانشینی ──
+func _build_succession_card(st: Dictionary):
+	var suc: Dictionary = st.get("succession", {})
+	if suc.is_empty():
+		return
+	var card = _card("👑 جانشینی رهبر")
+	var summary := SuccessionManager.get_heir_summary(st)
+	var heir_lbl = Label.new(); heir_lbl.text = summary
+	heir_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	heir_lbl.add_theme_font_size_override("font_size", 17)
+	card.add_child(heir_lbl)
+	var approval := clampf(float(suc.get("heir_approval", 0.0)), 0.0, 1.0)
+	_bar(card, "آمادگی وارث", approval)
+	var crisis: Dictionary = suc.get("crisis", {})
+	if not crisis.is_empty():
+		var crisis_lbl = Label.new()
+		crisis_lbl.text = "⚠️ بحران جانشینی: " + str(crisis.get("reason", "")) + (" — وارث آماده است" if suc.get("heir", "") != "" else " — وارثی نیست! جناح‌ها می‌جنگند")
+		crisis_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		crisis_lbl.add_theme_font_size_override("font_size", 16); crisis_lbl.modulate = ACCENT_RED
+		card.add_child(crisis_lbl)
+	var train_btn = Button.new(); train_btn.text = "🎓 تربیت وارث (۱ سرمایه سیاسی)"
+	train_btn.custom_minimum_size = Vector2(0, 44); train_btn.add_theme_font_size_override("font_size", 15)
+	train_btn.disabled = float(st.get("policies", {}).get("political_capital", 0.0)) < 1.0 or approval >= 0.8
+	train_btn.pressed.connect(FeedbackManager.play_click); train_btn.pressed.connect(_on_succession)
+	_mark_decision_button(train_btn, "succession:train")
+	card.add_child(train_btn)
+	var hint = Label.new()
+	hint.text = "وارث تربیت‌شده بحران‌های جانشینی را آرام می‌کند و اگر رهبر سقوط کند، کشور را با ویژگی خودش ادامه می‌دهد. بدون وارث، جناح‌ها و حتی کودتای قصر در راه‌اند!"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_succession():
+	var check = SuccessionManager.train_heir(GameState.state)
+	if not check.success:
+		_toast("⚠️ " + str(check.reason))
+		return
+	var cmd = GameCommandClass.create_succession_action("train")
+	if _queue_decision(cmd, "👑 تربیت وارث"):
+		_toast("تربیت وارث ثبت شد — با پایان نوبت انجام می‌شود")
+		_switch_tab("government")
+
 func _build_laws():
 	var state = GameState.state
 	var legislation: Dictionary = state.get("legislation", {})
@@ -2493,6 +2591,8 @@ func _build_government():
 	var hint = Label.new(); hint.text = "وزیر کارآمد خروجی وزارتخانه را بهتر می‌کند؛ پاکدستی پایین خطر رسوایی دارد و وفاداری بیشتر انسجام کابینه را حفظ می‌کند. هر انتصاب سرمایه سیاسی مصرف می‌کند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75, 0.82, 0.92); summary.add_child(hint)
 	_build_parliament_card(state)
+	_build_judiciary_card(state)
+	_build_succession_card(state)
 	_build_factions_card(state)
 	_build_governors_card(state)
 
@@ -2608,6 +2708,8 @@ func _build_economy():
 	_build_cycle_card(st)
 	_build_commodities_card(st)
 	_build_forex_card(st)
+	_build_energy_card(st)
+	_build_industry_card(st)
 	_build_shadow_card(st)
 	_build_policy_center()
 
@@ -2805,6 +2907,93 @@ func _on_shadow(action: String):
 	var cmd = GameCommandClass.create_shadow_action(action)
 	var labels := {"crackdown": "سرکوب سایه", "amnesty": "عفو مالیاتی", "cover": "پوشش رسوایی", "investigate": "تحقیق رسوایی", "ignore": "نادیده‌گرفتن رسوایی"}
 	if _queue_decision(cmd, "🕳️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── سیاست انرژی و اقلیم: سبد انرژی، امنیت، یارانه ──
+func _build_energy_card(st: Dictionary):
+	var en: Dictionary = st.get("energy_policy", {})
+	if en.is_empty():
+		return
+	var mix: Dictionary = en.get("mix", {})
+	var card = _card("⚡ سیاست انرژی و اقلیم")
+	_row(card, "امنیت انرژی", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("security", 0.6)) * 100.0)), _color_for(float(en.get("security", 0.6))))
+	_row(card, "ریسک خاموشی", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("blackout_risk", 0.1)) * 100.0)), _color_for(1.0 - float(en.get("blackout_risk", 0.1))))
+	_row(card, "انتشار کربن", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("emissions", 0.7)) * 100.0)), _color_for(1.0 - float(en.get("emissions", 0.7))))
+	_bar(card, "سهم فسیلی", float(mix.get("fossil", 0.7)))
+	_bar(card, "سهم تجدیدپذیر", float(mix.get("renewable", 0.1)))
+	_bar(card, "سهم هسته‌ای", float(mix.get("nuclear", 0.05)))
+	_row(card, "یارانه انرژی", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("subsidies", 0.45)) * 100.0)))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	for act in [["renewable", "🌱 سرمایه سبز"], ["nuclear", "☢️ هسته‌ای"], ["subsidy", "⚡ اصلاح یارانه"], ["climate", "🌍 تعهد اقلیمی"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 40); btn.add_theme_font_size_override("font_size", 14)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_energy.bind(act[0]))
+		_mark_decision_button(btn, "energy:" + act[0])
+		act_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "تنوع سبد امنیت می‌سازد؛ یارانه رضایت می‌خرد ولی بودجه و شبکه را می‌سوزاند. فناوری «انرژی پاک» سرمایه‌گذاری سبز را ارزان می‌کند و قیمت نفت بر هزینه‌ها اثر دارد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_energy(action: String):
+	var cmd = GameCommandClass.create_energy_action(action)
+	var labels := {"renewable": "سرمایه‌گذاری سبز", "nuclear": "نیروگاه هسته‌ای", "subsidy": "اصلاح یارانه انرژی", "climate": "تعهد اقلیمی"}
+	if _queue_decision(cmd, "⚡ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── سیاست صنعتی: راهبرد، شرکت‌های دولتی، صنعت برگزیده، مناطق آزاد ──
+func _build_industry_card(st: Dictionary):
+	var ind: Dictionary = st.get("industry_policy", {})
+	if ind.is_empty():
+		return
+	var strategy := str(ind.get("strategy", "diversified"))
+	var soe := clampf(float(ind.get("soe_share", 0.3)), 0.0, 1.0)
+	var card = _card("🏭 سیاست صنعتی")
+	_row(card, "راهبرد فعال", str(IndustryManager.STRATEGIES.get(strategy, {}).get("name_fa", strategy)))
+	_bar(card, "سهم شرکت‌های دولتی", soe)
+	_row(card, "مناطق آزاد", PersianFormatter.to_persian_digits("%.0f٪" % (float(ind.get("free_zones", 0.0)) * 100.0)))
+	var winner := str(ind.get("winner", ""))
+	_row(card, "صنعت برگزیده", IndustryManager._winner_name(winner) if winner != "" else "—")
+	var strat_row = HBoxContainer.new(); strat_row.add_theme_constant_override("separation", 5); card.add_child(strat_row)
+	var strat_lbl = Label.new(); strat_lbl.text = "راهبرد:"; strat_lbl.add_theme_font_size_override("font_size", 15); strat_lbl.modulate = TEXT_MUTED; strat_row.add_child(strat_lbl)
+	for sid in ["diversified", "high_tech", "heavy", "export"]:
+		var info: Dictionary = IndustryManager.STRATEGIES.get(sid, {})
+		var btn = Button.new(); btn.text = str(info.get("name_fa", sid))
+		btn.custom_minimum_size = Vector2(0, 38); btn.add_theme_font_size_override("font_size", 13)
+		btn.toggle_mode = true; btn.button_pressed = strategy == sid
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_industry.bind("strategy", sid))
+		_mark_decision_button(btn, "industry:strategy:" + sid)
+		strat_row.add_child(btn)
+	# صنعت برگزیده
+	var win_row = HBoxContainer.new(); win_row.add_theme_constant_override("separation", 5); card.add_child(win_row)
+	var win_lbl = Label.new(); win_lbl.text = "برگزیده:"; win_lbl.add_theme_font_size_override("font_size", 15); win_lbl.modulate = TEXT_MUTED; win_row.add_child(win_lbl)
+	for w in IndustryManager.WINNERS:
+		var btn = Button.new(); btn.text = str(w.get("name_fa", ""))
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 12)
+		btn.toggle_mode = true; btn.button_pressed = winner == str(w.get("id", ""))
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_industry.bind("winner", str(w.get("id", ""))))
+		_mark_decision_button(btn, "industry:winner:" + str(w.get("id", "")))
+		win_row.add_child(btn)
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	for act in [["privatize", "🏷️ خصوصی‌سازی"], ["nationalize", "🏛️ ملی‌سازی"], ["free_zone", "🏙️ منطقه آزاد"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 40); btn.add_theme_font_size_override("font_size", 14)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_industry.bind(act[0], ""))
+		_mark_decision_button(btn, "industry:" + act[0])
+		act_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "راهبرد فناوری‌محور نیازمند صنعت بالاست؛ سنگین به انرژی ارزان. خصوصی‌سازی کارآمدی می‌آورد ولی کارگران و نخبگان واکنش نشان می‌دهند؛ ملی‌سازی برعکس."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_industry(action: String, value: String):
+	var cmd = GameCommandClass.create_industry_action(action, value)
+	var labels := {"strategy": "تغییر راهبرد صنعتی", "winner": "انتخاب صنعت برگزیده", "privatize": "خصوصی‌سازی", "nationalize": "ملی‌سازی", "free_zone": "منطقه آزاد"}
+	if _queue_decision(cmd, "🏭 " + labels.get(action, action)):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
@@ -3307,6 +3496,52 @@ func _on_org_vote(decision: String):
 		_toast("رأی شما ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("map")
 
+# ── اتحادیه‌های کارگری و سیاست دستمزد ──
+func _build_labor_card(st: Dictionary):
+	var lab: Dictionary = st.get("labor", {})
+	if lab.is_empty():
+		return
+	var unions := clampf(float(lab.get("unions_power", 0.4)), 0.0, 1.0)
+	var risk := clampf(float(lab.get("strike_risk", 0.2)), 0.0, 1.0)
+	var policy := str(lab.get("wage_policy", "free"))
+	var card = _card("✊ اتحادیه‌های کارگری")
+	_bar(card, "قدرت اتحادیه‌ها", unions)
+	_row(card, "ریسک اعتصاب", PersianFormatter.to_persian_digits("%.0f٪" % (risk * 100.0)), _color_for(1.0 - risk))
+	var policy_names := {"free": "آزاد", "minimum_up": "افزایش حداقل دستمزد", "wage_control": "کنترل دستمزد"}
+	_row(card, "سیاست دستمزدی", str(policy_names.get(policy, policy)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 5); card.add_child(row)
+	for act in [["free", "آزاد"], ["minimum_up", "افزایش حداقل"], ["wage_control", "کنترل"]]:
+		var btn = Button.new(); btn.text = act[1]
+		btn.custom_minimum_size = Vector2(0, 36); btn.add_theme_font_size_override("font_size", 13)
+		btn.toggle_mode = true; btn.button_pressed = policy == act[0]
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_labor.bind(act[0]))
+		_mark_decision_button(btn, "labor:" + act[0])
+		row.add_child(btn)
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	var neg_btn = Button.new(); neg_btn.text = "🤝 مذاکره (۱)"
+	neg_btn.custom_minimum_size = Vector2(0, 40); neg_btn.add_theme_font_size_override("font_size", 14)
+	neg_btn.disabled = float(st.get("policies", {}).get("political_capital", 0.0)) < 1.0
+	neg_btn.pressed.connect(FeedbackManager.play_click); neg_btn.pressed.connect(_on_labor.bind("negotiate"))
+	_mark_decision_button(neg_btn, "labor:negotiate")
+	act_row.add_child(neg_btn)
+	var sup_btn = Button.new(); sup_btn.text = "🚨 سرکوب"
+	sup_btn.custom_minimum_size = Vector2(0, 40); sup_btn.add_theme_font_size_override("font_size", 14)
+	sup_btn.pressed.connect(FeedbackManager.play_click); sup_btn.pressed.connect(_on_labor.bind("suppress"))
+	_mark_decision_button(sup_btn, "labor:suppress")
+	act_row.add_child(sup_btn)
+	var hint = Label.new()
+	hint.text = "افزایش حداقل دستمزد رضایت می‌خرد ولی تورم می‌آورد؛ کنترل دستمزد سرمایه‌گذار را می‌آورد ولی کارگر را می‌رنجاند. اعتصاب سراسری تولید را می‌شکند!"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_labor(action: String):
+	var cmd = GameCommandClass.create_labor_action(action)
+	var labels := {"free": "دستمزد آزاد", "minimum_up": "افزایش حداقل دستمزد", "wage_control": "کنترل دستمزد", "negotiate": "مذاکره با اتحادیه", "suppress": "سرکوب اعتصاب"}
+	if _queue_decision(cmd, "✊ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
 func _build_technology():
 	var state = GameState.state
 	var tech: Dictionary = state.get("technology", {})
@@ -3434,6 +3669,7 @@ func _on_start_research(technology_id: String, technology_name: String):
 # ============================================================
 func _build_population():
 	_build_media_card(GameState.state)
+	_build_labor_card(GameState.state)
 	
 	var st = GameState.state
 	var pop = st.get("population", {})
@@ -5196,6 +5432,11 @@ func _command_queue_key(cmd) -> String:
 		"crisis_stance": return "crisis:" + str(p.get("stance", ""))
 		"rivalry_action": return "rivalry:" + ("de" if str(p.get("action", "")) == "de_escalate" else "es")
 		"shadow_action": return "shadow:" + str(p.get("action", ""))
+		"court_action": return "court:" + str(p.get("action", ""))
+		"energy_action": return "energy:" + str(p.get("action", ""))
+		"industry_action": return "industry:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("value", "")) != "" else "")
+		"succession_action": return "succession:train"
+		"labor_action": return "labor:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
