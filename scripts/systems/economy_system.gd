@@ -158,21 +158,22 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var cost_push = (0.02 if energy_penalty < 0 else 0.0) + (0.01 if food_penalty < 0 else 0.0)
 	var war_push = war_economy*0.03 + mobilization*0.005
 	var sanction_push = sanction_penalty*0.5
-	var inflation_change = ( (money_supply-1.0)*0.015 + demand_pull*0.012 + cost_push + war_push + sanction_push - 0.0015) / days_in_month
+	var inflation_change = ( (money_supply-1.0)*0.010 + demand_pull*0.008 + cost_push + war_push + sanction_push - 0.0015) / days_in_month
 	econ["inflation"] += inflation_change
 	econ["inflation"] = clamp(econ["inflation"], -0.03, 0.60)
 
 	# منحنی فیلیپس + انتظارات تورمی
 	var unemployment = econ.get("unemployment", 0.08)
 	if unemployment < 0.04:
-		econ["inflation"] += 0.006 / days_in_month # بیکاری خیلی کم = فشار دستمزد
+		econ["inflation"] += 0.0015 / days_in_month # بیکاری خیلی کم = فشار دستمزد (ملایم)
 	elif unemployment > 0.12:
 		econ["inflation"] -= 0.004 / days_in_month
 
 	# بیکاری - قانون اوکان + بسیج جنگی
-	var okun = -real_growth * 0.5
-	var mobilization_employment = mobilization*0.015 # بسیج اشتغال ایجاد می‌کند (ارتش)
-	var tech_unemployment = tech_digital*0.005 - tech_ind*0.003
+	# توجه: real_growth نرخ سالانه است؛ همه اجزا باید به مقیاس روزانه تبدیل شوند (تقسیم بر ۳۶۵)
+	var okun = -real_growth * 0.5 / 365.0
+	var mobilization_employment = mobilization*0.015 / 365.0 # بسیج اشتغال ایجاد می‌کند (ارتش)
+	var tech_unemployment = (tech_digital*0.005 - tech_ind*0.003) / 365.0
 	econ["unemployment"] += (okun - mobilization_employment + tech_unemployment + Deterministic.next_range(-0.0006,0.0006)) / days_in_month
 	econ["unemployment"] = clamp(econ["unemployment"], 0.015, 0.40)
 
