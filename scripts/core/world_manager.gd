@@ -137,8 +137,17 @@ func apply_country_profile(state: Dictionary, country_id: String) -> Dictionary:
 	state["military"]["power"] = float(profile["military_power"])
 	state["military"]["readiness"] = clamp(0.45 + float(profile["military_power"]) / 250.0, 0.45, 0.88)
 	var tech_level = float(profile["tech_level"])
+	# سیستم سطوح ۳۰: مقدار float سازگاری و سطح هر شاخه از تکنولوژی کشور
+	var tech_state: Dictionary = state.get("technology", {})
+	var branch_levels: Dictionary = tech_state.get("branch_levels", {})
 	for branch in state["technology"]["branches"].keys():
-		state["technology"]["branches"][branch] = clamp(tech_level * 0.55, 0.08, 0.75)
+		var value: float = clamp(tech_level * 0.55, 0.08, 0.75)
+		state["technology"]["branches"][branch] = value
+		if branch_levels.has(branch):
+			branch_levels[branch] = clampi(int(round(value * 30.0)), 0, 30)
+	if not branch_levels.is_empty():
+		tech_state["branch_levels"] = branch_levels
+		state["technology"] = tech_state
 	_apply_national_geography_profile(state, country_id, profile)
 	state["world"] = _build_world(country_id)
 	state["diplomacy"]["relations"] = _initial_relations(country_id)
