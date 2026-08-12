@@ -257,7 +257,8 @@ func _draw_countries(low_detail:bool=false):
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
 			if (not low_detail or is_focus) and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():
-				draw_colored_polygon(outer,fill)
+				# نورپردازی سه‌بعدی: گرادیان رأس‌به‌رأس — نور از بالا-چپ، سایه در پایین
+				_draw_polygon_lighted(outer, fill)
 				# سایه توپوگرافی: نوار تیره لبه پایین هر چندضلعی (حس برجستگی ۳بعدی)
 				if not low_detail or is_focus:
 					var shade_pts := PackedVector2Array()
@@ -294,7 +295,7 @@ func _draw_admin_detail(code: String):
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
 			if polygon.get("fillable", true) and not Geometry2D.triangulate_polygon(outer).is_empty():
-				draw_colored_polygon(outer, fill)
+				_draw_polygon_lighted(outer, fill)
 				_unit_screen_records.append({"id": unit_id, "outer": outer})
 			var ring = outer.duplicate(); ring.append(outer[0])
 			draw_polyline(ring, border, width, true)
@@ -459,6 +460,34 @@ func _draw_routes():
 			_drawn_routes.append(record)
 
 # مختصات (lon, lat) یک شهر/واحد مشخص؛ در نبود آن Vector2.ZERO برمی‌گرداند
+# نورپردازی سینمایی چندضلعی: هر رأس با ضریب روشنایی رنگی می‌شود (نور بالا-چپ، سایه پایین-راست)
+func _draw_polygon_lighted(points: PackedVector2Array, base: Color) -> void:
+	if points.size() < 3:
+		return
+	var min_y := points[0].y
+	var max_y := points[0].y
+	var min_x := points[0].x
+	var max_x := points[0].x
+	for i in range(1, points.size()):
+		var p := points[i]
+		min_y = minf(min_y, p.y); max_y = maxf(max_y, p.y)
+		min_x = minf(min_x, p.x); max_x = maxf(max_x, p.x)
+	var h := maxf(max_y - min_y, 1.0)
+	var w := maxf(max_x - min_x, 1.0)
+	var colors := PackedColorArray()
+	colors.resize(points.size())
+	for i in range(points.size()):
+		var p := points[i]
+		# نور از بالا-چپ: بالا روشن‌تر، پایین تیره‌تر + شیب افقی ملایم
+		var vertical := (max_y - p.y) / h
+		var horizontal := (max_x - p.x) / w
+		var light := 0.78 + vertical * 0.30 + horizontal * 0.08
+		var c := base * light
+		# رنگ‌گرمایی: سمت روشن گرم‌تر، سمت تیره سردتر
+		c = c.lerp(base.lightened(0.05), clampf(vertical, 0.0, 1.0))
+		colors[i] = c
+	draw_polygon(points, colors)
+
 func _polygon_area(points: PackedVector2Array) -> float:
 	if points.size() < 3:
 		return 0.0
@@ -1109,8 +1138,10 @@ func _draw_map_hud():
 	if tier != _last_tier:
 		_last_tier = tier; emit_signal("zoom_tier_changed", tier)
 	var panel = Rect2(14, 14, 320, 92)
-	draw_rect(panel, Color(0.006, 0.022, 0.039, 0.92), true)
-	draw_rect(panel, Color(0.25, 0.69, 0.78, 0.62), false, 1.5)
+	# پنل شیشه‌ای: شفاف‌تر + هایلایت لبه بالا + سایه
+	draw_rect(panel, Color(0.006, 0.022, 0.039, 0.82), true)
+	draw_rect(panel, Color(0.25, 0.69, 0.78, 0.60), false, 1.5)
+	draw_line(panel.position + Vector2(3, 1), panel.position + Vector2(panel.size.x - 3, 1), Color(0.75, 0.95, 1.0, 0.28), 1.0, true)
 	draw_string(PersianFont, Vector2(28, 50), tier, HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color(0.90, 0.96, 0.98))
 	draw_string(PersianFont, Vector2(28, 80), "بزرگ‌نمایی ×" + PersianFormatter.to_persian_digits("%.1f" % zoom_level), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.64, 0.80, 0.86))
 	var scale_km = _nice_scale_km()
@@ -1123,7 +1154,9 @@ func _draw_map_hud():
 	var layer_label = _layer_name(base_layer)
 	var width = max(205.0, layer_label.length() * 13.0 + 42.0)
 	var layer_panel = Rect2(size.x - width - 14, 14, width, 52)
-	draw_rect(layer_panel, Color(0.006, 0.022, 0.039, 0.92), true)
+	draw_rect(layer_panel, Color(0.006, 0.022, 0.039, 0.82), true)
+	draw_rect(layer_panel, Color(0.29, 0.76, 0.84, 0.60), false, 1.5)
+	draw_line(layer_panel.position + Vector2(3, 1), layer_panel.position + Vector2(layer_panel.size.x - 3, 1), Color(0.75, 0.95, 1.0, 0.28), 1.0, true)
 	draw_string(PersianFont, layer_panel.position + Vector2(16, 35), "لایه · " + layer_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color(1.0, 0.81, 0.30))
 	# مقدار لنز فعال برای کشور زیر نشانگر — اطلاعات نمایشی زنده و دقیق
 	if hovered_country != "":
