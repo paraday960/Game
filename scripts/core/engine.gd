@@ -18,7 +18,8 @@ const SUPPORTED_COMMANDS = [
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
 	"capital_control", "governor_appoint", "crisis_stance", "rivalry_action", "shadow_action",
 	"court_action", "energy_action", "industry_action", "succession_action", "labor_action",
-	"epidemic_action", "arms_action", "cyber_action", "migration_action", "culture_action"
+	"epidemic_action", "arms_action", "cyber_action", "migration_action", "culture_action",
+	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -522,6 +523,23 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "culture_action":
 			if not str(cmd.payload.get("action", "")) in ["heritage", "exchange", "festival", "sports", "film"]:
 				return {"valid": false, "reason": "اقدام فرهنگی نامعتبر است"}
+		elif cmd.type == "education_action":
+			if not str(cmd.payload.get("action", "")) in ["vocational", "university", "scholarship", "digital"]:
+				return {"valid": false, "reason": "اقدام آموزشی نامعتبر است"}
+		elif cmd.type == "agriculture_action":
+			if not str(cmd.payload.get("action", "")) in ["grain", "fertilizer", "diversity", "irrigation"]:
+				return {"valid": false, "reason": "اقدام کشاورزی نامعتبر است"}
+		elif cmd.type == "tourism_action":
+			if not str(cmd.payload.get("action", "")) in ["visa", "hospitality", "campaign", "health"]:
+				return {"valid": false, "reason": "اقدام گردشگری نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "visa" and not str(cmd.payload.get("value", "")) in ["open", "moderate", "strict"]:
+				return {"valid": false, "reason": "سیاست ویزا نامعتبر است"}
+		elif cmd.type == "urban_action":
+			if not str(cmd.payload.get("action", "")) in ["housing", "transit", "smart", "density"]:
+				return {"valid": false, "reason": "اقدام شهری نامعتبر است"}
+		elif cmd.type == "security_action":
+			if not str(cmd.payload.get("action", "")) in ["civil", "surveillance", "tough", "smuggling", "community", "modern"]:
+				return {"valid": false, "reason": "اقدام امنیتی نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -919,6 +937,68 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in cul_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("culture_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "education_action":
+		var edu_act := str(cmd.payload.get("action", ""))
+		var edu_result: Dictionary
+		match edu_act:
+			"vocational": edu_result = EducationManager.vocational_program(snapshot)
+			"university": edu_result = EducationManager.university_reform(snapshot)
+			"scholarship": edu_result = EducationManager.scholarship_program(snapshot)
+			_: edu_result = EducationManager.digital_education(snapshot)
+		snapshot = edu_result.state
+		for ev in edu_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("education_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "agriculture_action":
+		var ag_act := str(cmd.payload.get("action", ""))
+		var ag_result: Dictionary
+		match ag_act:
+			"grain": ag_result = AgricultureManager.build_grain_reserve(snapshot)
+			"fertilizer": ag_result = AgricultureManager.fertilizer_subsidy(snapshot)
+			"diversity": ag_result = AgricultureManager.crop_diversification(snapshot)
+			_: ag_result = AgricultureManager.smart_irrigation(snapshot)
+		snapshot = ag_result.state
+		for ev in ag_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("agriculture_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "tourism_action":
+		var tour_act := str(cmd.payload.get("action", ""))
+		var tour_result: Dictionary
+		match tour_act:
+			"visa": tour_result = TourismManager.visa_policy(snapshot, str(cmd.payload.get("value", "moderate")))
+			"hospitality": tour_result = TourismManager.invest_hospitality(snapshot)
+			"campaign": tour_result = TourismManager.destination_campaign(snapshot)
+			_: tour_result = TourismManager.health_tourism(snapshot)
+		snapshot = tour_result.state
+		for ev in tour_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("tourism_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "urban_action":
+		var urban_act := str(cmd.payload.get("action", ""))
+		var urban_result: Dictionary
+		match urban_act:
+			"housing": urban_result = UrbanManager.social_housing(snapshot)
+			"transit": urban_result = UrbanManager.public_transit(snapshot)
+			"smart": urban_result = UrbanManager.smart_city(snapshot)
+			_: urban_result = UrbanManager.density_control(snapshot)
+		snapshot = urban_result.state
+		for ev in urban_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("urban_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "security_action":
+		var sec_act := str(cmd.payload.get("action", ""))
+		var sec_result: Dictionary
+		match sec_act:
+			"civil": sec_result = SecurityManager.police_mode(snapshot, "civil")
+			"surveillance": sec_result = SecurityManager.police_mode(snapshot, "surveillance")
+			"tough": sec_result = SecurityManager.police_mode(snapshot, "tough")
+			"smuggling": sec_result = SecurityManager.anti_smuggling(snapshot)
+			"community": sec_result = SecurityManager.community_police(snapshot)
+			_: sec_result = SecurityManager.police_modernization(snapshot)
+		snapshot = sec_result.state
+		for ev in sec_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("security_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1203,6 +1283,11 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = CyberManager.ensure(snapshot)
 	snapshot = MigrationManager.ensure(snapshot)
 	snapshot = CultureManager.ensure(snapshot)
+	snapshot = EducationManager.ensure(snapshot)
+	snapshot = AgricultureManager.ensure(snapshot)
+	snapshot = TourismManager.ensure(snapshot)
+	snapshot = UrbanManager.ensure(snapshot)
+	snapshot = SecurityManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1375,6 +1460,26 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var culture_result = CultureManager.simulate_month(snapshot, turn)
 	snapshot = culture_result.state
 	_collect_events(culture_result, "culture", snapshot, turn, generated_events, "culture_event")
+	# سیاست آموزش: فنی، دانشگاه، بورس و دیجیتال
+	var education_result = EducationManager.simulate_month(snapshot, turn)
+	snapshot = education_result.state
+	_collect_events(education_result, "education", snapshot, turn, generated_events, "education_event")
+	# کشاورزی و امنیت غذایی: ذخیره غلات، کود و آبیاری
+	var agriculture_result = AgricultureManager.simulate_month(snapshot, turn)
+	snapshot = agriculture_result.state
+	_collect_events(agriculture_result, "agriculture", snapshot, turn, generated_events, "agriculture_event")
+	# گردشگری: ویزا، مهمان‌پذیری و جاذبه
+	var tourism_result = TourismManager.simulate_month(snapshot, turn)
+	snapshot = tourism_result.state
+	_collect_events(tourism_result, "tourism", snapshot, turn, generated_events, "tourism_event")
+	# شهرسازی: مسکن، حمل‌ونقل، شهر هوشمند
+	var urban_result = UrbanManager.simulate_month(snapshot, turn)
+	snapshot = urban_result.state
+	_collect_events(urban_result, "urban", snapshot, turn, generated_events, "urban_event")
+	# امنیت داخلی: جرم، پلیس و آزادی مدنی
+	var security_result = SecurityManager.simulate_month(snapshot, turn)
+	snapshot = security_result.state
+	_collect_events(security_result, "security", snapshot, turn, generated_events, "security_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
