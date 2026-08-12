@@ -450,18 +450,29 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var doctrine_power_mult = current_doctrine["power_mult"]
 	var joint_factor = command["joint_operations"] * 0.3 + 0.7
 
-	var power = 50.0
-	power *= (0.5 + personnel_factor*0.5)
-	power *= (0.7 + tech_factor*0.3)
-	power *= (0.5 + readiness_factor*0.5)
+	# پایه قدرت: همیشه از مقدار داده کشور (مثل ۶۵ برای ایران) گرفته می‌شود.
+	# نکته مهم: نباید از mil["power"] قبلی استفاده شود چون قدرت قبلی خودش حاصل ضرب
+	# ضرایب است و استفاده دوباره از آن، سقوط نمایی قدرت (۶۵→۲۷→۱۳→۵) ایجاد می‌کرد
+	# و بازیکن در جنگ‌ها همیشه می‌باخت.
+	var player_code = str(state.get("world", {}).get("player_country", "IRN"))
+	var country_profile = WorldManager.get_country(player_code)
+	var power_base = float(country_profile.get("military_power", float(mil.get("power", 65.0))))
+	var power = power_base
+	power *= (0.6 + personnel_factor*0.4)
+	power *= (0.8 + tech_factor*0.2)
+	power *= (0.6 + readiness_factor*0.4)
 	power *= logistics_factor
-	power *= (0.8 + budget_share_val/0.08*0.2)
+	power *= (0.85 + budget_share_val/0.08*0.15)
 	power *= float(development_modifiers.get("power_multiplier", 1.0)) * doctrine_power_mult
-	power *= (0.6 + morale_factor*0.4)
+	power *= (0.7 + morale_factor*0.3)
 	power *= equipment_factor
 	power *= joint_factor
-	power *= (1.0 - war_exhaustion*0.25)
+	power *= (1.0 - war_exhaustion*0.20)
 
+	# تعادل: قدرت نباید از مقدار داده کشور خیلی فاصله بگیرد.
+	# فرمول ضربی عوامل (که غالباً <1 هستند) قدرت را از ۶۵ به ~۳۰ می‌رساند؛
+	# با ضریب ۱.۶ خروجی در حالت پایه ~۶۰ می‌شود (نزدیک داده) و با ارتقای ارتش بالاتر می‌رود.
+	power *= 1.6
 	mil["power"] = clamp(power, 5.0, 350.0)
 	mil["readiness"] = clamp(readiness, 0.05, 1.0)
 
