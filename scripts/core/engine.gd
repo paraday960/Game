@@ -14,7 +14,9 @@ const SUPPORTED_COMMANDS = [
 	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
 	"assassinate", "leader_hidden", "faction_action", "set_war_goal",
 	"general_recruit", "general_assign", "media_policy", "media_campaign",
-	"commodity_trade", "org_toggle", "org_vote"
+	"commodity_trade", "org_toggle", "org_vote",
+	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
+	"capital_control", "governor_appoint", "crisis_stance", "rivalry_action", "shadow_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -452,6 +454,32 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "org_vote":
 			if not str(cmd.payload.get("decision", "")) in ["yes", "no"]:
 				return {"valid": false, "reason": "رأی نامعتبر است"}
+		elif cmd.type == "campaign_promise":
+			if not ParliamentManager.PROMISES.has(str(cmd.payload.get("promise_id", ""))):
+				return {"valid": false, "reason": "وعده نامعتبر است"}
+			var promise_check = ParliamentManager.can_promise(state, str(cmd.payload.get("promise_id", "")))
+			if not promise_check.valid:
+				return {"valid": false, "reason": promise_check.reason}
+		elif cmd.type == "forex_intervene":
+			if not _is_finite_number(cmd.payload.get("amount_billion", 0.0)) or float(cmd.payload.get("amount_billion", 0.0)) <= 0.0:
+				return {"valid": false, "reason": "مبلغ نامعتبر است"}
+		elif cmd.type == "forex_devalue":
+			if not _is_finite_number(cmd.payload.get("percent", 0.0)) or float(cmd.payload.get("percent", 0.0)) <= 0.0 or float(cmd.payload.get("percent", 0.0)) > 20.0:
+				return {"valid": false, "reason": "درصد نامعتبر است (۱ تا ۲۰)"}
+		elif cmd.type == "governor_appoint":
+			if not state.get("governors", {}).get("provinces", {}).has(str(cmd.payload.get("province_code", ""))):
+				return {"valid": false, "reason": "استان نامعتبر است"}
+			if not FactionManager.FACTIONS.has(str(cmd.payload.get("faction", ""))):
+				return {"valid": false, "reason": "جناح نامعتبر است"}
+		elif cmd.type == "crisis_stance":
+			if not str(cmd.payload.get("stance", "")) in ["west", "east", "neutral"]:
+				return {"valid": false, "reason": "موضع نامعتبر است"}
+		elif cmd.type == "rivalry_action":
+			if not str(cmd.payload.get("action", "")) in ["de_escalate", "escalate"]:
+				return {"valid": false, "reason": "اقدام نامعتبر است"}
+		elif cmd.type == "shadow_action":
+			if not str(cmd.payload.get("action", "")) in ["crackdown", "amnesty", "cover", "investigate", "ignore"]:
+				return {"valid": false, "reason": "اقدام نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -676,6 +704,67 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in ov_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("diplomacy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "snap_election":
+		var se_result = ParliamentManager.snap_election(snapshot, cmd.tick)
+		snapshot = se_result.state
+		for ev in se_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("election_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "campaign_promise":
+		var cp_result = ParliamentManager.add_promise(snapshot, str(cmd.payload.get("promise_id", "")))
+		snapshot = cp_result.state
+		for ev in cp_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("election_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "forex_intervene":
+		var fi_result = ForexManager.intervene(snapshot, float(cmd.payload.get("amount_billion", 0.0)))
+		snapshot = fi_result.state
+		for ev in fi_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("economic_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "forex_devalue":
+		var fd_result = ForexManager.devalue(snapshot, float(cmd.payload.get("percent", 0.0)))
+		snapshot = fd_result.state
+		for ev in fd_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("economic_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "capital_control":
+		var cc_result = ForexManager.toggle_capital_control(snapshot)
+		snapshot = cc_result.state
+		for ev in cc_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("economic_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "governor_appoint":
+		var ga_result = GovernorsManager.appoint(snapshot, str(cmd.payload.get("province_code", "")), str(cmd.payload.get("faction", "")))
+		snapshot = ga_result.state
+		for ev in ga_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("governor_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "crisis_stance":
+		var cs_result = RivalryManager.resolve_crisis(snapshot, str(cmd.payload.get("stance", "neutral")))
+		snapshot = cs_result.state
+		for ev in cs_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("diplomacy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "rivalry_action":
+		var ra_result: Dictionary = RivalryManager.de_escalate(snapshot) if str(cmd.payload.get("action", "")) == "de_escalate" else RivalryManager.escalate(snapshot)
+		snapshot = ra_result.state
+		for ev in ra_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("diplomacy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "shadow_action":
+		var action := str(cmd.payload.get("action", ""))
+		var sh_result: Dictionary
+		match action:
+			"crackdown": sh_result = ShadowManager.crackdown(snapshot)
+			"amnesty": sh_result = ShadowManager.amnesty(snapshot)
+			"cover": sh_result = ShadowManager.handle_scandal(snapshot, "cover")
+			"investigate": sh_result = ShadowManager.handle_scandal(snapshot, "investigate")
+			_: sh_result = ShadowManager.handle_scandal(snapshot, "ignore")
+		snapshot = sh_result.state
+		for ev in sh_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("corruption_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -945,6 +1034,11 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = MediaManager.ensure(snapshot)
 	snapshot = CommodityManager.ensure(snapshot)
 	snapshot = OrgManager.ensure(snapshot)
+	snapshot = ParliamentManager.ensure(snapshot)
+	snapshot = ForexManager.ensure(snapshot)
+	snapshot = GovernorsManager.ensure(snapshot)
+	snapshot = RivalryManager.ensure(snapshot)
+	snapshot = ShadowManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1057,6 +1151,26 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var org_result = OrgManager.simulate_month(snapshot, turn)
 	snapshot = org_result.state
 	_collect_events(org_result, "intl_orgs", snapshot, turn, generated_events, "diplomacy_event")
+	# مجلس و انتخابات: پشتیبانی، ماندات، برگزاری انتخابات دوره‌ای
+	var parliament_result = ParliamentManager.simulate_month(snapshot, turn)
+	snapshot = parliament_result.state
+	_collect_events(parliament_result, "parliament", snapshot, turn, generated_events, "election_event")
+	# سیاست ارزی: مداخلات، بازار سیاه و بحران ذخایر
+	var forex_result = ForexManager.simulate_month(snapshot, turn)
+	snapshot = forex_result.state
+	_collect_events(forex_result, "forex", snapshot, turn, generated_events, "economic_event")
+	# استانداران و سیاست استانی: رضایت، فساد و ناآرامی استان‌ها
+	var governors_result = GovernorsManager.simulate_month(snapshot, turn)
+	snapshot = governors_result.state
+	_collect_events(governors_result, "governors", snapshot, turn, generated_events, "governor_event")
+	# رقابت قدرت‌های بزرگ: تنش بلوکی، مسابقه تسلیحاتی و بحران‌های منطقه‌ای
+	var rivalry_result = RivalryManager.simulate_month(snapshot, turn)
+	snapshot = rivalry_result.state
+	_collect_events(rivalry_result, "rivalry", snapshot, turn, generated_events, "diplomacy_event")
+	# اقتصاد سایه و فساد: رشد سایه، رسوایی‌ها و اثر بر درآمد
+	var shadow_result = ShadowManager.simulate_month(snapshot, turn)
+	snapshot = shadow_result.state
+	_collect_events(shadow_result, "shadow", snapshot, turn, generated_events, "corruption_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
