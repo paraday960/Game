@@ -2778,6 +2778,7 @@ func _build_economy():
 	tariff_slider = HSlider.new(); tariff_slider.min_value = 0; tariff_slider.max_value = 60; tariff_slider.step = 1; tariff_slider.value = float(trade.get("tariff_rate", 0.15)) * 100.0; macro.add_child(tariff_slider)
 	_mark_decision_button(_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff), "tariff")
 	_build_cycle_card(st)
+	_build_banking_card(st)
 	_build_infrastructure_card(st)
 	_build_climate_card(st)
 	_build_commodities_card(st)
@@ -2787,6 +2788,7 @@ func _build_economy():
 	_build_agriculture_card(st)
 	_build_tourism_card(st)
 	_build_trade_policy_card(st)
+	_build_fdi_card(st)
 	_build_shadow_card(st)
 	_build_policy_center()
 
@@ -3261,6 +3263,90 @@ func _on_trade_policy(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
+# ── بانکداری و بازار سرمایه ──
+func _build_banking_card(st: Dictionary):
+	var bk: Dictionary = st.get("banking", {})
+	if bk.is_empty():
+		return
+	var card = _card("🏦 بانکداری و بازار سرمایه")
+	_row(card, "شاخص سهام", PersianFormatter.to_persian_digits("%.0f" % float(bk.get("stock_index", 55.0))), _color_for(float(bk.get("stock_index", 55.0)) / 100.0))
+	_bar(card, "سلامت بانک‌ها", float(bk.get("bank_health", 0.7)))
+	_row(card, "ذخیره قانونی", PersianFormatter.to_persian_digits("%.0f٪" % (float(bk.get("reserve_ratio", 0.12)) * 100.0)))
+	_bar(card, "نظارت بانکی", float(bk.get("supervision", 0.5)))
+	var crisis: Dictionary = bk.get("crisis", {})
+	if not crisis.is_empty():
+		var crisis_lbl = Label.new()
+		crisis_lbl.text = "🚨 بحران بانکی فعال! سپرده‌گذاران فرار می‌کنند — نجات دهید یا صبر کنید؟"
+		crisis_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		crisis_lbl.add_theme_font_size_override("font_size", 16); crisis_lbl.modulate = ACCENT_RED
+		card.add_child(crisis_lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for r in [[0.08, "🟢 ذخیره ۸٪"], [0.12, "🟡 ذخیره ۱۲٪"], [0.2, "🔴 ذخیره ۲۰٪"]]:
+		var btn = Button.new(); btn.text = r[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = absf(float(bk.get("reserve_ratio", 0.12)) - r[0]) < 0.01
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_banking.bind("reserve", r[0]))
+		_mark_decision_button(btn, "bank:reserve:" + str(r[0]))
+		row.add_child(btn)
+	var row2 = HBoxContainer.new(); row2.add_theme_constant_override("separation", 4); card.add_child(row2)
+	for a in [["supervision", "🔍 تقویت نظارت"], ["market", "📈 صندوق بازار"], ["bailout", "💸 نجات بانک‌ها"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_banking.bind(a[0], 0.0))
+		_mark_decision_button(btn, "bank:" + a[0])
+		row2.add_child(btn)
+	var hint = Label.new()
+	hint.text = "ذخیره پایین اعتبار می‌دهد ولی خطر بحران؛ ذخیره بالا امن ولی کم‌رونق. سلامت بانک‌ها از تورم، بازار سیاه و اقتصاد سایه می‌خورد. نجات بانک‌ها بدهی سنگین و خشم مردم می‌آورد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_banking(action: String, value: float):
+	var cmd = GameCommandClass.create_banking_action(action, value)
+	var labels := {"reserve": "تنظیم ذخیره قانونی", "supervision": "تقویت نظارت بانکی", "market": "حمایت از بازار سهام", "bailout": "نجات بانک‌ها"}
+	if _queue_decision(cmd, "🏦 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+# ── سرمایه‌گذاری خارجی (FDI) ──
+func _build_fdi_card(st: Dictionary):
+	var fdi: Dictionary = st.get("fdi_policy", {})
+	if fdi.is_empty():
+		return
+	var card = _card("🏢 سرمایه‌گذاری خارجی (FDI)")
+	_bar(card, "جریان سرمایه خارجی", float(fdi.get("inflow", 0.25)))
+	_bar(card, "مناطق ویژه اقتصادی", float(fdi.get("special_zones", 0.2)))
+	_bar(card, "حفاظت مالکیت فکری", float(fdi.get("ip_protection", 0.4)))
+	_bar(card, "محدودیت ورود", float(fdi.get("restrictions", 0.3)))
+	_row(card, "شرکت‌های خارجی", PersianFormatter.to_persian_digits(str(fdi.get("companies", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for r in [[0.0, "🟢 باز"], [0.5, "🟡 محدود"], [1.0, "🔴 بسته"]]:
+		var btn = Button.new(); btn.text = r[1]
+		btn.custom_minimum_size = Vector2(0, 32); btn.add_theme_font_size_override("font_size", 11)
+		btn.toggle_mode = true; btn.button_pressed = absf(float(fdi.get("restrictions", 0.3)) - r[0]) < 0.05
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_fdi.bind("restrictions", r[0]))
+		_mark_decision_button(btn, "fdi:restrictions:" + str(r[0]))
+		row.add_child(btn)
+	var row2 = HBoxContainer.new(); row2.add_theme_constant_override("separation", 4); card.add_child(row2)
+	for a in [["zone", "🏙️ منطقه ویژه"], ["ip", "📜 مالکیت فکری"], ["diplomacy", "🤝 هیئت اقتصادی (۱)"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_fdi.bind(a[0], 0.0))
+		_mark_decision_button(btn, "fdi:" + a[0])
+		row2.add_child(btn)
+	var hint = Label.new()
+	hint.text = "ثبات، زیرساخت و حفاظت مالکیت فکری سرمایه می‌آورند؛ فساد، تحریم و محدودیت آن را می‌رانند. FDI اشتغال، فناوری و رشد می‌آورد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_fdi(action: String, value: float):
+	var cmd = GameCommandClass.create_fdi_action(action, value)
+	var labels := {"zone": "منطقه ویژه اقتصادی", "ip": "حفاظت مالکیت فکری", "restrictions": "تنظیم محدودیت ورود", "diplomacy": "هیئت اقتصادی"}
+	if _queue_decision(cmd, "🏢 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
 func _build_policy_center():
 	var policy_state: Dictionary = GameState.state.get("policies", {})
 	var active: Dictionary = policy_state.get("active", {})
@@ -3493,6 +3579,56 @@ func _on_rivalry(action: String):
 	var label := "تنش‌زدایی" if action == "de_escalate" else "تشدید تنش"
 	if _queue_decision(cmd, "🌍 " + label):
 		_toast(label + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("map")
+
+# ── سفیران و دیپلماسی دوجانبه ──
+func _build_ambassador_card(st: Dictionary):
+	var dp: Dictionary = st.get("diplomacy_policy", {})
+	if dp.is_empty():
+		return
+	var ambassadors: Dictionary = dp.get("ambassadors", {})
+	var relations: Dictionary = st.get("diplomacy", {}).get("relations", {})
+	var card = _card("🤝 سفیران و دیپلماسی")
+	_row(card, "تصویر دیپلماتیک", PersianFormatter.to_persian_digits("%.0f / ۱۰۰" % float(dp.get("image", 50.0))), _color_for(float(dp.get("image", 50.0)) / 100.0))
+	for cid in AmbassadorManager.KEY_COUNTRIES:
+		var level := float(ambassadors.get(cid, 0.0))
+		var rel := float(relations.get(cid, 50.0))
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 6); card.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; info.add_theme_constant_override("separation", 1); row.add_child(info)
+		var name = Label.new()
+		name.text = ("✔ " if level > 0.0 else "○ ") + WorldManager.get_country_name(cid) + " — روابط " + PersianFormatter.to_persian_digits(str(int(rel)))
+		name.add_theme_font_size_override("font_size", 15)
+		info.add_child(name)
+		if level > 0.0:
+			var rec_btn = Button.new(); rec_btn.text = "فراخوانی"
+			rec_btn.custom_minimum_size = Vector2(90, 30); rec_btn.add_theme_font_size_override("font_size", 11)
+			rec_btn.pressed.connect(FeedbackManager.play_click); rec_btn.pressed.connect(_on_ambassador.bind("recall", cid))
+			_mark_decision_button(rec_btn, "amb:recall:" + cid)
+			row.add_child(rec_btn)
+		else:
+			var send_btn = Button.new(); send_btn.text = "اعزام (۰.۵)"
+			send_btn.custom_minimum_size = Vector2(90, 30); send_btn.add_theme_font_size_override("font_size", 11)
+			send_btn.disabled = float(st.get("policies", {}).get("political_capital", 0.0)) < 0.5
+			send_btn.pressed.connect(FeedbackManager.play_click); send_btn.pressed.connect(_on_ambassador.bind("send", cid))
+			_mark_decision_button(send_btn, "amb:send:" + cid)
+			row.add_child(send_btn)
+		var neg_btn = Button.new(); neg_btn.text = "مذاکره (۱)"
+		neg_btn.custom_minimum_size = Vector2(90, 30); neg_btn.add_theme_font_size_override("font_size", 11)
+		neg_btn.disabled = float(st.get("policies", {}).get("political_capital", 0.0)) < 1.0
+		neg_btn.pressed.connect(FeedbackManager.play_click); neg_btn.pressed.connect(_on_ambassador.bind("negotiate", cid))
+		_mark_decision_button(neg_btn, "amb:neg:" + cid)
+		row.add_child(neg_btn)
+	var hint = Label.new()
+	hint.text = "سفیران روابط را روزبه‌روز تقویت می‌کنند؛ در روابط بسیار بد ممکن است اخراج شوند. مذاکره سطح بالا روابط را یک‌جا جهش می‌دهد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_ambassador(action: String, country: String):
+	var cmd = GameCommandClass.create_ambassador_action(action, country)
+	var labels := {"send": "اعزام سفیر", "recall": "فراخوانی سفیر", "negotiate": "مذاکره سطح بالا"}
+	if _queue_decision(cmd, "🤝 " + labels.get(action, action) + " با " + WorldManager.get_country_name(country)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("map")
 
 func _build_war_goals_card(st: Dictionary):
@@ -4171,6 +4307,67 @@ func _on_space(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("technology")
 
+# ── اقتصاد دیجیتال: اینترنت، دولت الکترونیک، CBDC ──
+func _build_digital_card(st: Dictionary):
+	var dp: Dictionary = st.get("digital_policy", {})
+	if dp.is_empty():
+		return
+	var card = _card("💻 اقتصاد دیجیتال")
+	_bar(card, "پوشش اینترنت", float(dp.get("internet_coverage", 0.5)))
+	_bar(card, "دولت الکترونیک", float(dp.get("egovernment", 0.3)))
+	_bar(card, "ارز دیجیتال ملی (CBDC)", float(dp.get("cbdc", 0.0)))
+	_bar(card, "حفاظت حریم خصوصی", float(dp.get("privacy", 0.5)))
+	_row(card, "سهم اقتصاد دیجیتال", PersianFormatter.to_persian_digits("%.0f٪" % (float(dp.get("digital_gdp", 0.0)) * 100.0)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["internet", "📡 گسترش اینترنت"], ["egovernment", "🏛️ دولت الکترونیک"], ["cbdc", "💳 ارز دیجیتال"], ["privacy", "🔒 حریم خصوصی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_digital.bind(a[0]))
+		_mark_decision_button(btn, "digital:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "دولت الکترونیک فساد را می‌خشکاند (دیجیتال ۸+)؛ CBDC اقتصاد سایه را می‌خورد (دیجیتال ۱۲+) ولی سطح حمله سایبری را بالا می‌برد؛ حریم خصوصی اعتماد می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_digital(action: String):
+	var cmd = GameCommandClass.create_digital_action(action)
+	var labels := {"internet": "گسترش اینترنت", "egovernment": "دولت الکترونیک", "cbdc": "ارز دیجیتال ملی", "privacy": "قانون حریم خصوصی"}
+	if _queue_decision(cmd, "💻 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("technology")
+
+# ── ورزش و سلامت عمومی ──
+func _build_sports_card(st: Dictionary):
+	var sp: Dictionary = st.get("sports_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("🏆 ورزش و سلامت عمومی")
+	_bar(card, "ورزش همگانی", float(sp.get("grassroots", 0.3)))
+	_bar(card, "لیگ حرفه‌ای", float(sp.get("pro_league", 0.4)))
+	_bar(card, "برنامه ضد دوپینگ", float(sp.get("anti_doping", 0.5)))
+	_row(card, "رویدادهای میزبانی‌شده", PersianFormatter.to_persian_digits(str(sp.get("hosted", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["grassroots", "🏃 ورزش همگانی"], ["league", "⚽ لیگ حرفه‌ای"], ["doping", "🧪 ضد دوپینگ"], ["host", "🏟️ میزبانی رویداد"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_sports.bind(a[0]))
+		_mark_decision_button(btn, "sports:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "ورزش همگانی سلامت و بهره‌وری می‌آورد؛ لیگ حرفه‌ای جوانان و اشتغال؛ ضد دوپینگ تصویر جهانی؛ میزبانی رویداد بزرگ (هر ۱۸ نوبت) گردشگری و پرستیژ جهش می‌دهد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_sports(action: String):
+	var cmd = GameCommandClass.create_sports_action(action)
+	var labels := {"grassroots": "ورزش همگانی", "league": "توسعه لیگ حرفه‌ای", "doping": "برنامه ضد دوپینگ", "host": "میزبانی رویداد ورزشی"}
+	if _queue_decision(cmd, "🏆 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
 func _build_technology():
 	var state = GameState.state
 	var tech: Dictionary = state.get("technology", {})
@@ -4205,6 +4402,7 @@ func _build_technology():
 	_upgrade_row(upgrades, state, tech, "دیجیتال", "💻 دیجیتال")
 	_upgrade_row(upgrades, state, tech, "فضا", "🚀 فضا")
 	_build_space_card(state)
+	_build_digital_card(state)
 	var up_hint = Label.new()
 	up_hint.text = "با رسیدن سه شاخه به سطح ۳۰، کشور وارد «عصر طلایی» می‌شود و بازی قابل اتمام است (~۱ ساعت)."
 	up_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -4305,6 +4503,7 @@ func _build_population():
 	_build_culture_card(GameState.state)
 	_build_urban_card(GameState.state)
 	_build_welfare_card(GameState.state)
+	_build_sports_card(GameState.state)
 	
 	var st = GameState.state
 	var pop = st.get("population", {})
@@ -4704,6 +4903,7 @@ func _build_map_intel_card():
 	var world: Dictionary = state.get("world", {})
 	_build_orgs_card(state)
 	_build_rivalry_card(state)
+	_build_ambassador_card(state)
 	var card = _card("❖ گزارش جبهه و دیپلماسی")
 	var wars: Dictionary = world.get("wars", {})
 	var offers: Array = world.get("incoming_offers", [])
@@ -6089,6 +6289,11 @@ func _command_queue_key(cmd) -> String:
 		"welfare_action": return "welfare:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) in ["pension", "benefit"] else "")
 		"space_action": return "space:" + str(p.get("action", ""))
 		"trade_policy_action": return "trade_pol:" + str(p.get("action", ""))
+		"banking_action": return "bank:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "reserve" else "")
+		"fdi_action": return "fdi:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "restrictions" else "")
+		"ambassador_action": return "amb:" + str(p.get("action", "")) + ":" + str(p.get("country", ""))
+		"digital_action": return "digital:" + str(p.get("action", ""))
+		"sports_action": return "sports:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
