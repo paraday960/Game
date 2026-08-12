@@ -16,7 +16,8 @@ const SUPPORTED_COMMANDS = [
 	"general_recruit", "general_assign", "media_policy", "media_campaign",
 	"commodity_trade", "org_toggle", "org_vote",
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
-	"capital_control", "governor_appoint", "crisis_stance", "rivalry_action", "shadow_action"
+	"capital_control", "governor_appoint", "crisis_stance", "rivalry_action", "shadow_action",
+	"court_action", "energy_action", "industry_action", "succession_action", "labor_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -480,6 +481,25 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "shadow_action":
 			if not str(cmd.payload.get("action", "")) in ["crackdown", "amnesty", "cover", "investigate", "ignore"]:
 				return {"valid": false, "reason": "اقدام نامعتبر است"}
+		elif cmd.type == "court_action":
+			if not str(cmd.payload.get("action", "")) in ["fund", "press", "reform", "free", "mediate"]:
+				return {"valid": false, "reason": "اقدام قضایی نامعتبر است"}
+			if str(cmd.payload.get("action", "")) in ["free", "mediate"] and state.get("judiciary", {}).get("pending_ruling", {}).is_empty():
+				return {"valid": false, "reason": "پرونده‌ای در انتظار حکم نیست"}
+		elif cmd.type == "energy_action":
+			if not str(cmd.payload.get("action", "")) in ["renewable", "nuclear", "subsidy", "climate"]:
+				return {"valid": false, "reason": "اقدام انرژی نامعتبر است"}
+		elif cmd.type == "industry_action":
+			if not str(cmd.payload.get("action", "")) in ["strategy", "winner", "privatize", "nationalize", "free_zone"]:
+				return {"valid": false, "reason": "اقدام صنعتی نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "strategy" and not IndustryManager.STRATEGIES.has(str(cmd.payload.get("value", ""))):
+				return {"valid": false, "reason": "راهبرد نامعتبر است"}
+		elif cmd.type == "succession_action":
+			if not str(cmd.payload.get("action", "")) in ["train"]:
+				return {"valid": false, "reason": "اقدام جانشینی نامعتبر است"}
+		elif cmd.type == "labor_action":
+			if not str(cmd.payload.get("action", "")) in ["free", "minimum_up", "wage_control", "negotiate", "suppress"]:
+				return {"valid": false, "reason": "اقدام کارگری نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -765,6 +785,61 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in sh_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("corruption_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "court_action":
+		var court_act := str(cmd.payload.get("action", ""))
+		var court_result: Dictionary
+		match court_act:
+			"fund": court_result = JudiciaryManager.fund_courts(snapshot)
+			"press": court_result = JudiciaryManager.press_court(snapshot)
+			"reform": court_result = JudiciaryManager.judicial_reform(snapshot)
+			"free": court_result = JudiciaryManager.respond_ruling(snapshot, "free")
+			_: court_result = JudiciaryManager.respond_ruling(snapshot, "mediate")
+		snapshot = court_result.state
+		for ev in court_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("judiciary_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "energy_action":
+		var energy_act := str(cmd.payload.get("action", ""))
+		var energy_result: Dictionary
+		match energy_act:
+			"renewable": energy_result = EnergyManager.invest_renewable(snapshot)
+			"nuclear": energy_result = EnergyManager.invest_nuclear(snapshot)
+			"subsidy": energy_result = EnergyManager.reform_subsidies(snapshot)
+			_: energy_result = EnergyManager.climate_pledge(snapshot)
+		snapshot = energy_result.state
+		for ev in energy_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("energy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "industry_action":
+		var ind_act := str(cmd.payload.get("action", ""))
+		var ind_result: Dictionary
+		match ind_act:
+			"strategy": ind_result = IndustryManager.set_strategy(snapshot, str(cmd.payload.get("value", "diversified")))
+			"winner": ind_result = IndustryManager.pick_winner(snapshot, str(cmd.payload.get("value", "")))
+			"privatize": ind_result = IndustryManager.privatize(snapshot)
+			"nationalize": ind_result = IndustryManager.nationalize(snapshot)
+			_: ind_result = IndustryManager.create_free_zone(snapshot)
+		snapshot = ind_result.state
+		for ev in ind_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("industry_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "succession_action":
+		var suc_result = SuccessionManager.train_heir(snapshot)
+		snapshot = suc_result.state
+		for ev in suc_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("succession_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "labor_action":
+		var lab_act := str(cmd.payload.get("action", ""))
+		var lab_result: Dictionary
+		match lab_act:
+			"negotiate": lab_result = LaborManager.negotiate(snapshot)
+			"suppress": lab_result = LaborManager.suppress(snapshot)
+			_: lab_result = LaborManager.set_wage_policy(snapshot, lab_act)
+		snapshot = lab_result.state
+		for ev in lab_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("labor_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1039,6 +1114,11 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = GovernorsManager.ensure(snapshot)
 	snapshot = RivalryManager.ensure(snapshot)
 	snapshot = ShadowManager.ensure(snapshot)
+	snapshot = JudiciaryManager.ensure(snapshot)
+	snapshot = EnergyManager.ensure(snapshot)
+	snapshot = IndustryManager.ensure(snapshot)
+	snapshot = SuccessionManager.ensure(snapshot)
+	snapshot = LaborManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1171,6 +1251,26 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var shadow_result = ShadowManager.simulate_month(snapshot, turn)
 	snapshot = shadow_result.state
 	_collect_events(shadow_result, "shadow", snapshot, turn, generated_events, "corruption_event")
+	# قوه قضائیه: استقلال، تراکم پرونده و پرونده‌های بزرگ
+	var judiciary_result = JudiciaryManager.simulate_month(snapshot, turn)
+	snapshot = judiciary_result.state
+	_collect_events(judiciary_result, "judiciary", snapshot, turn, generated_events, "judiciary_event")
+	# سیاست انرژی و اقلیم: سبد انرژی، امنیت، یارانه و خاموشی‌ها
+	var energy_result = EnergyManager.simulate_month(snapshot, turn)
+	snapshot = energy_result.state
+	_collect_events(energy_result, "energy", snapshot, turn, generated_events, "energy_event")
+	# سیاست صنعتی: راهبرد، شرکت‌های دولتی و مناطق آزاد
+	var industry_result = IndustryManager.simulate_month(snapshot, turn)
+	snapshot = industry_result.state
+	_collect_events(industry_result, "industry", snapshot, turn, generated_events, "industry_event")
+	# جانشینی رهبر: بحران‌ها و آماده‌سازی وارث
+	var succession_result = SuccessionManager.simulate_month(snapshot, turn)
+	snapshot = succession_result.state
+	_collect_events(succession_result, "succession", snapshot, turn, generated_events, "succession_event")
+	# اتحادیه‌های کارگری: دستمزد، اعتصاب و مذاکره
+	var labor_result = LaborManager.simulate_month(snapshot, turn)
+	snapshot = labor_result.state
+	_collect_events(labor_result, "labor", snapshot, turn, generated_events, "labor_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
