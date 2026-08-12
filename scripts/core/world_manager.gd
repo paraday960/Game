@@ -2,6 +2,7 @@ extends Node
 # داده و منطق جهان: کشورها، انتخاب کشور، پیمان، تحریم و جنگ فرمان‌محور
 
 const COUNTRIES_PATH = "res://data/countries.json"
+const NpcTurnManagerClass = preload("res://scripts/core/npc_turn_manager.gd")
 const ACTIONS = [
 	"improve_relations", "trade_agreement", "end_trade_agreement",
 	"form_alliance", "leave_alliance", "sanction", "lift_sanction",
@@ -714,34 +715,16 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 			relations[forced_key] = 0.0
 			events.append(_global_event("npc_war_started", str(force_pair[0]), str(force_pair[1]), "جنگ میان %s و %s آغاز شد" % [get_country_name(str(force_pair[0])), get_country_name(str(force_pair[1]))]))
 
-	# تصمیم راهبردی محدود: حداکثر ۳ اقدام جدید در هر ماه تا جهان زنده اما قابل‌پیش‌بینی بماند.
-	var acted_count := events.size()
-	if acted_count < 3:
-		var keys = relations.keys()
-		keys.sort()
-		for key in keys:
-			if acted_count >= 3:
-				break
-			var relation = float(relations[key])
-			var pair = str(key).split("|")
-			if pair.size() != 2: continue
-			var a = str(pair[0]); var b = str(pair[1])
-			if relation <= 25.0 and not npc_wars.has(key) and Deterministic.chance(0.10):
-				npc_wars[key] = _new_npc_war(a, b, turn)
-				relations[key] = 0.0
-				events.append(_global_event("npc_war_started", a, b, "جنگ میان %s و %s آغاز شد" % [get_country_name(a), get_country_name(b)]))
-				acted_count += 1
-				continue
-			elif relation >= 75.0 and not npc_alliances.has(key) and Deterministic.chance(0.08):
-				npc_alliances.append(key)
-				events.append(_global_event("npc_alliance", a, b, "اتحاد تازه‌ای میان %s و %s شکل گرفت" % [get_country_name(a), get_country_name(b)]))
-				acted_count += 1
-				continue
-			elif relation >= 55.0 and not npc_trade.has(key) and Deterministic.chance(0.10):
-				npc_trade.append(key)
-				events.append(_global_event("npc_trade_agreement", a, b, "توافق تجاری تازه میان %s و %s امضا شد" % [get_country_name(a), get_country_name(b)]))
-				acted_count += 1
-				continue
+	# فاز اجرای تصمیم‌های کشورهای غیربازیکن: هر کشور در آغاز نوبت تصمیم گرفت
+	# (NpcTurnManager.plan_npc_turn) و اکنون در پایان نوبت یکجا اجرا می‌شود.
+	var npc_exec_result = NpcTurnManagerClass.execute_npc_turn(state, turn)
+	state = npc_exec_result.state
+	world = state["world"]
+	relations = world.get("npc_relations", {})
+	npc_wars = world.get("npc_wars", {})
+	npc_alliances = world.get("npc_alliances", [])
+	npc_trade = world.get("npc_trade_agreements", [])
+	events.append_array(npc_exec_result.events)
 
 	# جنگ‌های AI ماهانه پیش می‌روند و بر اقتصاد جهانی و شرکای بازیکن اثر می‌گذارند.
 	var finished: Array = []
