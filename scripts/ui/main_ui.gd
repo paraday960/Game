@@ -255,6 +255,8 @@ func _ready():
 	SettingsManager.settings_changed.connect(_on_setting_changed)
 	current_state = GameState.get_state_copy()
 	_build_chrome()
+	# افکت لمسی دکمه‌های ثابت (کروم) — ناوبری، کشو، هدر
+	call_deferred("_wire_press_fx", self)
 	# لایه جشن: بنر + کاغذرنگی برای لحظه‌های مهم (روی همه‌چیز)
 	celebration_layer = load("res://scripts/ui/celebration_layer.gd").new()
 	celebration_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -661,6 +663,9 @@ func _build_professional_theme() -> Theme:
 	for kind in ["Button", "OptionButton"]:
 		result.set_stylebox("normal", kind, button_normal); result.set_stylebox("hover", kind, button_hover); result.set_stylebox("pressed", kind, button_pressed); result.set_stylebox("focus", kind, button_hover); result.set_stylebox("disabled", kind, button_disabled)
 		result.set_color("font_color", kind, Color(0.88,0.94,0.97)); result.set_color("font_hover_color", kind, Color.WHITE); result.set_color("font_pressed_color", kind, Color.WHITE); result.set_color("font_disabled_color", kind, Color(0.42,0.52,0.60))
+		result.set_color("font_shadow_color", kind, Color(0.0,0.0,0.0,0.55))
+		result.set_constant("shadow_offset_x", kind, 1)
+		result.set_constant("shadow_offset_y", kind, 2)
 	# اقدام اصلی: طلایی حکومتی پررنگ با متن سیر
 	result.set_stylebox("normal", "PrimaryButton", _style_box(Color(0.78,0.58,0.20,1.0), Color(0.98,0.82,0.44,1.0), 12, 2, 12))
 	result.set_stylebox("hover", "PrimaryButton", _style_box(Color(0.92,0.71,0.29,1.0), Color(1.0,0.90,0.58,1.0), 12, 2, 12))
@@ -793,13 +798,42 @@ func _apply_tooltip_recursive(node:Node,enabled:bool):
 
 func _animate_page_in(generation:int):
 	await get_tree().process_frame
-	if generation!=page_generation or bool(SettingsManager.get_value("reduce_motion",false)):return
+	if generation!=page_generation:return
+	_wire_press_fx(content)
+	if bool(SettingsManager.get_value("reduce_motion",false)):return
 	var delay=0.0
 	for child in content.get_children():
 		if not child is Control or child.is_queued_for_deletion():continue
 		child.modulate.a=0.0
-		var tween=create_tween();tween.tween_interval(delay);tween.tween_property(child,"modulate:a",1.0,0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		delay=min(0.12,delay+0.018)
+		child.pivot_offset=child.size*0.5
+		child.scale=Vector2(0.965,0.965)
+		var tween=create_tween();tween.tween_interval(delay)
+		tween.tween_property(child,"modulate:a",1.0,0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.parallel().tween_property(child,"scale",Vector2.ONE,0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		delay=min(0.12,delay+0.016)
+
+# افکت لمسی دکمه‌ها: کوچک‌شدن نرم هنگام لمس (حس فیزیکی بازی)
+func _wire_press_fx(root_node: Node):
+	if bool(SettingsManager.get_value("reduce_motion", false)):
+		return
+	for child in root_node.get_children():
+		if child is Button and not child.has_meta("press_fx"):
+			var btn: Button = child
+			btn.set_meta("press_fx", true)
+			btn.pivot_offset = btn.size * 0.5
+			btn.button_down.connect(func():
+				if is_instance_valid(btn):
+					btn.pivot_offset = btn.size * 0.5
+					var tw := create_tween()
+					tw.tween_property(btn, "scale", Vector2(0.93, 0.93), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
+			btn.button_up.connect(func():
+				if is_instance_valid(btn):
+					var tw := create_tween()
+					tw.tween_property(btn, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
+			btn.focus_exited.connect(func():
+				if is_instance_valid(btn):
+					btn.scale = Vector2.ONE)
+		_wire_press_fx(child)
 
 func _unhandled_key_input(event:InputEvent):
 	# تا مُدال قهرمان آغاز روی صحنه است، میان‌برها مسدودند (رفتار مُدال).
@@ -2831,6 +2865,10 @@ func _build_hero_overlay():
 	scenario_description_lbl = Label.new(); scenario_description_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; scenario_description_lbl.modulate = TEXT_MUTED; scenario_description_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; setup.add_child(scenario_description_lbl); _on_scenario_option_changed(scenario_index)
 	var start_button = _mk_btn(setup, "⚑ شروع فرماندهی", Vector2(340,62), _on_country_start_selected, "PrimaryAction"); start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; start_button.add_theme_font_size_override("font_size", 27)
 	_pulse_control(start_button)
+	# ✨ غبار طلایی شناور پشت کارت — فضای سینمایی
+	var ambient = load("res://scripts/ui/hero_ambient.gd").new()
+	hero_overlay.add_child(ambient)
+	hero_overlay.move_child(ambient, 0)
 	if not bool(SettingsManager.get_value("reduce_motion", false)):
 		hero_overlay.modulate.a = 0.0
 		create_tween().tween_property(hero_overlay, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
