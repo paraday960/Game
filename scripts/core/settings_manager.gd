@@ -17,6 +17,7 @@ const DEFAULTS = {
 	"haptics_enabled": true,
 	"sound_enabled": true,
 	"sound_volume": 0.22,
+	"music_enabled": true,
 	"tutorial_dismissed": false
 }
 
@@ -118,6 +119,7 @@ func _sanitize():
 	settings["tooltips_enabled"] = bool(settings.get("tooltips_enabled", true))
 	settings["haptics_enabled"] = bool(settings.get("haptics_enabled", true))
 	settings["sound_enabled"] = bool(settings.get("sound_enabled", true))
+	settings["music_enabled"] = bool(settings.get("music_enabled", true))
 	settings["sound_volume"] = clamp(float(settings.get("sound_volume", 0.22)), 0.0, 0.5)
 	settings["tutorial_dismissed"] = bool(settings.get("tutorial_dismissed", false))
 
