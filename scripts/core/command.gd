@@ -62,8 +62,11 @@ static func create_tariff_set(rate: float):
 static func create_research_start(tech_id: String):
 	return _self_script().new("research_start", {"tech_id": tech_id})
 
-static func create_diplomacy_action(target: String, action: String):
-	return _self_script().new("diplomacy", {"target": target, "action": action})
+static func create_diplomacy_action(target: String, action: String, goal: String = ""):
+	var payload := {"target": target, "action": action}
+	if goal != "":
+		payload["goal"] = goal
+	return _self_script().new("diplomacy", payload)
 
 static func create_country_select(country_id: String, scenario_id: String = "balanced"):
 	return _self_script().new("country_select", {"country_id": country_id, "scenario_id": scenario_id})
@@ -112,6 +115,12 @@ static func create_assassinate(target_country: String):
 
 static func create_leader_hidden(hidden: bool):
 	return _self_script().new("leader_hidden", {"hidden": hidden})
+
+static func create_faction_action(faction: String, action: String):
+	return _self_script().new("faction_action", {"faction": faction, "action": action})
+
+static func create_set_war_goal(target: String, goal: String):
+	return _self_script().new("set_war_goal", {"target": target, "goal": goal})
 
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
