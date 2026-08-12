@@ -3542,6 +3542,261 @@ func _on_labor(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("population")
 
+# ── بهداشت عمومی و پاندمی: قرنطینه، واکسن، بیمارستان ──
+func _build_epidemic_card(st: Dictionary):
+	var ep: Dictionary = st.get("epidemic", {})
+	if ep.is_empty():
+		return
+	var status: String = str(ep.get("status", "normal"))
+	var status_fa: String = String({"normal": "🟢 عادی", "outbreak": "🟠 شکست کنترل", "pandemic": "🔴 همه‌گیری"}.get(status, status))
+	var spread: float = clampf(float(ep.get("spread", 0.0)), 0.0, 1.0)
+	var card = _card("🦠 بهداشت عمومی و پاندمی — " + status_fa)
+	_row(card, "شدت شیوع", PersianFormatter.to_persian_digits("%.0f٪" % (spread * 100.0)), _color_for(1.0 - spread))
+	_bar(card, "شدت شیوع", spread)
+	_row(card, "تلفات کل", PersianFormatter.to_persian_digits(str(ep.get("deaths", 0))))
+	_row(card, "پوشش واکسیناسیون", PersianFormatter.to_persian_digits("%.0f٪" % (float(ep.get("vaccinated", 0.0)) * 100.0)))
+	_row(card, "ظرفیت بیمارستانی", PersianFormatter.to_persian_digits("%.0f٪" % (float(ep.get("hospital_bonus", 0.0)) * 100.0)))
+	var lockdown := int(ep.get("lockdown", 0))
+	var lock_names := ["—", "سبک", "سنگین"]
+	_row(card, "قرنطینه", str(lock_names[lockdown]) if lockdown < 3 else "؟")
+	# دکمه‌ها
+	var lock_row = HBoxContainer.new(); lock_row.add_theme_constant_override("separation", 5); card.add_child(lock_row)
+	for lv in [[0, "🟢 لغو"], [1, "🟡 سبک"], [2, "🔴 سنگین"]]:
+		var btn = Button.new(); btn.text = "قرنطینه " + lv[1]
+		btn.custom_minimum_size = Vector2(0, 40); btn.add_theme_font_size_override("font_size", 13)
+		btn.toggle_mode = true; btn.button_pressed = lockdown == lv[0]
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_epidemic.bind("lockdown" + str(lv[0])))
+		_mark_decision_button(btn, "epi:lockdown" + str(lv[0]))
+		lock_row.add_child(btn)
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	var vac_btn = Button.new(); vac_btn.text = "💉 کمپین واکسن"
+	vac_btn.custom_minimum_size = Vector2(0, 40); vac_btn.add_theme_font_size_override("font_size", 13)
+	vac_btn.disabled = float(st.get("technology", {}).get("branch_levels", {}).get("پزشکی", 0)) < 10
+	vac_btn.tooltip_text = "" if not vac_btn.disabled else "فناوری پزشکی سطح ۱۰+ لازم است"
+	vac_btn.pressed.connect(FeedbackManager.play_click); vac_btn.pressed.connect(_on_epidemic.bind("vaccine"))
+	_mark_decision_button(vac_btn, "epi:vaccine")
+	act_row.add_child(vac_btn)
+	var hos_btn = Button.new(); hos_btn.text = "🏥 بیمارستان اضطراری"
+	hos_btn.custom_minimum_size = Vector2(0, 40); hos_btn.add_theme_font_size_override("font_size", 13)
+	hos_btn.pressed.connect(FeedbackManager.play_click); hos_btn.pressed.connect(_on_epidemic.bind("hospitals"))
+	_mark_decision_button(hos_btn, "epi:hospitals")
+	act_row.add_child(hos_btn)
+	var hint = Label.new()
+	hint.text = "قرنطینه سنگین شیوع را می‌میراند ولی اقتصاد و رضایت را می‌شکند. واکسن نیازمند فناوری پزشکی است؛ فناوری بالا حتی واکسن خودکار می‌سازد!"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_epidemic(action: String):
+	var cmd = GameCommandClass.create_epidemic_action(action)
+	var labels := {"lockdown0": "لغو قرنطینه", "lockdown1": "قرنطینه سبک", "lockdown2": "قرنطینه سنگین", "vaccine": "کمپین واکسن", "hospitals": "بیمارستان اضطراری"}
+	if _queue_decision(cmd, "🦠 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+# ── سیاست مهاجرت و جمعیت ──
+func _build_migration_card(st: Dictionary):
+	var mig: Dictionary = st.get("migration", {})
+	if mig.is_empty():
+		return
+	var policy := str(mig.get("policy", "restricted"))
+	var card = _card("🌍 سیاست مهاجرت و جمعیت")
+	_row(card, "جریان خالص مهاجرت", PersianFormatter.to_persian_digits("%+.2f٪" % (float(mig.get("net", 0.0)) * 100.0)))
+	_row(card, "فشار پناهندگان", PersianFormatter.to_persian_digits("%.0f٪" % (float(mig.get("refugees", 0.0)) * 100.0)), _color_for(1.0 - float(mig.get("refugees", 0.0))))
+	_bar(card, "فرار مغزها", float(mig.get("brain_drain", 0.25)))
+	_bar(card, "ادغام پناهندگان", float(mig.get("integration", 0.0)))
+	var policy_names := {"open": "باز", "restricted": "محدود", "skilled": "مهارت‌محور"}
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 5); card.add_child(row)
+	var lbl = Label.new(); lbl.text = "سیاست:"; lbl.add_theme_font_size_override("font_size", 15); lbl.modulate = TEXT_MUTED; row.add_child(lbl)
+	for pkey in ["open", "restricted", "skilled"]:
+		var btn = Button.new(); btn.text = str(policy_names.get(pkey, pkey))
+		btn.custom_minimum_size = Vector2(0, 38); btn.add_theme_font_size_override("font_size", 13)
+		btn.toggle_mode = true; btn.button_pressed = policy == pkey
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_migration.bind(pkey))
+		_mark_decision_button(btn, "mig:" + pkey)
+		row.add_child(btn)
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	var int_btn = Button.new(); int_btn.text = "🤝 برنامه ادغام"
+	int_btn.custom_minimum_size = Vector2(0, 40); int_btn.add_theme_font_size_override("font_size", 13)
+	int_btn.pressed.connect(FeedbackManager.play_click); int_btn.pressed.connect(_on_migration.bind("integrate"))
+	_mark_decision_button(int_btn, "mig:integrate")
+	act_row.add_child(int_btn)
+	var brain_btn = Button.new(); brain_btn.text = "🎓 مهار فرار مغزها"
+	brain_btn.custom_minimum_size = Vector2(0, 40); brain_btn.add_theme_font_size_override("font_size", 13)
+	brain_btn.pressed.connect(FeedbackManager.play_click); brain_btn.pressed.connect(_on_migration.bind("brain"))
+	_mark_decision_button(brain_btn, "mig:brain")
+	act_row.add_child(brain_btn)
+	var hint = Label.new()
+	hint.text = "مهاجرت نیروی کار و جمعیت جوان می‌آورد ولی پناهندگان هزینه رفاه و تنش پوپولیستی دارند. فرار مغزها پژوهش را می‌خورد؛ مهارش با بودجه علم ممکن است."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_migration(action: String):
+	var cmd = GameCommandClass.create_migration_action(action)
+	var labels := {"open": "مهاجرت باز", "restricted": "مهاجرت محدود", "skilled": "مهاجرت مهارت‌محور", "integrate": "برنامه ادغام", "brain": "مهار فرار مغزها"}
+	if _queue_decision(cmd, "🌍 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+# ── فرهنگ و قدرت نرم ──
+func _build_culture_card(st: Dictionary):
+	var cul: Dictionary = st.get("culture_policy", {})
+	if cul.is_empty():
+		return
+	var soft := clampf(float(cul.get("soft_power", 40.0)), 0.0, 100.0)
+	var card = _card("🎭 فرهنگ و قدرت نرم")
+	_row(card, "قدرت نرم", PersianFormatter.to_persian_digits("%.0f / ۱۰۰" % soft), _color_for(soft / 100.0))
+	_bar(card, "قدرت نرم", soft / 100.0)
+	_row(card, "سرمایه میراثی", PersianFormatter.to_persian_digits("%.0f٪" % float(cul.get("heritage", 35.0))))
+	_row(card, "رویدادهای میزبانی‌شده", PersianFormatter.to_persian_digits(str(cul.get("events_hosted", 0))))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	var her_btn = Button.new(); her_btn.text = "🏛️ سرمایه میراث"
+	her_btn.custom_minimum_size = Vector2(0, 40); her_btn.add_theme_font_size_override("font_size", 13)
+	her_btn.pressed.connect(FeedbackManager.play_click); her_btn.pressed.connect(_on_culture.bind("heritage"))
+	_mark_decision_button(her_btn, "cul:heritage")
+	act_row.add_child(her_btn)
+	var exc_btn = Button.new(); exc_btn.text = "🌐 تبادل فرهنگی"
+	exc_btn.custom_minimum_size = Vector2(0, 40); exc_btn.add_theme_font_size_override("font_size", 13)
+	exc_btn.pressed.connect(FeedbackManager.play_click); exc_btn.pressed.connect(_on_culture.bind("exchange"))
+	_mark_decision_button(exc_btn, "cul:exchange")
+	act_row.add_child(exc_btn)
+	var ev_row = HBoxContainer.new(); ev_row.add_theme_constant_override("separation", 5); card.add_child(ev_row)
+	var ev_lbl = Label.new(); ev_lbl.text = "رویداد جهانی:"; ev_lbl.add_theme_font_size_override("font_size", 14); ev_lbl.modulate = TEXT_MUTED; ev_row.add_child(ev_lbl)
+	for ev in [["festival", "🎉 جشنواره"], ["sports", "🏅 ورزشی"], ["film", "🎬 سینما"]]:
+		var btn = Button.new(); btn.text = ev[1]
+		btn.custom_minimum_size = Vector2(0, 38); btn.add_theme_font_size_override("font_size", 12)
+		btn.disabled = int(st.get("tick", 0)) - int(cul.get("last_event", 0)) < 12
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_culture.bind(ev[0]))
+		_mark_decision_button(btn, "cul:" + ev[0])
+		ev_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "قدرت نرم گردشگری، محبوبیت رهبر و نفوذ دیپلماتیک را می‌سازد و از میراث، رسانه و محبوبیت تغذیه می‌شود. رویدادهای جهانی هر ۱۲ نوبت یک بار."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_culture(action: String):
+	var cmd = GameCommandClass.create_culture_action(action, action)
+	var labels := {"heritage": "سرمایه‌گذاری میراث", "exchange": "تبادل فرهنگی", "festival": "جشنواره جهانی", "sports": "رویداد ورزشی", "film": "جشنواره فیلم"}
+	if _queue_decision(cmd, "🎭 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+# ── صنایع دفاعی و صادرات تسلیحات ──
+func _build_arms_card(st: Dictionary):
+	var arms: Dictionary = st.get("arms_industry", {})
+	if arms.is_empty():
+		return
+	var stock := float(arms.get("stock", 50.0))
+	var capacity := float(arms.get("capacity", 20.0))
+	var card = _card("🔫 صنایع دفاعی و صادرات تسلیحات")
+	_row(card, "ظرفیت تولید", PersianFormatter.to_persian_digits("%.0f" % capacity))
+	_row(card, "انبار تجهیزات", PersianFormatter.to_persian_digits("%.0f واحد" % stock))
+	_row(card, "تحریم تسلیحاتی", "فعال 🚫" if bool(arms.get("embargo", false)) else "غیرفعال", Color(1.0, 0.4, 0.4) if bool(arms.get("embargo", false)) else Color(0.4, 0.9, 0.55))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	var inv_btn = Button.new(); inv_btn.text = "🏭 توسعه ظرفیت"
+	inv_btn.custom_minimum_size = Vector2(0, 40); inv_btn.add_theme_font_size_override("font_size", 13)
+	inv_btn.disabled = capacity >= 100.0
+	inv_btn.pressed.connect(FeedbackManager.play_click); inv_btn.pressed.connect(_on_arms.bind("invest", "", 0.0))
+	_mark_decision_button(inv_btn, "arms:invest")
+	act_row.add_child(inv_btn)
+	var tr_btn = Button.new(); tr_btn.text = "🪖 به ارتش (۱۰)"
+	tr_btn.custom_minimum_size = Vector2(0, 40); tr_btn.add_theme_font_size_override("font_size", 13)
+	tr_btn.disabled = stock < 10.0
+	tr_btn.pressed.connect(FeedbackManager.play_click); tr_btn.pressed.connect(_on_arms.bind("transfer", "", 10.0))
+	_mark_decision_button(tr_btn, "arms:transfer")
+	act_row.add_child(tr_btn)
+	# خریداران پیشنهادی: روابط خوب یا درگیر
+	var relations: Dictionary = st.get("diplomacy", {}).get("relations", {})
+	var candidates: Array = []
+	var player_id := str(st.get("world", {}).get("player_country", ""))
+	for cid in relations.keys():
+		if cid == player_id or candidates.size() >= 3:
+			continue
+		if float(relations[cid]) >= 35.0 or st.get("world", {}).get("wars", {}).has(cid):
+			candidates.append(cid)
+	if not candidates.is_empty():
+		var sell_lbl = Label.new(); sell_lbl.text = "قرارداد فروش (هر کشور ۱۰ واحد):"
+		sell_lbl.add_theme_font_size_override("font_size", 14); sell_lbl.modulate = TEXT_MUTED
+		card.add_child(sell_lbl)
+		var sell_row = HBoxContainer.new(); sell_row.add_theme_constant_override("separation", 5); card.add_child(sell_row)
+		for cid in candidates:
+			var btn = Button.new(); btn.text = WorldManager.get_country_name(str(cid))
+			btn.custom_minimum_size = Vector2(0, 38); btn.add_theme_font_size_override("font_size", 12)
+			btn.disabled = stock < 10.0 or bool(arms.get("embargo", false))
+			btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_arms.bind("sell", str(cid), 10.0))
+			_mark_decision_button(btn, "arms:sell:" + str(cid))
+			sell_row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "تولید هر ماه به انبار می‌رود؛ فروش به دوستان و درگیران ذخایر ارزی و نفوذ می‌آورد ولی تنش را بالا می‌برد. تحریم تسلیحاتی فروش را می‌بندد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_arms(action: String, target: String, amount: float):
+	var cmd = GameCommandClass.create_arms_action(action, target, amount)
+	var labels := {"invest": "توسعه صنایع دفاعی", "sell": "فروش تسلیحات", "transfer": "انتقال به ارتش"}
+	if _queue_decision(cmd, "🔫 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("military")
+
+# ── جنگ سایبری: فایروال و حملات ──
+func _build_cyber_card(st: Dictionary):
+	var cy: Dictionary = st.get("cyber", {})
+	if cy.is_empty():
+		return
+	var offense := CyberManager.offense_level(st)
+	var defense := CyberManager.defense_level(st)
+	var card = _card("💻 جنگ سایبری")
+	_row(card, "توان تهاجمی", PersianFormatter.to_persian_digits("%.0f" % offense))
+	_row(card, "توان دفاعی", PersianFormatter.to_persian_digits("%.0f" % defense))
+	_bar(card, "فایروال", float(cy.get("firewall", 0.4)))
+	_row(card, "حملات دفع‌شده", PersianFormatter.to_persian_digits(str(cy.get("defended", 0))))
+	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
+	var fw_btn = Button.new(); fw_btn.text = "🛡️ ارتقای فایروال"
+	fw_btn.custom_minimum_size = Vector2(0, 40); fw_btn.add_theme_font_size_override("font_size", 13)
+	fw_btn.disabled = float(cy.get("firewall", 0.4)) >= 0.95
+	fw_btn.pressed.connect(FeedbackManager.play_click); fw_btn.pressed.connect(_on_cyber.bind("firewall", "", ""))
+	_mark_decision_button(fw_btn, "cyber:firewall")
+	act_row.add_child(fw_btn)
+	# اهداف حمله
+	var world: Dictionary = st.get("world", {})
+	var relations: Dictionary = st.get("diplomacy", {}).get("relations", {})
+	var targets: Array = []
+	for cid in relations.keys():
+		if float(relations[cid]) <= 45.0 or world.get("wars", {}).has(cid):
+			if not targets.has(cid):
+				targets.append(cid)
+	if not targets.is_empty():
+		var atk_lbl = Label.new(); atk_lbl.text = "حمله به دشمن (نوع):"
+		atk_lbl.add_theme_font_size_override("font_size", 14); atk_lbl.modulate = TEXT_MUTED
+		card.add_child(atk_lbl)
+		for cid in targets:
+			var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+			var name = Label.new(); name.text = WorldManager.get_country_name(str(cid))
+			name.add_theme_font_size_override("font_size", 14); name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(name)
+			for kind in [["economy", "اقتصاد"], ["infrastructure", "زیرساخت"], ["information", "اطلاعات"]]:
+				var btn = Button.new(); btn.text = kind[1]
+				btn.custom_minimum_size = Vector2(0, 32); btn.add_theme_font_size_override("font_size", 11)
+				btn.disabled = offense < 25.0
+				btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_cyber.bind("attack", str(cid), kind[0]))
+				_mark_decision_button(btn, "cyber:atk:" + str(cid) + ":" + kind[0])
+				row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "حمله موفق اقتصاد/زیرساخت/اطلاعات دشمن را می‌فرساید ولی ریسک افشا دارد (روابط −۲۰ و حتی جنگ). فایروال حملات دشمن در تنش بالا را دفع می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_cyber(action: String, target: String, kind: String):
+	var cmd = GameCommandClass.create_cyber_action(action, target, kind)
+	var label := "ارتقای فایروال" if action == "firewall" else "حمله سایبری به " + WorldManager.get_country_name(target)
+	if _queue_decision(cmd, "💻 " + label):
+		_toast(label + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("military")
+
 func _build_technology():
 	var state = GameState.state
 	var tech: Dictionary = state.get("technology", {})
@@ -3670,6 +3925,9 @@ func _on_start_research(technology_id: String, technology_name: String):
 func _build_population():
 	_build_media_card(GameState.state)
 	_build_labor_card(GameState.state)
+	_build_epidemic_card(GameState.state)
+	_build_migration_card(GameState.state)
+	_build_culture_card(GameState.state)
 	
 	var st = GameState.state
 	var pop = st.get("population", {})
@@ -3722,7 +3980,9 @@ func _build_military():
 	_bar(c3, "آمادگی سایبری", intel.get("cyber_readiness", 0.5))
 	_build_assassination_card(st, c3)
 	_build_war_goals_card(st)
+	_build_cyber_card(st)
 	_build_generals_card(st)
+	_build_arms_card(st)
 
 	var development: Dictionary = st.get("military_development", {})
 	var doctrine_card = _card("🧭 دکترین نظامی")
@@ -5437,6 +5697,11 @@ func _command_queue_key(cmd) -> String:
 		"industry_action": return "industry:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("value", "")) != "" else "")
 		"succession_action": return "succession:train"
 		"labor_action": return "labor:" + str(p.get("action", ""))
+		"epidemic_action": return "epi:" + str(p.get("action", ""))
+		"arms_action": return "arms:" + str(p.get("action", "")) + (":" + str(p.get("target", "")) if str(p.get("target", "")) != "" else "")
+		"cyber_action": return "cyber:" + str(p.get("action", "")) + (":" + str(p.get("target", "")) + ":" + str(p.get("kind", "")) if str(p.get("action", "")) == "attack" else "")
+		"migration_action": return "mig:" + str(p.get("action", ""))
+		"culture_action": return "cul:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
