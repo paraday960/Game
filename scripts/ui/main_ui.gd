@@ -231,6 +231,7 @@ const METRIC_WORD_FA = {
 const TABS := [
 	["map", "نقشه فرماندهی"],
 	["dashboard", "داشبورد"],
+	["news", "📰 اخبار"],
 	["government", "دولت"],
 	["laws", "قوانین"],
 	["economy", "اقتصاد"],
@@ -494,7 +495,7 @@ func _build_drawer():
 	var title = Label.new(); title.text = "☰ منوی بیشتر"; title.add_theme_font_size_override("font_size", 27); title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(title)
 	var close_btn = Button.new(); close_btn.text = "✕"; close_btn.custom_minimum_size = Vector2(64, 54); close_btn.add_theme_font_size_override("font_size", 24); close_btn.theme_type_variation = "GhostButton"; close_btn.pressed.connect(FeedbackManager.play_click); close_btn.pressed.connect(_close_drawer); head.add_child(close_btn)
 	var tiles = GridContainer.new(); tiles.columns = 4; tiles.add_theme_constant_override("h_separation", 7); tiles.add_theme_constant_override("v_separation", 7); box.add_child(tiles)
-	for tile_def in [["laws","⚖","قوانین"],["projects","⚒","توسعه"],["technology","⚛","فناوری"],["population","☺","جامعه"],["military","⚔","دفاع"],["network","◍","چندنفره"],["systems","⚙","سامانه‌ها"]]:
+	for tile_def in [["news","📰","اخبار"],["laws","⚖","قوانین"],["projects","⚒","توسعه"],["technology","⚛","فناوری"],["population","☺","جامعه"],["military","⚔","دفاع"],["network","◍","چندنفره"],["systems","⚙","سامانه‌ها"]]:
 		_make_drawer_tile(tiles, str(tile_def[0]), str(tile_def[1]), str(tile_def[2]))
 	var sep = HSeparator.new(); box.add_child(sep)
 	var sys = HBoxContainer.new(); sys.alignment = BoxContainer.ALIGNMENT_CENTER; sys.add_theme_constant_override("separation", 8); box.add_child(sys)
@@ -816,6 +817,7 @@ func _switch_tab(tab_key: String):
 	match tab_key:
 		"map": _build_unified_map()
 		"dashboard": _build_dashboard()
+		"news": _build_news()
 		"government": _build_government()
 		"laws": _build_laws()
 		"economy": _build_economy()
@@ -940,6 +942,142 @@ func _dashboard_section(title: String) -> Label:
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(lbl)
 	return lbl
+
+# ============================================================
+# تب 📰 اخبار — تحریریه بین‌المللی
+# اطلاعات به دو دسته 🔒 حساس و 🌐 عمومی تقسیم شده‌اند:
+#  - کشور خود بازیکن: حساس + عمومی
+#  - کشورهای دیگر: فقط عمومی (اسرار دیگران محرمانه است)
+# ============================================================
+func _build_news():
+	var state = GameState.state
+	var items: Array = NewsManager.get_visible_news(state)
+	var counts: Dictionary = NewsManager.count_items(state)
+	var clock: Dictionary = state.get("clock", {})
+	var year: int = int(clock.get("year", 2027))
+	var month_n: int = int(clock.get("month", 1))
+	var month_fa: String = TimeManager.month_name(month_n)
+
+	# ── سربرگ تحریریه ──
+	var masthead = _card("📰 تحریریه خبری")
+	var top_row = HBoxContainer.new(); top_row.add_theme_constant_override("separation", 10); masthead.add_child(top_row)
+	var date_lbl = Label.new()
+	date_lbl.text = "🗓 %s %s" % [month_fa, PersianFormatter.to_persian_digits(str(year))]
+	date_lbl.add_theme_font_size_override("font_size", 20); date_lbl.modulate = TEXT_MUTED
+	date_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(date_lbl)
+	var count_lbl = Label.new()
+	count_lbl.text = "%s خبر | 🔒 %s حساس" % [PersianFormatter.to_persian_digits(str(counts.get("total", 0))), PersianFormatter.to_persian_digits(str(counts.get("sensitive", 0)))]
+	count_lbl.add_theme_font_size_override("font_size", 18); count_lbl.modulate = ACCENT_GOLD
+	top_row.add_child(count_lbl)
+
+	# ── فیلترها ──
+	var filter_row = HBoxContainer.new(); filter_row.add_theme_constant_override("separation", 6); masthead.add_child(filter_row)
+	for filter_def in [["all", "🌐 همه"], ["domestic", "🏛 داخلی"], ["international", "🌍 بین‌المللی"]]:
+		var fbtn = Button.new(); fbtn.text = str(filter_def[1]); fbtn.toggle_mode = true
+		fbtn.button_pressed = news_filter_mode == str(filter_def[0])
+		fbtn.custom_minimum_size = Vector2(0, 42); fbtn.add_theme_font_size_override("font_size", 17)
+		fbtn.theme_type_variation = "LensChipActive" if news_filter_mode == str(filter_def[0]) else "LensChip"
+		fbtn.pressed.connect(_on_news_filter.bind(str(filter_def[0])))
+		filter_row.add_child(fbtn)
+	var sens_btn = Button.new(); sens_btn.text = "🔒 فقط حساس"; sens_btn.toggle_mode = true
+	sens_btn.button_pressed = news_sensitive_only
+	sens_btn.custom_minimum_size = Vector2(0, 42); sens_btn.add_theme_font_size_override("font_size", 17)
+	sens_btn.theme_type_variation = "LensChipActive" if news_sensitive_only else "LensChip"
+	sens_btn.pressed.connect(_on_news_sensitive_toggle)
+	filter_row.add_child(sens_btn)
+
+	var legend = Label.new()
+	legend.text = "🔒 حساس = اطلاعات محرمانهٔ کشور خودتان · 🌐 عمومی = اطلاعات رسمی منتشرشده (اسرار کشورهای دیگر محرمانه است)"
+	legend.add_theme_font_size_override("font_size", 15); legend.modulate = TEXT_FAINT
+	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	masthead.add_child(legend)
+
+	# ── فهرست اخبار ──
+	var shown := 0
+	for item in items:
+		var is_player: bool = bool(item.get("is_player", false))
+		var is_sensitive: bool = str(item.get("sensitivity", "non_sensitive")) == "sensitive"
+		if news_filter_mode == "domestic" and not is_player:
+			continue
+		if news_filter_mode == "international" and is_player:
+			continue
+		if news_sensitive_only and not is_sensitive:
+			continue
+		_add_news_card(item)
+		shown += 1
+	if shown == 0:
+		var empty = Label.new()
+		empty.text = "خبری برای نمایش نیست. ماه بعد اخبار جدید منتشر می‌شود."
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.add_theme_font_size_override("font_size", 19)
+		empty.modulate = TEXT_FAINT
+		content.add_child(empty)
+
+func _on_news_filter(mode: String):
+	news_filter_mode = mode
+	_switch_tab("news")
+
+func _on_news_sensitive_toggle():
+	news_sensitive_only = not news_sensitive_only
+	_switch_tab("news")
+
+# کارت هر خبر — سبک خبر حرفه‌ای
+func _add_news_card(item: Dictionary):
+	var card = PanelContainer.new()
+	card.theme_type_variation = "CommandPanel"
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(card)
+	var box = VBoxContainer.new(); box.add_theme_constant_override("separation", 6); card.add_child(box)
+
+	# ردیف فراداده: آیکون · تاریخ · کشور · دسته · نشان حساسیت
+	var meta = HBoxContainer.new(); meta.add_theme_constant_override("separation", 10); box.add_child(meta)
+	var icon = Label.new(); icon.text = str(item.get("icon", "📰")); icon.add_theme_font_size_override("font_size", 22); meta.add_child(icon)
+	var date_l = Label.new()
+	date_l.text = "%s %s" % [str(item.get("month_fa", "")), PersianFormatter.to_persian_digits(str(item.get("year", 0)))]
+	date_l.add_theme_font_size_override("font_size", 15); date_l.modulate = TEXT_FAINT
+	meta.add_child(date_l)
+	var country_l = Label.new()
+	country_l.text = str(item.get("country_fa", ""))
+	country_l.add_theme_font_size_override("font_size", 16); country_l.modulate = ACCENT_TEAL
+	meta.add_child(country_l)
+	var cat_l = Label.new()
+	cat_l.text = str(item.get("category_fa", ""))
+	cat_l.add_theme_font_size_override("font_size", 15); cat_l.modulate = Color(0.72, 0.78, 0.85)
+	meta.add_child(cat_l)
+	var spacer = Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; meta.add_child(spacer)
+	var is_player: bool = bool(item.get("is_player", false))
+	var is_sensitive: bool = str(item.get("sensitivity", "non_sensitive")) == "sensitive"
+	var sens_l = Label.new()
+	if is_sensitive:
+		sens_l.text = "🔒 حساس"
+		sens_l.modulate = Color(1.0, 0.52, 0.47)
+	else:
+		sens_l.text = "🌐 عمومی"
+		sens_l.modulate = Color(0.50, 0.92, 0.66)
+	sens_l.add_theme_font_size_override("font_size", 15)
+	meta.add_child(sens_l)
+	if is_player and not is_sensitive:
+		var home_l = Label.new()
+		home_l.text = "🏛 کشور شما"
+		home_l.add_theme_font_size_override("font_size", 14)
+		home_l.modulate = Color(1.0, 0.81, 0.30)
+		meta.add_child(home_l)
+
+	# تیتر
+	var headline = Label.new()
+	headline.text = str(item.get("headline", ""))
+	headline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	headline.add_theme_font_size_override("font_size", 23)
+	headline.modulate = Color(0.96, 0.975, 0.99)
+	box.add_child(headline)
+	# متن خبر
+	var body = Label.new()
+	body.text = str(item.get("body", ""))
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_theme_font_size_override("font_size", 18)
+	body.modulate = TEXT_MUTED
+	box.add_child(body)
 
 func _build_dashboard():
 	var st = GameState.state
@@ -3443,6 +3581,8 @@ func _build_systems():
 			grid.add_child(button)
 
 var systems_domain_filter := ""
+var news_filter_mode := "all"   # all | domestic | international
+var news_sensitive_only := false
 
 func _on_system_domain_filter(domain_name: String):
 	systems_domain_filter = domain_name
