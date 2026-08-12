@@ -2,9 +2,48 @@ extends Control
 # پس‌زمینه اورجینال «اتاق فرمان»؛ گرادیان شبانه + هاله‌های نوری + شبکه راهبردی
 # بدون هیچ تصویر یا منبع خارجی — همه‌چیز با رسم برداری ساخته می‌شود.
 
+# ستاره‌های چشمک‌زن و شهاب — پس‌زمینه زنده (procedural، نرخ محدود)
+var _stars: Array = []
+var _shooting_stars: Array = []
+var _bg_time := 0.0
+var _accum := 0.0
+
 func _ready():
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	resized.connect(queue_redraw)
+	queue_redraw()
+	_generate_stars()
+	set_process(true)
+
+func _generate_stars():
+	_stars.clear()
+	for i in range(140):
+		_stars.append({
+			"x": randf_range(0.0, 1.0),
+			"y": randf_range(0.0, 0.55),
+			"r": randf_range(0.6, 2.2),
+			"phase": randf_range(0.0, TAU),
+			"speed": randf_range(0.4, 2.2)
+		})
+
+func _process(delta):
+	_accum += delta
+	if _accum < 1.0 / 20.0:
+		return
+	_accum = 0.0
+	_bg_time += delta
+	# شهاب‌های گاه‌به‌گاه
+	if randf() < 0.008 and _shooting_stars.size() < 3:
+		_shooting_stars.append({
+			"x": randf_range(0.2, 0.9), "y": randf_range(0.0, 0.2),
+			"vx": randf_range(0.012, 0.02), "vy": randf_range(0.008, 0.013),
+			"life": 1.0
+		})
+	for s in _shooting_stars:
+		s["x"] = float(s["x"]) + float(s["vx"])
+		s["y"] = float(s["y"]) + float(s["vy"])
+		s["life"] = float(s["life"]) - 0.035
+	_shooting_stars = _shooting_stars.filter(func(s): return float(s["life"]) > 0.0)
 	queue_redraw()
 
 func _draw():
@@ -38,6 +77,21 @@ func _draw():
 		draw_rect(Rect2(0, size.y - thickness, size.x, thickness), vc, true)
 	# خط افقی طلایی زیر نوار بالایی
 	draw_line(Vector2(0, 2), Vector2(size.x, 2), Color(0.93, 0.74, 0.33, 0.30), 2.0)
+	# ── ستاره‌های چشمک‌زن (نیمه بالایی، سبک اتاق فرمان شبانه) ──
+	for star in _stars:
+		var twinkle: float = 0.45 + 0.55 * sin(_bg_time * float(star["speed"]) + float(star["phase"]))
+		var px := Vector2(float(star["x"]) * size.x, float(star["y"]) * size.y)
+		draw_circle(px, float(star["r"]) * (0.8 + twinkle * 0.4), Color(0.85, 0.92, 1.0, 0.10 + 0.28 * twinkle))
+		# هاله‌های روشن‌تر
+		if twinkle > 0.75:
+			draw_circle(px, float(star["r"]) * 2.4, Color(0.72, 0.86, 1.0, 0.05 * twinkle))
+	# ── شهاب‌ها ──
+	for s in _shooting_stars:
+		var start := Vector2(float(s["x"]) * size.x, float(s["y"]) * size.y)
+		var tail := start - Vector2(float(s["vx"]), float(s["vy"])) * 320.0
+		var alpha: float = clampf(float(s["life"]), 0.0, 1.0)
+		draw_line(tail, start, Color(0.85, 0.92, 1.0, 0.28 * alpha), 1.6, true)
+		draw_circle(start, 1.8, Color(1.0, 1.0, 1.0, 0.75 * alpha))
 
 
 # --- لایه عمیق UI: انیمیشن، دسترس‌پذیری، واکنش‌گرایی، فارسی، بازخورد، کارایی ---
