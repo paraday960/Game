@@ -7,18 +7,46 @@ func _ready():
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_theme_constant_override("separation",6)
 	z_index = 180
+	# هرگز اجازه نده پیام‌ها از کادر خودشان (محدوده anchor) بیرون بزنند
+	clip_contents = true
+	# حداکثر ارتفاع انباشته: پیام‌های اضافی به‌جای بیرون‌زدن، حذف می‌شوند
+	set_meta("max_total_height", 620.0)
 
 func push_message(message:String,severity:String="info"):
+	# حذف قدیمی‌ها با remove_child (queue_free تا پایان فریم اعمال نمی‌شود و
+	# با چند پیام هم‌زمان حلقه بی‌نهایت می‌شد)
 	while get_child_count() >= max_visible:
-		get_child(0).queue_free()
+		var oldest = get_child(0)
+		remove_child(oldest)
+		oldest.queue_free()
+	# اگر پیام‌های انباشته از حداکثر ارتفاع کادر بگذرند، قدیمی‌ترین حذف می‌شود
+	var max_h: float = float(get_meta("max_total_height", 620.0))
+	var total_h := 0.0
+	for ch in get_children():
+		if ch is Control:
+			total_h += float(ch.size.y)
+	while total_h > max_h and get_child_count() > 1:
+		var first = get_child(0)
+		total_h -= float(first.size.y)
+		remove_child(first)
+		first.queue_free()
 	var panel=PanelContainer.new();panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	var color={"success":Color(0.18,0.88,0.59),"warning":Color(1.0,0.72,0.22),"danger":Color(1.0,0.30,0.36),"info":Color(0.25,0.78,0.94)}.get(severity,Color(0.25,0.78,0.94))
 	var style=StyleBoxFlat.new();style.bg_color=Color(0.012,0.043,0.063,0.97);style.border_color=Color(color.r,color.g,color.b,0.88);style.set_border_width_all(1);style.border_width_right=5;style.set_corner_radius_all(9);style.content_margin_left=18;style.content_margin_right=18;style.content_margin_top=14;style.content_margin_bottom=14;style.shadow_color=Color(0,0,0,0.38);style.shadow_size=6;style.shadow_offset=Vector2(0,3);panel.add_theme_stylebox_override("panel",style)
-	var label=Label.new();label.text=message;label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_font_size_override("font_size",24);label.modulate=Color(0.92,0.97,0.98);label.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(label)
+	panel.clip_contents = true
+	var label=Label.new();label.text=message;label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_font_size_override("font_size",24);label.modulate=Color(0.92,0.97,0.98);label.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.custom_minimum_size = Vector2(0, 0)
+	# متن‌های بسیار بلند با سه‌نقطه کوتاه می‌شوند تا هرگز از کادر بیرون نزنند
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_child(label)
 	add_child(panel)
 	if not bool(SettingsManager.get_value("reduce_motion",false)):
-		panel.modulate.a=0.0;panel.position.x=45.0
-		var tween=create_tween().set_parallel(true);tween.tween_property(panel,"modulate:a",1.0,0.14);tween.tween_property(panel,"position:x",0.0,0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		# انیمیشن با offset_left انجام می‌شود؛ position.x در حالت راست‌به‌چپ آینه می‌شود
+		# و پیام می‌تواند از کادر گوشی بیرون بزند.
+		panel.modulate.a=0.0;panel.offset_left=45.0
+		var tween=create_tween().set_parallel(true);tween.tween_property(panel,"modulate:a",1.0,0.14);tween.tween_property(panel,"offset_left",0.0,0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_expire(panel)
 
 func _expire(panel:Control):
@@ -26,7 +54,7 @@ func _expire(panel:Control):
 	if not is_instance_valid(panel):return
 	if bool(SettingsManager.get_value("reduce_motion",false)):
 		panel.queue_free();return
-	var tween=create_tween().set_parallel(true);tween.tween_property(panel,"modulate:a",0.0,0.18);tween.tween_property(panel,"position:x",30.0,0.18)
+	var tween=create_tween().set_parallel(true);tween.tween_property(panel,"modulate:a",0.0,0.18);tween.tween_property(panel,"offset_left",30.0,0.18)
 	await tween.finished
 	if is_instance_valid(panel):panel.queue_free()
 
