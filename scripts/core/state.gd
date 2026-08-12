@@ -35,6 +35,7 @@ func init_default_state():
 				"unemployment": float(BalanceConfig.get_value("economy.unemployment_initial", 0.08)),
 				"tax_rate": float(BalanceConfig.get_value("economy.tax_base", 0.20)),
 			"government_revenue": 100_000_000_000.0,
+			"foreign_reserves": 60_000_000_000.0,
 			"government_spending": 95_000_000_000.0,
 			"deficit": 5_000_000_000.0,  # قرارداد واحد: مثبت یعنی کسری
 			"national_debt": 200_000_000_000.0,
