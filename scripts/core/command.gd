@@ -215,6 +215,21 @@ static func create_urban_action(action: String):
 static func create_security_action(action: String):
 	return _self_script().new("security_action", {"action": action})
 
+static func create_infra_action(action: String, value: float = 0.0):
+	return _self_script().new("infra_action", {"action": action, "value": value})
+
+static func create_climate_action(action: String, value: float = 0.0):
+	return _self_script().new("climate_action", {"action": action, "value": value})
+
+static func create_welfare_action(action: String, value: float = 0.0):
+	return _self_script().new("welfare_action", {"action": action, "value": value})
+
+static func create_space_action(action: String):
+	return _self_script().new("space_action", {"action": action})
+
+static func create_trade_policy_action(action: String):
+	return _self_script().new("trade_policy_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
