@@ -1345,6 +1345,97 @@ func _on_market(resource: String, action: String, amount: float):
 		_toast("⚠️ " + str(result.get("reason", "خطا")))
 
 # 🎁 پاداش روزانه (استریک ورود)
+# ── کارت رهبر: محبوبیت جهانی، وضعیت پنهان/آشکار، کودتا و پیروزی ──
+func _build_leader_card(st: Dictionary):
+	var leader: Dictionary = st.get("leader", {})
+	if leader.is_empty():
+		return
+	# حالت ژنرال وفادار: بنر ویژه
+	if str(leader.get("mode", "leader")) == "general":
+		var rebel_card = _card("⚔️ ژنرال وفادار — کودتای سراسری")
+		var rebellion: Dictionary = leader.get("rebellion", {})
+		if bool(rebellion.get("failed", false)):
+			var fail_lbl = Label.new()
+			match str(leader.get("country_status", "")):
+				"annexed":
+					fail_lbl.text = "کودتا نافرجام ماند؛ کشور هم‌مرزِ برنده، سراسر خاک را ضمیمه خود کرد و توانایی‌های کشور به او منتقل شد."
+				"puppet":
+					fail_lbl.text = "کودتا نافرجام ماند؛ برنده بدون مرز مشترک، حاکم دست‌نشانده گماشت و کشور عملاً زیر سلطه اوست."
+				_:
+					fail_lbl.text = "کودتا نافرجام ماند و کشور در هرج‌ومرج فرو رفت."
+			fail_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			fail_lbl.add_theme_font_size_override("font_size", 20)
+			fail_lbl.modulate = Color(1.0, 0.55, 0.5)
+			rebel_card.add_child(fail_lbl)
+		else:
+			var total := int(rebellion.get("total", 1))
+			var controlled := int(rebellion.get("progress", 1))
+			var deadline := int(rebellion.get("deadline_turn", 0))
+			var turns_left: int = max(0, deadline - int(st.get("tick", 0)))
+			_row(rebel_card, "استان پایگاه کودتا", str(rebellion.get("base_province", "—")))
+			_row(rebel_card, "استان‌های تحت کنترل", "%s از %s" % [
+				PersianFormatter.to_persian_digits(str(controlled)),
+				PersianFormatter.to_persian_digits(str(total))])
+			_row(rebel_card, "نوبت‌های باقی‌مانده برای تصاحب کامل", PersianFormatter.to_persian_digits(str(turns_left)))
+			_bar(rebel_card, "پیشروی کودتا", float(controlled) / max(total, 1))
+			var hint = Label.new()
+			hint.text = "هر نوبت با «پایان نوبت» ژنرال به پیشروی ادامه می‌دهد؛ در ۷ نوبت باید سراسر کشور را تصاحب کند."
+			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hint.add_theme_font_size_override("font_size", 18)
+			hint.modulate = TEXT_MUTED
+			rebel_card.add_child(hint)
+	# پیروزی: عصر طلایی
+	var victory: Dictionary = st.get("victory", {})
+	if bool(victory.get("achieved", false)):
+		var win_card = _card("🏆 عصر طلایی کشور!")
+		var win_lbl = Label.new()
+		win_lbl.text = "سه شاخه فناوری به سطح ۳۰ رسید؛ کشور وارد عصر طلایی شد. می‌توانید به گسترش ادامه دهید."
+		win_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		win_lbl.add_theme_font_size_override("font_size", 20)
+		win_lbl.modulate = ACCENT_GOLD
+		win_card.add_child(win_lbl)
+	# کارت اصلی رهبر
+	var card = _card("👤 رهبر کشور")
+	var hidden := bool(leader.get("hidden", false))
+	_row(card, "وضعیت", "🛡 پنهان (مکان امن)" if hidden else "☀ آشکار (در برابر مردم)")
+	var pop := clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
+	_row(card, "محبوبیت جهانی", PersianFormatter.to_persian_digits("%.0f / ۱۰۰" % pop), _color_for(pop / 100.0))
+	_bar(card, "محبوبیت جهانی", pop / 100.0)
+	var hint = Label.new()
+	hint.text = "جنگ تجاوزکارانه، تحریم و ترور محبوبیت را می‌سوزاند؛ صلح، تجارت و رشد آن را بالا می‌برد. رهبر محبوبِ ترورشده، شهرهایی را به شورش می‌کشاند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 17)
+	hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+	# دکمه پنهان/آشکار — فقط در جنگ
+	var at_war := false
+	for war_key in st.get("world", {}).get("wars", {}).keys():
+		if str(war_key).split("|").has(str(st.get("world", {}).get("player_country", ""))):
+			at_war = true
+			break
+	if at_war and str(leader.get("mode", "leader")) == "leader":
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); card.add_child(row)
+		var toggle = Button.new()
+		toggle.text = "🛡 پنهان کردن رهبر" if not hidden else "☀ آشکار کردن رهبر"
+		toggle.custom_minimum_size = Vector2(0, 50)
+		toggle.add_theme_font_size_override("font_size", 19)
+		toggle.pressed.connect(FeedbackManager.play_click)
+		toggle.pressed.connect(_on_leader_hidden_toggle.bind(not hidden))
+		row.add_child(toggle)
+		var why = Label.new()
+		why.text = "پنهان: امن‌تر در برابر ترور ولی افت روحیه و محبوبیت — آشکار: محبوب‌تر ولی آسیب‌پذیرتر"
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		why.add_theme_font_size_override("font_size", 16)
+		why.modulate = TEXT_FAINT
+		why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(why)
+
+func _on_leader_hidden_toggle(hidden: bool):
+	var cmd = GameCommandClass.create_leader_hidden(hidden)
+	if _queue_decision(cmd, "🛡 پنهان‌سازی رهبر" if hidden else "☀ آشکار شدن رهبر"):
+		_toast("وضعیت رهبر ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("dashboard")
+
 func _build_daily_reward_card(state: Dictionary):
 	var status: Dictionary = DailyRewardManager.get_status()
 	var can_claim: bool = bool(status.get("can_claim", false))
@@ -1446,6 +1537,7 @@ func _build_dashboard():
 	if not bool(SettingsManager.get_value("tutorial_dismissed", false)) and int(st.get("tick", 0)) < 7:
 		_build_onboarding_card(st)
 	_build_command_kpis(st)
+	_build_leader_card(st)
 	_build_daily_reward_card(st)
 	_build_special_event_card(st)
 	_build_weather_and_municipal_card(st)
@@ -2430,6 +2522,73 @@ func _on_cancel_national_project(project_id: String):
 # ============================================================
 # تب فناوری — درخت پژوهش داده‌محور
 # ============================================================
+# ── ترور رهبران دشمن: نیازمند فناوری، توازن با ضداطلاعات حریف، عواقب جهانی ──
+func _build_assassination_card(st: Dictionary, parent: VBoxContainer):
+	var unlocked: bool = st.get("technology", {}).get("unlocked", []).has("assassination_ops")
+	if not unlocked:
+		var locked = Label.new()
+		locked.text = "☠ عملیات ترور پس از باز کردن فناوری «عملیات ترور هدفمند» (شاخه نظامی، سطح بالا) فعال می‌شود."
+		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		locked.add_theme_font_size_override("font_size", 17)
+		locked.modulate = TEXT_MUTED
+		parent.add_child(locked)
+		return
+	var world: Dictionary = st.get("world", {})
+	var player_id := str(world.get("player_country", WorldManager.default_country))
+	var relations: Dictionary = st.get("diplomacy", {}).get("relations", {})
+	var targets: Array = []
+	for war_key in world.get("wars", {}).keys():
+		var pair := str(war_key).split("|")
+		if pair.size() == 2:
+			for p in pair:
+				if p != player_id and not targets.has(p):
+					targets.append(p)
+	for key in relations.keys():
+		var pair := str(key).split("|")
+		if pair.size() != 2 or not pair.has(player_id):
+			continue
+		var other := pair[0] if pair[0] != player_id else pair[1]
+		if float(relations[key]) <= 35.0 and not targets.has(other):
+			targets.append(other)
+	if targets.is_empty():
+		var none = Label.new()
+		none.text = "☠ عملیات ترور آماده است؛ اما دشمنی (جنگ یا روابط بسیار خصمانه) در کار نیست."
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		none.add_theme_font_size_override("font_size", 17)
+		none.modulate = TEXT_MUTED
+		parent.add_child(none)
+		return
+	var head = Label.new()
+	head.text = "☠ ترور رهبران دشمن"
+	head.add_theme_font_size_override("font_size", 20)
+	head.modulate = ACCENT_RED
+	parent.add_child(head)
+	for target in targets:
+		var chance: float = LeaderManager.assassination_chance(st, str(target))
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); parent.add_child(row)
+		var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; info.add_theme_constant_override("separation", 2); row.add_child(info)
+		var lbl = Label.new()
+		lbl.text = "%s — شانس موفقیت %s٪" % [WorldManager.get_country_name(str(target)), PersianFormatter.to_persian_digits(str(int(chance * 100.0)))]
+		lbl.add_theme_font_size_override("font_size", 18)
+		info.add_child(lbl)
+		var sub = Label.new()
+		sub.text = "ضداطلاعات قوی‌تر حریف، شانس را به صفر می‌رساند و ترورِ ناموفق روابط را نابود می‌کند."
+		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sub.add_theme_font_size_override("font_size", 14)
+		sub.modulate = TEXT_FAINT
+		info.add_child(sub)
+		var btn = Button.new(); btn.text = "ترور"; btn.custom_minimum_size = Vector2(110, 48)
+		btn.add_theme_font_size_override("font_size", 18); btn.theme_type_variation = "DangerButton" if chance >= 0.5 else ""
+		btn.pressed.connect(FeedbackManager.play_click)
+		btn.pressed.connect(_on_assassinate.bind(str(target)))
+		row.add_child(btn)
+
+func _on_assassinate(target: String):
+	var cmd = GameCommandClass.create_assassinate(target)
+	if _queue_decision(cmd, "☠ ترور رهبر " + WorldManager.get_country_name(target)):
+		_toast("☠ عملیات ترور «%s» ثبت شد — با پایان نوبت اجرا می‌شود" % WorldManager.get_country_name(target))
+		_switch_tab("military")
+
 func _build_technology():
 	var state = GameState.state
 	var tech: Dictionary = state.get("technology", {})
@@ -2454,6 +2613,21 @@ func _build_technology():
 	var branches = _card("🧬 بلوغ شاخه‌های فناوری")
 	for branch in tech.get("branches", {}).keys():
 		_bar(branches, str(branch).replace("_", " "), float(tech["branches"][branch]))
+
+	# ارتقاهای اصلی: هر شاخه ۳۰ سطح دارد (بالانس ~۱ ساعته)؛ متفرقه‌ها سطح کم‌تری دارند
+	var upgrades = _card("⬆️ ارتقای شاخه‌های اصلی — حداکثر سطح ۳۰")
+	_upgrade_row(upgrades, state, tech, "صنعت", "🏭 صنعت")
+	_upgrade_row(upgrades, state, tech, "انرژی_پاک", "🌱 انرژی پاک")
+	_upgrade_row(upgrades, state, tech, "پزشکی", "⚕ پزشکی")
+	_upgrade_row(upgrades, state, tech, "نظامی", "🪖 نظامی")
+	_upgrade_row(upgrades, state, tech, "دیجیتال", "💻 دیجیتال")
+	_upgrade_row(upgrades, state, tech, "فضا", "🚀 فضا")
+	var up_hint = Label.new()
+	up_hint.text = "با رسیدن سه شاخه به سطح ۳۰، کشور وارد «عصر طلایی» می‌شود و بازی قابل اتمام است (~۱ ساعت)."
+	up_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	up_hint.add_theme_font_size_override("font_size", 17)
+	up_hint.modulate = TEXT_FAINT
+	upgrades.add_child(up_hint)
 
 	var available = TechnologyManager.get_available(state)
 	var projects = _card("🧪 پروژه‌های در دسترس")
@@ -2493,6 +2667,42 @@ func _build_technology():
 	unlocked_label.text = " • ".join(unlocked_names)
 	unlocked_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	unlocked_card.add_child(unlocked_label)
+
+func _upgrade_row(parent: VBoxContainer, state: Dictionary, tech: Dictionary, branch: String, label: String):
+	var level: int = TechnologyManager.get_branch_level(state, branch)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); parent.add_child(row)
+	var info = VBoxContainer.new(); info.size_flags_horizontal = Control.SIZE_EXPAND_FILL; info.add_theme_constant_override("separation", 2); row.add_child(info)
+	var top = Label.new()
+	top.text = "%s — سطح %s / ۳۰" % [label, PersianFormatter.to_persian_digits(str(level))]
+	top.add_theme_font_size_override("font_size", 19)
+	info.add_child(top)
+	var pbar = ProgressBar.new(); pbar.max_value = 30.0; pbar.value = level; pbar.custom_minimum_size = Vector2(0, 12)
+	info.add_child(pbar)
+	var upgrade = Button.new()
+	if level >= 30:
+		upgrade.text = "✅ کامل"
+		upgrade.disabled = true
+	else:
+		var cost: float = TechnologyManager.branch_upgrade_cost(level)
+		upgrade.text = "ارتقا (%s امتیاز)" % PersianFormatter.to_persian_digits(str(int(cost)))
+		upgrade.disabled = float(tech.get("research_points", 0.0)) < cost
+		upgrade.tooltip_text = "" if not upgrade.disabled else "امتیاز پژوهش کافی نیست"
+	upgrade.custom_minimum_size = Vector2(190, 46)
+	upgrade.add_theme_font_size_override("font_size", 18)
+	upgrade.pressed.connect(FeedbackManager.play_click)
+	upgrade.pressed.connect(_on_upgrade_branch.bind(branch))
+	row.add_child(upgrade)
+
+func _on_upgrade_branch(branch: String):
+	var result = TechnologyManager.upgrade_branch(GameState.state, branch)
+	if result.success:
+		var level: int = int(result.level)
+		_toast("⬆️ شاخه «%s» به سطح %s رسید" % [branch, PersianFormatter.to_persian_digits(str(level))])
+		if level >= 30:
+			FeedbackManager.play_achievement()
+		_switch_tab("technology")
+	else:
+		_toast("⚠️ " + str(result.get("reason", "ارتقا ممکن نشد")))
 
 func _on_start_research(technology_id: String, technology_name: String):
 	var cmd = GameCommandClass.create_research_start(technology_id)
@@ -2553,6 +2763,7 @@ func _build_military():
 	var c3 = _card("🕵️ اطلاعات")
 	_bar(c3, "قدرت اطلاعاتی", intel.get("power", 50) / 100.0)
 	_bar(c3, "آمادگی سایبری", intel.get("cyber_readiness", 0.5))
+	_build_assassination_card(st, c3)
 
 	var development: Dictionary = st.get("military_development", {})
 	var doctrine_card = _card("🧭 دکترین نظامی")
