@@ -22,7 +22,7 @@ func ensure(state: Dictionary) -> Dictionary:
 		state["leader"] = {
 			"name_fa": "رهبر ملی", "alive": true, "popularity_world": 50.0,
 			"hidden": false, "mode": "leader", "country_status": "independent",
-			"rebellion": {}
+			"rebellion": {}, "traits": []
 		}
 	var world: Dictionary = state.get("world", {})
 	if not world.has("leader_deaths"):
@@ -58,6 +58,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 				state = adv.state
 				events.append_array(adv.events)
 		return {"state": state, "events": events}
+
+	# ── ویژگی‌های رهبر: کسب از رویدادهای بزرگ + اثر ماهانه ──
+	_acquire_traits_from_history(state, turn)
+	_apply_trait_effects(state)
 
 	# ── محبوبیت جهانی: اثر اعمال رهبر در جهان ──
 	var pop: float = clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
@@ -232,6 +236,10 @@ func attempt_assassination(state: Dictionary, target_id: String, turn: int) -> D
 		# محبوبیت جهانی ترورکننده سقوط می‌کند (جهان ترور را محکوم می‌کند)
 		var leader: Dictionary = state["leader"]
 		leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 9.0, 0.0, 100.0)
+		var a_traits: Array = leader.get("traits", [])
+		if not a_traits.has("دست‌پنهان") and a_traits.size() < 3:
+			a_traits.append("دست‌پنهان")
+			leader["traits"] = a_traits
 		state["leader"] = leader
 	else:
 		events.append({"type": "assassination_failed",
@@ -415,6 +423,10 @@ func _advance_rebellion(state: Dictionary, turn: int) -> Dictionary:
 		leader["alive"] = true
 		leader["name_fa"] = "ژنرال پیروز"
 		leader["rebellion"] = {}
+		var coup_traits: Array = leader.get("traits", [])
+		if not coup_traits.has("ژنرال-رهبر") and coup_traits.size() < 3:
+			coup_traits.append("ژنرال-رهبر")
+			leader["traits"] = coup_traits
 		leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 8.0, 0.0, 100.0)
 		state["leader"] = leader
 		state.get("population", {})["happiness"] = clampf(float(state.get("population", {}).get("happiness", 0.6)) + 0.05, 0.0, 1.0)
@@ -504,3 +516,115 @@ func _is_neighbor(state: Dictionary, a: String, b: String) -> bool:
 	var h: float = pow(sin(dlat * 0.5), 2.0) + cos(lat_a) * cos(lat_b) * pow(sin(dlon * 0.5), 2.0)
 	var dist_deg: float = rad_to_deg(2.0 * atan2(sqrt(h), sqrt(max(0.0, 1.0 - h))))
 	return dist_deg <= ANNEX_DISTANCE_DEG
+
+
+# ────────────────────────────────────────────────────────────────
+# ویژگی‌های رهبر: شخصیت رهبر از کنش‌های او شکل می‌گیرد (حداکثر ۳ ویژگی)
+# ────────────────────────────────────────────────────────────────
+const TRAIT_INFO := {
+	"فاتح": {"name": "فاتح", "desc": "پیروزی در جنگ؛ ارتش پرقدرت‌تر و مردم امیدوارتر"},
+	"شکست‌خورده": {"name": "شکست‌خورده", "desc": "شکست نظامی؛ ثبات و اعتبار رهبر آسیب دیده"},
+	"جنگ‌طلب": {"name": "جنگ‌طلب", "desc": "آغاز جنگ؛ ارتش تقویت می‌شود اما جهان محبوبیت را کم می‌کند"},
+	"صلح‌جو": {"name": "صلح‌جو", "desc": "پیمان صلح؛ شادی مردم و تجارت بهبود می‌یابد"},
+	"پیشرو": {"name": "پیشرو", "desc": "عصر طلایی فناوری؛ پژوهش شتاب می‌گیرد"},
+	"ژنرال-رهبر": {"name": "ژنرال-رهبر", "desc": "پیروزی کودتا؛ ثبات و اقتدار نظامی"},
+	"دست‌پنهان": {"name": "دست‌پنهان", "desc": "ترور موفق؛ توان اطلاعاتی بالا اما اعتبار جهانی کمتر"}
+}
+
+func _add_trait(state: Dictionary, trait_id: String, turn: int) -> Dictionary:
+	var leader: Dictionary = state["leader"]
+	var traits: Array = leader.get("traits", [])
+	if not traits.has(trait_id) and traits.size() < 3:
+		traits.append(trait_id)
+		leader["traits"] = traits
+		state["leader"] = leader
+		var info: Dictionary = TRAIT_INFO.get(trait_id, {})
+		EventLog.log_event("leader_trait", {"message": "رهبر ویژگی «%s» را به دست آورد" % info.get("name", trait_id), "trait": trait_id}, turn, state.get("version", 0))
+	return state
+
+func _acquire_traits_from_history(state: Dictionary, turn: int):
+	var world: Dictionary = state.get("world", {})
+	var player_id := str(world.get("player_country", WorldManager.default_country))
+	var leader: Dictionary = state["leader"]
+	if str(leader.get("mode", "leader")) != "leader":
+		return
+	var traits: Array = leader.get("traits", [])
+	# رویدادهای مصرف‌شده تا هر رویداد فقط یک‌بار ویژگی دهد
+	var consumed: Array = leader.get("trait_history_consumed", [])
+	# پیروزی/شکست/صلح (ended_tick = روز شبیه‌سازی؛ برای هر ورودی تازه یک‌بار بررسی می‌شود)
+	for entry in world.get("war_history", []):
+		var entry_key := str(entry.get("outcome", "")) + ":" + str(entry.get("target", "")) + ":" + str(entry.get("ended_tick", 0))
+		if consumed.has(entry_key):
+			continue
+		consumed.append(entry_key)
+		leader["trait_history_consumed"] = consumed
+		if str(entry.get("outcome", "")) == "victory":
+			if not traits.has("فاتح"):
+				state = _add_trait(state, "فاتح", turn)
+				return
+		elif str(entry.get("outcome", "")) == "defeat":
+			if not traits.has("شکست‌خورده"):
+				state = _add_trait(state, "شکست‌خورده", turn)
+				return
+		elif str(entry.get("outcome", "")) == "peace":
+			if not traits.has("صلح‌جو"):
+				state = _add_trait(state, "صلح‌جو", turn)
+				return
+	# جنگ تازه آغازشده (started_tick = روز شبیه‌سازی؛ از روی مصرف‌شده‌ها)
+	for target in world.get("wars", {}).keys():
+		var war_start_key := "start:" + str(target) + ":" + str(world["wars"][target].get("started_tick", 0))
+		if consumed.has(war_start_key):
+			continue
+		consumed.append(war_start_key)
+		leader["trait_history_consumed"] = consumed
+		if not traits.has("جنگ‌طلب"):
+			state = _add_trait(state, "جنگ‌طلب", turn)
+			return
+	# عصر طلایی
+	var victory: Dictionary = state.get("victory", {})
+	if bool(victory.get("achieved", false)):
+		if not consumed.has("golden_age") and not traits.has("پیشرو"):
+			consumed.append("golden_age")
+			leader["trait_history_consumed"] = consumed
+			state = _add_trait(state, "پیشرو", turn)
+			return
+
+func _apply_trait_effects(state: Dictionary):
+	var leader: Dictionary = state["leader"]
+	var traits: Array = leader.get("traits", [])
+	if traits.is_empty():
+		return
+	var mil: Dictionary = state.get("military", {})
+	var pop: Dictionary = state.get("population", {})
+	var pol: Dictionary = state.get("politics", {})
+	var tech: Dictionary = state.get("technology", {})
+	var intel: Dictionary = state.get("intelligence", {})
+	for trait_id in traits:
+		match str(trait_id):
+			"فاتح":
+				mil["power"] = float(mil.get("power", 50.0)) * 1.01
+				pol["stability"] = clampf(float(pol.get("stability", 0.6)) + 0.004, 0.05, 1.0)
+				leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 0.4, 0.0, 100.0)
+			"شکست‌خورده":
+				pol["stability"] = clampf(float(pol.get("stability", 0.6)) - 0.004, 0.05, 1.0)
+				pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) - 0.003, 0.05, 1.0)
+			"جنگ‌طلب":
+				mil["power"] = float(mil.get("power", 50.0)) * 1.006
+				leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 0.4, 0.0, 100.0)
+			"صلح‌جو":
+				pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.003, 0.05, 1.0)
+				state["trade"]["exports"] = float(state.get("trade", {}).get("exports", 1.0)) * 1.001
+			"پیشرو":
+				tech["research_rate"] = float(tech.get("research_rate", 20.0)) * 1.02
+			"ژنرال-رهبر":
+				pol["stability"] = clampf(float(pol.get("stability", 0.6)) + 0.006, 0.05, 1.0)
+				mil["power"] = float(mil.get("power", 50.0)) * 1.008
+			"دست‌پنهان":
+				intel["power"] = clampf(float(intel.get("power", 50.0)) + 1.2, 0.0, 100.0)
+				leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 0.3, 0.0, 100.0)
+	state["leader"] = leader
+	state["military"] = mil
+	state["population"] = pop
+	state["politics"] = pol
+	state["technology"] = tech
+	state["intelligence"] = intel
