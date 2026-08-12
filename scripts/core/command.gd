@@ -107,6 +107,12 @@ static func create_decision_resolve(decision_id: String, choice_id: String):
 static func create_next_tick():
 	return _self_script().new("next_tick", {})
 
+static func create_assassinate(target_country: String):
+	return _self_script().new("assassinate", {"target": target_country})
+
+static func create_leader_hidden(hidden: bool):
+	return _self_script().new("leader_hidden", {"hidden": hidden})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
