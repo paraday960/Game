@@ -92,9 +92,15 @@ func simulate_month(state:Dictionary,turn:int,forced:Dictionary={})->Dictionary:
 	return {"state":state,"events":events}
 
 func get_recon_bonus(state:Dictionary,target:String)->float:
+	var bonus := 0.0
 	for report in state.get("intelligence_operations",{}).get("reports",[]):
-		if report.get("type","")=="military_recon" and report.get("target","")==target and int(report.get("expires_turn",0))>=int(state.get("tick",0)):return float(report.get("quality",0.0))*0.12
-	return 0.0
+		if report.get("type","")=="military_recon" and report.get("target","")==target and int(report.get("expires_turn",0))>=int(state.get("tick",0)):
+			bonus = maxf(bonus, float(report.get("quality",0.0))*0.12)
+	# عامل‌های نفوذی دائمی: شناسایی بهتر از هر گزارش موقت
+	for asset in state.get("intelligence_operations",{}).get("assets",[]):
+		if asset.get("target","")==target:
+			bonus += 0.03 + float(asset.get("quality",0.5))*0.04
+	return clampf(bonus, 0.0, 0.25)
 
 func _apply_success(state:Dictionary,id:String,target:String,definition:Dictionary,quality:float,turn:int,io:Dictionary):
 	for effect in definition.get("effects",[]):_apply_effect(state,effect)
@@ -104,6 +110,27 @@ func _apply_success(state:Dictionary,id:String,target:String,definition:Dictiona
 	elif id=="influence_campaign":state["diplomacy"]["relations"][target]=clamp(float(state["diplomacy"]["relations"].get(target,50))+8.0,0,100)
 	elif id=="covert_diplomacy":state["diplomacy"]["relations"][target]=clamp(float(state["diplomacy"]["relations"].get(target,50))+10.0,0,100)
 	elif id=="sanctions_network":_remove_one_incoming_sanction(state,target)
+	elif id=="tech_theft":
+		var tech: Dictionary = state.get("technology", {})
+		var gain := 14.0 + quality * 18.0
+		tech["research_points"] = float(tech.get("research_points", 0.0)) + gain
+		state["technology"] = tech
+		io["reports"].append({"type":"tech_theft","target":target,"quality":quality,"turn":turn,"expires_turn":turn+12,"gain":gain})
+	elif id=="destabilize":
+		var world: Dictionary = state.get("world", {})
+		var target_country: Dictionary = world.get("countries", {}).get(target, {})
+		if not target_country.is_empty():
+			target_country["stability"] = clampf(float(target_country.get("stability", 60.0)) - (4.0 + quality * 5.0), 5.0, 100.0)
+			target_country["gdp"] = maxf(1.0, float(target_country.get("gdp", 1.0)) * 0.995)
+			world["countries"][target] = target_country
+			state["world"] = world
+	elif id=="recruit_asset":
+		var assets: Array = io.get("assets", [])
+		assets.append({"target": target, "turn": turn, "quality": quality})
+		while assets.size() > 6:
+			assets.pop_front()
+		io["assets"] = assets
+		io["reports"].append({"type":"recruit_asset","target":target,"quality":quality,"turn":turn,"expires_turn":turn+24})
 
 func _apply_detection(state:Dictionary,id:String,target:String,io:Dictionary):
 	io["heat"]=clamp(float(io["heat"])+0.22,0,1);state["diplomacy"]["relations"][target]=clamp(float(state["diplomacy"]["relations"].get(target,50))-12.0,0,100);state["politics"]["tension"]=clamp(float(state["politics"].get("tension",0.3))+0.025,0,1)
