@@ -9,6 +9,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tech["unlocked"] = tech.get("unlocked", ["industry_basic", "agriculture_basic"])
 	tech["in_progress"] = tech.get("in_progress", null)
 	tech["branches"] = tech.get("branches", {"صنعت":0.20,"انرژی_پاک":0.15,"پزشکی":0.10,"نظامی":0.15,"دیجیتال":0.20,"فضا":0.05})
+	# سیستم سطوح ۳۰: مقادیر float سازگاری از سطوح تازه‌سازی می‌شوند
+	if tech.has("branch_levels") and tech["branch_levels"] is Dictionary:
+		var levels: Dictionary = tech["branch_levels"]
+		for branch in ["صنعت","انرژی_پاک","پزشکی","نظامی","دیجیتال","فضا"]:
+			if levels.has(branch):
+				tech["branches"][branch] = float(clampi(int(levels[branch]),0,30)) / 30.0
 	tech["tech_level"] = tech.get("tech_level", 0.15)
 	tech["innovation_index"] = tech.get("innovation_index", 0.40)
 	tech["researchers"] = tech.get("researchers", 50000)
@@ -29,7 +35,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var gdp = econ.get("gdp", 500e9)
 
 	# نرخ تحقیق = f(بودجه R&D، دانشمندان، دانشگاه، آموزش، زیرساخت دیجیتال)
-	var base_rate = 10.0
+	# (پایه بالاتر برای بالانس «قابل اتمام در ~۱ ساعت»: سطوح ۳۰ شاخه‌های اصلی)
+	var base_rate = 26.0
 	var budget_factor = (budget / max(econ.get("government_spending",95e9)*0.04, 1.0))
 	budget_factor = clamp(budget_factor, 0.2, 3.0)
 	var edu_factor = edu.get("quality",0.55)*1.5 + edu.get("literacy",0.85)*0.5
@@ -38,7 +45,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var lab_factor = tech["labs"]/200.0*0.5 + 0.5
 
 	tech["research_rate"] = base_rate * budget_factor * edu_factor * infra_factor * researcher_factor * lab_factor
-	tech["research_rate"] = clamp(tech["research_rate"], 1.0, 100.0)
+	tech["research_rate"] = clamp(tech["research_rate"], 2.0, 260.0)
 
 	tech["research_points"] += tech["research_rate"] / 365.0
 
