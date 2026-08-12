@@ -363,10 +363,13 @@ func _start_rebellion(state: Dictionary, turn: int) -> Dictionary:
 	var player_id := str(state.get("world", {}).get("player_country", WorldManager.default_country))
 	var units := _country_units(player_id)
 	var base := _best_province(player_id)
-	# تنها بخشی از ارتش به ژنرال وفادار می‌پیوندد: هرچه مردم از رهبر قبلی ناراضی‌تر
-	# باشند، سهم بیشتری از ارتش و مردم به کودتا می‌پیوندند.
+	# تنها بخشی از ارتش به ژنرال وفادار می‌پیوندد:
+	#  - رضایت مردم از رهبر قبلی (happiness)
+	#  - محبوبیت جهانی رهبر قبلی: ژنرالِ رهبرِ محبوب، ارتش و مردم بیشتری را با خود
+	#    همراه می‌کند و کودتا سریع‌تر پیش می‌رود؛ رهبرِ منفور، پشتیبانی نمی‌گیرد.
 	var happiness := clampf(float(state.get("population", {}).get("happiness", 0.6)), 0.0, 1.0)
-	var loyal_factor := clampf(0.30 + happiness * 0.60, 0.30, 0.90)
+	var world_popularity := clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
+	var loyal_factor := clampf(0.30 + happiness * 0.55 + world_popularity / 100.0 * 0.45, 0.30, 0.95)
 	var rebellion := {
 		"start_turn": turn,
 		"deadline_turn": turn + REBELLION_TURNS,
@@ -375,7 +378,8 @@ func _start_rebellion(state: Dictionary, turn: int) -> Dictionary:
 		"total": max(1, units.size()),
 		"progress": 1,
 		"failed": false,
-		"loyal_power": float(state.get("military", {}).get("power", 50.0)) * loyal_factor
+		"loyal_power": float(state.get("military", {}).get("power", 50.0)) * loyal_factor,
+		"popularity": world_popularity
 	}
 	leader["rebellion"] = rebellion
 	state["leader"] = leader
