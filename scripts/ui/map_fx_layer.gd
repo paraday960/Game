@@ -46,6 +46,8 @@ func _draw():
 	_draw_city_lights()
 	_draw_weather_precipitation()
 	_draw_selection_glow()
+	_draw_radar_sweep()
+	_draw_ambient_dust()
 
 # موج‌های نوری آرام روی اقیانوس در نمای جهان/منطقه — حس نقشه زنده HOI4.
 func _draw_ocean_shimmer():
@@ -219,6 +221,38 @@ func _draw_selection_glow():
 		var inner: Vector2 = p + dir * 26.0
 		var outer: Vector2 = p + dir * (40.0 + pulse * 10.0)
 		draw_line(inner, outer, Color(1.0, 0.90, 0.55, 0.16), 2.0, true)
+
+# 📡 اسکن رادار دور پایتخت — بازوی نور چرخان (حس اتاق فرمان)
+func _draw_radar_sweep():
+	if map.player_country == "":
+		return
+	var profile: Dictionary = map.countries.get(map.player_country, {})
+	if profile.is_empty():
+		return
+	var p = map._geo_point(float(profile.get("lon", 0.0)), float(profile.get("lat", 0.0)))
+	if not get_rect().grow(50).has_point(p):
+		return
+	var angle: float = fx_time * 1.1
+	var radius := 30.0
+	# بازوی نور با دم محو
+	for seg in range(20):
+		var a: float = angle - float(seg) * 0.045
+		var alpha: float = 0.38 * (1.0 - float(seg) / 20.0)
+		draw_arc(p, radius, a, a + 0.03, 2, Color(0.35, 0.95, 0.90, alpha), 2.0, true)
+	# حلقه‌های رادار
+	for ring in range(3):
+		draw_arc(p, radius * (0.4 + float(ring) * 0.32), 0.0, TAU, 40, Color(0.30, 0.80, 0.85, 0.10 + 0.05 * sin(fx_time * 1.5 + float(ring))), 1.2, true)
+
+# ✨ ذرات غبار طلایی شناور روی کل نقشه — حس دنیای جادویی زنده
+func _draw_ambient_dust():
+	if bool(SettingsManager.get_value("reduce_motion", false)):
+		return
+	for i in range(16):
+		var px: float = fposmod(float(i) * 173.3 + fx_time * 6.0 + sin(fx_time * 0.3 + float(i)) * 40.0, size.x)
+		var py: float = fposmod(float(i) * 97.7 + fx_time * -3.0 + cos(fx_time * 0.22 + float(i)) * 30.0, size.y)
+		var tw: float = 0.55 + 0.45 * sin(fx_time * 1.3 + float(i) * 2.4)
+		var warm: Color = Color(1.0, 0.82, 0.42) if i % 2 == 0 else Color(0.55, 0.92, 0.95)
+		draw_circle(Vector2(px, py), 1.4 + float(i % 3) * 0.6, Color(warm.r, warm.g, warm.b, 0.10 + 0.22 * tw))
 
 func _dash_flow(points: PackedVector2Array, color: Color, width: float, phase: float):
 	var dash := 10.0
