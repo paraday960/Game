@@ -19,7 +19,8 @@ const SUPPORTED_COMMANDS = [
 	"capital_control", "governor_appoint", "crisis_stance", "rivalry_action", "shadow_action",
 	"court_action", "energy_action", "industry_action", "succession_action", "labor_action",
 	"epidemic_action", "arms_action", "cyber_action", "migration_action", "culture_action",
-	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action"
+	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action",
+	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -540,6 +541,25 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "security_action":
 			if not str(cmd.payload.get("action", "")) in ["civil", "surveillance", "tough", "smuggling", "community", "modern"]:
 				return {"valid": false, "reason": "اقدام امنیتی نامعتبر است"}
+		elif cmd.type == "infra_action":
+			if not str(cmd.payload.get("action", "")) in ["maintenance", "focus_roads", "focus_power", "focus_water", "focus_telecom"]:
+				return {"valid": false, "reason": "اقدام زیرساختی نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "maintenance" and (not _is_finite_number(cmd.payload.get("value", 0.0)) or float(cmd.payload.get("value", 0.0)) < 0.0 or float(cmd.payload.get("value", 0.0)) > 1.0):
+				return {"valid": false, "reason": "سهم نگهداری نامعتبر است"}
+		elif cmd.type == "climate_action":
+			if not str(cmd.payload.get("action", "")) in ["carbon", "reforest", "disaster", "greencity"]:
+				return {"valid": false, "reason": "اقدام اقلیمی نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "carbon" and (not _is_finite_number(cmd.payload.get("value", 0.0)) or float(cmd.payload.get("value", 0.0)) < 0.0 or float(cmd.payload.get("value", 0.0)) > 1.0):
+				return {"valid": false, "reason": "مالیات کربن نامعتبر است"}
+		elif cmd.type == "welfare_action":
+			if not str(cmd.payload.get("action", "")) in ["pension", "benefit", "child", "health"]:
+				return {"valid": false, "reason": "اقدام رفاهی نامعتبر است"}
+		elif cmd.type == "space_action":
+			if not str(cmd.payload.get("action", "")) in ["agency", "comm", "obs", "launcher"]:
+				return {"valid": false, "reason": "اقدام فضایی نامعتبر است"}
+		elif cmd.type == "trade_policy_action":
+			if not str(cmd.payload.get("action", "")) in ["diversify", "imports", "mission", "supply"]:
+				return {"valid": false, "reason": "اقدام تجاری نامعتبر است"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -999,6 +1019,65 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in sec_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("security_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "infra_action":
+		var infra_act := str(cmd.payload.get("action", ""))
+		var infra_result: Dictionary
+		if infra_act == "maintenance":
+			infra_result = InfrastructureManager.set_maintenance(snapshot, float(cmd.payload.get("value", 0.4)))
+		else:
+			infra_result = InfrastructureManager.set_focus(snapshot, infra_act.replace("focus_", ""))
+		snapshot = infra_result.state
+		for ev in infra_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("infrastructure_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "climate_action":
+		var climate_act := str(cmd.payload.get("action", ""))
+		var climate_result: Dictionary
+		match climate_act:
+			"carbon": climate_result = ClimateManager.set_carbon_tax(snapshot, float(cmd.payload.get("value", 0.1)))
+			"reforest": climate_result = ClimateManager.reforest(snapshot)
+			"disaster": climate_result = ClimateManager.disaster_preparedness(snapshot)
+			_: climate_result = ClimateManager.green_city_plan(snapshot)
+		snapshot = climate_result.state
+		for ev in climate_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("climate_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "welfare_action":
+		var welfare_act := str(cmd.payload.get("action", ""))
+		var welfare_result: Dictionary
+		match welfare_act:
+			"pension": welfare_result = WelfareManager.set_pension_age(snapshot, int(cmd.payload.get("value", 65)))
+			"benefit": welfare_result = WelfareManager.set_benefit(snapshot, float(cmd.payload.get("value", 0.4)))
+			"child": welfare_result = WelfareManager.child_allowance(snapshot)
+			_: welfare_result = WelfareManager.expand_health_coverage(snapshot)
+		snapshot = welfare_result.state
+		for ev in welfare_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("welfare_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "space_action":
+		var space_act := str(cmd.payload.get("action", ""))
+		var space_result: Dictionary
+		match space_act:
+			"agency": space_result = SpaceManager.expand_agency(snapshot)
+			"comm": space_result = SpaceManager.comm_satellite(snapshot)
+			"obs": space_result = SpaceManager.observation_satellite(snapshot)
+			_: space_result = SpaceManager.launch_vehicle(snapshot)
+		snapshot = space_result.state
+		for ev in space_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("space_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "trade_policy_action":
+		var trade_act := str(cmd.payload.get("action", ""))
+		var trade_result: Dictionary
+		match trade_act:
+			"diversify": trade_result = TradePolicyManager.export_diversification(snapshot)
+			"imports": trade_result = TradePolicyManager.strategic_imports(snapshot)
+			"mission": trade_result = TradePolicyManager.trade_mission(snapshot)
+			_: trade_result = TradePolicyManager.supply_chain_security(snapshot)
+		snapshot = trade_result.state
+		for ev in trade_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("trade_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1288,6 +1367,11 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = TourismManager.ensure(snapshot)
 	snapshot = UrbanManager.ensure(snapshot)
 	snapshot = SecurityManager.ensure(snapshot)
+	snapshot = InfrastructureManager.ensure(snapshot)
+	snapshot = ClimateManager.ensure(snapshot)
+	snapshot = WelfareManager.ensure(snapshot)
+	snapshot = SpaceManager.ensure(snapshot)
+	snapshot = TradePolicyManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1480,6 +1564,26 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var security_result = SecurityManager.simulate_month(snapshot, turn)
 	snapshot = security_result.state
 	_collect_events(security_result, "security", snapshot, turn, generated_events, "security_event")
+	# زیرساخت: نگهداری، پوسیدگی و اولویت توسعه
+	var infra_result = InfrastructureManager.simulate_month(snapshot, turn)
+	snapshot = infra_result.state
+	_collect_events(infra_result, "infrastructure", snapshot, turn, generated_events, "infrastructure_event")
+	# اقلیم و محیط زیست: آلودگی، بلایا و مالیات کربن
+	var climate_result = ClimateManager.simulate_month(snapshot, turn)
+	snapshot = climate_result.state
+	_collect_events(climate_result, "climate", snapshot, turn, generated_events, "climate_event")
+	# رفاه و تأمین اجتماعی: صندوق بازنشستگی و بیمه‌ها
+	var welfare_result = WelfareManager.simulate_month(snapshot, turn)
+	snapshot = welfare_result.state
+	_collect_events(welfare_result, "welfare", snapshot, turn, generated_events, "welfare_event")
+	# برنامه فضایی: آژانس، پرتاب‌ها و ماهواره‌ها
+	var space_result = SpaceManager.simulate_month(snapshot, turn)
+	snapshot = space_result.state
+	_collect_events(space_result, "space", snapshot, turn, generated_events, "space_event")
+	# تجارت راهبردی: تنوع صادرات و زنجیره تأمین
+	var trade_policy_result = TradePolicyManager.simulate_month(snapshot, turn)
+	snapshot = trade_policy_result.state
+	_collect_events(trade_policy_result, "trade_policy", snapshot, turn, generated_events, "trade_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
