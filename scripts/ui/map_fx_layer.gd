@@ -43,6 +43,9 @@ func _draw():
 	_draw_war_pulses()
 	_draw_capital_beacon()
 	_draw_weather_clouds()
+	_draw_city_lights()
+	_draw_weather_precipitation()
+	_draw_selection_glow()
 
 # موج‌های نوری آرام روی اقیانوس در نمای جهان/منطقه — حس نقشه زنده HOI4.
 func _draw_ocean_shimmer():
@@ -134,6 +137,88 @@ func _draw_weather_clouds():
 		for puff in range(3):
 			var off = Vector2(float(puff - 1) * r * 0.55, float((puff + i) % 2) * r * 0.16)
 			draw_circle(Vector2(cx, cy) + off, r * (0.5 + float(puff % 2) * 0.2), Color(0.86, 0.93, 0.99, 0.045))
+
+# 🌃 چراغ‌های شهرهای بزرگ — نمای نزدیک، حس نقشه شب زنده
+func _draw_city_lights():
+	if float(map.zoom_level) < 4.5 or map.selected_country == "":
+		return
+	var cities: Array = CountryGeographyManager.get_cities(map.selected_country)
+	if cities.is_empty():
+		return
+	var count := 0
+	for city in cities:
+		if count >= 24:
+			break
+		var pop_city = float(city.get("population", 0))
+		if pop_city < 400_000.0 and not bool(city.get("capital", false)):
+			continue
+		var p = map._geo_point(float(city.get("lon", 0.0)), float(city.get("lat", 0.0)))
+		if not get_rect().grow(40).has_point(p):
+			continue
+		count += 1
+		var size_city = clamp(2.0 + log(pop_city + 1.0) * 0.22, 2.0, 7.0)
+		var flicker: float = 0.8 + 0.2 * sin(fx_time * 3.0 + float(count) * 2.1)
+		# هاله گرم
+		draw_circle(p, size_city * 2.6, Color(1.0, 0.72, 0.30, 0.10 * flicker))
+		draw_circle(p, size_city, Color(1.0, 0.80, 0.42, 0.85 * flicker))
+		draw_circle(p, size_city * 0.45, Color(1.0, 0.95, 0.75, 0.95))
+
+# 🌧 باران/برف فصلی — افکت آب‌وهوای زنده (فقط در نمای نزدیک)
+var _precip_seed := 0
+func _draw_weather_precipitation():
+	if float(map.zoom_level) < 3.0:
+		return
+	var season: String = str(map.full_state.get("clock", {}).get("season", map.full_state.get("time", {}).get("season", "بهار")))
+	var is_winter: bool = season == "زمستان"
+	var is_rainy: bool = season in ["پاییز", "بهار"]
+	if not is_winter and not is_rainy:
+		return
+	_precip_seed += 1
+	var intensity := 22 if is_winter else 34
+	if bool(SettingsManager.get_value("reduce_motion", false)):
+		return
+	if is_winter:
+		# ❄ برف — دانه‌های سفید آرام
+		for i in range(intensity):
+			var px := Vector2(
+				fposmod(float(i) * 173.0 + fx_time * 14.0 + float(_precip_seed) * 7.0, size.x),
+				fposmod(float(i) * 97.0 + fx_time * 30.0, size.y)
+			)
+			var r := 1.2 + float(i % 3) * 0.7
+			draw_circle(px, r, Color(0.96, 0.98, 1.0, 0.55))
+	else:
+		# 🌧 باران — خطوط مورب سریع
+		for i in range(intensity):
+			var x := fposmod(float(i) * 137.0 + fx_time * 210.0, size.x)
+			var y := fposmod(float(i) * 61.0 + fx_time * 520.0, size.y)
+			var start := Vector2(x, y)
+			var end := start + Vector2(-4.0, 14.0)
+			draw_line(start, end, Color(0.72, 0.86, 0.95, 0.35), 1.2, true)
+
+# 💫 هاله درخشان دور کشور/واحد انتخاب‌شده — نور طلایی تپنده
+func _draw_selection_glow():
+	var selected := str(map.selected_country)
+	if selected == "":
+		return
+	var profile: Dictionary = map.countries.get(selected, {})
+	if profile.is_empty():
+		return
+	var p = map._geo_point(float(profile.get("lon", 0.0)), float(profile.get("lat", 0.0)))
+	if not get_rect().grow(60).has_point(p):
+		return
+	var pulse: float = 0.5 + 0.5 * sin(fx_time * 2.4)
+	# هاله چندلایه طلایی
+	for layer in range(3):
+		var radius = 22.0 + float(layer) * 14.0 + pulse * 8.0
+		var alpha = 0.20 - float(layer) * 0.05
+		draw_arc(p, radius, 0.0, TAU, 48, Color(1.0, 0.84, 0.35, alpha * (0.6 + pulse * 0.4)), 2.0, true)
+	# اشعه‌های نور
+	for ray in range(6):
+		var ang := fx_time * 0.8 + float(ray) * TAU / 6.0
+		var dir: Vector2 = Vector2(cos(ang), sin(ang))
+		var inner: Vector2 = p + dir * 26.0
+		var outer: Vector2 = p + dir * (40.0 + pulse * 10.0)
+		draw_line(inner, outer, Color(1.0, 0.90, 0.55, 0.16), 2.0, true)
 
 func _dash_flow(points: PackedVector2Array, color: Color, width: float, phase: float):
 	var dash := 10.0
