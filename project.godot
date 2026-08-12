@@ -22,6 +22,7 @@ boot_splash/bg_color=Color(0.05, 0.08, 0.15, 1)
 BalanceConfig="*res://scripts/core/balance_config.gd"
 WorldManager="*res://scripts/core/world_manager.gd"
 TechnologyManager="*res://scripts/core/technology_manager.gd"
+LeaderManager="*res://scripts/core/leader_manager.gd"
 ScenarioManager="*res://scripts/core/scenario_manager.gd"
 PolicyManager="*res://scripts/core/policy_manager.gd"
 AnalyticsManager="*res://scripts/core/analytics_manager.gd"
