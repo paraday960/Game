@@ -274,7 +274,7 @@ func can_action(state: Dictionary, target: String, action: String) -> Dictionary
 			if not _has_incoming_sanction(diplomacy, target): return {"valid": false, "reason": "تحریم ورودی از این کشور وجود ندارد"}
 	return {"valid": true, "reason": ""}
 
-func apply_action(state: Dictionary, target: String, action: String, tick: int) -> Dictionary:
+func apply_action(state: Dictionary, target: String, action: String, tick: int, goal: String = "reparations") -> Dictionary:
 	var check = can_action(state, target, action)
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
@@ -322,7 +322,8 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int) 
 			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) + 0.10, 0.0, 1.0)
 			events.append(_event("ultimatum_issued", target, "اولتیماتوم به %s ارسال شد - روابط به شدت تنش یافت" % get_country_name(target)))
 		"declare_war":
-			world["wars"][target] = {"target":target, "started_tick":tick, "progress":0.0, "player_losses":0, "enemy_losses":0}
+			world["wars"][target] = {"target":target, "started_tick":tick, "progress":0.0, "player_losses":0, "enemy_losses":0,
+				"goal": goal, "goal_scale": float(war_goal_scale(goal))}
 			diplomacy["relations"][target] = 0.0
 			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) + 0.12, 0.0, 1.0)
 			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.6)) - 0.04, 0.0, 1.0)
@@ -610,8 +611,9 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		state["economy"]["gdp"] *= 0.99994 # هزینه کمی بیشتر به خاطر جنگ عمیق
 		# هزینه‌ی واقعی جنگ: حدود ۰٫۵٪ GDP سالانه بر بدهی (جنگ مدرن گران‌تر)
 		state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.005 / 365.0
-		# خستگی جنگ با تلفات و طول جنگ
-		state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.005 + float(player_loss)/500000.0*0.01, 0.0, 1.0)
+		# خستگی جنگ با تلفات و طول جنگ (+ هدف الحاق: جنگ طاقت‌فرسا)
+		var goal_extra := 0.004 if str(war.get("goal", "reparations")) == "annexation" else 0.0
+		state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.005 + float(player_loss)/500000.0*0.01 + goal_extra, 0.0, 1.0)
 		enemy["military_power"] = max(10.0, float(enemy["military_power"]) - enemy_loss / 500000.0)
 		world["countries"][target] = enemy
 		if war["progress"] >= 100.0:
@@ -625,6 +627,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			state["economy"]["gdp"] = float(state["economy"].get("gdp", 1.0)) * 1.02
 			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.5)) + 0.04, 0.05, 0.95)
 			state["military"]["war_exhaustion"] = max(0.0, float(state["military"].get("war_exhaustion", 0.0)) - 0.20)
+			# نتیجه بر پایه هدف جنگی — هر هدف پیامد متفاوتی دارد
+			var goal_outcome := _apply_war_goal_victory(state, target, str(war.get("goal", "reparations")), war)
+			state = goal_outcome.state
+			events.append_array(goal_outcome.events)
 			events.append(_event("war_victory", target, "پیروزی در جنگ با %s؛ رهبر در قدرت باقی ماند و غنایم به خزانه رسید" % get_country_name(target)))
 		elif war["progress"] <= -100.0:
 			finished.append(target)
@@ -638,6 +644,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.03
 			state["economy"]["gdp"] = float(state["economy"].get("gdp", 1.0)) * 0.97
 			state["military"]["war_exhaustion"] = clamp(float(state["military"].get("war_exhaustion", 0.0)) + 0.10, 0.0, 1.0)
+			# جریمه بر پایه هدف جنگیِ پیروز (هر هدف پیامد متفاوتی دارد)
+			var defeat_outcome := _apply_war_goal_defeat(state, target, str(war.get("goal", "reparations")), war)
+			state = defeat_outcome.state
+			events.append_array(defeat_outcome.events)
 			events.append(_event("war_defeat", target, "شکست نظامی برابر %s؛ کشور آسیب دید اما رهبر برکنار نشد" % get_country_name(target)))
 		else:
 			world["wars"][target] = war
@@ -937,3 +947,104 @@ func _remove_treaty(diplomacy: Dictionary, treaty_type: String, target: String):
 
 func _event(type: String, target: String, message: String) -> Dictionary:
 	return {"type":type, "target":target, "country":get_country_name(target), "message":message}
+
+
+# ────────────────────────────────────────────────────────────────
+# اهداف جنگی: مقیاس و پیامدهای پیروزی/شکست بر پایه هدف
+# ────────────────────────────────────────────────────────────────
+func war_goal_scale(goal: String) -> float:
+	# مقیاس دشواری/بها: هر هدف جنگی «بهای» متفاوتی دارد
+	return {"reparations": 1.0, "annexation": 1.6, "humiliation": 0.8, "liberation": 0.7}.get(goal, 1.0)
+
+func get_war_goal_name(goal: String) -> String:
+	return {"reparations": "غرامت جنگی", "annexation": "الحاق و سلطه", "humiliation": "تحقیر راهبردی", "liberation": "آزادسازی"}.get(goal, goal)
+
+func _apply_war_goal_victory(state: Dictionary, target: String, goal: String, war: Dictionary) -> Dictionary:
+	var events: Array = []
+	var world: Dictionary = state.get("world", {})
+	var econ: Dictionary = state.get("economy", {})
+	var player_id := str(world.get("player_country", default_country))
+	var enemy: Dictionary = world.get("countries", {}).get(target, {})
+	var enemy_gdp := float(enemy.get("gdp", 1.0))
+	var leader: Dictionary = state.get("leader", {})
+	match goal:
+		"reparations":
+			# GDP کشورها در world به دلار خام است؛ غرامت = ۴٪ تولید ناخالص دشمن
+			var payout: float = enemy_gdp * 0.04
+			econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + payout
+			diplomacy_relations_add(state, target, -10.0)
+			events.append({"type": "war_reparations", "message": "%s غرامت جنگی معادل %s به خزانه کشور واریز کرد" % [get_country_name(target), PersianFormatter.format_money(payout)]})
+		"annexation":
+			if _is_neighbor_state(state, player_id, target):
+				# الحاق بخشی از خاک و توانایی‌ها
+				world["annexations"].append({"annexed": target, "by": player_id, "turn": int(war.get("ended_tick", 0)), "partial": true})
+				enemy["partial_annexed_by"] = player_id
+				var gain := enemy_gdp * 0.05
+				enemy["gdp"] = maxf(1.0, enemy_gdp * 0.95)
+				econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + gain * 0.02)
+				enemy["population"] = maxf(100000.0, float(enemy.get("population", 1.0)) * 0.94)
+				world["countries"][target] = enemy
+				events.append({"type": "war_annexation", "message": "بخشی از خاک %s ضمیمه کشور شد و توانایی‌های آن به کشور شما منتقل گردید" % get_country_name(target)})
+			else:
+				# بدون مرز: حاکم دست‌نشانده
+				world["puppets"].append({"puppet": target, "master": player_id, "turn": int(war.get("ended_tick", 0))})
+				enemy["puppet_master"] = player_id
+				world["countries"][target] = enemy
+				events.append({"type": "war_puppet", "message": "%s تحت حاکمیت دست‌نشانده کشور شما قرار گرفت" % get_country_name(target)})
+			leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 6.0, 0.0, 100.0)
+			state["leader"] = leader
+		"humiliation":
+			diplomacy_relations_add(state, target, -18.0)
+			state["diplomacy"]["influence"] = clamp(float(state["diplomacy"].get("influence", 40.0)) + 10.0, 0.0, 100.0)
+			events.append({"type": "war_humiliation", "message": "%s در برابر کشور شما تحقیر شد؛ نفوذ بین‌المللی کشور به‌شدت بالا رفت" % get_country_name(target)})
+		"liberation":
+			leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 8.0, 0.0, 100.0)
+			diplomacy_relations_add(state, target, 12.0)
+			state["diplomacy"]["influence"] = clamp(float(state["diplomacy"].get("influence", 40.0)) + 8.0, 0.0, 100.0)
+			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.5)) + 0.03, 0.05, 0.95)
+			events.append({"type": "war_liberation", "message": "پیروزی آزادی‌بخش، کشور را در جهان محبوب کرد و رهبر اعتبار بین‌المللی گرفت"})
+	state["economy"] = econ
+	state["world"] = world
+	return {"state": state, "events": events}
+
+func _apply_war_goal_defeat(state: Dictionary, target: String, goal: String, war: Dictionary) -> Dictionary:
+	var events: Array = []
+	var econ: Dictionary = state.get("economy", {})
+	var leader: Dictionary = state.get("leader", {})
+	var gdp := float(econ.get("gdp", 1.0))
+	match goal:
+		"annexation":
+			econ["national_debt"] = float(econ.get("national_debt", 0.0)) + gdp * 0.05
+			leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 4.0, 0.0, 100.0)
+			events.append({"type": "war_defeat_annexation", "message": "دشمنِ الحاق‌طلب پیروز شد؛ بدهی سنگینی بر کشور تحمیل و اعتبار رهبر در جهان خدشه‌دار شد"})
+		"reparations":
+			var payout := gdp * 0.03
+			econ["foreign_reserves"] = maxf(0.0, float(econ.get("foreign_reserves", 0.0)) - payout)
+			events.append({"type": "war_reparations_paid", "message": "کشور موظف به پرداخت غرامت جنگی به %s شد و ذخایر ارزی کاهش یافت" % get_country_name(target)})
+		"humiliation":
+			state["diplomacy"]["influence"] = clamp(float(state["diplomacy"].get("influence", 40.0)) - 8.0, 0.0, 100.0)
+			events.append({"type": "war_humiliation_suffered", "message": "شکست تحقیرآمیز، نفوذ دیپلماتیک کشور را به‌شدت کاهش داد"})
+		_:
+			events.append({"type": "war_defeat_terms", "message": "پایان جنگ با شرایط دشمن؛ کشور آسیب اقتصادی دید"})
+	state["economy"] = econ
+	state["leader"] = leader
+	return {"state": state, "events": events}
+
+func _is_neighbor_state(state: Dictionary, a: String, b: String) -> bool:
+	var profile_a: Dictionary = countries.get(a, {})
+	var profile_b: Dictionary = countries.get(b, {})
+	var lat_a := deg_to_rad(float(profile_a.get("lat", 0.0)))
+	var lon_a := deg_to_rad(float(profile_a.get("lon", 0.0)))
+	var lat_b := deg_to_rad(float(profile_b.get("lat", 0.0)))
+	var lon_b := deg_to_rad(float(profile_b.get("lon", 0.0)))
+	var dlat := lat_b - lat_a
+	var dlon := lon_b - lon_a
+	var h: float = pow(sin(dlat * 0.5), 2.0) + cos(lat_a) * cos(lat_b) * pow(sin(dlon * 0.5), 2.0)
+	var dist_deg: float = rad_to_deg(2.0 * atan2(sqrt(h), sqrt(max(0.0, 1.0 - h))))
+	return dist_deg <= 16.0
+
+func diplomacy_relations_add(state: Dictionary, target: String, delta: float):
+	var relations: Dictionary = state.get("diplomacy", {}).get("relations", {})
+	if relations.has(target):
+		relations[target] = clampf(float(relations[target]) + delta, 0.0, 100.0)
+		state["diplomacy"]["relations"] = relations
