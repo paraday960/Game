@@ -85,6 +85,15 @@ func _draw():
 		# هاله‌های روشن‌تر
 		if twinkle > 0.75:
 			draw_circle(px, float(star["r"]) * 2.4, Color(0.72, 0.86, 1.0, 0.05 * twinkle))
+	# ── شفق قطبی متحرک (aurora) — هاله‌های رنگی آرام در پس‌زمینه ──
+	for b in range(3):
+		var cx: float = size.x * (0.22 + 0.28 * sin(_bg_time * 0.07 + float(b) * 2.4) + float(b) * 0.16)
+		var cy: float = size.y * (0.10 + 0.05 * cos(_bg_time * 0.05 + float(b) * 1.7))
+		var hue_col: Color = [Color(0.12, 0.55, 0.70), Color(0.55, 0.35, 0.75), Color(0.85, 0.60, 0.25)][b]
+		for radius in range(300, 20, -20):
+			var alpha: float = (300.0 - float(radius)) / 300.0 * 0.016
+			alpha *= 0.75 + 0.25 * sin(_bg_time * 0.4 + float(b) * 2.0)
+			draw_circle(Vector2(cx, cy), float(radius), Color(hue_col.r, hue_col.g, hue_col.b, alpha))
 	# ── شهاب‌ها ──
 	for s in _shooting_stars:
 		var start := Vector2(float(s["x"]) * size.x, float(s["y"]) * size.y)
