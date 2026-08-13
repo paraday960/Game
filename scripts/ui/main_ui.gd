@@ -2849,6 +2849,7 @@ func _build_economy():
 	_build_tourism_card(st)
 	_build_retail_card(st)
 	_build_creative_card(st)
+	_build_supply_card(st)
 	_build_trade_policy_card(st)
 	_build_fdi_card(st)
 	_build_shadow_card(st)
@@ -5293,6 +5294,97 @@ func _on_sme(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("economy")
 
+func _build_supply_card(st: Dictionary):
+	var sp: Dictionary = st.get("supply_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("🚢 زنجیره تأمین و تدارکات")
+	_bar(card, "ذخایر راهبردی", float(sp.get("strategic_reserve", 0.35)))
+	_bar(card, "تنوع تأمین‌کننده", float(sp.get("diversification", 0.40)))
+	_bar(card, "ظرفیت داخلی", float(sp.get("domestic_capacity", 0.40)))
+	_bar(card, "اختلال زنجیره", float(sp.get("disruption", 0.20)))
+	_bar(card, "شاخص لجستیک", float(sp.get("logistics_index", 0.45)))
+	_row(card, "موجودی (روز)", PersianFormatter.to_persian_digits("%.0f" % float(sp.get("inventory_days", 60.0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["reserve", "🏭 ذخیره"], ["diversify", "🌐 تنوع"], ["domestic", "🏗️ داخلی"], ["rotation", "🔄 گردش"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_supply.bind(a[0]))
+		_mark_decision_button(btn, "supply:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "تقویت ذخایر هر ۵ نوبت. اختلال زنجیره تورم و کاهش تولید می‌آورد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_supply(action: String):
+	var cmd = GameCommandClass.create_supply_action(action)
+	var labels := {"reserve": "تقویت ذخایر راهبردی", "diversify": "تنوع تأمین‌کنندگان", "domestic": "تولید داخلی کلیدی", "rotation": "گردش موجودی"}
+	if _queue_decision(cmd, "🚢 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_care_card(st: Dictionary):
+	var cp: Dictionary = st.get("care_policy", {})
+	if cp.is_empty():
+		return
+	var card = _card("💗 اقتصاد مراقبت")
+	_bar(card, "بار مراقبت", float(cp.get("care_burden", 0.55)))
+	_bar(card, "سالمند care", float(cp.get("eldercare", 0.25)))
+	_bar(card, "مهدکودک", float(cp.get("childcare", 0.25)))
+	_bar(card, "مراقبت در منزل", float(cp.get("home_care", 0.20)))
+	_bar(card, "مشارکت زنان", float(cp.get("female_lfp", 0.35)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["eldercare", "🏥 سالمندان"], ["childcare", "🧸 مهدکودک"], ["homecare", "🏠 منزل"], ["leave", "🤱 مرخصی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_care.bind(a[0]))
+		_mark_decision_button(btn, "care:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "خدمات مراقبت رسمی بار زنان را کم و مشارکت نیروی کار را بالا می‌برد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_care(action: String):
+	var cmd = GameCommandClass.create_care_action(action)
+	var labels := {"eldercare": "مراکز سالمندان", "childcare": "توسعه مهدکودک", "homecare": "مراقبت در منزل", "leave": "مرخصی زایمان"}
+	if _queue_decision(cmd, "💗 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("population")
+
+func _build_science_card(st: Dictionary):
+	var sp: Dictionary = st.get("science_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("🔬 دیپلماسی علمی")
+	_bar(card, "جریان دانش", float(sp.get("knowledge_flow", 0.20)))
+	_bar(card, "آزمایشگاه مشترک", float(sp.get("joint_labs", 0.15)))
+	_bar(card, "بورس بین‌المللی", float(sp.get("scholarships", 0.25)))
+	_bar(card, "کنسرسیوم فناوری", float(sp.get("tech_consortium", 0.10)))
+	_bar(card, "جذب نخبگان", float(sp.get("brain_gain", 0.15)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["agreement", "📜 توافق"], ["lab", "🔬 آزمایشگاه"], ["scholarship", "🎓 بورس"], ["consortium", "🌐 کنسرسیوم"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_science.bind(a[0]))
+		_mark_decision_button(btn, "science:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "توافق علمی هر ۶ نوبت. آزمایشگاه مشترک به دیجیتال ۴+ نیاز دارد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_science(action: String):
+	var cmd = GameCommandClass.create_science_action(action)
+	var labels := {"agreement": "توافق علمی دوجانبه", "lab": "آزمایشگاه مشترک", "scholarship": "برنامه بورس", "consortium": "کنسرسیوم فناوری"}
+	if _queue_decision(cmd, "🔬 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -5418,6 +5510,7 @@ func _build_technology():
 
 	_build_research_card(state)
 	_build_startup_card(state)
+	_build_science_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
 	var unlocked_names: Array = []
@@ -5484,6 +5577,7 @@ func _build_population():
 	_build_housing_card(GameState.state)
 	_build_welfare_card(GameState.state)
 	_build_insurance_card(GameState.state)
+	_build_care_card(GameState.state)
 	_build_rural_card(GameState.state)
 	_build_sports_card(GameState.state)
 	_build_veterans_card(GameState.state)
@@ -7396,6 +7490,9 @@ func _command_queue_key(cmd) -> String:
 		"housing_action": return "housing:" + str(p.get("action", ""))
 		"startup_action": return "startup:" + str(p.get("action", ""))
 		"sme_action": return "sme:" + str(p.get("action", ""))
+		"supply_action": return "supply:" + str(p.get("action", ""))
+		"care_action": return "care:" + str(p.get("action", ""))
+		"science_action": return "science:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

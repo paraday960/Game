@@ -30,7 +30,8 @@ const SUPPORTED_COMMANDS = [
 	"prison_action", "statistics_action", "mining_action",
 	"waste_action", "insurance_action", "rural_action",
 	"judicial_reform_action", "election_action", "fuel_action",
-	"housing_action", "startup_action", "sme_action"
+	"housing_action", "startup_action", "sme_action",
+	"supply_action", "care_action", "science_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -670,6 +671,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "sme_action":
 			if not str(cmd.payload.get("action", "")) in ["redtape", "microcredit", "supplychain", "formalize"]:
 				return {"valid": false, "reason": "اقدام SME نامعتبر است"}
+		elif cmd.type == "supply_action":
+			if not str(cmd.payload.get("action", "")) in ["reserve", "diversify", "domestic", "rotation"]:
+				return {"valid": false, "reason": "اقدام زنجیره تأمین نامعتبر است"}
+		elif cmd.type == "care_action":
+			if not str(cmd.payload.get("action", "")) in ["eldercare", "childcare", "homecare", "leave"]:
+				return {"valid": false, "reason": "اقدام مراقبت نامعتبر است"}
+		elif cmd.type == "science_action":
+			if not str(cmd.payload.get("action", "")) in ["agreement", "lab", "scholarship", "consortium"]:
+				return {"valid": false, "reason": "اقدام علمی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1583,6 +1593,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in sme_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("sme_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "supply_action":
+		var supply_act := str(cmd.payload.get("action", ""))
+		var supply_result: Dictionary
+		match supply_act:
+			"reserve": supply_result = SupplyChainManager.build_reserve(snapshot, cmd.tick)
+			"diversify": supply_result = SupplyChainManager.diversify_suppliers(snapshot)
+			"domestic": supply_result = SupplyChainManager.build_domestic_capacity(snapshot)
+			_: supply_result = SupplyChainManager.rotate_stockpile(snapshot)
+		snapshot = supply_result.state
+		for ev in supply_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("supply_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "care_action":
+		var care_act := str(cmd.payload.get("action", ""))
+		var care_result: Dictionary
+		match care_act:
+			"eldercare": care_result = CareEconomyManager.eldercare_program(snapshot)
+			"childcare": care_result = CareEconomyManager.childcare_expansion(snapshot)
+			"homecare": care_result = CareEconomyManager.home_care_program(snapshot)
+			_: care_result = CareEconomyManager.paid_parental_leave(snapshot)
+		snapshot = care_result.state
+		for ev in care_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("care_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "science_action":
+		var science_act := str(cmd.payload.get("action", ""))
+		var science_result: Dictionary
+		match science_act:
+			"agreement": science_result = ScienceDiplomacyManager.science_agreement(snapshot, cmd.tick)
+			"lab": science_result = ScienceDiplomacyManager.joint_lab(snapshot)
+			"scholarship": science_result = ScienceDiplomacyManager.scholarship_program(snapshot)
+			_: science_result = ScienceDiplomacyManager.tech_consortium(snapshot)
+		snapshot = science_result.state
+		for ev in science_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("science_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1910,6 +1956,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = HousingManager.ensure(snapshot)
 	snapshot = StartupManager.ensure(snapshot)
 	snapshot = SmeManager.ensure(snapshot)
+	snapshot = SupplyChainManager.ensure(snapshot)
+	snapshot = CareEconomyManager.ensure(snapshot)
+	snapshot = ScienceDiplomacyManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2251,6 +2300,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var sme_result = SmeManager.simulate_month(snapshot, turn)
 	snapshot = sme_result.state
 	_collect_events(sme_result, "sme", snapshot, turn, generated_events, "sme_event")
+	var supply_result = SupplyChainManager.simulate_month(snapshot, turn)
+	snapshot = supply_result.state
+	_collect_events(supply_result, "supply", snapshot, turn, generated_events, "supply_event")
+	var care_result = CareEconomyManager.simulate_month(snapshot, turn)
+	snapshot = care_result.state
+	_collect_events(care_result, "care", snapshot, turn, generated_events, "care_event")
+	var science_result = ScienceDiplomacyManager.simulate_month(snapshot, turn)
+	snapshot = science_result.state
+	_collect_events(science_result, "science", snapshot, turn, generated_events, "science_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

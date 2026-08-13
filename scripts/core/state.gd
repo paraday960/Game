@@ -49,6 +49,9 @@ func init_default_state():
 		"housing_policy": {"social_supply": 0.20, "mortgage_access": 0.35, "renewal": 0.15, "property_tax": 0.20, "construction": 0.40, "last_social": -99, "price_index": 0.50, "bubble": 0.25, "rent_burden": 0.35, "home_ownership": 0.60, "vacancy": 0.10},
 		"startup_policy": {"accelerators": 0.20, "vc_funding": 0.15, "incubators": 0.25, "regulatory_sandbox": 0.10, "last_fund": -99, "startups": 100, "unicorns": 0, "innovation_rate": 0.20, "failure_rate": 0.50, "tech_exports": 0.10},
 		"sme_policy": {"ease_business": 0.35, "micro_credit": 0.30, "supply_chain": 0.25, "formalization": 0.30, "last_credit": -99, "sme_share": 0.40, "jobs": 12000000, "business_count": 1500000, "credit_gap": 0.45, "productivity": 0.35},
+		"supply_policy": {"strategic_reserve": 0.35, "diversification": 0.40, "domestic_capacity": 0.40, "stockpile_rotation": 0.30, "last_reserve": -99, "disruption": 0.20, "import_dependency": 0.45, "logistics_index": 0.45, "inventory_days": 60.0},
+		"care_policy": {"eldercare": 0.25, "childcare": 0.25, "home_care": 0.20, "paid_leave": 0.30, "care_workers": 0.25, "last_program": -99, "female_lfp": 0.35, "care_burden": 0.55, "informal_care": 0.70, "labor_force_gain": 0.0},
+		"science_policy": {"bilateral": 0.20, "joint_labs": 0.15, "scholarships": 0.25, "tech_consortium": 0.10, "last_agreement": -99, "knowledge_flow": 0.20, "brain_gain": 0.15, "co_publications": 0.10, "tech_absorption": 0.25},
 		"clock": {
 			"year": 2027,
 			"month": 1,
