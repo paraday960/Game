@@ -260,6 +260,18 @@ static func create_heritage_action(action: String):
 	# action: restore, register, festival, antiquities
 	return _self_script().new("heritage_action", {"action": action})
 
+static func create_transport_action(action: String):
+	# action: metro, brt, subsidy, fleet
+	return _self_script().new("transport_action", {"action": action})
+
+static func create_retail_action(action: String):
+	# action: price, protect, ecommerce, bazaar
+	return _self_script().new("retail_action", {"action": action})
+
+static func create_ethnicity_action(action: String):
+	# action: equal, autonomy, dialogue, festival
+	return _self_script().new("ethnicity_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
