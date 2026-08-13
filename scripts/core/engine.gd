@@ -37,7 +37,8 @@ const SUPPORTED_COMMANDS = [
 	"disaster_action", "livestock_action", "textile_action",
 	"basic_industry_action", "nation_brand_action", "ai_action",
 	"tax_action", "ev_action", "health_tourism_action",
-	"defense_industry_action", "knowledge_economy_action", "waste_mgmt_action"
+	"defense_industry_action", "knowledge_economy_action", "waste_mgmt_action",
+	"aerospace_action", "petrochemical_action", "pro_sports_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -740,6 +741,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "waste_mgmt_action":
 			if not str(cmd.payload.get("action", "")) in ["collection", "separation", "recycling", "wte", "landfill"]:
 				return {"valid": false, "reason": "اقدام پسماند نامعتبر است"}
+		elif cmd.type == "aerospace_action":
+			if not str(cmd.payload.get("action", "")) in ["launch", "factory", "sensing", "telecom", "rnd"]:
+				return {"valid": false, "reason": "اقدام هوافضا نامعتبر است"}
+		elif cmd.type == "petrochemical_action":
+			if not str(cmd.payload.get("action", "")) in ["feedstock", "plants", "downstream", "catalyst", "exports"]:
+				return {"valid": false, "reason": "اقدام پتروشیمی نامعتبر است"}
+		elif cmd.type == "pro_sports_action":
+			if not str(cmd.payload.get("action", "")) in ["leagues", "infrastructure", "events", "academy", "exports"]:
+				return {"valid": false, "reason": "اقدام اقتصاد ورزش نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1833,6 +1843,73 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in ai_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("ai_event", ev, cmd.tick, cmd.version)
+
+	elif cmd.type == "defense_industry_action":
+		var di_act := str(cmd.payload.get("action", ""))
+		var di_result: Dictionary
+		match di_act:
+			"production": di_result = DefenseIndustryManager.expand_production(snapshot)
+			"rnd": di_result = DefenseIndustryManager.invest_rnd(snapshot)
+			"maintenance": di_result = DefenseIndustryManager.improve_maintenance(snapshot)
+			"training": di_result = DefenseIndustryManager.train_personnel(snapshot)
+			_: di_result = DefenseIndustryManager.allow_exports(snapshot)
+		if di_result.get("success", false):
+			snapshot = DefenseIndustryManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "knowledge_economy_action":
+		var ke_act := str(cmd.payload.get("action", ""))
+		var ke_result: Dictionary
+		match ke_act:
+			"park": ke_result = KnowledgeEconomyManager.build_tech_park(snapshot)
+			"incubator": ke_result = KnowledgeEconomyManager.expand_incubator(snapshot)
+			"startup": ke_result = KnowledgeEconomyManager.support_startups(snapshot)
+			"commercialize": ke_result = KnowledgeEconomyManager.commercialize_research(snapshot)
+			_: ke_result = KnowledgeEconomyManager.attract_vc(snapshot)
+		if ke_result.get("success", false):
+			snapshot = KnowledgeEconomyManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "waste_mgmt_action":
+		var wm_act := str(cmd.payload.get("action", ""))
+		var wm_result: Dictionary
+		match wm_act:
+			"collection": wm_result = WasteManagementManager.expand_collection(snapshot)
+			"separation": wm_result = WasteManagementManager.source_separation(snapshot)
+			"recycling": wm_result = WasteManagementManager.build_recycling(snapshot)
+			"wte": wm_result = WasteManagementManager.build_wte(snapshot)
+			_: wm_result = WasteManagementManager.reduce_landfill(snapshot)
+		if wm_result.get("success", false):
+			snapshot = WasteManagementManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "aerospace_action":
+		var as_act := str(cmd.payload.get("action", ""))
+		var as_result: Dictionary
+		match as_act:
+			"launch": as_result = AerospaceManager.expand_launch(snapshot)
+			"factory": as_result = AerospaceManager.build_satellite_factory(snapshot)
+			"sensing": as_result = AerospaceManager.invest_remote_sensing(snapshot)
+			"telecom": as_result = AerospaceManager.invest_space_telecom(snapshot)
+			_: as_result = AerospaceManager.invest_rnd(snapshot)
+		if as_result.get("success", false):
+			snapshot = AerospaceManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "petrochemical_action":
+		var pe_act := str(cmd.payload.get("action", ""))
+		var pe_result: Dictionary
+		match pe_act:
+			"feedstock": pe_result = PetrochemicalManager.secure_feedstock(snapshot)
+			"plants": pe_result = PetrochemicalManager.build_plants(snapshot)
+			"downstream": pe_result = PetrochemicalManager.expand_downstream(snapshot)
+			"catalyst": pe_result = PetrochemicalManager.invest_catalyst(snapshot)
+			_: pe_result = PetrochemicalManager.boost_exports(snapshot)
+		if pe_result.get("success", false):
+			snapshot = PetrochemicalManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "pro_sports_action":
+		var ps_act := str(cmd.payload.get("action", ""))
+		var ps_result: Dictionary
+		match ps_act:
+			"leagues": ps_result = ProSportsManager.develop_leagues(snapshot)
+			"infrastructure": ps_result = ProSportsManager.build_infrastructure(snapshot)
+			"events": ps_result = ProSportsManager.host_events(snapshot)
+			"academy": ps_result = ProSportsManager.develop_academy(snapshot)
+			_: ps_result = ProSportsManager.boost_exports(snapshot)
+		if ps_result.get("success", false):
+			snapshot = ProSportsManager.simulate(snapshot, cmd.tick)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -2579,6 +2656,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var waste_mgmt_result = WasteManagementManager.simulate_month(snapshot, turn)
 	snapshot = waste_mgmt_result.state
 	_collect_events(waste_mgmt_result, "waste_mgmt", snapshot, turn, generated_events, "waste_mgmt_event")
+	var aerospace_result = AerospaceManager.simulate_month(snapshot, turn)
+	snapshot = aerospace_result.state
+	_collect_events(aerospace_result, "aerospace", snapshot, turn, generated_events, "aerospace_event")
+	var petrochemical_result = PetrochemicalManager.simulate_month(snapshot, turn)
+	snapshot = petrochemical_result.state
+	_collect_events(petrochemical_result, "petrochemical", snapshot, turn, generated_events, "petrochemical_event")
+	var pro_sports_result = ProSportsManager.simulate_month(snapshot, turn)
+	snapshot = pro_sports_result.state
+	_collect_events(pro_sports_result, "pro_sports", snapshot, turn, generated_events, "pro_sports_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

@@ -1,0 +1,63 @@
+extends Node
+# اقتصاد ورزش حرفه‌ای — لیگ‌های پولی، زیرساخت، میزبانی رویداد، آکادمی و صادرات صنعت ورزش.
+# کلید state جدا از sports_policy قدیمی: pro_sports_policy
+
+signal sports_industry_changed(index: float)
+
+var leagues: float = 0.20
+var infrastructure: float = 0.20
+var events: float = 0.10
+var youth_academy: float = 0.20
+var sports_exports: float = 0.05
+var industry_index: float = 0.0
+
+func reset():
+	leagues = 0.20; infrastructure = 0.20; events = 0.10
+	youth_academy = 0.20; sports_exports = 0.05; industry_index = 0.0
+
+func _ensure(state: Dictionary):
+	if not state.has("pro_sports_policy"):
+		state["pro_sports_policy"] = {
+			"leagues": leagues, "infrastructure": infrastructure, "events": events,
+			"academy": youth_academy, "exports": sports_exports, "index": industry_index,
+		}
+
+func get_policy(state: Dictionary) -> Dictionary:
+	_ensure(state); return state["pro_sports_policy"]
+
+func develop_leagues(state): _ensure(state); var p=state["pro_sports_policy"]; p["leagues"]=clampf(float(p["leagues"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func build_infrastructure(state):
+	_ensure(state); var p=state["pro_sports_policy"]
+	if float(state.get("economy",{}).get("gdp",0))<=0: return {"success":false,"reason":"اقتصاد فعالی وجود ندارد"}
+	p["infrastructure"]=clampf(float(p["infrastructure"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func host_events(state):
+	_ensure(state); var p=state["pro_sports_policy"]
+	if float(p["infrastructure"])<0.3: return {"success":false,"reason":"به زیرساخت ورزشی بیشتری نیاز است"}
+	p["events"]=clampf(float(p["events"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func develop_academy(state): _ensure(state); var p=state["pro_sports_policy"]; p["academy"]=clampf(float(p["academy"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func boost_exports(state): _ensure(state); var p=state["pro_sports_policy"]; p["exports"]=clampf(float(p["exports"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+
+func simulate(state: Dictionary, tick: int) -> Dictionary:
+	_ensure(state)
+	var p=state["pro_sports_policy"]
+	var econ=state.get("economy",{}); var gdp=float(econ.get("gdp",0))
+	var stability=float(state.get("politics",{}).get("stability",0.5))
+	var lg=float(p["leagues"]); var infra=float(p["infrastructure"]); var ev=float(p["events"]); var acad=float(p["academy"]); var exp=float(p["exports"])
+	var index=clampf(lg*0.25+infra*0.25+ev*0.20+acad*0.15+exp*0.15,0,1)*clampf(stability,0.3,1)
+	industry_index=index; p["index"]=index
+	if gdp>0:
+		econ["gdp"]=gdp+gdp*index*0.005
+		if ev>0 or exp>0: econ["foreign_reserves"]=float(econ.get("foreign_reserves",0))+gdp*(ev*0.001+exp*0.001)
+		state["economy"]=econ
+	var health=state.get("health",{})
+	if not health.is_empty(): health["quality"]=clampf(float(health.get("quality",0.5))+acad*0.0008,0,1); state["health"]=health
+	var tourism=state.get("tourism",{})
+	if tourism.has("tourists"): tourism["tourists"]=float(tourism.get("tourists",0))+ev*50.0; state["tourism"]=tourism
+	var culture=state.get("culture_policy",{})
+	if not culture.is_empty(): culture["soft_power"]=clampf(float(culture.get("soft_power",40))+ev*0.002,5,100); state["culture_policy"]=culture
+	emit_signal("sports_industry_changed", index)
+	state["pro_sports_policy"]=p
+	return state
+
+func simulate_month(state, tick): return simulate(state, tick)
+func get_summary(state): var p=get_policy(state); return {"leagues":p["leagues"],"infrastructure":p["infrastructure"],"events":p["events"],"academy":p["academy"],"exports":p["exports"],"index":p["index"]}

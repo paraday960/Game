@@ -2873,6 +2873,7 @@ func _build_economy():
 	_build_nation_brand_card(st)
 	_build_health_tourism_card(st)
 	_build_waste_management_card(st)
+	_build_pro_sports_card(st)
 	_build_supply_card(st)
 	_build_textile_card(st)
 	_build_tax_card(st)
@@ -5917,6 +5918,64 @@ func _on_waste_management(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("society")
 
+func _build_aerospace_card(st: Dictionary):
+	var ap: Dictionary = AerospaceManager.get_policy(st)
+	var card = _card("🛰️ هوافضا و ماهواره")
+	_bar(card, "توان پرتاب", float(ap.get("launch",0.05)))
+	_bar(card, "ساخت ماهواره", float(ap.get("manufacturing",0.10)))
+	_bar(card, "سنجش از دور", float(ap.get("remote_sensing",0.05)))
+	_bar(card, "مخابرات فضایی", float(ap.get("telecom",0.05)))
+	var lbl = Label.new(); lbl.text = "ماهواره‌ها در مدار: " + str(ap.get("satellites",0)); lbl.add_theme_font_size_override("font_size",14); lbl.modulate = ACCENT_GOLD; card.add_child(lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["launch","🚀 پرتاب"],["factory","🛰️ ساخت"],["sensing","📡 سنجش"],["telecom","📶 مخابرات"],["rnd","🔬 تحقیق"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_aerospace.bind(a[0])); _mark_decision_button(b, "as:"+a[0]); row.add_child(b)
+
+func _on_aerospace(action: String):
+	var cmd = GameCommandClass.create_aerospace_action(action)
+	var labels := {"launch":"گسترش توان پرتاب","factory":"ساخت کارخانه ماهواره","sensing":"سنجش از دور","telecom":"مخابرات فضایی","rnd":"تحقیق هوافضا"}
+	if _queue_decision(cmd, "🛰️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
+func _build_petrochemical_card(st: Dictionary):
+	var pp: Dictionary = PetrochemicalManager.get_policy(st)
+	var card = _card("🧪 پتروشیمی")
+	_bar(card, "تأمین خوراک", float(pp.get("feedstock",0.40)))
+	_bar(card, "مجتمع‌ها", float(pp.get("plants",0.20)))
+	_bar(card, "پایین‌دست", float(pp.get("downstream",0.15)))
+	_bar(card, "صادرات", float(pp.get("exports",0.10)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["feedstock","🛢️ خوراک"],["plants","🏭 مجتمع"],["downstream","🔗 پایین‌دست"],["catalyst","⚗️ کاتالیست"],["exports","📦 صادرات"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_petrochemical.bind(a[0])); _mark_decision_button(b, "petro:"+a[0]); row.add_child(b)
+
+func _on_petrochemical(action: String):
+	var cmd = GameCommandClass.create_petrochemical_action(action)
+	var labels := {"feedstock":"تأمین خوراک پتروشیمی","plants":"احداث مجتمع پتروشیمی","downstream":"توسعه پایین‌دست","catalyst":"تحقیق کاتالیست","exports":"افزایش صادرات"}
+	if _queue_decision(cmd, "🧪 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_pro_sports_card(st: Dictionary):
+	var sp: Dictionary = ProSportsManager.get_policy(st)
+	var card = _card("⚽ اقتصاد ورزش حرفه‌ای")
+	_bar(card, "لیگ‌های حرفه‌ای", float(sp.get("leagues",0.20)))
+	_bar(card, "زیرساخت", float(sp.get("infrastructure",0.20)))
+	_bar(card, "رویدادها", float(sp.get("events",0.10)))
+	_bar(card, "آکادمی جوانان", float(sp.get("academy",0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["leagues","🏆 لیگ"],["infrastructure","🏟️ زیرساخت"],["events","🎟️ رویداد"],["academy","🎓 آکادمی"],["exports","📤 صادرات"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_pro_sports.bind(a[0])); _mark_decision_button(b, "psports:"+a[0]); row.add_child(b)
+
+func _on_pro_sports(action: String):
+	var cmd = GameCommandClass.create_pro_sports_action(action)
+	var labels := {"leagues":"توسعه لیگ‌های حرفه‌ای","infrastructure":"ساخت زیرساخت ورزشی","events":"میزبانی رویداد","academy":"آکادمی جوانان","exports":"صادرات صنعت ورزش"}
+	if _queue_decision(cmd, "⚽ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("society")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -6046,6 +6105,7 @@ func _build_technology():
 	_build_science_card(state)
 	_build_ip_card(state)
 	_build_ai_card(state)
+	_build_aerospace_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
 	var unlocked_names: Array = []
@@ -6175,6 +6235,7 @@ func _build_military():
 	_build_arms_card(st)
 	_build_civil_defense_card(st)
 	_build_defense_industry_card(st)
+	_build_petrochemical_card(st)
 	_build_blue_economy_card(st)
 
 	var development: Dictionary = st.get("military_development", {})
