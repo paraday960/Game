@@ -296,6 +296,18 @@ static func create_blue_economy_action(action: String):
 	# action: port, fleet, fishery, patrol
 	return _self_script().new("blue_economy_action", {"action": action})
 
+static func create_creative_action(action: String):
+	# action: funding, education, platform, export
+	return _self_script().new("creative_action", {"action": action})
+
+static func create_demographic_action(action: String):
+	# action: pronatal, childcare, elderly, retraining
+	return _self_script().new("demographic_action", {"action": action})
+
+static func create_watershed_action(action: String):
+	# action: restore, forest, dust, wetlands
+	return _self_script().new("watershed_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort

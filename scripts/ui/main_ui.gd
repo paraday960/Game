@@ -2831,6 +2831,7 @@ func _build_economy():
 	_build_infrastructure_card(st)
 	_build_transport_card(st)
 	_build_water_card(st)
+	_build_watershed_card(st)
 	_build_climate_card(st)
 	_build_commodities_card(st)
 	_build_forex_card(st)
@@ -2839,6 +2840,7 @@ func _build_economy():
 	_build_agriculture_card(st)
 	_build_tourism_card(st)
 	_build_retail_card(st)
+	_build_creative_card(st)
 	_build_trade_policy_card(st)
 	_build_fdi_card(st)
 	_build_shadow_card(st)
@@ -4790,6 +4792,103 @@ func _on_blue_economy(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("military")
 
+func _build_creative_card(st: Dictionary):
+	var cp: Dictionary = st.get("creative_policy", {})
+	if cp.is_empty():
+		return
+	var card = _card("🎬 اقتصاد خلاق و صنایع فرهنگی")
+	_bar(card, "شاخص خلاقیت", float(cp.get("creative_index", 0.30)))
+	_bar(card, "صندوق حمایت", float(cp.get("funding", 0.25)))
+	_bar(card, "آموزش هنری", float(cp.get("education", 0.25)))
+	_bar(card, "پلتفرم توزیع", float(cp.get("platform", 0.15)))
+	_bar(card, "صادرات فرهنگی", float(cp.get("export", 0.15)))
+	_bar(card, "دزدی دریایی", float(cp.get("piracy", 0.45)))
+	_row(card, "اشتغال خلاق", PersianFormatter.to_persian_digits(str(int(cp.get("jobs", 0)))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["funding", "💰 صندوق"], ["education", "🎓 آموزش"], ["platform", "📱 پلتفرم"], ["export", "🌍 جشنواره"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_creative.bind(a[0]))
+		_mark_decision_button(btn, "creative:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "پلتفرم به دیجیتال ۸ نیاز دارد. اقتصاد خلاق اشتغال جوانان و قدرت نرم می‌سازد؛ جشنواره هر ۶ نوبت."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_creative(action: String):
+	var cmd = GameCommandClass.create_creative_action(action)
+	var labels := {"funding": "صندوق تولید فرهنگی", "education": "آموزش هنر و خلاقیت", "platform": "سکوی توزیع فرهنگی", "export": "جشنواره و صادرات فرهنگی"}
+	if _queue_decision(cmd, "🎬 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _build_demographic_card(st: Dictionary):
+	var dp: Dictionary = st.get("demographic_policy", {})
+	if dp.is_empty():
+		return
+	var card = _card("📊 تحول جمعیتی و پنجره جمعیت")
+	_bar(card, "پنجره جمعیت", float(dp.get("window", 0.55)))
+	_bar(card, "شاخص سالخوردگی", float(dp.get("aging_index", 0.25)))
+	_bar(card, "سلامت صندوق بازنشستگی", float(dp.get("pension_fund", 0.55)))
+	_bar(card, "مشوق فرزندآوری", float(dp.get("fertility_incentive", 0.20)))
+	_bar(card, "پوشش مهدکودک", float(dp.get("childcare", 0.25)))
+	_bar(card, "مراقبت سالمندی", float(dp.get("elderly_care", 0.20)))
+	_bar(card, "بازآموزی نیروی کار", float(dp.get("retraining", 0.15)))
+	_row(card, "میانگین سن", PersianFormatter.to_persian_digits("%.1f" % float(dp.get("median_age", 31.0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["pronatal", "👶 مشوق تولد"], ["childcare", "🧸 مهدکودک"], ["elderly", "👴 سالمندی"], ["retraining", "🎓 بازآموزی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_demographic.bind(a[0]))
+		_mark_decision_button(btn, "demographic:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "پنجره جمعیت موتور رشد است؛ با سالخوردگی صندوق زیر فشار می‌رود. مشوق فرزندآوری هر ۵ نوبت."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_demographic(action: String):
+	var cmd = GameCommandClass.create_demographic_action(action)
+	var labels := {"pronatal": "بسته حمایت از فرزندآوری", "childcare": "توسعه مهدکودک", "elderly": "مراقبت سالمندان", "retraining": "بازآموزی نیروی کار"}
+	if _queue_decision(cmd, "📊 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+func _build_watershed_card(st: Dictionary):
+	var wp: Dictionary = st.get("watershed_policy", {})
+	if wp.is_empty():
+		return
+	var card = _card("⛰️ آبخیزداری و مقابله با بیابان‌زایی")
+	_bar(card, "سلامت خاک", float(wp.get("soil_health", 0.55)))
+	_bar(card, "فرسایش خاک", float(wp.get("erosion_rate", 0.35)))
+	_bar(card, "پوشش جنگلی", float(wp.get("forest_cover", 0.20)))
+	_bar(card, "بیابان‌زایی", float(wp.get("desertification", 0.45)))
+	_bar(card, "شدت ریزگرد", float(wp.get("dust", 0.40)))
+	_bar(card, "احیای آبخیز", float(wp.get("restoration", 0.20)))
+	_bar(card, "مقابله با ریزگرد", float(wp.get("dust_control", 0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["restore", "⛰️ آبخیزداری"], ["forest", "🌲 جنگل‌کاری"], ["dust", "💨 ضد ریزگرد"], ["wetlands", "🦩 تا‌لاب"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_watershed.bind(a[0]))
+		_mark_decision_button(btn, "watershed:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "آبخیزداری هر ۶ نوبت. فرسایش خاک محصول را می‌کاهد، ریزگرد سلامت و حمل‌ونقل را تخریب می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_watershed(action: String):
+	var cmd = GameCommandClass.create_watershed_action(action)
+	var labels := {"restore": "احیای آبخیز و پخش سیلاب", "forest": "جنگل‌کاری و احیای مرتع", "dust": "مقابله با کانون ریزگرد", "wetlands": "احیای تا‌لاب‌ها"}
+	if _queue_decision(cmd, "⛰️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -4974,6 +5073,7 @@ func _build_population():
 	_build_labor_card(GameState.state)
 	_build_epidemic_card(GameState.state)
 	_build_migration_card(GameState.state)
+	_build_demographic_card(GameState.state)
 	_build_culture_card(GameState.state)
 	_build_urban_card(GameState.state)
 	_build_welfare_card(GameState.state)
@@ -6873,6 +6973,9 @@ func _command_queue_key(cmd) -> String:
 		"diaspora_action": return "diaspora:" + str(p.get("action", ""))
 		"civil_defense_action": return "civil_defense:" + str(p.get("action", ""))
 		"blue_economy_action": return "blue_economy:" + str(p.get("action", ""))
+		"creative_action": return "creative:" + str(p.get("action", ""))
+		"demographic_action": return "demographic:" + str(p.get("action", ""))
+		"watershed_action": return "watershed:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

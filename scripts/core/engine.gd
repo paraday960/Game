@@ -25,7 +25,8 @@ const SUPPORTED_COMMANDS = [
 	"dilemma_resolve", "stock_action", "veterans_action", "heritage_action",
 	"transport_action", "retail_action", "ethnicity_action",
 	"water_action", "research_action", "civic_action",
-	"diaspora_action", "civil_defense_action", "blue_economy_action"
+	"diaspora_action", "civil_defense_action", "blue_economy_action",
+	"creative_action", "demographic_action", "watershed_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -618,6 +619,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "blue_economy_action":
 			if not str(cmd.payload.get("action", "")) in ["port", "fleet", "fishery", "patrol"]:
 				return {"valid": false, "reason": "اقدام اقتصاد دریایی نامعتبر است"}
+		elif cmd.type == "creative_action":
+			if not str(cmd.payload.get("action", "")) in ["funding", "education", "platform", "export"]:
+				return {"valid": false, "reason": "اقدام اقتصاد خلاق نامعتبر است"}
+		elif cmd.type == "demographic_action":
+			if not str(cmd.payload.get("action", "")) in ["pronatal", "childcare", "elderly", "retraining"]:
+				return {"valid": false, "reason": "اقدام جمعیتی نامعتبر است"}
+		elif cmd.type == "watershed_action":
+			if not str(cmd.payload.get("action", "")) in ["restore", "forest", "dust", "wetlands"]:
+				return {"valid": false, "reason": "اقدام آبخیزداری نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1351,6 +1361,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in blue_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("blue_economy_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "creative_action":
+		var creative_act := str(cmd.payload.get("action", ""))
+		var creative_result: Dictionary
+		match creative_act:
+			"funding": creative_result = CreativeManager.increase_funding(snapshot)
+			"education": creative_result = CreativeManager.creative_education(snapshot)
+			"platform": creative_result = CreativeManager.build_platform(snapshot)
+			_: creative_result = CreativeManager.cultural_export(snapshot, cmd.tick)
+		snapshot = creative_result.state
+		for ev in creative_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("creative_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "demographic_action":
+		var demo_act := str(cmd.payload.get("action", ""))
+		var demo_result: Dictionary
+		match demo_act:
+			"pronatal": demo_result = DemographicManager.pro_natal_package(snapshot, cmd.tick)
+			"childcare": demo_result = DemographicManager.expand_childcare(snapshot)
+			"elderly": demo_result = DemographicManager.expand_elderly_care(snapshot)
+			_: demo_result = DemographicManager.retraining_program(snapshot)
+		snapshot = demo_result.state
+		for ev in demo_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("demographic_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "watershed_action":
+		var water_shed_act := str(cmd.payload.get("action", ""))
+		var water_shed_result: Dictionary
+		match water_shed_act:
+			"restore": water_shed_result = WatershedManager.restore_watershed(snapshot, cmd.tick)
+			"forest": water_shed_result = WatershedManager.reforest_land(snapshot)
+			"dust": water_shed_result = WatershedManager.control_dust(snapshot)
+			_: water_shed_result = WatershedManager.restore_wetlands(snapshot)
+		snapshot = water_shed_result.state
+		for ev in water_shed_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("watershed_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1663,6 +1709,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = DiasporaManager.ensure(snapshot)
 	snapshot = CivilDefenseManager.ensure(snapshot)
 	snapshot = BlueEconomyManager.ensure(snapshot)
+	snapshot = CreativeManager.ensure(snapshot)
+	snapshot = DemographicManager.ensure(snapshot)
+	snapshot = WatershedManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1947,6 +1996,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var blue_economy_result = BlueEconomyManager.simulate_month(snapshot, turn)
 	snapshot = blue_economy_result.state
 	_collect_events(blue_economy_result, "blue_economy", snapshot, turn, generated_events, "blue_economy_event")
+	# اقتصاد خلاق: سینما، موسیقی، بازی، صنایع فرهنگی و صادرات فرهنگی
+	var creative_result = CreativeManager.simulate_month(snapshot, turn)
+	snapshot = creative_result.state
+	_collect_events(creative_result, "creative", snapshot, turn, generated_events, "creative_event")
+	# تحول جمعیتی: پنجره جمعیت، سالخوردگی، صندوق بازنشستگی و باروری
+	var demographic_result = DemographicManager.simulate_month(snapshot, turn)
+	snapshot = demographic_result.state
+	_collect_events(demographic_result, "demographic", snapshot, turn, generated_events, "demographic_event")
+	# آبخیزداری: فرسایش، بیابان‌زایی، ریزگرد، تا‌لاب‌ها و امنیت خاک
+	var watershed_result = WatershedManager.simulate_month(snapshot, turn)
+	snapshot = watershed_result.state
+	_collect_events(watershed_result, "watershed", snapshot, turn, generated_events, "watershed_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

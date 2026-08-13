@@ -33,6 +33,9 @@ func init_default_state():
 		"diaspora_policy": {"engagement": 0.35, "networks": 0.25, "public_diplomacy": 0.20, "return_incentive": 0.15, "last_summit": -99, "remittance_b": 12.0, "soft_power_boost": 0.0, "trust": 0.45},
 		"civil_defense_policy": {"hardening": 0.25, "redundancy": 0.20, "shelters": 0.20, "strategic_stock": 0.30, "drills": 0.20, "last_drill": -99, "resilience_index": 0.30, "last_hardening": -99, "civilian_protection": 0.30},
 		"blue_economy_policy": {"port_capacity": 0.40, "merchant_fleet": 0.30, "sustainable_fisheries": 0.35, "coast_guard": 0.30, "shipbuilding": 0.20, "last_port": -99, "last_fleet": -99, "last_patrol": -99, "blue_gdp": 0.0, "container_throughput": 0.0},
+		"creative_policy": {"funding": 0.25, "education": 0.25, "platform": 0.15, "export": 0.15, "cinema": 0.35, "music": 0.40, "games": 0.15, "crafts": 0.45, "last_festival": -99, "creative_gdp": 0.0, "jobs": 0, "creative_index": 0.30, "piracy": 0.45},
+		"demographic_policy": {"fertility_incentive": 0.20, "childcare": 0.25, "elderly_care": 0.20, "retraining": 0.15, "last_pro_natal": -99, "last_pension": -99, "window": 0.55, "aging_index": 0.25, "pension_fund": 0.55, "dependency_ratio": 0.45, "median_age": 31.0},
+		"watershed_policy": {"restoration": 0.20, "check_dams": 0.15, "forestry": 0.25, "dust_control": 0.20, "wetlands": 0.20, "last_restoration": -99, "soil_health": 0.55, "desertification": 0.45, "dust": 0.40, "forest_cover": 0.20, "erosion_rate": 0.35},
 		"clock": {
 			"year": 2027,
 			"month": 1,
