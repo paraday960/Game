@@ -363,9 +363,36 @@ func get_pending_commands() -> Array:
 func broadcast_state(state: Dictionary, version: int, tick: int):
 	if mode != NetworkMode.HOST or peers.is_empty():
 		return
-	var payload = JSON.stringify(state)
-	var checksum = payload.sha256_text()
-	rpc("_receive_state_snapshot", payload, checksum, version, tick)
+	var packed := _pack_state(state)
+	rpc("_receive_state_snapshot", packed[0], packed[1], version, tick)
+
+# ── فشرده‌سازی Snapshot: state ماه‌ها رشد می‌کند (چند مگابایت JSON)؛
+# بسته فشرده با DEFLATE تا ~۹۰٪ کوچک‌تر روی شبکه موبایل می‌رود. ──
+const SNAPSHOT_MAX_BYTES := 64 * 1024 * 1024
+
+func _pack_state(state: Dictionary) -> Array:
+	var payload := JSON.stringify(state)
+	var checksum := payload.sha256_text()
+	var compressed := payload.to_utf8_buffer().compress(FileAccess.COMPRESSION_DEFLATE)
+	return [compressed, checksum]
+
+func _unpack_state(data: PackedByteArray, checksum: String) -> Dictionary:
+	if data.is_empty() or data.size() > SNAPSHOT_MAX_BYTES:
+		_error("Snapshot دریافتی اندازه نامعتبری دارد")
+		return {}
+	var decompressed := data.decompress(SNAPSHOT_MAX_BYTES, FileAccess.COMPRESSION_DEFLATE)
+	if decompressed.is_empty():
+		_error("Snapshot دریافتی بازنشدنی است")
+		return {}
+	var text := decompressed.get_string_from_utf8()
+	if text.sha256_text() != checksum:
+		_error("صحت Snapshot دریافتی تأیید نشد")
+		return {}
+	var state = JSON.parse_string(text)
+	if not state is Dictionary:
+		_error("Snapshot دریافتی قابل خواندن نیست")
+		return {}
+	return state
 
 func get_peers_count() -> int:
 	return peers.size() + 1
@@ -505,10 +532,9 @@ func _campaign_join_rejected(reason:String):
 	_error("ورود به کمپین رد شد: "+reason)
 
 @rpc("authority","call_remote","reliable")
-func _receive_campaign_snapshot(payload:String,checksum:String,version:int,tick:int):
-	if payload.sha256_text()!=checksum:return _error("صحت Snapshot کشور تأیید نشد")
-	var state=JSON.parse_string(payload)
-	if not state is Dictionary:return _error("Snapshot کشور نامعتبر است")
+func _receive_campaign_snapshot(data:PackedByteArray,checksum:String,version:int,tick:int):
+	var state=_unpack_state(data,checksum)
+	if state.is_empty():return
 	emit_signal("state_snapshot_received",state,version,tick)
 
 func _broadcast_lobby():
@@ -518,9 +544,10 @@ func _broadcast_lobby():
 func _broadcast_campaign_states():
 	if not is_host:return
 	for peer_id in MultiplayerCampaignManager.peer_registry.keys():
-		var state=MultiplayerCampaignManager.get_state_for_peer(str(peer_id));var payload=JSON.stringify(state);var checksum=payload.sha256_text()
+		var state=MultiplayerCampaignManager.get_state_for_peer(str(peer_id))
+		var packed=_pack_state(state)
 		if str(peer_id)==host_id:emit_signal("state_snapshot_received",state,int(state.get("version",0)),int(state.get("tick",0)))
-		elif int(peer_id)>0:rpc_id(int(peer_id),"_receive_campaign_snapshot",payload,checksum,int(state.get("version",0)),int(state.get("tick",0)))
+		elif int(peer_id)>0:rpc_id(int(peer_id),"_receive_campaign_snapshot",packed[0],packed[1],int(state.get("version",0)),int(state.get("tick",0)))
 
 @rpc("any_peer", "call_remote", "reliable")
 func _receive_client_command(data: Dictionary):
@@ -547,18 +574,11 @@ func _receive_client_command(data: Dictionary):
 	emit_signal("command_received", cmd)
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_state_snapshot(payload: String, checksum: String, version: int, tick: int):
+func _receive_state_snapshot(data: PackedByteArray, checksum: String, version: int, tick: int):
 	if mode != NetworkMode.CLIENT:
 		return
-	if payload.length() > 5_000_000:
-		_error("Snapshot دریافتی بیش از حد بزرگ است")
-		return
-	if payload.sha256_text() != checksum:
-		_error("صحت Snapshot دریافتی تأیید نشد")
-		return
-	var state = JSON.parse_string(payload)
-	if not state is Dictionary:
-		_error("Snapshot دریافتی قابل خواندن نیست")
+	var state := _unpack_state(data, checksum)
+	if state.is_empty():
 		return
 	if int(state.get("version", -1)) != version or int(state.get("tick", -1)) != tick:
 		_error("نسخه Snapshot با بسته شبکه سازگار نیست")

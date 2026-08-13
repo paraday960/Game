@@ -92,13 +92,16 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 
 	# توان پرتاب و ساخت، احتمال پرتاب موفق را تعیین می‌کند
 	var launch_prob: float = clampf(launch * 0.5 + mfg * 0.3 + rnd * 0.2, 0.0, 0.95)
-	# هر ۳ نوبت یک بار شانس پرتاب
+	# هر ۳ نوبت یک بار شانس پرتاب — شانس دترمینستیک (ضد Desync در چندنفره)
+	# و شمارش ماهواره‌ها از state خوانده می‌شود (نه فیلد نمونه منیجر) تا بین
+	# کشورهای کمپین چندنفره نشت نکند.
+	var sat_count: int = int(p.get("satellites", 0))
 	var fmod: int = tick % 3
-	if fmod == 0 and launch_prob > 0.15 and randf() < launch_prob * 0.4:
-		satellites_in_orbit += 1
-	var sat_count: int = satellites_in_orbit
+	if fmod == 0 and launch_prob > 0.15 and Deterministic.next_float() < launch_prob * 0.4:
+		sat_count += 1
 	p["satellites"] = sat_count
 	p["last_tick"] = tick
+	satellites_in_orbit = sat_count
 
 	if gdp > 0.0:
 		# درآمد از سرویس‌های ماهواره‌ای (مخابرات + سنجش)

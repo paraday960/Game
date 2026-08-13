@@ -39,6 +39,7 @@ func _ensure_state(state: Dictionary):
 			"digital": digital_invoicing,
 			"brackets": tax_brackets,
 			"revenue": total_revenue,
+			"revenue_to_gdp": revenue_to_gdp,
 			"last_tick": last_tick,
 		}
 
@@ -111,8 +112,9 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	revenue *= bracket_bonus
 
 	p["revenue"] = revenue
+	p["revenue_to_gdp"] = revenue / gdp if gdp > 0.0 else 0.0
 	p["last_tick"] = tick
-	revenue_to_gdp = revenue / gdp if gdp > 0.0 else 0.0
+	revenue_to_gdp = float(p["revenue_to_gdp"])
 	state["tax_policy"] = p
 
 	# درآمد به بودجه دولت تزریق می‌شود (اگر کلید بودجه وجود داشت)
@@ -135,7 +137,7 @@ func get_summary(state: Dictionary) -> Dictionary:
 		"digital": p["digital"],
 		"brackets": p["brackets"],
 		"revenue": p.get("revenue", 0.0),
-		"revenue_to_gdp": revenue_to_gdp,
+		"revenue_to_gdp": float(p.get("revenue_to_gdp", 0.0)),
 	}
 
 # سازگاری با چرخه‌ی ماهانه‌ی GameEngine
