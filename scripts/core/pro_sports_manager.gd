@@ -59,5 +59,8 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	state["pro_sports_policy"]=p
 	return state
 
-func simulate_month(state, tick): return simulate(state, tick)
+func simulate_month(state: Dictionary, tick: int) -> Dictionary:
+	# قرارداد مشترک چرخه ماهانه موتور: خروجی همیشه {state, events} است؛
+	# simulate خام state را برمی‌گرداند (سازگار با تست‌ها) پس اینجا بسته‌بندی می‌شود.
+	return {"state": simulate(state, tick), "events": []}
 func get_summary(state): var p=get_policy(state); return {"leagues":p["leagues"],"infrastructure":p["infrastructure"],"events":p["events"],"academy":p["academy"],"exports":p["exports"],"index":p["index"]}

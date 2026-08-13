@@ -23,8 +23,8 @@ func reset():
 	satellites_in_orbit = 0
 
 func _ensure(state: Dictionary):
-	if not state.has("space_policy"):
-		state["space_policy"] = {
+	if not state.has("aerospace_policy"):
+		state["aerospace_policy"] = {
 			"launch": launch_capacity,
 			"manufacturing": satellite_manufacturing,
 			"remote_sensing": remote_sensing,
@@ -36,49 +36,49 @@ func _ensure(state: Dictionary):
 
 func get_policy(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	return state["space_policy"]
+	return state["aerospace_policy"]
 
 func expand_launch(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["space_policy"]
+	var p: Dictionary = state["aerospace_policy"]
 	var tech: float = float(state.get("technology", {}).get("branches", {}).get("aerospace", 0.0)) if state.get("technology",{}).get("branches",{}).has("aerospace") else float(state.get("ai_policy",{}).get("adoption",0.1))
 	if tech < 0.25:
 		return {"success": false, "reason": "به فناوری فضایی بالاتری نیاز است"}
 	p["launch"] = clampf(float(p["launch"]) + 0.10, 0.0, 1.0)
-	state["space_policy"] = p
+	state["aerospace_policy"] = p
 	return {"success": true}
 
 func build_satellite_factory(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["space_policy"]
+	var p: Dictionary = state["aerospace_policy"]
 	p["manufacturing"] = clampf(float(p["manufacturing"]) + 0.12, 0.0, 1.0)
-	state["space_policy"] = p
+	state["aerospace_policy"] = p
 	return {"success": true}
 
 func invest_remote_sensing(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["space_policy"]
+	var p: Dictionary = state["aerospace_policy"]
 	p["remote_sensing"] = clampf(float(p["remote_sensing"]) + 0.12, 0.0, 1.0)
-	state["space_policy"] = p
+	state["aerospace_policy"] = p
 	return {"success": true}
 
 func invest_space_telecom(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["space_policy"]
+	var p: Dictionary = state["aerospace_policy"]
 	p["telecom"] = clampf(float(p["telecom"]) + 0.12, 0.0, 1.0)
-	state["space_policy"] = p
+	state["aerospace_policy"] = p
 	return {"success": true}
 
 func invest_rnd(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["space_policy"]
+	var p: Dictionary = state["aerospace_policy"]
 	p["rnd"] = clampf(float(p["rnd"]) + 0.12, 0.0, 1.0)
-	state["space_policy"] = p
+	state["aerospace_policy"] = p
 	return {"success": true}
 
 func simulate(state: Dictionary, tick: int) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["space_policy"]
+	var p: Dictionary = state["aerospace_policy"]
 	var economy: Dictionary = state.get("economy", {})
 	var gdp: float = float(economy.get("gdp", 0.0))
 	var military: Dictionary = state.get("military", {})
@@ -120,11 +120,13 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		state["diplomacy"] = dip
 
 	emit_signal("satellite_count_changed", sat_count)
-	state["space_policy"] = p
+	state["aerospace_policy"] = p
 	return state
 
 func simulate_month(state: Dictionary, tick: int) -> Dictionary:
-	return simulate(state, tick)
+	# قرارداد مشترک چرخه ماهانه موتور: خروجی همیشه {state, events} است؛
+	# simulate خام state را برمی‌گرداند (سازگار با تست‌ها) پس اینجا بسته‌بندی می‌شود.
+	return {"state": simulate(state, tick), "events": []}
 
 func get_summary(state: Dictionary) -> Dictionary:
 	var p = get_policy(state)

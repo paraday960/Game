@@ -117,7 +117,9 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	return state
 
 func simulate_month(state: Dictionary, tick: int) -> Dictionary:
-	return simulate(state, tick)
+	# قرارداد مشترک چرخه ماهانه موتور: خروجی همیشه {state, events} است؛
+	# simulate خام state را برمی‌گرداند (سازگار با تست‌ها) پس اینجا بسته‌بندی می‌شود.
+	return {"state": simulate(state, tick), "events": []}
 
 func get_summary(state: Dictionary) -> Dictionary:
 	var p = get_policy(state)
