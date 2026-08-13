@@ -35,7 +35,8 @@ const SUPPORTED_COMMANDS = [
 	"downstream_action", "higher_ed_action", "food_chain_action",
 	"pharma_action", "ip_action", "transit_action",
 	"disaster_action", "livestock_action", "textile_action",
-	"basic_industry_action", "nation_brand_action", "ai_action"
+	"basic_industry_action", "nation_brand_action", "ai_action",
+	"tax_action", "ev_action", "health_tourism_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -720,6 +721,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "ai_action":
 			if not str(cmd.payload.get("action", "")) in ["adopt", "robotics", "reskill", "datainfra"]:
 				return {"valid": false, "reason": "اقدام هوش مصنوعی نامعتبر است"}
+		elif cmd.type == "tax_action":
+			if not str(cmd.payload.get("action", "")) in ["income", "corporate", "vat", "wealth", "compliance", "digital", "bracket"]:
+				return {"valid": false, "reason": "اقدام مالیاتی نامعتبر است"}
+		elif cmd.type == "ev_action":
+			if not str(cmd.payload.get("action", "")) in ["battery", "research", "production", "charging", "recycling"]:
+				return {"valid": false, "reason": "اقدام خودرو/باطری نامعتبر است"}
+		elif cmd.type == "health_tourism_action":
+			if not str(cmd.payload.get("action", "")) in ["hospital", "quality", "wellness", "visa", "accreditation", "marketing"]:
+				return {"valid": false, "reason": "اقدام گردشگری سلامت نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -2541,6 +2551,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var ai_result = AiIndustryManager.simulate_month(snapshot, turn)
 	snapshot = ai_result.state
 	_collect_events(ai_result, "ai", snapshot, turn, generated_events, "ai_event")
+	var tax_result = TaxManager.simulate_month(snapshot, turn)
+	snapshot = tax_result.state
+	_collect_events(tax_result, "tax", snapshot, turn, generated_events, "tax_event")
+	var ev_result = EvIndustryManager.simulate_month(snapshot, turn)
+	snapshot = ev_result.state
+	_collect_events(ev_result, "ev_industry", snapshot, turn, generated_events, "ev_industry_event")
+	var health_tourism_result = HealthTourismManager.simulate_month(snapshot, turn)
+	snapshot = health_tourism_result.state
+	_collect_events(health_tourism_result, "health_tourism", snapshot, turn, generated_events, "health_tourism_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

@@ -85,6 +85,9 @@ var chat_panel: PanelContainer
 var chat_log: RichTextLabel
 var chat_input: LineEdit
 var chat_dock_btn: Button
+var tax_vat_slider: HSlider
+var ev_charge_bar: ProgressBar
+var ht_quality_bar: ProgressBar
 
 # ── سیستم طراحی «اتاق فرمان» — الهام از HOI4 / EU4 / Power & Revolution ──
 const ACCENT_GOLD = Color(0.93, 0.74, 0.33)
@@ -2865,8 +2868,11 @@ func _build_economy():
 	_build_retail_card(st)
 	_build_creative_card(st)
 	_build_nation_brand_card(st)
+	_build_health_tourism_card(st)
 	_build_supply_card(st)
 	_build_textile_card(st)
+	_build_tax_card(st)
+	_build_ev_card(st)
 	_build_trade_policy_card(st)
 	_build_fdi_card(st)
 	_build_shadow_card(st)
@@ -5769,6 +5775,82 @@ func _on_ai(action: String):
 	if _queue_decision(cmd, "🤖 " + labels.get(action, action)):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("technology")
+
+func _build_tax_card(st: Dictionary):
+	var tp: Dictionary = TaxManager.get_policy(st)
+	var card = _card("💰 نظام مالیاتی")
+	_bar(card, "پایبندی مالیاتی", float(tp.get("compliance", 0.65)))
+	_bar(card, "صورتحساب دیجیتال", float(tp.get("digital", 0.20)))
+	for row in [["income","مالیات بر درآمد"],["corporate","مالیات شرکت"],["vat","مالیات بر ارزش افزوده"],["wealth","مالیات بر ثروت"]]:
+		var r = HBoxContainer.new(); r.add_theme_constant_override("separation", 4); card.add_child(r)
+		var lbl = Label.new(); lbl.text = row[1]; lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; lbl.add_theme_font_size_override("font_size",13); r.add_child(lbl)
+		var val = Label.new(); val.text = "%.0f%%" % (float(tp.get("rates",{}).get(row[0],0))*100.0); val.custom_minimum_size = Vector2(50,0); val.add_theme_font_size_override("font_size",13); r.add_child(val)
+		var up = Button.new(); up.text = "＋"; up.custom_minimum_size = Vector2(34,30); up.add_theme_font_size_override("font_size",14)
+		up.pressed.connect(FeedbackManager.play_click); up.pressed.connect(_on_tax_adjust.bind(row[0], 0.02)); r.add_child(up)
+		var down = Button.new(); down.text = "－"; down.custom_minimum_size = Vector2(34,30); down.add_theme_font_size_override("font_size",14)
+		down.pressed.connect(FeedbackManager.play_click); down.pressed.connect(_on_tax_adjust.bind(row[0], -0.02)); r.add_child(down)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	_mark_decision_button(_mk_btn(row, "🧾 صورتحساب دیجیتال", Vector2(0,34), _on_tax_action.bind("digital")), "tax:digital")
+	_mark_decision_button(_mk_btn(row, "🔍 بهبود پایبندی", Vector2(0,34), _on_tax_action.bind("compliance")), "tax:compliance")
+	_mark_decision_button(_mk_btn(row, "📊 پلکان مالیاتی", Vector2(0,34), _on_tax_action.bind("bracket")), "tax:bracket")
+	var hint = Label.new(); hint.text = "افزایش زیاد نرخ، فرار مالیاتی و کاهش فعالیت را در پی دارد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.add_theme_font_size_override("font_size",14); hint.modulate = TEXT_FAINT; card.add_child(hint)
+
+func _on_tax_adjust(tax_type: String, delta: float):
+	var st = GameState.state
+	var cur = float(TaxManager.get_policy(st)["rates"].get(tax_type, 0.0))
+	var target = clampf(cur + delta, 0.0, 0.45)
+	var cmd = GameCommandClass.create_tax_action(tax_type, target)
+	if _queue_decision(cmd, "💰 تنظیم %s به %.0f%%" % [tax_type, target*100.0]):
+		_toast("نرخ ثبت شد — با پایان نوبت اعمال می‌شود")
+		_refresh_once_buttons()
+
+func _on_tax_action(action: String):
+	var cmd = GameCommandClass.create_tax_action(action, 0.0)
+	var labels := {"digital":"استقرار صورتحساب دیجیتال","compliance":"بهبود پایبندی مالیاتی","bracket":"افزودن پلکان مالیاتی"}
+	if _queue_decision(cmd, "💰 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_ev_card(st: Dictionary):
+	var ep: Dictionary = EvIndustryManager.get_policy(st)
+	var card = _card("🔋 خودرو برقی و باطری")
+	_bar(card, "ظرفیت باطری", float(ep.get("battery_capacity",0.15)))
+	_bar(card, "تحقیق باطری", float(ep.get("battery_research",0.10)))
+	_bar(card, "تولید خودرو", float(ep.get("ev_production",0.05)))
+	_bar(card, "ایستگاه شارژ", float(ep.get("charging",0.05)))
+	_bar(card, "سهم خودروی برقی", float(ep.get("ev_share",0.02)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["battery","🔋 باطری"],["research","🔬 تحقیق"],["production","🚗 تولید"],["charging","⚡ شارژ"],["recycling","♻️ بازیافت"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_ev.bind(a[0])); _mark_decision_button(b, "ev:"+a[0]); row.add_child(b)
+
+func _on_ev(action: String):
+	var cmd = GameCommandClass.create_ev_action(action)
+	var labels := {"battery":"ساخت کارخانه باطری","research":"تحقیق باطری","production":"تولید خودرو برقی","charging":"شبکه شارژ","recycling":"بازیافت باطری"}
+	if _queue_decision(cmd, "🔋 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_health_tourism_card(st: Dictionary):
+	var hp: Dictionary = HealthTourismManager.get_policy(st)
+	var card = _card("🏥 گردشگری سلامت")
+	_bar(card, "بیمارستان بین‌المللی", float(hp.get("hospitals",0.20)))
+	_bar(card, "کیفیت درمان", float(hp.get("quality",0.30)))
+	_bar(card, "آب‌درمانی", float(hp.get("wellness",0.15)))
+	_bar(card, "اعتباربخشی", float(hp.get("accreditation",0.15)))
+	_bar(card, "تسهیل ویزا", float(hp.get("visa",0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["hospital","🏥 بیمارستان"],["quality","🥇 کیفیت"],["wellness","💆 آب‌درمانی"],["visa","🛂 ویزا"],["accreditation","🏅 اعتباربخشی"],["marketing","📢 بازاریابی"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_health_tourism.bind(a[0])); _mark_decision_button(b, "ht:"+a[0]); row.add_child(b)
+
+func _on_health_tourism(action: String):
+	var cmd = GameCommandClass.create_health_tourism_action(action)
+	var labels := {"hospital":"ساخت بیمارستان بین‌المللی","quality":"ارتقای کیفیت درمان","wellness":"توسعه آب‌درمانی","visa":"تسهیل ویزای درمانی","accreditation":"اعتباربخشی بین‌المللی","marketing":"کمپین گردشگری سلامت"}
+	if _queue_decision(cmd, "🏥 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("society")
 
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)

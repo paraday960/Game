@@ -401,6 +401,15 @@ static func create_nation_brand_action(action: String):
 static func create_ai_action(action: String):
 	return _self_script().new("ai_action", {"action": action})
 
+static func create_tax_action(action: String, value: float = 0.0):
+	return _self_script().new("tax_action", {"action": action, "value": value})
+
+static func create_ev_action(action: String):
+	return _self_script().new("ev_action", {"action": action})
+
+static func create_health_tourism_action(action: String):
+	return _self_script().new("health_tourism_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
