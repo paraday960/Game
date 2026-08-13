@@ -108,6 +108,7 @@ jobs:
           godot --headless --path . res://tests/test_scene.tscn
           godot --headless --path . res://tests/test_long.tscn
           godot --headless --path . -s res://tests/test_ui.gd
+          godot --headless --path . -s res://tests/test_save_compat.gd
 
           # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet
           godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1 &

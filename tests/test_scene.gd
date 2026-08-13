@@ -568,11 +568,16 @@ func _ready():
 		# ذخیره دوم نسخه پشتیبان سالم می‌سازد؛ خرابی فایل اصلی باید خودکار بازیابی شود.
 		SaveManager.save_game(save_path)
 		var save_file = FileAccess.open(save_path, FileAccess.READ)
-		var wrapped = JSON.parse_string(save_file.get_as_text())
+		var raw_bytes := save_file.get_buffer(save_file.get_length())
 		save_file.close()
-		wrapped["payload"] += " "
+		# فرمت ۳ باینری است؛ خراب‌کردن چند بایت میانه بدنه فشرده،
+		# خروجی یا checksum را می‌شکند و بارگذاری باید به پشتیبان برگردد.
+		var idx := int(raw_bytes.size() * 0.6)
+		raw_bytes[idx] = raw_bytes[idx] ^ 0xFF
+		raw_bytes[idx + 1] = raw_bytes[idx + 1] ^ 0xFF
+		raw_bytes[idx + 2] = raw_bytes[idx + 2] ^ 0xFF
 		var tampered = FileAccess.open(save_path, FileAccess.WRITE)
-		tampered.store_string(JSON.stringify(wrapped))
+		tampered.store_buffer(raw_bytes)
 		tampered.close()
 		var tamper_result = SaveManager.load_game(save_path)
 		if not tamper_result.success or not tamper_result.get("recovered_from_backup", false):

@@ -1,7 +1,10 @@
 extends Node
 # ذخیره/بارگذاری نسخه‌دار، اتمی، دارای checksum و پشتیبان
+# فرمت ۳: باینری فشرده (DEFLATE) با هدر سبک — ذخیره‌های قدیمی JSON هم خوانده می‌شوند
 
-const FORMAT_VERSION = 2
+const FORMAT_VERSION = 3
+const MAGIC := "CS3"
+const SAVE_MAX_PAYLOAD_BYTES := 256 * 1024 * 1024
 const DEFAULT_PATH = "user://savegame.json"
 const SAVES_DIR = "user://saves"
 const AUTOSAVE_PATH = "user://saves/autosave.json"
@@ -28,17 +31,75 @@ func save_game(path: String = DEFAULT_PATH, metadata: Dictionary = {}) -> Dictio
 		"events": EventLog.get_events()
 	}
 	var payload = JSON.stringify(payload_data)
-	var envelope = {
-		"checksum": payload.sha256_text(),
-		"payload": payload
+	var checksum = payload.sha256_text()
+	# هدر سبک برای لیست ذخیره‌ها (بدون نیاز به بازکردن فشرده‌سازی) + بدنه فشرده
+	var meta = {
+		"checksum": checksum,
+		"format_version": FORMAT_VERSION,
+		"saved_at": float(payload_data.get("saved_at", 0.0)),
+		"game_version": str(payload_data.get("game_version", "")),
+		"label": str(payload_data.get("label", "ذخیره سریع")),
+		"slot": int(payload_data.get("slot", 0)),
+		"country_name": str(payload_data.get("country_name", "")),
+		"tick": int(payload_data.get("tick", 0)),
+		"total_days": int(payload_data.get("total_days", 0)),
+		"year": int(payload_data.get("year", 2027)),
+		"month": int(payload_data.get("month", 1)),
 	}
-	var write_result = _atomic_write(path, JSON.stringify(envelope, "\t"))
+	var write_result = _atomic_write_bytes(path, _encode_save(payload, meta))
 	if not write_result.success:
 		emit_signal("operation_failed", write_result.reason)
 		return write_result
 	EventLog.log_event("save", {"tick": GameState.tick, "path": path}, GameState.tick, GameState.version)
 	emit_signal("save_completed", path)
 	return {"success": true, "path": path, "backup": path + ".bak"}
+
+# ── فرمت ۳: MAGIC(3) + meta_len(2) + meta JSON + payload_len(4) + payload فشرده ──
+func _encode_save(payload: String, meta: Dictionary) -> PackedByteArray:
+	var out := PackedByteArray()
+	out.append_array(MAGIC.to_ascii_buffer())
+	var meta_bytes := JSON.stringify(meta).to_utf8_buffer()
+	var mlen := PackedByteArray(); mlen.resize(2); mlen.encode_u16(0, meta_bytes.size())
+	out.append_array(mlen)
+	out.append_array(meta_bytes)
+	var compressed := payload.to_utf8_buffer().compress(FileAccess.COMPRESSION_DEFLATE)
+	var clen := PackedByteArray(); clen.resize(4); clen.encode_u32(0, compressed.size())
+	out.append_array(clen)
+	out.append_array(compressed)
+	return out
+
+func _decode_save_buffer(buf: PackedByteArray) -> Dictionary:
+	if buf.size() < 5 + 2 + 4:
+		return {"success": false, "reason": "فایل ذخیره فشرده ناقص است"}
+	var meta_len := int(buf.decode_u16(3))
+	if 5 + meta_len + 4 > buf.size():
+		return {"success": false, "reason": "هدر فایل ذخیره فشرده خراب است"}
+	var meta_raw = JSON.parse_string(buf.slice(5, 5 + meta_len).get_string_from_utf8())
+	if not meta_raw is Dictionary:
+		return {"success": false, "reason": "فهرست فایل ذخیره فشرده قابل خواندن نیست"}
+	var clen := int(buf.decode_u32(5 + meta_len))
+	var start := 5 + meta_len + 4
+	if start + clen > buf.size():
+		return {"success": false, "reason": "بدنه فایل ذخیره فشرده ناقص است"}
+	var decompressed := buf.slice(start, start + clen).decompress(SAVE_MAX_PAYLOAD_BYTES, FileAccess.COMPRESSION_DEFLATE)
+	if decompressed.is_empty():
+		return {"success": false, "reason": "بدنه فایل ذخیره بازنشدنی است"}
+	var payload_text := decompressed.get_string_from_utf8()
+	var checksum := str(meta_raw.get("checksum", ""))
+	if checksum.is_empty() or payload_text.sha256_text() != checksum:
+		return {"success": false, "reason": "صحت فایل ذخیره تأیید نشد؛ فایل دستکاری یا خراب شده است"}
+	var parsed = JSON.parse_string(payload_text)
+	if not parsed is Dictionary:
+		return {"success": false, "reason": "محتوای فایل ذخیره قابل بازیابی نیست"}
+	if int(parsed.get("format_version", 1)) > FORMAT_VERSION:
+		return {"success": false, "reason": "این ذخیره با نسخه جدیدتری از بازی ساخته شده است"}
+	var state = parsed.get("state", {})
+	if not state is Dictionary or state.is_empty():
+		return {"success": false, "reason": "وضعیت بازی در ذخیره وجود ندارد"}
+	return {"success": true, "state": state, "events": parsed.get("events", []), "migrated": false}
+
+func _is_binary_save(buf: PackedByteArray) -> bool:
+	return buf.size() >= 3 and buf.slice(0, 3) == MAGIC.to_ascii_buffer()
 
 func load_game(path: String = DEFAULT_PATH) -> Dictionary:
 	var prepared = _prepare_load(path)
@@ -79,11 +140,14 @@ func _prepare_load(path: String) -> Dictionary:
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"success": false, "reason": "فایل ذخیره قابل خواندن نیست"}
-	var raw = JSON.parse_string(file.get_as_text())
+	var buffer := file.get_buffer(file.get_length())
 	file.close()
-	if not raw is Dictionary:
-		return {"success": false, "reason": "ساختار فایل ذخیره خراب است"}
-	var decoded = _decode_and_migrate(raw)
+	var decoded: Dictionary
+	if _is_binary_save(buffer):
+		decoded = _decode_save_buffer(buffer)
+	else:
+		# فرمت قدیمی متنی (JSON با پوش checksum)
+		decoded = _decode_and_migrate_text(buffer.get_string_from_utf8())
 	if not decoded.success:
 		return decoded
 	var validation = _validate_state(decoded.state)
@@ -97,6 +161,12 @@ func _prepare_load(path: String) -> Dictionary:
 		"events": decoded.events,
 		"migrated": decoded.get("migrated", false)
 	}
+
+func _decode_and_migrate_text(text: String) -> Dictionary:
+	var raw = JSON.parse_string(text)
+	if not raw is Dictionary:
+		return {"success": false, "reason": "ساختار فایل ذخیره خراب است"}
+	return _decode_and_migrate(raw)
 
 func save_slot(slot: int) -> Dictionary:
 	if slot < 1 or slot > MAX_SLOTS:
@@ -166,8 +236,22 @@ func _read_metadata_file(path: String) -> Dictionary:
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"exists": true, "valid": false, "label": "غیرقابل خواندن"}
-	var raw = JSON.parse_string(file.get_as_text())
+	var buffer := file.get_buffer(file.get_length())
 	file.close()
+	if _is_binary_save(buffer):
+		if buffer.size() < 7:
+			return {"exists": true, "valid": false, "label": "خراب"}
+		var meta_len := int(buffer.decode_u16(3))
+		if 5 + meta_len > buffer.size():
+			return {"exists": true, "valid": false, "label": "خراب"}
+		var meta_raw = JSON.parse_string(buffer.slice(5, 5 + meta_len).get_string_from_utf8())
+		if not meta_raw is Dictionary:
+			return {"exists": true, "valid": false, "label": "نامعتبر"}
+		meta_raw["exists"] = true
+		meta_raw["valid"] = true
+		return meta_raw
+	# فرمت قدیمی متنی
+	var raw = JSON.parse_string(buffer.get_string_from_utf8())
 	if not raw is Dictionary or not raw.has("payload") or not raw.has("checksum"):
 		return {"exists": true, "valid": false, "label": "ذخیره قدیمی"}
 	if not raw.payload is String or raw.payload.sha256_text() != str(raw.checksum):
@@ -326,6 +410,33 @@ func _atomic_write(path: String, content: String) -> Dictionary:
 	if temp_file == null:
 		return {"success": false, "reason": "فضای ذخیره‌سازی قابل نوشتن نیست"}
 	temp_file.store_string(content)
+	temp_file.flush()
+	temp_file.close()
+
+	if FileAccess.file_exists(path):
+		if not _copy_file(path, path + ".bak"):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary))
+			return {"success": false, "reason": "ساخت نسخه پشتیبان ناموفق بود"}
+	var absolute_temp = ProjectSettings.globalize_path(temporary)
+	var had_previous = FileAccess.file_exists(path)
+	if had_previous:
+		DirAccess.remove_absolute(absolute_target)
+	if DirAccess.rename_absolute(absolute_temp, absolute_target) != OK:
+		if had_previous and FileAccess.file_exists(path + ".bak"):
+			_copy_file(path + ".bak", path)
+		return {"success": false, "reason": "ثبت اتمی فایل ذخیره ناموفق بود؛ نسخه قبلی بازیابی شد"}
+	return {"success": true}
+
+func _atomic_write_bytes(path: String, content: PackedByteArray) -> Dictionary:
+	var absolute_target = ProjectSettings.globalize_path(path)
+	var make_dir_result = DirAccess.make_dir_recursive_absolute(absolute_target.get_base_dir())
+	if make_dir_result != OK and make_dir_result != ERR_ALREADY_EXISTS:
+		return {"success": false, "reason": "پوشه ذخیره‌سازی ساخته نشد"}
+	var temporary = path + ".tmp"
+	var temp_file = FileAccess.open(temporary, FileAccess.WRITE)
+	if temp_file == null:
+		return {"success": false, "reason": "فضای ذخیره‌سازی قابل نوشتن نیست"}
+	temp_file.store_buffer(content)
 	temp_file.flush()
 	temp_file.close()
 
