@@ -44,7 +44,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var cost := gdp * (0.001 + pension_level * 0.002) * (1.0 - employment_program * 0.3)
 	if clinic_active:
 		cost += gdp * 0.0005
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + cost
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
 	var revenue := float(econ.get("government_revenue", 0.0))
 	if cost > revenue * 0.08:
 		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + (cost - revenue * 0.08) * 0.5
@@ -115,7 +115,7 @@ func veterans_parade(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(vp.get("last_parade", -99)) < 12:
 		return {"success": false, "reason": "مراسم بزرگداشت هر ۱۲ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	vp["last_parade"] = turn
 	vp["parades"] = int(vp.get("parades", 0)) + 1
 	state["veterans"]["recognition"] = clampf(float(state["veterans"].get("recognition", 0.7)) + 0.1, 0.05, 1.0)

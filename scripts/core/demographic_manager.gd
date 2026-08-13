@@ -128,7 +128,7 @@ func pro_natal_package(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(dp.get("last_pro_natal", -99)) < 5:
 		return {"success": false, "reason": "بسته حمایت از فرزندآوری هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	dp["last_pro_natal"] = turn
 	dp["fertility_incentive"] = clampf(float(dp.get("fertility_incentive", 0.20)) + 0.13, 0.0, 1.0)
 	state["economy"] = econ
@@ -143,7 +143,7 @@ func expand_childcare(state: Dictionary) -> Dictionary:
 	if float(dp.get("childcare", 0.25)) >= 0.95:
 		return {"success": false, "reason": "پوشش مهدکودک در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	dp["childcare"] = clampf(float(dp.get("childcare", 0.25)) + 0.15, 0.0, 1.0)
 	state["population"]["happiness"] = clampf(state["population"].get("happiness", 0.60) + 0.003, 0.05, 1.0)
 	state["economy"] = econ
@@ -158,7 +158,7 @@ func expand_elderly_care(state: Dictionary) -> Dictionary:
 	if float(dp.get("elderly_care", 0.20)) >= 0.95:
 		return {"success": false, "reason": "پوشش مراقبت سالمندان در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	dp["elderly_care"] = clampf(float(dp.get("elderly_care", 0.20)) + 0.15, 0.0, 1.0)
 	dp["pension_fund"] = clampf(float(dp.get("pension_fund", 0.55)) + 0.05, 0.0, 1.0)
 	state["economy"] = econ

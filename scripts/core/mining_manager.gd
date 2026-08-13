@@ -102,7 +102,7 @@ func develop_mine(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(mp.get("last_mine", -99)) < 5:
 		return {"success": false, "reason": "توسعه معدن هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	mp["last_mine"] = turn
 	mp["exploration"] = clampf(float(mp.get("exploration", 0.30)) + 0.12, 0.0, 1.0)
 	mp["reserves"] = clampf(float(mp.get("reserves", 0.65)) + 0.05, 0.0, 1.0)
@@ -122,7 +122,7 @@ func build_refinery(state: Dictionary, turn: int) -> Dictionary:
 	if tech_level < 6:
 		return {"success": false, "reason": "به فناوری صنعت سطح ۶ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
 	mp["last_refinery"] = turn
 	mp["processing"] = clampf(float(mp.get("processing", 0.25)) + 0.13, 0.0, 1.0)
 	state["economy"] = econ
@@ -137,7 +137,7 @@ func improve_safety(state: Dictionary) -> Dictionary:
 	if float(mp.get("safety", 0.40)) >= 0.95:
 		return {"success": false, "reason": "ایمنی معادن در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	mp["safety"] = clampf(float(mp.get("safety", 0.40)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["mining_policy"] = mp

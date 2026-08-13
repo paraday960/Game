@@ -76,7 +76,7 @@ func adopt_ai(state: Dictionary, turn: int) -> Dictionary:
 	if tech_level < 6:
 		return {"success": false, "reason": "به فناوری دیجیتال سطح ۶ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	ap["last_program"] = turn
 	ap["adoption"] = clampf(float(ap.get("adoption", 0.10)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -88,7 +88,7 @@ func industrial_robotics(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var ap: Dictionary = state["ai_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	ap["robotics"] = clampf(float(ap.get("robotics", 0.10)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["ai_policy"] = ap

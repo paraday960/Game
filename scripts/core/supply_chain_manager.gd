@@ -83,7 +83,7 @@ func build_reserve(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(sp.get("last_reserve", -99)) < 5:
 		return {"success": false, "reason": "تقویت ذخایر هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	sp["last_reserve"] = turn
 	sp["strategic_reserve"] = clampf(float(sp.get("strategic_reserve", 0.35)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

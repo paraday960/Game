@@ -98,7 +98,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# اثر اقتصادی: هزینه نگهداری و کار زندانیان
 	var gdp := float(econ.get("gdp", 1.0))
 	var cost: float = gdp * 0.001 * (0.5 + float(prison["overcrowding"]) * 0.3 - labor * 0.1)
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + cost
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
 	# کار زندانیان سهم کوچکی در اقتصاد دارد
 	if labor > 0.3:
 		econ["gdp"] = gdp * (1.0 + labor * 0.0001)
@@ -148,7 +148,7 @@ func expand_capacity(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(pp.get("last_expansion", -99)) < 6:
 		return {"success": false, "reason": "توسعه زندان هر ۶ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	pp["last_expansion"] = turn
 	pp["capacity_expansion"] = clampf(float(pp.get("capacity_expansion", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

@@ -86,7 +86,7 @@ func build_plant(state: Dictionary, turn: int) -> Dictionary:
 	if tech < 4:
 		return {"success": false, "reason": "به فناوری سطح ۴ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
 	pp["last_plant"] = turn
 	pp["domestic"] = clampf(float(pp.get("domestic", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -106,7 +106,7 @@ func stockpile_drugs(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var pp: Dictionary = state["pharma_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	pp["stockpile"] = clampf(float(pp.get("stockpile", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["pharma_policy"] = pp

@@ -50,7 +50,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# هزینه آمادگی
 	var gdp: float = float(econ.get("gdp", 1.0))
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * 0.0015
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * 0.0015
 	state["economy"] = econ
 
 	# پدافند غیرعامل هم به آمادگی کمک می‌کند
@@ -79,7 +79,7 @@ func build_early_warning(state: Dictionary, turn: int) -> Dictionary:
 	if tech < 3:
 		return {"success": false, "reason": "به فناوری دیجیتال سطح ۳ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	dp["early_warning"] = clampf(float(dp.get("early_warning", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["disaster_policy"] = dp
@@ -90,7 +90,7 @@ func build_shelters(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var dp: Dictionary = state["disaster_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	dp["shelter"] = clampf(float(dp.get("shelter", 0.25)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["disaster_policy"] = dp
@@ -113,7 +113,7 @@ func relief_aid(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var dp: Dictionary = state["disaster_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	dp["relief_stock"] = clampf(float(dp.get("relief_stock", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["disaster_policy"] = dp

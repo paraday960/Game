@@ -91,7 +91,7 @@ func fund_vc(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(sp.get("last_fund", -99)) < 6:
 		return {"success": false, "reason": "صندوق خطرپذیر هر ۶ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	sp["last_fund"] = turn
 	sp["vc_funding"] = clampf(float(sp.get("vc_funding", 0.15)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

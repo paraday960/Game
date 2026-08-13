@@ -80,7 +80,7 @@ func brand_campaign(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(nbp.get("last_event", -99)) < 5:
 		return {"success": false, "reason": "کمپین برند هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	nbp["last_event"] = turn
 	nbp["branding"] = clampf(float(nbp.get("branding", 0.25)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -92,7 +92,7 @@ func host_event(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var nbp: Dictionary = state["nation_brand_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	nbp["events"] = clampf(float(nbp.get("events", 0.20)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["nation_brand_policy"] = nbp

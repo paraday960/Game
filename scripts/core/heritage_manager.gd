@@ -60,7 +60,7 @@ func restore_sites(state: Dictionary) -> Dictionary:
 	var hr: Dictionary = state.get("heritage", {})
 	var hp: Dictionary = state["heritage_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	hr["preservation"] = clampf(float(hr.get("preservation", 0.6)) + 0.1, 0.05, 1.0)
 	hr["restoration"] = clampf(float(hr.get("restoration", 0.55)) + 0.1, 0.05, 1.0)
 	hp["restored"] = int(hp.get("restored", 0)) + 1
@@ -78,7 +78,7 @@ func register_unesco(state: Dictionary) -> Dictionary:
 	if int(hr.get("unesco_sites", 0)) >= 6:
 		return {"success": false, "reason": "ظرفیت ثبت جهانی در این بازه تکمیل است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.015
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.015
 	hr["unesco_sites"] = int(hr.get("unesco_sites", 0)) + 1
 	hp["registered"] = int(hp.get("registered", 0)) + 1
 	state["culture_policy"]["soft_power"] = clampf(float(state["culture_policy"].get("soft_power", 40.0)) + 4.0, 5.0, 100.0)
@@ -96,7 +96,7 @@ func heritage_festival(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "جشنواره بین‌المللی هر ۱۲ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
 	var tour: Dictionary = state.get("tourism", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
 	tour["revenue"] = float(tour.get("revenue", 0.0)) * 1.05
 	hp["last_festival"] = turn
 	hp["festivals"] = int(hp.get("festivals", 0)) + 1

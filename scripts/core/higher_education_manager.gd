@@ -67,7 +67,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["technology"] = tech
 
 	# هزینه
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * (0.002 + funding * 0.003)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.002 + funding * 0.003)
 	state["economy"] = econ
 
 	# رویدادها
@@ -87,7 +87,7 @@ func increase_funding(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(hp.get("last_endowment", -99)) < 5:
 		return {"success": false, "reason": "افزایش بودجه دانشگاه هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	hp["last_endowment"] = turn
 	hp["funding"] = clampf(float(hp.get("funding", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

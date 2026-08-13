@@ -159,6 +159,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	else:
 		econ["war_spending"] = 0.0
 
+	# کانال هزینه اقدامات بازیکن و برنامه‌های مدیران — دقیقاً یک‌بار مصرف و صفر می‌شود
+	spending += float(econ.get("extra_spending_daily", 0.0))
+	econ["extra_spending_daily"] = 0.0
 	econ["government_spending"] = spending
 	econ["budget_allocations"] = budget_alloc
 

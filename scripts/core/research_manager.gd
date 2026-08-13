@@ -80,7 +80,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["health"] = health
 
 	# هزینه بودجه پژوهشی
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * 0.002 * (0.4 + university + centers)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * 0.002 * (0.4 + university + centers)
 	state["economy"] = econ
 
 	# رویدادها
@@ -101,7 +101,7 @@ func fund_universities(state: Dictionary) -> Dictionary:
 	if float(rp.get("university_funding", 0.45)) >= 0.95:
 		return {"success": false, "reason": "بودجه دانشگاه‌ها در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	rp["university_funding"] = clampf(float(rp.get("university_funding", 0.45)) + 0.15, 0.0, 1.0)
 	state["education"]["quality"] = clampf(float(state["education"].get("quality", 0.55)) + 0.015, 0.1, 1.0)
 	rp["brain_drain"] = clampf(float(rp.get("brain_drain", 0.28)) - 0.02, 0.05, 0.80)
@@ -117,7 +117,7 @@ func build_research_center(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(rp.get("last_center", -99)) < 8:
 		return {"success": false, "reason": "احداث مرکز پژوهشی هر ۸ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	rp["rnd_centers"] = clampf(float(rp.get("rnd_centers", 0.25)) + 0.12, 0.0, 1.0)
 	rp["last_center"] = turn
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - 0.0004, 0.02, 0.30)
@@ -151,7 +151,7 @@ func retain_talent(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(rp.get("last_grant", -99)) < 6:
 		return {"success": false, "reason": "بسته نخبگان هر ۶ نوبت یک بار قابل اجراست", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0025
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0025
 	rp["last_grant"] = turn
 	rp["brain_drain"] = clampf(float(rp.get("brain_drain", 0.28)) - 0.10, 0.05, 0.80)
 	rp["innovation_index"] = clampf(float(rp.get("innovation_index", 0.35)) + 0.03, 0.05, 1.0)

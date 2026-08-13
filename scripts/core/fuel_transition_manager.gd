@@ -110,7 +110,7 @@ func build_charging(state: Dictionary) -> Dictionary:
 	if tech < 4:
 		return {"success": false, "reason": "به فناوری انرژی پاک سطح ۴ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	fp["ev_charging"] = clampf(float(fp.get("ev_charging", 0.10)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["fuel_policy"] = fp
@@ -141,7 +141,7 @@ func electrify_public_fleet(state: Dictionary) -> Dictionary:
 	if float(fp.get("public_fleet", 0.20)) >= 0.95:
 		return {"success": false, "reason": "ناوگان عمومی برقی در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	fp["public_fleet"] = clampf(float(fp.get("public_fleet", 0.20)) + 0.15, 0.0, 1.0)
 	state["urban_policy"]["public_transit"] = clampf(state["urban_policy"].get("public_transit", 0.4) + 0.05, 0.0, 1.0)
 	state["economy"] = econ

@@ -97,7 +97,7 @@ func build_social_housing(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(hp.get("last_social", -99)) < 5:
 		return {"success": false, "reason": "پروژه مسکن اجتماعی هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	hp["last_social"] = turn
 	hp["social_supply"] = clampf(float(hp.get("social_supply", 0.20)) + 0.13, 0.0, 1.0)
 	state["economy"] = econ
@@ -123,7 +123,7 @@ func urban_renewal(state: Dictionary) -> Dictionary:
 	if float(hp.get("renewal", 0.15)) >= 0.95:
 		return {"success": false, "reason": "نوسازی بافت فرسوده در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	hp["renewal"] = clampf(float(hp.get("renewal", 0.15)) + 0.13, 0.0, 1.0)
 	state["economy"] = econ
 	state["housing_policy"] = hp

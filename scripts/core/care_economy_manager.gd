@@ -57,7 +57,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	econ["gdp"] = gdp * (1.0 + labor_gain * 0.0008)
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - labor_gain * 0.0005, 0.02, 0.30)
 	# بار اقتصادی مراقبت غیررسمی (فرصت ازدست‌رفته)
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * (0.001 + elder * 0.001 + child * 0.001)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.001 + elder * 0.001 + child * 0.001)
 	state["economy"] = econ
 
 	# سلامت سالمندان

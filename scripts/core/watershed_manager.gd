@@ -105,7 +105,7 @@ func restore_watershed(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(wp.get("last_restoration", -99)) < 6:
 		return {"success": false, "reason": "پروژه آبخیزداری هر ۶ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	wp["last_restoration"] = turn
 	wp["restoration"] = clampf(float(wp.get("restoration", 0.20)) + 0.13, 0.0, 1.0)
 	wp["check_dams"] = clampf(float(wp.get("check_dams", 0.15)) + 0.05, 0.0, 1.0)
@@ -134,7 +134,7 @@ func control_dust(state: Dictionary) -> Dictionary:
 	if float(wp.get("dust_control", 0.20)) >= 0.95:
 		return {"success": false, "reason": "پروژه‌های مقابله با ریزگرد در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	wp["dust_control"] = clampf(float(wp.get("dust_control", 0.20)) + 0.13, 0.0, 1.0)
 	state["economy"] = econ
 	state["watershed_policy"] = wp

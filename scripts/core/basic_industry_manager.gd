@@ -87,7 +87,7 @@ func expand_steel(state: Dictionary, turn: int) -> Dictionary:
 	if tech < 4:
 		return {"success": false, "reason": "به فناوری صنعت سطح ۴ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
 	bp["last_capacity"] = turn
 	bp["steel"] = clampf(float(bp.get("steel", 0.35)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -99,7 +99,7 @@ func expand_cement(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var bp: Dictionary = state["basic_industry_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	bp["cement"] = clampf(float(bp.get("cement", 0.40)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["basic_industry_policy"] = bp

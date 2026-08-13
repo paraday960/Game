@@ -84,7 +84,7 @@ func consumer_protection(state: Dictionary) -> Dictionary:
 	if float(rp.get("consumer_protection", 0.4)) >= 0.98:
 		return {"success": false, "reason": "حمایت از مصرف‌کننده حداکثری است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	rp["consumer_protection"] = clampf(float(rp.get("consumer_protection", 0.4)) + 0.3, 0.0, 1.0)
 	state["politics"]["corruption"] = clampf(float(state["politics"].get("corruption", 0.3)) - 0.008, 0.01, 1.0)
 	state["retail_policy"] = rp
@@ -101,7 +101,7 @@ func boost_ecommerce(state: Dictionary) -> Dictionary:
 		return {"success": false, "reason": "زیرساخت دیجیتال کافی نیست (شاخه دیجیتال حداقل سطح ۶)", "state": state, "events": []}
 	var retail: Dictionary = state.get("retail", {})
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	rp["online_boost"] = int(rp.get("online_boost", 0)) + 1
 	retail["e_commerce_share"] = clampf(float(retail.get("e_commerce_share", 0.15)) + 0.05, 0.02, 0.60)
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - 0.0005, 0.02, 0.30)
@@ -119,7 +119,7 @@ func renovate_bazaars(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "نوسازی بازارهای سنتی هر ۱۰ نوبت یک بار ممکن است", "state": state, "events": []}
 	var retail: Dictionary = state.get("retail", {})
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	rp["last_bazaar"] = turn
 	retail["bazaars"] = int(retail.get("bazaars", 5000)) + 200
 	retail["competition"] = clampf(float(retail.get("competition", 0.6)) + 0.03, 0.1, 0.9)

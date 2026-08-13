@@ -95,7 +95,7 @@ func expand_refining(state: Dictionary, turn: int) -> Dictionary:
 	if tech < 4:
 		return {"success": false, "reason": "به فناوری صنعت سطح ۴ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
 	dp["last_refinery"] = turn
 	dp["refining"] = clampf(float(dp.get("refining", 0.35)) + 0.15, 0.0, 1.0)
 	dp["self_sufficiency"] = clampf(float(dp.get("self_sufficiency", 0.40)) + 0.05, 0.0, 1.0)
@@ -110,7 +110,7 @@ func expand_petrochemical(state: Dictionary) -> Dictionary:
 	if float(dp.get("petrochemical", 0.30)) >= 0.95:
 		return {"success": false, "reason": "ظرفیت پتروشیمی در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
 	dp["petrochemical"] = clampf(float(dp.get("petrochemical", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["downstream_policy"] = dp

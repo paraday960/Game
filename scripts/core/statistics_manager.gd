@@ -58,7 +58,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# خطای سیاست‌گذاری با آمار بد: سیاست‌ها به خطا می‌روند و بودجه هدر می‌شود
 	var error_cost := (1.0 - accuracy) * 0.0008
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * error_cost
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * error_cost
 	# آمار دقیق هدفمندی یارانه/رفاه را بهتر می‌کند
 	if accuracy > 0.70:
 		welfare["poverty"] = clampf(float(welfare.get("poverty", 0.15)) - 0.0004, 0.02, 0.80)
@@ -92,7 +92,7 @@ func run_census(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(sp.get("last_census", -99)) < 10:
 		return {"success": false, "reason": "سرشماری ملی هر ۱۰ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	sp["last_census"] = turn
 	sp["census_quality"] = clampf(float(sp.get("census_quality", 0.50)) + 0.12, 0.0, 1.0)
 	sp["accuracy"] = clampf(float(sp.get("accuracy", 0.75)) + 0.04, 0.0, 1.0)
@@ -112,7 +112,7 @@ func build_data_infra(state: Dictionary) -> Dictionary:
 	if tech < 5:
 		return {"success": false, "reason": "به فناوری دیجیتال سطح ۵ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	sp["data_infrastructure"] = clampf(float(sp.get("data_infrastructure", 0.40)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["statistics_policy"] = sp

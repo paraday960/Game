@@ -99,7 +99,7 @@ func universal_scheme(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(ip.get("last_scheme", -99)) < 8:
 		return {"success": false, "reason": "طرح سراسری بیمه هر ۸ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	ip["last_scheme"] = turn
 	ip["penetration"] = clampf(float(ip.get("penetration", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

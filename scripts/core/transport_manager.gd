@@ -36,7 +36,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# هزینه ماهانه یارانه کرایه
 	var gdp := float(econ.get("gdp", 1.0))
 	var cost := gdp * 0.001 * subsidy_level
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + cost
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
 	var revenue := float(econ.get("government_revenue", 0.0))
 	if cost > revenue * 0.05:
 		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + (cost - revenue * 0.05) * 0.5
@@ -71,7 +71,7 @@ func build_metro(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "ساخت هر خط مترو ۸ نوبت طول می‌کشد", "state": state, "events": []}
 	var pt: Dictionary = state.get("public_transport", {})
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.012
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.012
 	tp["last_metro"] = turn
 	tp["metro_built"] = int(tp.get("metro_built", 0)) + 1
 	pt["metro_lines"] = int(pt.get("metro_lines", 4)) + 1
@@ -93,7 +93,7 @@ func build_brt(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "توسعه BRT هر ۴ نوبت یک بار ممکن است", "state": state, "events": []}
 	var pt: Dictionary = state.get("public_transport", {})
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	tp["last_brt"] = turn
 	tp["brt_built"] = int(tp.get("brt_built", 0)) + 1
 	pt["brt_lines"] = int(pt.get("brt_lines", 8)) + 1
@@ -127,7 +127,7 @@ func modernize_fleet(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "نوسازی ناوگان هر ۶ نوبت یک بار ممکن است", "state": state, "events": []}
 	var pt: Dictionary = state.get("public_transport", {})
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
 	tp["last_fleet"] = turn
 	pt["fleet_age"] = maxf(float(pt.get("fleet_age", 7.0)) - 2.0, 2.0)
 	pt["electrification"] = clampf(float(pt.get("electrification", 0.15)) + 0.1, 0.02, 0.85)

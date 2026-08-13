@@ -95,7 +95,7 @@ func hold_summit(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(dp.get("last_summit", -99)) < 8:
 		return {"success": false, "reason": "اجلاس دیاسپورا هر ۸ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	dp["last_summit"] = turn
 	dp["engagement"] = clampf(float(dp.get("engagement", 0.35)) + 0.15, 0.0, 1.0)
 	dp["trust"] = clampf(float(dp.get("trust", 0.45)) + 0.05, 0.0, 1.0)
@@ -112,7 +112,7 @@ func build_networks(state: Dictionary) -> Dictionary:
 	if float(dp.get("networks", 0.25)) >= 0.95:
 		return {"success": false, "reason": "شبکه‌های دیاسپورا در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0015
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0015
 	dp["networks"] = clampf(float(dp.get("networks", 0.25)) + 0.15, 0.0, 1.0)
 	dp["soft_power_boost"] = clampf(float(dp.get("soft_power_boost", 0.0)) + 0.03, 0.0, 1.0)
 	state["economy"] = econ
@@ -141,7 +141,7 @@ func return_talent(state: Dictionary) -> Dictionary:
 	if float(dp.get("return_incentive", 0.15)) >= 0.95:
 		return {"success": false, "reason": "بسته بازگشت نخبگان در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0025
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0025
 	dp["return_incentive"] = clampf(float(dp.get("return_incentive", 0.15)) + 0.15, 0.0, 1.0)
 	dp["trust"] = clampf(float(dp.get("trust", 0.45)) + 0.03, 0.0, 1.0)
 	var research: Dictionary = state.get("research_policy", {})

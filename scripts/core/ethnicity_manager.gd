@@ -71,7 +71,7 @@ func equal_opportunities(state: Dictionary) -> Dictionary:
 	if float(ep.get("equal_programs", 0.4)) >= 0.98:
 		return {"success": false, "reason": "برنامه فرصت‌های برابر حداکثری است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	ep["equal_programs"] = clampf(float(ep.get("equal_programs", 0.4)) + 0.3, 0.0, 1.0)
 	state["ethnicity"]["discrimination"] = clampf(float(state["ethnicity"].get("discrimination", 0.2)) - 0.03, 0.0, 0.85)
 	state["education"]["quality"] = clampf(float(state["education"].get("quality", 0.55)) + 0.008, 0.1, 1.0)
@@ -87,7 +87,7 @@ func cultural_autonomy(state: Dictionary) -> Dictionary:
 	if float(ep.get("autonomy", 0.4)) >= 0.98:
 		return {"success": false, "reason": "خودمختاری فرهنگی حداکثری است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	ep["autonomy"] = clampf(float(ep.get("autonomy", 0.4)) + 0.3, 0.0, 1.0)
 	state["ethnicity"]["cultural_rights"] = clampf(float(state["ethnicity"].get("cultural_rights", 0.6)) + 0.05, 0.1, 0.95)
 	state["ethnicity"]["tension"] = clampf(float(state["ethnicity"].get("tension", 0.3)) - 0.02, 0.02, 0.95)
@@ -108,7 +108,7 @@ func national_dialogue(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(ep.get("last_dialogue", -99)) < 4:
 		return {"success": false, "reason": "گفت‌وگوی ملی هر ۴ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.001
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.001
 	ep["last_dialogue"] = turn
 	ep["dialogues"] = int(ep.get("dialogues", 0)) + 1
 	state["ethnicity"]["tension"] = clampf(float(state["ethnicity"].get("tension", 0.3)) - 0.04, 0.02, 0.95)
@@ -125,7 +125,7 @@ func ethnic_festival(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(ep.get("last_festival", -99)) < 12:
 		return {"success": false, "reason": "جشنواره فرهنگ اقوام هر ۱۲ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	ep["last_festival"] = turn
 	var pop: Dictionary = state.get("population", {})
 	pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.012, 0.05, 1.0)

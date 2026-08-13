@@ -108,7 +108,7 @@ func build_rural_roads(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(rp.get("last_road", -99)) < 5:
 		return {"success": false, "reason": "پروژه راه روستایی هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	rp["last_road"] = turn
 	rp["rural_roads"] = clampf(float(rp.get("rural_roads", 0.40)) + 0.13, 0.0, 1.0)
 	state["infrastructure"]["quality"] = clampf(state["infrastructure"].get("quality", 0.55) + 0.005, 0.1, 1.0)
@@ -127,7 +127,7 @@ func expand_rural_internet(state: Dictionary) -> Dictionary:
 	if tech < 4:
 		return {"success": false, "reason": "به فناوری دیجیتال سطح ۴ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	rp["rural_internet"] = clampf(float(rp.get("rural_internet", 0.25)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["rural_policy"] = rp
@@ -141,7 +141,7 @@ func build_agro_processing(state: Dictionary) -> Dictionary:
 	if float(rp.get("agro_processing", 0.20)) >= 0.95:
 		return {"success": false, "reason": "صنایع تبدیلی در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	rp["agro_processing"] = clampf(float(rp.get("agro_processing", 0.20)) + 0.15, 0.0, 1.0)
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - 0.0005, 0.02, 0.30)
 	state["economy"] = econ

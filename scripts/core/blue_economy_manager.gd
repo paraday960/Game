@@ -79,7 +79,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["military"] = mil
 
 	# هزینه نگهداشت
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * (0.0008 + port * 0.0005 + coast_guard * 0.0008)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.0008 + port * 0.0005 + coast_guard * 0.0008)
 	state["economy"] = econ
 
 	# رویدادها
@@ -103,7 +103,7 @@ func expand_port(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(be.get("last_port", -99)) < 8:
 		return {"success": false, "reason": "توسعه بندر هر ۸ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.009
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.009
 	be["last_port"] = turn
 	be["port_capacity"] = clampf(float(be.get("port_capacity", 0.40)) + 0.13, 0.0, 1.0)
 	state["infrastructure"]["capacity"] = clampf(float(state["infrastructure"].get("capacity", 0.60)) + 0.01, 0.1, 1.0)
@@ -119,7 +119,7 @@ func expand_fleet(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(be.get("last_fleet", -99)) < 10:
 		return {"success": false, "reason": "نوسازی ناوگان هر ۱۰ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
 	be["last_fleet"] = turn
 	be["merchant_fleet"] = clampf(float(be.get("merchant_fleet", 0.30)) + 0.13, 0.0, 1.0)
 	be["shipbuilding"] = clampf(float(be.get("shipbuilding", 0.20)) + 0.05, 0.0, 1.0)
@@ -148,7 +148,7 @@ func coast_guard_patrol(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(be.get("last_patrol", -99)) < 4:
 		return {"success": false, "reason": "گشت فشرده دریایی هر ۴ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	be["last_patrol"] = turn
 	be["coast_guard"] = clampf(float(be.get("coast_guard", 0.30)) + 0.12, 0.0, 1.0)
 	state["fuel_stations"]["smuggling"] = clampf(float(state["fuel_stations"].get("smuggling", 0.15)) - 0.03, 0.02, 0.60)

@@ -81,7 +81,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# هزینه نگهداری تصفیه‌خانه و کاهش بیماری‌های آب
 	var cost := gdp * 0.0008 + gdp * leakage * 0.0006
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + cost
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
 	state["health"]["coverage"] = clampf(float(state["health"].get("coverage", 0.75)) + float(wi.get("quality", 0.60)) * 0.0005, 0.1, 1.0)
 	state["economy"] = econ
 
@@ -111,7 +111,7 @@ func build_dam(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(wp.get("last_dam", -99)) < 12:
 		return {"success": false, "reason": "ساخت سد جدید هر ۱۲ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.010
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.010
 	wp["dams"] = clampf(float(wp.get("dams", 0.30)) + 0.12, 0.0, 1.0)
 	wp["last_dam"] = turn
 	var wi: Dictionary = state["water_infrastructure"]
@@ -134,7 +134,7 @@ func build_desalination(state: Dictionary, turn: int) -> Dictionary:
 	if float(tech.get("branch_levels", {}).get("انرژی_پاک", 0)) < 5:
 		return {"success": false, "reason": "به فناوری انرژی پاک سطح ۵ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
 	wp["desalination"] = clampf(float(wp.get("desalination", 0.05)) + 0.12, 0.0, 0.90)
 	wp["last_desal"] = turn
 	state["resources"]["inventory"]["برق"] = clampf(float(state["resources"]["inventory"].get("برق", 100.0)) - 3.0, 0.0, 150.0)
@@ -150,7 +150,7 @@ func reduce_leakage(state: Dictionary) -> Dictionary:
 	if float(wp.get("leakage", 0.28)) <= 0.08:
 		return {"success": false, "reason": "هدررفت شبکه در حد حداقلی است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	wp["leakage"] = clampf(float(wp.get("leakage", 0.28)) - 0.10, 0.05, 0.60)
 	var urban: Dictionary = state.get("urban_facilities", {})
 	urban["water_network"] = clampf(float(urban.get("water_network", 0.75)) + 0.03, 0.2, 0.99)
@@ -167,7 +167,7 @@ func irrigation_upgrade(state: Dictionary) -> Dictionary:
 	if float(wp.get("irrigation_efficiency", 0.35)) >= 0.92:
 		return {"success": false, "reason": "بازده آبیاری در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0035
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0035
 	wp["irrigation_efficiency"] = clampf(float(wp.get("irrigation_efficiency", 0.35)) + 0.13, 0.10, 0.95)
 	wp["conservation"] = clampf(float(wp.get("conservation", 0.25)) + 0.04, 0.0, 1.0)
 	var agri: Dictionary = state.get("agriculture", {})

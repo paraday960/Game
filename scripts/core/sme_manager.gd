@@ -67,7 +67,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["labor"] = labor
 
 	# هزینه بهبود فضای کسب‌وکار
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * 0.0008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * 0.0008
 	state["economy"] = econ
 
 	# رویدادها
@@ -99,7 +99,7 @@ func micro_credit_fund(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(sp.get("last_credit", -99)) < 5:
 		return {"success": false, "reason": "صندوق وام خرد هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	sp["last_credit"] = turn
 	sp["micro_credit"] = clampf(float(sp.get("micro_credit", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

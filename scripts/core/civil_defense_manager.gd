@@ -70,7 +70,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# هزینه نگهداری مستمر پدافند
 	var cost := gdp * (0.0015 + hardening * 0.002 + redundancy * 0.0015 + shelters * 0.001)
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + cost
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
 	state["economy"] = econ
 
 	# رویدادها: تمرین سراسری و حفظ آمادگی
@@ -103,7 +103,7 @@ func harden_targets(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(cd.get("last_hardening", -99)) < 6:
 		return {"success": false, "reason": "پروژه سخت‌سازی هر ۶ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.008
 	cd["last_hardening"] = turn
 	cd["hardening"] = clampf(float(cd.get("hardening", 0.25)) + 0.12, 0.0, 1.0)
 	state["economy"] = econ
@@ -118,7 +118,7 @@ func build_redundancy(state: Dictionary) -> Dictionary:
 	if float(cd.get("redundancy", 0.20)) >= 0.95:
 		return {"success": false, "reason": "افزونگی زیرساخت در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.007
 	cd["redundancy"] = clampf(float(cd.get("redundancy", 0.20)) + 0.13, 0.0, 1.0)
 	var infra: Dictionary = state.get("infrastructure", {})
 	infra["capacity"] = clampf(float(infra.get("capacity", 0.60)) + 0.01, 0.1, 1.0)
@@ -135,7 +135,7 @@ func build_shelters(state: Dictionary) -> Dictionary:
 	if float(cd.get("shelters", 0.20)) >= 0.95:
 		return {"success": false, "reason": "پوشش پناهگاه در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	cd["shelters"] = clampf(float(cd.get("shelters", 0.20)) + 0.13, 0.0, 1.0)
 	state["media"]["groups"]["شهرنشینان"]["approval"] = clampf(float(state["media"]["groups"]["شهرنشینان"].get("approval", 55.0)) + 1.0, 5.0, 100.0)
 	state["economy"] = econ
@@ -150,7 +150,7 @@ func strategic_stockpile(state: Dictionary) -> Dictionary:
 	if float(cd.get("strategic_stock", 0.30)) >= 0.95:
 		return {"success": false, "reason": "ذخیره راهبردی در سقف ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	cd["strategic_stock"] = clampf(float(cd.get("strategic_stock", 0.30)) + 0.13, 0.0, 1.0)
 	var resources: Dictionary = state.get("resources", {})
 	if resources.has("inventory"):

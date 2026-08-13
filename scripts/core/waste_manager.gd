@@ -80,7 +80,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["resources"] = resources
 
 	# هزینه مدیریت
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * (0.001 + collection * 0.0008)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.001 + collection * 0.0008)
 	state["economy"] = econ
 
 	# رضایت محلی/روستایی
@@ -108,7 +108,7 @@ func expand_collection(state: Dictionary) -> Dictionary:
 	if float(wp.get("collection", 0.65)) >= 0.97:
 		return {"success": false, "reason": "پوشش جمع‌آوری در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	wp["collection"] = clampf(float(wp.get("collection", 0.65)) + 0.12, 0.0, 1.0)
 	state["economy"] = econ
 	state["waste_policy"] = wp
@@ -122,7 +122,7 @@ func build_recycling(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(wp.get("last_plant", -99)) < 6:
 		return {"success": false, "reason": "احداث کارخانه بازیافت هر ۶ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	wp["last_plant"] = turn
 	wp["recycling"] = clampf(float(wp.get("recycling", 0.18)) + 0.13, 0.0, 1.0)
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - 0.0003, 0.02, 0.30)
@@ -138,7 +138,7 @@ func build_sanitary_landfill(state: Dictionary) -> Dictionary:
 	if float(wp.get("sanitary_landfill", 0.30)) >= 0.95:
 		return {"success": false, "reason": "پوشش دفن بهداشتی در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	wp["sanitary_landfill"] = clampf(float(wp.get("sanitary_landfill", 0.30)) + 0.15, 0.0, 1.0)
 	wp["wte"] = clampf(float(wp.get("wte", 0.05)) + 0.05, 0.0, 0.80)
 	state["economy"] = econ

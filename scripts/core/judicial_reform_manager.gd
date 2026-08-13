@@ -59,7 +59,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	jrp["business_disputes"] = business_disputes
 	econ["gdp"] = gdp * (1.0 + (0.6 - business_disputes) * 0.0004)
 	# اطاله دادرسی هزینه اقتصادی دارد
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * (0.0008 + delay_cost * 0.0008)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.0008 + delay_cost * 0.0008)
 	state["economy"] = econ
 
 	# میانجی‌گری و پیشگیری → زندان و امنیت
@@ -98,7 +98,7 @@ func digitalize_courts(state: Dictionary, turn: int) -> Dictionary:
 	if tech < 4:
 		return {"success": false, "reason": "به فناوری دیجیتال سطح ۴ نیاز است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.003
 	jrp["last_digital"] = turn
 	jrp["digital_courts"] = clampf(float(jrp.get("digital_courts", 0.20)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -113,7 +113,7 @@ func specialized_courts(state: Dictionary) -> Dictionary:
 	if float(jrp.get("specialized_courts", 0.20)) >= 0.95:
 		return {"success": false, "reason": "دادگاه‌های تخصصی در سقف هستند", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.002
 	jrp["specialized_courts"] = clampf(float(jrp.get("specialized_courts", 0.20)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["judicial_reform_policy"] = jrp
@@ -140,7 +140,7 @@ func legal_aid(state: Dictionary) -> Dictionary:
 	if float(jrp.get("legal_aid", 0.25)) >= 0.95:
 		return {"success": false, "reason": "معاضدت حقوقی در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0015
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.0015
 	jrp["legal_aid"] = clampf(float(jrp.get("legal_aid", 0.25)) + 0.15, 0.0, 1.0)
 	jrp["crime_prevention"] = clampf(float(jrp.get("crime_prevention", 0.20)) + 0.08, 0.0, 1.0)
 	state["economy"] = econ

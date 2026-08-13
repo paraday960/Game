@@ -88,7 +88,7 @@ func expand_mills(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(tp.get("last_mill", -99)) < 5:
 		return {"success": false, "reason": "پروژه کارخانه هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	tp["last_mill"] = turn
 	tp["spinning"] = clampf(float(tp.get("spinning", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

@@ -85,7 +85,7 @@ func build_storage(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(fp.get("last_storage", -99)) < 5:
 		return {"success": false, "reason": "ساخت سردخانه هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	fp["last_storage"] = turn
 	fp["storage"] = clampf(float(fp.get("storage", 0.25)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -99,7 +99,7 @@ func expand_processing(state: Dictionary) -> Dictionary:
 	if float(fp.get("processing", 0.20)) >= 0.95:
 		return {"success": false, "reason": "صنایع تبدیلی در سقف است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	fp["processing"] = clampf(float(fp.get("processing", 0.20)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["food_chain_policy"] = fp

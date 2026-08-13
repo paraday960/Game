@@ -81,7 +81,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["population"] = pop
 
 	# هزینه حمایت
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + gdp * (0.001 + funding * 0.0015)
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.001 + funding * 0.0015)
 	state["economy"] = econ
 
 	# رویدادها

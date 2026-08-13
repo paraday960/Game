@@ -89,7 +89,7 @@ func expand_industrial(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(lp.get("last_program", -99)) < 5:
 		return {"success": false, "reason": "توسعه دامداری صنعتی هر ۵ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.004
 	lp["last_program"] = turn
 	lp["industrial"] = clampf(float(lp.get("industrial", 0.30)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ

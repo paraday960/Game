@@ -84,7 +84,7 @@ func expand_corridor(state: Dictionary, turn: int) -> Dictionary:
 	if turn - int(tp.get("last_corridor", -99)) < 6:
 		return {"success": false, "reason": "پروژه کریدور هر ۶ نوبت یک بار", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	tp["last_corridor"] = turn
 	tp["corridors"] = clampf(float(tp.get("corridors", 0.25)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
@@ -107,7 +107,7 @@ func rail_freight(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var tp: Dictionary = state["transit_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
 	tp["rail"] = clampf(float(tp.get("rail", 0.25)) + 0.15, 0.0, 1.0)
 	state["economy"] = econ
 	state["transit_policy"] = tp
