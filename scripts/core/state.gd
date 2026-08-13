@@ -58,6 +58,9 @@ func init_default_state():
 		"pharma_policy": {"domestic": 0.30, "generic": 0.40, "stockpile": 0.30, "vaccine": 0.20, "medical_devices": 0.25, "last_plant": -99, "import_dep": 0.65, "drug_security": 0.40, "drug_cost": 0.60, "local_production": 0.35},
 		"ip_policy": {"patents": 0.25, "copyright": 0.30, "tech_transfer": 0.20, "enforcement": 0.30, "last_reform": -99, "innovation_index": 0.25, "patent_count": 500, "royalty_income": 0.05, "ip_compliance": 0.40},
 		"transit_policy": {"corridors": 0.25, "customs": 0.30, "rail": 0.25, "free_zones": 0.20, "last_corridor": -99, "transit_share": 0.15, "freight": 0.30, "revenue": 0.0, "border_delay": 0.50},
+		"disaster_policy": {"early_warning": 0.30, "shelter": 0.25, "response": 0.35, "relief_stock": 0.30, "last_drill": -99, "preparedness": 0.30, "risk": 0.45, "casualty_risk": 0.50, "recovery_speed": 0.35, "drills": 0},
+		"livestock_policy": {"industrial": 0.30, "vaccination": 0.45, "feed": 0.35, "breeding": 0.25, "last_program": -99, "self_suff": 0.65, "protein_security": 0.55, "herd_size": 0.50, "disease_risk": 0.30, "milk_production": 0.45, "meat_production": 0.40},
+		"textile_policy": {"raw_material": 0.35, "spinning": 0.30, "apparel": 0.40, "branding": 0.20, "last_mill": -99, "output": 0.35, "export_share": 0.20, "employment": 500000, "value_added": 0.30, "import_dep": 0.45},
 		"clock": {
 			"year": 2027,
 			"month": 1,

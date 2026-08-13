@@ -2713,6 +2713,7 @@ func _build_government():
 	_build_education_card(state)
 	_build_security_card(state)
 	_build_prison_card(state)
+	_build_disaster_card(state)
 	_build_statistics_card(state)
 	_build_factions_card(state)
 	_build_governors_card(state)
@@ -2849,10 +2850,12 @@ func _build_economy():
 	_build_transit_card(st)
 	_build_agriculture_card(st)
 	_build_food_chain_card(st)
+	_build_livestock_card(st)
 	_build_tourism_card(st)
 	_build_retail_card(st)
 	_build_creative_card(st)
 	_build_supply_card(st)
+	_build_textile_card(st)
 	_build_trade_policy_card(st)
 	_build_fdi_card(st)
 	_build_shadow_card(st)
@@ -5574,6 +5577,99 @@ func _on_transit(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("economy")
 
+func _build_disaster_card(st: Dictionary):
+	var dp: Dictionary = st.get("disaster_policy", {})
+	if dp.is_empty():
+		return
+	var card = _card("🚨 مدیریت بحران")
+	_bar(card, "آمادگی", float(dp.get("preparedness", 0.30)))
+	_bar(card, "هشدار زودهنگام", float(dp.get("early_warning", 0.30)))
+	_bar(card, "پناهگاه", float(dp.get("shelter", 0.25)))
+	_bar(card, "واکنش سریع", float(dp.get("response", 0.35)))
+	_bar(card, "ذخیره امدادی", float(dp.get("relief_stock", 0.30)))
+	_bar(card, "ریسک حادثه", float(dp.get("risk", 0.45)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["warning", "📡 هشدار"], ["shelter", "🏠 پناهگاه"], ["response", "🚑 واکنش"], ["relief", "📦 امداد"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_disaster.bind(a[0]))
+		_mark_decision_button(btn, "disaster:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "مانور سراسری هر ۴ نوبت. آمادگی بالا خسارت حادثه را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_disaster(action: String):
+	var cmd = GameCommandClass.create_disaster_action(action)
+	var labels := {"warning": "سامانه هشدار زودهنگام", "shelter": "پناهگاه اضطراری", "response": "مانور واکنش سریع", "relief": "ذخیره امدادی"}
+	if _queue_decision(cmd, "🚨 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("government")
+
+func _build_livestock_card(st: Dictionary):
+	var lp: Dictionary = st.get("livestock_policy", {})
+	if lp.is_empty():
+		return
+	var card = _card("🐄 دامپروری و پروتئین")
+	_bar(card, "امنیت پروتئین", float(lp.get("protein_security", 0.55)))
+	_bar(card, "گله دام", float(lp.get("herd_size", 0.50)))
+	_bar(card, "تولید شیر", float(lp.get("milk_production", 0.45)))
+	_bar(card, "تولید گوشت", float(lp.get("meat_production", 0.40)))
+	_bar(card, "واکسیناسیون", float(lp.get("vaccination", 0.45)))
+	_bar(card, "خودکفایی", float(lp.get("self_suff", 0.65)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["industrial", "🏭 صنعتی"], ["vaccine", "💉 واکسن"], ["feed", "🌾 علوفه"], ["breeding", "🐂 اصلاح نژاد"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_livestock.bind(a[0]))
+		_mark_decision_button(btn, "livestock:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "دامداری صنعتی هر ۵ نوبت. خشکسالی و ریزگرد به دام لطمه می‌زند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_livestock(action: String):
+	var cmd = GameCommandClass.create_livestock_action(action)
+	var labels := {"industrial": "دامداری صنعتی", "vaccine": "واکسیناسیون دام", "feed": "بهبود علوفه", "breeding": "اصلاح نژاد"}
+	if _queue_decision(cmd, "🐄 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_textile_card(st: Dictionary):
+	var tp: Dictionary = st.get("textile_policy", {})
+	if tp.is_empty():
+		return
+	var card = _card("🧵 نساجی و پوشاک")
+	_bar(card, "تولید", float(tp.get("output", 0.35)))
+	_bar(card, "ریسندگی", float(tp.get("spinning", 0.30)))
+	_bar(card, "پوشاک", float(tp.get("apparel", 0.40)))
+	_bar(card, "برندسازی", float(tp.get("branding", 0.20)))
+	_bar(card, "ارزش افزوده", float(tp.get("value_added", 0.30)))
+	_row(card, "اشتغال", PersianFormatter.to_persian_digits(str(tp.get("employment", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["mills", "🏭 کارخانه"], ["cotton", "🌾 پنبه"], ["apparel", "👕 پوشاک"], ["branding", "🏷️ برند"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_textile.bind(a[0]))
+		_mark_decision_button(btn, "textile:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "کارخانه هر ۵ نوبت. برندسازی به دیجیتال ۳+ نیاز دارد. نساجی اشتغال انبوه می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_textile(action: String):
+	var cmd = GameCommandClass.create_textile_action(action)
+	var labels := {"mills": "توسعه کارخانه نساجی", "cotton": "تامین پنبه", "apparel": "شهرک پوشاک", "branding": "برندسازی پوشاک"}
+	if _queue_decision(cmd, "🧵 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -7691,6 +7787,9 @@ func _command_queue_key(cmd) -> String:
 		"pharma_action": return "pharma:" + str(p.get("action", ""))
 		"ip_action": return "ip:" + str(p.get("action", ""))
 		"transit_action": return "transit:" + str(p.get("action", ""))
+		"disaster_action": return "disaster:" + str(p.get("action", ""))
+		"livestock_action": return "livestock:" + str(p.get("action", ""))
+		"textile_action": return "textile:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

@@ -33,7 +33,8 @@ const SUPPORTED_COMMANDS = [
 	"housing_action", "startup_action", "sme_action",
 	"supply_action", "care_action", "science_action",
 	"downstream_action", "higher_ed_action", "food_chain_action",
-	"pharma_action", "ip_action", "transit_action"
+	"pharma_action", "ip_action", "transit_action",
+	"disaster_action", "livestock_action", "textile_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -700,6 +701,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "transit_action":
 			if not str(cmd.payload.get("action", "")) in ["corridor", "customs", "rail", "freezone"]:
 				return {"valid": false, "reason": "اقدام ترانزیت نامعتبر است"}
+		elif cmd.type == "disaster_action":
+			if not str(cmd.payload.get("action", "")) in ["warning", "shelter", "response", "relief"]:
+				return {"valid": false, "reason": "اقدام بحران نامعتبر است"}
+		elif cmd.type == "livestock_action":
+			if not str(cmd.payload.get("action", "")) in ["industrial", "vaccine", "feed", "breeding"]:
+				return {"valid": false, "reason": "اقدام دام نامعتبر است"}
+		elif cmd.type == "textile_action":
+			if not str(cmd.payload.get("action", "")) in ["mills", "cotton", "apparel", "branding"]:
+				return {"valid": false, "reason": "اقدام نساجی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1721,6 +1731,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in tr_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("transit_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "disaster_action":
+		var dis_act := str(cmd.payload.get("action", ""))
+		var dis_result: Dictionary
+		match dis_act:
+			"warning": dis_result = DisasterManager.build_early_warning(snapshot, cmd.tick)
+			"shelter": dis_result = DisasterManager.build_shelters(snapshot)
+			"response": dis_result = DisasterManager.train_response(snapshot, cmd.tick)
+			_: dis_result = DisasterManager.relief_aid(snapshot)
+		snapshot = dis_result.state
+		for ev in dis_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("disaster_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "livestock_action":
+		var live_act := str(cmd.payload.get("action", ""))
+		var live_result: Dictionary
+		match live_act:
+			"industrial": live_result = LivestockManager.expand_industrial(snapshot, cmd.tick)
+			"vaccine": live_result = LivestockManager.vaccination(snapshot)
+			"feed": live_result = LivestockManager.improve_feed(snapshot)
+			_: live_result = LivestockManager.breeding_program(snapshot)
+		snapshot = live_result.state
+		for ev in live_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("livestock_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "textile_action":
+		var tex_act := str(cmd.payload.get("action", ""))
+		var tex_result: Dictionary
+		match tex_act:
+			"mills": tex_result = TextileManager.expand_mills(snapshot, cmd.tick)
+			"cotton": tex_result = TextileManager.cotton_supply(snapshot)
+			"apparel": tex_result = TextileManager.apparel_parks(snapshot)
+			_: tex_result = TextileManager.branding(snapshot)
+		snapshot = tex_result.state
+		for ev in tex_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("textile_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -2057,6 +2103,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = PharmaManager.ensure(snapshot)
 	snapshot = IntellectualPropertyManager.ensure(snapshot)
 	snapshot = TransitManager.ensure(snapshot)
+	snapshot = DisasterManager.ensure(snapshot)
+	snapshot = LivestockManager.ensure(snapshot)
+	snapshot = TextileManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2425,6 +2474,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var transit_result = TransitManager.simulate_month(snapshot, turn)
 	snapshot = transit_result.state
 	_collect_events(transit_result, "transit", snapshot, turn, generated_events, "transit_event")
+	var disaster_result = DisasterManager.simulate_month(snapshot, turn)
+	snapshot = disaster_result.state
+	_collect_events(disaster_result, "disaster", snapshot, turn, generated_events, "disaster_event")
+	var livestock_result = LivestockManager.simulate_month(snapshot, turn)
+	snapshot = livestock_result.state
+	_collect_events(livestock_result, "livestock", snapshot, turn, generated_events, "livestock_event")
+	var textile_result = TextileManager.simulate_month(snapshot, turn)
+	snapshot = textile_result.state
+	_collect_events(textile_result, "textile", snapshot, turn, generated_events, "textile_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
