@@ -44,7 +44,9 @@ func intervene(state: Dictionary, amount_billion: float) -> Dictionary:
 	econ["foreign_reserves"] = reserves - amount
 	state["economy"] = econ
 	var cb: Dictionary = state.get("central_bank", {})
-	cb["exchange_rate"] = clampf(float(cb.get("exchange_rate", 1.0)) * 0.98, 0.2, 5.0)
+	# قدرت تقویت نرخ با مبلغ مداخله مقیاس می‌گیرد: از ۱٪ تا ۵٪ (در ۲۰ میلیارد به اوج می‌رسد)
+	var strength := clampf(amount / 20.0e9, 0.0, 1.0)
+	cb["exchange_rate"] = clampf(float(cb.get("exchange_rate", 1.0)) * (1.0 - 0.01 - strength * 0.04), 0.2, 5.0)
 	state["central_bank"] = cb
 	var forex: Dictionary = state["forex"]
 	forex["intervention"] = clampf(float(forex.get("intervention", 0.0)) + 0.3, 0.0, 1.0)

@@ -60,7 +60,7 @@ func _init():
 	# ── ۲) سیاست ارزی ──
 	GS.state["economy"]["foreign_reserves"] = 100e9
 	var rate0 := float(GS.state.get("central_bank", {}).get("exchange_rate", 1.0))
-	r = GE.tick(GS.state, GS.version, GS.tick, [CS.create_forex_intervene(2.0)])
+	r = GE.tick(GS.state, GS.version, GS.tick, [CS.create_forex_intervene(10.0)])
 	GS.set_state(r.state, r.version, r.tick)
 	var rate1 := float(GS.state.get("central_bank", {}).get("exchange_rate", 1.0))
 	if rate1 >= rate0:

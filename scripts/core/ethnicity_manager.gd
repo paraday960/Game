@@ -127,10 +127,25 @@ func ethnic_festival(state: Dictionary, turn: int) -> Dictionary:
 	var econ: Dictionary = state.get("economy", {})
 	econ["government_spending"] = float(econ.get("government_spending", 0.0)) + float(econ.get("gdp", 1.0)) * 0.006
 	ep["last_festival"] = turn
-	state["population"]["happiness"] = clampf(float(state["population"].get("happiness", 0.6)) + 0.012, 0.05, 1.0)
-	state["culture_policy"]["soft_power"] = clampf(float(state["culture_policy"].get("soft_power", 40.0)) + 2.0, 5.0, 100.0)
-	state["tourism"]["revenue"] = float(state["tourism"].get("revenue", 0.0)) * 1.02
-	state["media"]["groups"]["جوانان"]["approval"] = clampf(float(state["media"]["groups"]["جوانان"].get("approval", 45.0)) + 2.0, 5.0, 100.0)
+	var pop: Dictionary = state.get("population", {})
+	pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.012, 0.05, 1.0)
+	# درخشش ماندگار جشنواره: تعادل شادی حدود یک ماه بالاتر می‌ماند تا اثر آن
+	# در پایان همان نوبت (پس از ۳۰ روز کشش روزانه به سمت تعادل) محو نشود.
+	pop["festival_glow"] = clampf(float(pop.get("festival_glow", 0.0)) + 0.05, 0.0, 0.12)
+	state["population"] = pop
+	var culture: Dictionary = state.get("culture_policy", {})
+	culture["soft_power"] = clampf(float(culture.get("soft_power", 40.0)) + 2.0, 5.0, 100.0)
+	state["culture_policy"] = culture
+	var tourism: Dictionary = state.get("tourism", {})
+	tourism["revenue"] = float(tourism.get("revenue", 0.0)) * 1.02
+	state["tourism"] = tourism
+	var media: Dictionary = state.get("media", {})
+	var groups: Dictionary = media.get("groups", {})
+	var youth: Dictionary = groups.get("جوانان", {})
+	youth["approval"] = clampf(float(youth.get("approval", 45.0)) + 2.0, 5.0, 100.0)
+	groups["جوانان"] = youth
+	media["groups"] = groups
+	state["media"] = media
 	state["ethnicity_policy"] = ep
 	state["economy"] = econ
 	return {"success": true, "state": state,

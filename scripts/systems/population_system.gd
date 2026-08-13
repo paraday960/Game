@@ -89,8 +89,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		happiness -= 0.2
 	if resources["energy_crisis"]:
 		happiness -= 0.1
+	# درخشش جشنواره‌ها و رویدادهای شادی‌بخش: تعادل شادی را موقتاً بالا نگه می‌دارد و آرام محو می‌شود
+	happiness += float(pop.get("festival_glow", 0.0))
 	happiness = clamp(happiness, 0.05, 0.95)
 	pop["happiness"] = pop["happiness"] * 0.95 + happiness * 0.05  # نرم شدن تغییرات
+	pop["festival_glow"] = maxf(float(pop.get("festival_glow", 0.0)) - 0.0015, 0.0)
 	pop["satisfaction"] = pop["happiness"] * 0.9 + pol["trust"] * 0.1
 
 	# آستانه شورش - ۳.۱۱.۴

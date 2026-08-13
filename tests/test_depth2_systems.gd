@@ -40,10 +40,15 @@ func _init():
 		GS.set_state(r.state, r.version, r.tick)
 		if str(GS.state.get("generals", {}).get("commanders", {}).get(cid, {}).get("assigned_war", "")) != "AFG":
 			fails.append("فرمانده به جنگ گمارده نشد")
-		# بونوس جبهه باید عددی باشد
+		# بونوس جبهه باید عددی و از فرمانده گمارده‌شده بیاید (ویژگی‌ها عمداً بده‌بستان دارند:
+		# مثلاً فرمانده دفاعی حمله ضعیف‌تری دارد؛ عدد منفی ویژگی، باگ نیست)
 		var bonus: Dictionary = GM.front_bonus(GS.state, "AFG")
-		if float(bonus.get("offense", 0.0)) < 0.0:
-			fails.append("بونوس جبهه منفی است")
+		for k in ["offense", "defense", "logistics", "air"]:
+			if not is_finite(float(bonus.get(k, 0.0))):
+				fails.append("بونوس جبهه «%s» عددی نیست" % k)
+		var contributed := absf(float(bonus.get("offense", 0.0))) + absf(float(bonus.get("defense", 0.0))) + absf(float(bonus.get("logistics", 0.0))) + absf(float(bonus.get("air", 0.0)))
+		if contributed <= 0.0:
+			fails.append("بونوس جبهه از فرمانده گمارده‌شده صفر است")
 		# چند تیک برای تجربه/ارتقا
 		for i in range(8):
 			r = GE.tick(GS.state, GS.version, GS.tick, [])

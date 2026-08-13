@@ -3020,8 +3020,8 @@ func _on_forex(action: String):
 	var label := ""
 	match action:
 		"intervene":
-			cmd = GameCommandClass.create_forex_intervene(2.0)
-			label = "مداخله ارزی"
+			cmd = GameCommandClass.create_forex_intervene(10.0)
+			label = "مداخله ارزی (۱۰ میلیارد)"
 		"devalue":
 			cmd = GameCommandClass.create_forex_devalue(10.0)
 			label = "کاهش ارزش ۱۰٪"
