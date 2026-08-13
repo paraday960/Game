@@ -129,22 +129,44 @@ func _draw() -> void:
 		# پس‌زمینه
 		draw_rect(rect, Color(0.01, 0.03, 0.05, 0.94 * _banner_alpha), true)
 		draw_rect(rect, Color(_banner_severity.r, _banner_severity.g, _banner_severity.b, 0.9 * _banner_alpha), false, 3.0)
-		# تیتر — شکستن دستی خطوط و مرکزچینی واقعی (متن هرگز از کادر بیرون نمی‌زند)
+		# تیتر و زیرتیتر — وسط‌چین عمودی با فاصله‌گذاری واقعی فونت
 		# draw_string با width فقط برای align است و متن را محدود نمی‌کند؛
 		# بنابراین هر خط را با عرض واقعی اندازه می‌گیریم و دستی مرکز می‌کنیم.
 		var title_lines_arr := _wrap_text(font, _banner_title, text_w, title_size)
-		var title_y := rect.position.y + 30.0 * _banner_scale
+		var sub_lines_arr: Array = []
+		if _banner_subtitle != "":
+			sub_lines_arr = _wrap_text(font, _banner_subtitle, text_w, sub_size)
+		var title_ascent: float = font.get_ascent(title_size)
+		var title_descent: float = font.get_descent(title_size)
+		var sub_ascent := 0.0
+		var sub_descent := 0.0
+		if sub_lines_arr.size() > 0:
+			sub_ascent = font.get_ascent(sub_size)
+			sub_descent = font.get_descent(sub_size)
+		# فاصله بین خطوط هم‌خانواده (بدون همپوشانی حروف)
+		var title_line_gap := title_ascent + title_descent + 5.0
+		var sub_line_gap := sub_ascent + sub_descent + 4.0
+		# فاصله بین تیتر و زیرتیتر: descent تیتر + تنفس + ascent زیرتیتر
+		var title_sub_gap := title_descent + 7.0 + sub_ascent
+		# بلوک واقعی متن از بالای ascent تیتر تا پایین descent آخرین خط
+		var total_text_h := float(maxi(0, title_lines_arr.size() - 1)) * title_line_gap + title_ascent
+		if sub_lines_arr.size() > 0:
+			total_text_h += title_sub_gap + float(maxi(0, sub_lines_arr.size() - 1)) * sub_line_gap + sub_descent
+		else:
+			total_text_h += title_descent
+		# نقطه شروع عمودی: وسط بنر منهای نصف بلوک متن (فاصله بالا و پایین یکسان)
+		var text_top := rect.position.y + (rect.size.y - total_text_h) * 0.5
+		var title_y := text_top + title_ascent
 		for line in title_lines_arr:
 			var line_w: float = font.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x
 			var line_x: float = center.x - line_w * 0.5
 			draw_string(font, Vector2(line_x, title_y), str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, Color(1, 1, 1, _banner_alpha))
-			title_y += float(title_size + 6)
-		# زیرتیتر
-		if _banner_subtitle != "":
-			var sub_lines_arr := _wrap_text(font, _banner_subtitle, text_w, sub_size)
-			var sub_y := title_y + 8.0
+			title_y += title_line_gap
+		# زیرتیتر (title_y بعد از حلقه یک فاصله خط جلوتر است؛ آن را برمی‌گردانیم)
+		if sub_lines_arr.size() > 0:
+			var sub_y := title_y - title_line_gap + title_sub_gap
 			for line in sub_lines_arr:
 				var line_w2: float = font.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size).x
 				var line_x2: float = center.x - line_w2 * 0.5
 				draw_string(font, Vector2(line_x2, sub_y), str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size, Color(0.85, 0.9, 0.95, _banner_alpha * 0.9))
-				sub_y += float(sub_size + 5)
+				sub_y += sub_line_gap
