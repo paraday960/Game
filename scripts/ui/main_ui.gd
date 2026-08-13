@@ -1453,6 +1453,47 @@ func _on_leader_hidden_toggle(hidden: bool):
 		_toast("وضعیت رهبر ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("dashboard")
 
+# ── معضلات راهبردی: انتخاب بین دو بدی با پیامد واقعی ──
+func _build_dilemma_card(st: Dictionary):
+	var dm: Dictionary = st.get("dilemmas", {})
+	if dm.is_empty():
+		return
+	var active: Dictionary = dm.get("active", {})
+	if active.is_empty():
+		return
+	var card = _card("🤔 معضل راهبردی — «%s»" % str(active.get("title", "")))
+	var desc = Label.new()
+	desc.text = str(active.get("desc", ""))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.add_theme_font_size_override("font_size", 17)
+	card.add_child(desc)
+	var hint = Label.new()
+	hint.text = "هیچ گزینه‌ای رایگان نیست؛ معضل یعنی انتخاب بین دو بدی. تا ۵ نوبت فرصت دارید."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = ACCENT_ORANGE
+	card.add_child(hint)
+	for ch: String in ["a", "b"]:
+		var opt: Dictionary = active.get("option_" + ch, {})
+		var btn = Button.new()
+		btn.text = str(opt.get("label", "انتخاب"))
+		btn.custom_minimum_size = Vector2(0, 50)
+		btn.add_theme_font_size_override("font_size", 17)
+		btn.pressed.connect(FeedbackManager.play_click)
+		btn.pressed.connect(_on_dilemma.bind(ch))
+		_mark_decision_button(btn, "dilemma:" + ch)
+		card.add_child(btn)
+		var eff = Label.new()
+		eff.text = "🔻 " + str(opt.get("effect", ""))
+		eff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		eff.add_theme_font_size_override("font_size", 13); eff.modulate = TEXT_MUTED
+		card.add_child(eff)
+
+func _on_dilemma(choice: String):
+	var cmd = GameCommandClass.create_dilemma_resolve(choice)
+	if _queue_decision(cmd, "🤔 حل معضل راهبردی" + (" (گزینه الف)" if choice == "a" else " (گزینه ب)")):
+		_toast("انتخاب شما ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("dashboard")
+
 func _build_daily_reward_card(state: Dictionary):
 	var status: Dictionary = DailyRewardManager.get_status()
 	var can_claim: bool = bool(status.get("can_claim", false))
@@ -1554,6 +1595,7 @@ func _build_dashboard():
 	if not bool(SettingsManager.get_value("tutorial_dismissed", false)) and int(st.get("tick", 0)) < 7:
 		_build_onboarding_card(st)
 	_build_command_kpis(st)
+	_build_dilemma_card(st)
 	_build_leader_card(st)
 	_build_daily_reward_card(st)
 	_build_special_event_card(st)
@@ -6385,6 +6427,7 @@ func _command_queue_key(cmd) -> String:
 		"ambassador_action": return "amb:" + str(p.get("action", "")) + ":" + str(p.get("country", ""))
 		"digital_action": return "digital:" + str(p.get("action", ""))
 		"sports_action": return "sports:" + str(p.get("action", ""))
+		"dilemma_resolve": return "dilemma:" + str(p.get("choice", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
