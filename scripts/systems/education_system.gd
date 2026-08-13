@@ -88,7 +88,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			events.append({"type": "student_protest", "message": "اعتراض دانشجویان به کاهش بودجه آموزش", "budget_share": edu_budget_share})
 		elif r < 0.8:
 			events.append({"type": "education_reform", "message": "اصلاحات آموزشی پیشنهاد شد", "effect": 0.02})
-			education["quality"] += 0.01
+			education["quality"] = clampf(float(education.get("quality", 0.5)) + 0.01, 0.05, 0.98)
 		else:
 			events.append({"type": "talent_discovered", "message": "کشف استعداد درخشان!", "bonus": 0.05})
 			education["human_capital"] += 0.01

@@ -64,12 +64,19 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	life_exp += (1.0 - welfare.get("poverty",0.15)) * 2.0
 	health["life_expectancy"] = clamp(health["life_expectancy"] * 0.999 + life_exp * 0.001, 50.0, 90.0)
 
+	# واقع‌گرایی: ظرفیت سلامت (تخت بیمارستانی و پزشک) با بودجه بهداشت رشد/تحلیل می‌رود
+	# قبلاً تخت و پزشک برای همیشه ثابت بودند و کمبود تخت جریمه‌ای بدون راه‌حل می‌ساخت
+	var hb_share: float = float(state.get("economy", {}).get("budget_allocations", {}).get("بهداشت", 0.10))
+	var cap_growth: float = (hb_share - 0.10) * 0.0008  # بودجه بالای ۱۰٪ ≈ رشد ~۲.۹٪ در سال
+	health["hospital_beds"] = maxf(float(health.get("hospital_beds", 150000.0)) * (1.0 + cap_growth), 10000.0)
+	health["doctors"] = maxf(float(health.get("doctors", 50000.0)) * (1.0 + cap_growth), 2000.0)
+
 	# هزینه سلامت = f(بیمارستان، دارو، نیروی متخصص)
 	var bed_need = pop.get("total", 85_000_000) / 1000.0 * 2.5  # 2.5 تخت per 1000
 	var bed_ratio = health["hospital_beds"] / max(bed_need, 1.0)
 	if bed_ratio < 0.8:
 		events.append({"type": "hospital_bed_shortage", "message": "کمبود تخت بیمارستانی - ظرفیت پر", "ratio": bed_ratio})
-		health["quality"] -= 0.002
+		health["quality"] = clampf(float(health.get("quality", 0.60)) - 0.002, 0.05, 0.98)
 
 	# نیروی پزشکی
 	var doctor_need = pop.get("total",0) / 1000.0 * 1.5
@@ -90,7 +97,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# رویدادها - ۳.۱۹.۵
 	if health["epidemic_readiness"] < 0.4 and Deterministic.chance(0.01):
 		events.append({"type": "epidemic_outbreak", "message": "شیوع بیماری واگیردار! آمادگی پایین", "severity": 1.0 - health["epidemic_readiness"]})
-		health["quality"] -= 0.02
+		health["quality"] = clampf(float(health.get("quality", 0.60)) - 0.02, 0.05, 0.98)
 		pop["happiness"] -= 0.03
 
 	if health["coverage"] < 0.6 and Deterministic.chance(0.01):
@@ -98,7 +105,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	if Deterministic.chance(0.008):
 		events.append({"type": "medical_breakthrough", "message": "پیشرفت پزشکی - کشف درمان جدید", "benefit": 0.03})
-		health["quality"] += 0.01
+		health["quality"] = clampf(float(health.get("quality", 0.60)) + 0.01, 0.05, 0.98)
 		health["life_expectancy"] += 0.1
 
 	state["health"] = health
