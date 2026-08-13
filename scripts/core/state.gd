@@ -23,6 +23,9 @@ func init_default_state():
 		"stock_policy": {"policy": "none", "ipos": 0, "bubble": 0.0, "last_crash": -99, "last_support": -99, "watchdog": 0.0},
 		"veterans_policy": {"pension_level": 0.5, "employment_program": 0.4, "clinic": false, "parades": 0, "last_parade": -99, "satisfaction": 0.6},
 		"heritage_policy": {"restored": 0, "registered": 0, "festivals": 0, "last_festival": -99, "last_disaster": -99, "last_antiq": -99},
+		"transport_policy": {"subsidy_level": 0.5, "last_metro": -99, "last_fleet": -99, "last_brt": -99, "metro_built": 0, "brt_built": 0},
+		"retail_policy": {"price_control": false, "consumer_protection": 0.4, "confidence": 0.6, "online_boost": 0, "last_bazaar": -99},
+		"ethnicity_policy": {"equal_programs": 0.4, "autonomy": 0.4, "dialogues": 0, "last_dialogue": -99, "last_festival": -99, "representation": 0.4},
 		"clock": {
 			"year": 2027,
 			"month": 1,
