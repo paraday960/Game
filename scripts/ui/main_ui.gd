@@ -2846,6 +2846,7 @@ func _build_economy():
 	_build_industry_card(st)
 	_build_mining_card(st)
 	_build_sme_card(st)
+	_build_transit_card(st)
 	_build_agriculture_card(st)
 	_build_food_chain_card(st)
 	_build_tourism_card(st)
@@ -5480,6 +5481,99 @@ func _on_food_chain(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("economy")
 
+func _build_pharma_card(st: Dictionary):
+	var pp: Dictionary = st.get("pharma_policy", {})
+	if pp.is_empty():
+		return
+	var card = _card("💊 دارو و صنعت سلامت")
+	_bar(card, "امنیت دارو", float(pp.get("drug_security", 0.40)))
+	_bar(card, "تولید داخلی", float(pp.get("local_production", 0.35)))
+	_bar(card, "داروی ژنریک", float(pp.get("generic", 0.40)))
+	_bar(card, "ذخیره دارو", float(pp.get("stockpile", 0.30)))
+	_bar(card, "واکسن", float(pp.get("vaccine", 0.20)))
+	_row(card, "وابستگی واردات", PersianFormatter.format_percent(float(pp.get("import_dep", 0.65))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["plant", "🏭 کارخانه"], ["generic", "💊 ژنریک"], ["stockpile", "📦 ذخیره"], ["vaccine", "💉 واکسن"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_pharma.bind(a[0]))
+		_mark_decision_button(btn, "pharma:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "کارخانه هر ۶ نوبت؛ نیازمند فناوری ۴+. تولید داخلی وابستگی و قیمت دارو را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_pharma(action: String):
+	var cmd = GameCommandClass.create_pharma_action(action)
+	var labels := {"plant": "احداث کارخانه دارو", "generic": "توسعه داروی ژنریک", "stockpile": "ذخیره راهبردی دارو", "vaccine": "برنامه واکسن"}
+	if _queue_decision(cmd, "💊 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("population")
+
+func _build_ip_card(st: Dictionary):
+	var ip: Dictionary = st.get("ip_policy", {})
+	if ip.is_empty():
+		return
+	var card = _card("©️ مالکیت فکری")
+	_bar(card, "شاخص نوآوری", float(ip.get("innovation_index", 0.25)))
+	_bar(card, "ثبت اختراع", float(ip.get("patents", 0.25)))
+	_bar(card, "کپی‌رایت", float(ip.get("copyright", 0.30)))
+	_bar(card, "انتقال فناوری", float(ip.get("tech_transfer", 0.20)))
+	_bar(card, "اجرای قانون", float(ip.get("enforcement", 0.30)))
+	_row(card, "اختراعات ثبت‌شده", PersianFormatter.to_persian_digits(str(ip.get("patent_count", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["patent", "📜 ثبت اختراع"], ["copyright", "©️ کپی‌رایت"], ["transfer", "🤝 انتقال"], ["park", "🔬 پارک علم"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_ip.bind(a[0]))
+		_mark_decision_button(btn, "ip:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "اصلاح ثبت اختراع هر ۵ نوبت. IP قوی سرمایه‌گذاری و تجاری‌سازی دانش را جذب می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_ip(action: String):
+	var cmd = GameCommandClass.create_ip_action(action)
+	var labels := {"patent": "اصلاح نظام ثبت اختراع", "copyright": "تقویت کپی‌رایت", "transfer": "دفتر انتقال فناوری", "park": "پارک علم و فناوری"}
+	if _queue_decision(cmd, "©️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
+func _build_transit_card(st: Dictionary):
+	var tp: Dictionary = st.get("transit_policy", {})
+	if tp.is_empty():
+		return
+	var card = _card("🚛 لجستیک و ترانزیت")
+	_bar(card, "کریدورهای ترانزیتی", float(tp.get("corridors", 0.25)))
+	_bar(card, "گمرک هوشمند", float(tp.get("customs", 0.30)))
+	_bar(card, "ریلی باری", float(tp.get("rail", 0.25)))
+	_bar(card, "مناطق آزاد", float(tp.get("free_zones", 0.20)))
+	_bar(card, "بار ترانزیتی", float(tp.get("freight", 0.30)))
+	_row(card, "تأخیر مرزی", PersianFormatter.format_percent(float(tp.get("border_delay", 0.50))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["corridor", "🛣️ کریدور"], ["customs", "🛃 گمرک"], ["rail", "🚂 ریل"], ["freezone", "🏭 منطقه آزاد"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_transit.bind(a[0]))
+		_mark_decision_button(btn, "transit:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "کریدور هر ۶ نوبت. گمرک هوشمند به دیجیتال ۴+ نیاز دارد. ترانزیت درآمد ارزی پایدار می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_transit(action: String):
+	var cmd = GameCommandClass.create_transit_action(action)
+	var labels := {"corridor": "توسعه کریدور ترانزیتی", "customs": "اصلاح گمرک", "rail": "توسعه ریلی باری", "freezone": "گسترش منطقه آزاد"}
+	if _queue_decision(cmd, "🚛 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -5607,6 +5701,7 @@ func _build_technology():
 	_build_startup_card(state)
 	_build_higher_ed_card(state)
 	_build_science_card(state)
+	_build_ip_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
 	var unlocked_names: Array = []
@@ -5666,6 +5761,7 @@ func _build_population():
 	_build_media_card(GameState.state)
 	_build_labor_card(GameState.state)
 	_build_epidemic_card(GameState.state)
+	_build_pharma_card(GameState.state)
 	_build_migration_card(GameState.state)
 	_build_demographic_card(GameState.state)
 	_build_culture_card(GameState.state)
@@ -7592,6 +7688,9 @@ func _command_queue_key(cmd) -> String:
 		"downstream_action": return "downstream:" + str(p.get("action", ""))
 		"higher_ed_action": return "highered:" + str(p.get("action", ""))
 		"food_chain_action": return "foodchain:" + str(p.get("action", ""))
+		"pharma_action": return "pharma:" + str(p.get("action", ""))
+		"ip_action": return "ip:" + str(p.get("action", ""))
+		"transit_action": return "transit:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

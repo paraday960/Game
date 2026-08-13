@@ -55,6 +55,9 @@ func init_default_state():
 		"downstream_policy": {"refining": 0.35, "petrochemical": 0.30, "self_sufficiency": 0.40, "value_added": 0.25, "last_refinery": -99, "raw_export_share": 0.65, "fuel_security": 0.45, "product_exports": 0.10, "refining_capacity": 0.40},
 		"higher_ed_policy": {"funding": 0.30, "research": 0.25, "faculty": 0.30, "international": 0.15, "last_endowment": -99, "quality": 0.35, "graduates": 500000, "ranking": 0.20, "brain_gain": 0.10, "tuition_access": 0.55},
 		"food_chain_policy": {"storage": 0.25, "processing": 0.20, "logistics": 0.30, "safety": 0.40, "last_storage": -99, "waste": 0.35, "food_security": 0.55, "price_volatility": 0.40, "cold_chain": 0.20, "self_sufficiency": 0.60},
+		"pharma_policy": {"domestic": 0.30, "generic": 0.40, "stockpile": 0.30, "vaccine": 0.20, "medical_devices": 0.25, "last_plant": -99, "import_dep": 0.65, "drug_security": 0.40, "drug_cost": 0.60, "local_production": 0.35},
+		"ip_policy": {"patents": 0.25, "copyright": 0.30, "tech_transfer": 0.20, "enforcement": 0.30, "last_reform": -99, "innovation_index": 0.25, "patent_count": 500, "royalty_income": 0.05, "ip_compliance": 0.40},
+		"transit_policy": {"corridors": 0.25, "customs": 0.30, "rail": 0.25, "free_zones": 0.20, "last_corridor": -99, "transit_share": 0.15, "freight": 0.30, "revenue": 0.0, "border_delay": 0.50},
 		"clock": {
 			"year": 2027,
 			"month": 1,

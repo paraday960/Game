@@ -32,7 +32,8 @@ const SUPPORTED_COMMANDS = [
 	"judicial_reform_action", "election_action", "fuel_action",
 	"housing_action", "startup_action", "sme_action",
 	"supply_action", "care_action", "science_action",
-	"downstream_action", "higher_ed_action", "food_chain_action"
+	"downstream_action", "higher_ed_action", "food_chain_action",
+	"pharma_action", "ip_action", "transit_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -690,6 +691,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "food_chain_action":
 			if not str(cmd.payload.get("action", "")) in ["storage", "processing", "logistics", "safety"]:
 				return {"valid": false, "reason": "اقدام زنجیره غذا نامعتبر است"}
+		elif cmd.type == "pharma_action":
+			if not str(cmd.payload.get("action", "")) in ["plant", "generic", "stockpile", "vaccine"]:
+				return {"valid": false, "reason": "اقدام دارو نامعتبر است"}
+		elif cmd.type == "ip_action":
+			if not str(cmd.payload.get("action", "")) in ["patent", "copyright", "transfer", "park"]:
+				return {"valid": false, "reason": "اقدام مالکیت فکری نامعتبر است"}
+		elif cmd.type == "transit_action":
+			if not str(cmd.payload.get("action", "")) in ["corridor", "customs", "rail", "freezone"]:
+				return {"valid": false, "reason": "اقدام ترانزیت نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1675,6 +1685,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in fc_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("food_chain_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "pharma_action":
+		var ph_act := str(cmd.payload.get("action", ""))
+		var ph_result: Dictionary
+		match ph_act:
+			"plant": ph_result = PharmaManager.build_plant(snapshot, cmd.tick)
+			"generic": ph_result = PharmaManager.expand_generic(snapshot)
+			"stockpile": ph_result = PharmaManager.stockpile_drugs(snapshot)
+			_: ph_result = PharmaManager.vaccine_program(snapshot)
+		snapshot = ph_result.state
+		for ev in ph_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("pharma_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "ip_action":
+		var ip_act := str(cmd.payload.get("action", ""))
+		var ip_result: Dictionary
+		match ip_act:
+			"patent": ip_result = IntellectualPropertyManager.patent_reform(snapshot, cmd.tick)
+			"copyright": ip_result = IntellectualPropertyManager.strengthen_copyright(snapshot)
+			"transfer": ip_result = IntellectualPropertyManager.tech_transfer_office(snapshot)
+			_: ip_result = IntellectualPropertyManager.science_park(snapshot)
+		snapshot = ip_result.state
+		for ev in ip_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("ip_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "transit_action":
+		var tr_act := str(cmd.payload.get("action", ""))
+		var tr_result: Dictionary
+		match tr_act:
+			"corridor": tr_result = TransitManager.expand_corridor(snapshot, cmd.tick)
+			"customs": tr_result = TransitManager.customs_reform(snapshot)
+			"rail": tr_result = TransitManager.rail_freight(snapshot)
+			_: tr_result = TransitManager.free_zone(snapshot)
+		snapshot = tr_result.state
+		for ev in tr_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("transit_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -2008,6 +2054,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = DownstreamEnergyManager.ensure(snapshot)
 	snapshot = HigherEducationManager.ensure(snapshot)
 	snapshot = FoodValueChainManager.ensure(snapshot)
+	snapshot = PharmaManager.ensure(snapshot)
+	snapshot = IntellectualPropertyManager.ensure(snapshot)
+	snapshot = TransitManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2367,6 +2416,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var food_chain_result = FoodValueChainManager.simulate_month(snapshot, turn)
 	snapshot = food_chain_result.state
 	_collect_events(food_chain_result, "food_chain", snapshot, turn, generated_events, "food_chain_event")
+	var pharma_result = PharmaManager.simulate_month(snapshot, turn)
+	snapshot = pharma_result.state
+	_collect_events(pharma_result, "pharma", snapshot, turn, generated_events, "pharma_event")
+	var ip_result = IntellectualPropertyManager.simulate_month(snapshot, turn)
+	snapshot = ip_result.state
+	_collect_events(ip_result, "ip", snapshot, turn, generated_events, "ip_event")
+	var transit_result = TransitManager.simulate_month(snapshot, turn)
+	snapshot = transit_result.state
+	_collect_events(transit_result, "transit", snapshot, turn, generated_events, "transit_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

@@ -374,6 +374,15 @@ static func create_higher_ed_action(action: String):
 static func create_food_chain_action(action: String):
 	return _self_script().new("food_chain_action", {"action": action})
 
+static func create_pharma_action(action: String):
+	return _self_script().new("pharma_action", {"action": action})
+
+static func create_ip_action(action: String):
+	return _self_script().new("ip_action", {"action": action})
+
+static func create_transit_action(action: String):
+	return _self_script().new("transit_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
