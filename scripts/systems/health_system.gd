@@ -110,137 +110,18 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["health"] = health
 	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("health", {})
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
+	# ── لایه واقع‌گرایانه اختصاصی بهداشت (جایگزین قالب خودکار تکراری) — بخش ۳.۱۹ ──
+	# آمادگی همه‌گیری از بودجه بهداشت و پیشگیری تغذیه می‌شود
+	var hb_share_h: float = float(econ.get("budget_allocations", {}).get("بهداشت", 0.10))
+	var readiness_target: float = clampf(hb_share_h * 4.0 + float(health.get("prevention", 0.50)) * 0.2, 0.05, 0.95)
+	health["epidemic_readiness"] = clampf(float(health.get("epidemic_readiness", 0.50)) * 0.998 + readiness_target * 0.002, 0.05, 0.95)
+	# بهداشت محیط: آلودگی بالا بار بیماری و فرسایش سلامت جمعیت
+	var pollution_h: float = float(environment.get("pollution", 0.45))
+	health["population_health"] = clampf(float(health.get("population_health", 0.55)) * 0.998 - (pollution_h - 0.40) * 0.0006 + float(health.get("quality", 0.60)) * 0.0004, 0.10, 0.95)
+	# امید به زندگی از سلامت جمعیت و کیفیت خدمات
+	health["life_expectancy"] = clampf(55.0 + float(health.get("population_health", 0.55)) * 15.0 + float(health.get("quality", 0.60)) * 10.0, 55.0, 85.0)
+	if pollution_h > 0.70 and Deterministic.chance(0.005):
+		events.append({"type": "smog_health_alert", "message": "هشدار سلامت - آلودگی شدید هوا؛ مراجعات تنفسی افزایش یافت", "pollution": pollution_h})
+	state["health"] = health
 
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
-
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("health",{}).has("efficiency"):
-		_efficiency = float(state["health"].get("efficiency",0.60))
-	elif state.get("health",{}).has("quality"):
-		_efficiency = float(state["health"].get("quality",0.60))
-
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("health") and state["health"] is Dictionary:
-		state["health"]["efficiency"] = _efficiency
-		state["health"]["quality"] = clamp(float(state["health"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
-
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("health",{}).get("quality",0.60) if state.has("health") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_health","gap": _budget_gap, "message":"کسری بودجه نگهداری health - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_health","digital": _digital, "message":"جهش دیجیتال در health - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_health_extra","corruption": _corruption, "message":"فساد در health - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_health","gini": _gini, "message":"نابرابری اثر بر health"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("health",{}).get("productivity",0.60) if state.has("health") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("health") and state["health"] is Dictionary:
-		state["health"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("health",{}).get("resilience",0.60) if state.has("health") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("health") and state["health"] is Dictionary:
-		state["health"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_health","resilience": _resilience, "message":"تاب‌آوری پایین health - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("health",{}).get("coverage",0.70) if state.has("health") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_health","coverage": _coverage, "message":"پوشش health پایین - دسترسی محدود"})
-
-
-	
-	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
-
-	_trust = float(_extra_politics.get("trust",0.55))
-	_corruption = float(_extra_politics.get("corruption",0.30))
-	_stability = float(_extra_politics.get("stability",0.60))
-	_happiness = float(_extra_pop.get("happiness",0.60))
-	_gini = float(state.get("welfare",{}).get("gini",0.38))
-	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
-
-	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
-	if state.has("health") and state["health"] is Dictionary:
-		_sys_q = float(state["health"].get("quality",0.60) if state["health"].has("quality") else state["health"].get("efficiency",0.60) if state["health"].has("efficiency") else 0.60)
-	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
-	if state.has("health") and state["health"] is Dictionary:
-		state["health"]["quality"] = _sys_q
-
-	# نابرابری و نارضایتی
-	if _gini > 0.42 and Deterministic.chance(0.007):
-		events.append({"type":"inequality_health_deep","gini": _gini, "message":"نابرابری اثر بر health - شکاف طبقاتی"})
-
-	# فناوری دوگانه (نظامی-غیرنظامی)
-	if _digital > 0.65 and Deterministic.chance(0.006):
-		events.append({"type":"dual_use_tech_health","digital": _digital, "message":"فناوری دوگانه در health - کاربرد نظامی و غیرنظامی"})
-
-	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
-	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
-		events.append({"type":"climate_vulnerability_health","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی health"})
-
-	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
-	if _social_capital < 0.40 and Deterministic.chance(0.006):
-		events.append({"type":"low_social_capital_health","capital": _social_capital, "message":"سرمایه اجتماعی پایین در health"})
-
-	# اثر تورمی بر هزینه نگهداری
-	_inflation = float(_extra_econ.get("inflation",0.08))
-	if state.has("health") and state["health"] is Dictionary and state["health"].has("maintenance_cost"):
-		state["health"]["maintenance_cost"] = float(state["health"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
-
-
-	
 	return {"success": true, "state": state, "events": events}
