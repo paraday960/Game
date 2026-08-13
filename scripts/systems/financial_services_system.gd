@@ -95,7 +95,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["financial_services"] = fin
 	state["economy"] = econ
 	
-		# ── لایه واقع‌گرایانه اختصاصی خدمات مالی (جایگزین قالب خودکار) — بخش ۳.۵۰ ──
+	# ── لایه واقع‌گرایانه اختصاصی خدمات مالی (جایگزین قالب خودکار) — بخش ۳.۵۰ ──
 	# نرخ بهره واقعی منفی = فرار سپرده‌ها از بانک به سمت طلا و ارز (پدیده کلاسیک)
 	var real_interest = float(interest) - float(inflation)
 	var deposit_flow = real_interest * 0.02 + float(fin.get("trust_banks", 0.60)) * 0.001 - 0.0005

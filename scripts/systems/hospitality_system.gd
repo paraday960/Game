@@ -72,7 +72,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["hospitality"] = hospitality
 	
-		# ── لایه واقع‌گرایانه اختصاصی مهمان‌داری (جایگزین قالب خودکار) — بخش ۳.۴۴ ──
+	# ── لایه واقع‌گرایانه اختصاصی مهمان‌داری (جایگزین قالب خودکار) — بخش ۳.۴۴ ──
 	# اشتغال واقعی مهمان‌داری: هر رستوران ~۶ نفر، هر هتل ~۴۰ نفر، هر کافه ~۳ نفر
 	hospitality["employment"] = int(float(hospitality.get("restaurants", 50000)) * 6.0 + float(hospitality.get("hotels", 3000)) * 40.0 + float(hospitality.get("cafes", 30000)) * 3.0)
 	# درآمد از اشتغال و گردشگر — نه عدد ثابت

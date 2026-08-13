@@ -295,84 +295,27 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["central_bank"] = central_bank
 	state["politics"] = pol
 
-	# ==================== بلوک تکمیل عمق - حفظ تمام سیستم‌ها بالای ۱۵۰ خط ====================
-	var _sys_extra = state.get("economy", {})
-	var _econ_extra = econ
-	var _pop_extra = pop
-	var _pol_extra = pol
-	var _infra_extra = infra
-	var _tech_extra = tech
-	var _welfare_extra = welfare
-	var _culture_extra = state.get("culture", {})
+	# ── لایه واقع‌گرایانه اختصاصی اقتصاد (جایگزین قالب خودکار) ──
+	# اقتصاد غیررسمی، مالیات دولت را می‌نوردد — برآورد آماری (دور ۱۰) به درآمد واقعی وصل شد
+	var informal_e = float(state.get("statistics", {}).get("informal_economy_estimate", 0.25))
+	econ["informal_tax_loss_daily"] = float(econ.get("government_revenue", 0.0)) * informal_e * 0.30 / 365.0
+	econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) - float(econ["informal_tax_loss_daily"])
+	# برق نامطمئن (تأسیسات شهری دور ۱۲) تولید را گران و سرمایه‌گذاری را فراری می‌کند
+	var power_rel_e = float(econ.get("power_reliability", 1.0))
+	if power_rel_e < 0.75:
+		econ["growth_rate"] = clampf(float(econ.get("growth_rate", 0.02)) - (0.75 - power_rel_e) * 0.0015, -0.12, 0.15)
+	# کمک‌های بین‌المللی (سازمان‌ها دور ۱۴) واقعاً به خزانه واریز می‌شود
+	var aid_in_e = float(econ.get("aid_inflow_daily", 0.0))
+	if aid_in_e > 0.0:
+		econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + aid_in_e
+	# سرمایه‌گذاری بخش خصوصی از فضای کسب‌وکار (دور ۹) و اعتماد بانکی (دور ۱۵)
+	var biz_climate = float(private_sector.get("business_ease", private_sector.get("ease_of_business", 0.55)))
+	var bank_trust_e = float(state.get("financial_services", {}).get("trust_banks", 0.60))
+	econ["private_investment"] = clampf(float(econ.get("private_investment", 0.15)) * 0.995 + (biz_climate * 0.20 + bank_trust_e * 0.05 + 0.02) * 0.005, 0.03, 0.40)
+	if informal_e > 0.40 and Deterministic.chance(0.004):
+		events.append({"type": "shadow_economy_leak", "message": "دزدی مالیاتی اقتصاد زیرزمینی - خزانه از %d٪ اقتصاد بی‌نصیب است" % int(informal_e * 100.0), "informal": informal_e})
+	if power_rel_e < 0.55 and Deterministic.chance(0.005):
+		events.append({"type": "power_drag_growth", "message": "قطعی‌های برق، چرخ تولید را کند کرده — رشد در محاصره خاموشی"})
+	state["economy"] = econ
 
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-
-	if _stability < 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"stability_impact_economy","message":"بی‌ثباتی اثر بر اقتصاد"})
-
-	if _corruption > 0.60 and Deterministic.chance(0.006):
-		events.append({"type":"corruption_impact_economy","message":"فساد بالا - کارآمدی اقتصاد افت کرد"})
-
-	
-	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
-
-	_trust = float(_extra_politics.get("trust",0.55))
-	_corruption = float(_extra_politics.get("corruption",0.30))
-	_stability = float(_extra_politics.get("stability",0.60))
-	_happiness = float(_extra_pop.get("happiness",0.60))
-	var _gini = float(state.get("welfare",{}).get("gini",0.38))
-	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
-
-	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
-	if state.has("economy") and state["economy"] is Dictionary:
-		_sys_q = float(state["economy"].get("quality",0.60) if state["economy"].has("quality") else state["economy"].get("efficiency",0.60) if state["economy"].has("efficiency") else 0.60)
-	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
-	if state.has("economy") and state["economy"] is Dictionary:
-		state["economy"]["quality"] = _sys_q
-
-	# نابرابری و نارضایتی
-	if _gini > 0.42 and Deterministic.chance(0.007):
-		events.append({"type":"inequality_economy_deep","gini": _gini, "message":"نابرابری اثر بر economy - شکاف طبقاتی"})
-
-	# فناوری دوگانه (نظامی-غیرنظامی)
-	if _digital > 0.65 and Deterministic.chance(0.006):
-		events.append({"type":"dual_use_tech_economy","digital": _digital, "message":"فناوری دوگانه در economy - کاربرد نظامی و غیرنظامی"})
-
-	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
-	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
-		events.append({"type":"climate_vulnerability_economy","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی economy"})
-
-	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
-	if _social_capital < 0.40 and Deterministic.chance(0.006):
-		events.append({"type":"low_social_capital_economy","capital": _social_capital, "message":"سرمایه اجتماعی پایین در economy"})
-
-	# اثر تورمی بر هزینه نگهداری
-	var _inflation = float(_extra_econ.get("inflation",0.08))
-	if state.has("economy") and state["economy"] is Dictionary and state["economy"].has("maintenance_cost"):
-		state["economy"]["maintenance_cost"] = float(state["economy"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
-
-
-	
 	return {"success":true,"state":state,"events":events}

@@ -96,7 +96,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["transport_detail"] = transport
 	state["economy"] = econ
 	
-		# ── لایه واقع‌گرایانه اختصاصی جایگاه‌های سوخت (جایگزین قالب خودکار) — بخش ۳.۴۶ ──
+	# ── لایه واقع‌گرایانه اختصاصی جایگاه‌های سوخت (جایگزین قالب خودکار) — بخش ۳.۴۶ ──
 	# قاچاق سوخت از شکاف قیمت واقعی و ضعف مرزبانی (پیوند با امنیت دور ۵)
 	var border_ctrl_f = float(state.get("security", {}).get("border_control", 0.60))
 	var smuggle_target = clampf(float(subsidy_rate) * 0.35 * (1.0 - border_ctrl_f) + 0.03, 0.02, 0.55)

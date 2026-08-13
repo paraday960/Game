@@ -88,7 +88,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["security_forces_detail"] = sf
 	
-		# ── لایه واقع‌گرایانه اختصاصی نیروهای امنیتی (جایگزین قالب خودکار) — بخش ۳.۶۰ ──
+	# ── لایه واقع‌گرایانه اختصاصی نیروهای امنیتی (جایگزین قالب خودکار) — بخش ۳.۶۰ ──
 	# تلفات و فرسایش روحیه در جنگ؛ در صلح تلفات تقریباً صفر است
 	var at_war_sf = not state.get("world", {}).get("wars", {}).is_empty()
 	if at_war_sf:

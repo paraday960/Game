@@ -118,7 +118,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["settlements_detail"] = settlements
 	
-		# ── لایه واقع‌گرایانه اختصاصی سکونتگاه‌ها (جایگزین قالب خودکار) — بخش ۳.۴۲ ──
+	# ── لایه واقع‌گرایانه اختصاصی سکونتگاه‌ها (جایگزین قالب خودکار) — بخش ۳.۴۲ ──
 	# حاشیه‌نشینی: وقتی ورودی مهاجران روزانه از ظرفیت پذیرش مسکن جدید بیشتر است، حاشیه رشد می‌کند
 	var daily_houses = float(settlements.get("new_houses_per_year", 300000)) / 365.0 * 3.3
 	var daily_migrants = float(settlements.get("migration_urban", 100000.0))

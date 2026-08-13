@@ -71,7 +71,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["foreign_affairs"] = fa
 	
-		# ── لایه واقع‌گرایانه اختصاصی امور خارجی (جایگزین قالب خودکار) — بخش ۳.۷۱ ──
+	# ── لایه واقع‌گرایانه اختصاصی امور خارجی (جایگزین قالب خودکار) — بخش ۳.۷۱ ──
 	# پرونده‌های کنسولی از جریان واقعی مهاجرت: خروج بالا = تقاضای ترجمه مدارک و امور اتباع
 	var emig_fa = float(state.get("migration", {}).get("emigration", 60000.0))
 	fa["consular_cases"] = maxi(int(emig_fa * 0.10 + float(pop.get("total", 85_000_000)) * 0.00003), 500)

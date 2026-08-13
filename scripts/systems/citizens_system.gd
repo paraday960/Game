@@ -121,7 +121,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["citizens_detail"] = citizens
 	
-		# ── لایه واقع‌گرایانه اختصاصی شهروندان (جایگزین قالب خودکار) — بخش ۳.۵۳ ──
+	# ── لایه واقع‌گرایانه اختصاصی شهروندان (جایگزین قالب خودکار) — بخش ۳.۵۳ ──
 	# شکاف میانگین/میانه درآمد: میانه در جامعه نابرابر به‌مراتب پایین‌تر از میانگین است (رابطه واقعی جینی)
 	var gini_c = float(welfare.get("gini", 0.38))
 	citizens["income_median"] = float(citizens.get("income_avg", 5000.0)) * clampf(1.0 - gini_c * 0.62, 0.45, 0.95)

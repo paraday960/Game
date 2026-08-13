@@ -75,7 +75,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["administration"] = admin
 	
-		# ── لایه واقع‌گرایانه اختصاصی حکومت محلی (جایگزین قالب خودکار) — بخش ۳.۲۶ ──
+	# ── لایه واقع‌گرایانه اختصاصی حکومت محلی (جایگزین قالب خودکار) — بخش ۳.۲۶ ──
 	# سهم بودجه محلی باید با میزان تمرکززدایی واقعی هم‌راستا شود — تفکیک بدون بودجه، نمایشی است
 	var local_budget_target = 0.08 + float(admin.get("decentralization", 0.40)) * 0.42
 	admin["local_budget_share"] = clampf(float(admin.get("local_budget_share", 0.25)) * 0.995 + local_budget_target * 0.005, 0.05, 0.60)

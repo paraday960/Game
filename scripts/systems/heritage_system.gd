@@ -86,7 +86,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["heritage"] = heritage
 	
-		# ── لایه واقع‌گرایانه اختصاصی میراث فرهنگی (جایگزین قالب خودکار) — بخش ۳.۴۰ ──
+	# ── لایه واقع‌گرایانه اختصاصی میراث فرهنگی (جایگزین قالب خودکار) — بخش ۳.۴۰ ──
 	# درآمد سالانه میراث: گردشگران × سهم گردشگری فرهنگی × ضریب آثار ثبت جهانی یونسکو
 	var visitors_h = float(tourism.get("visitors", 5_000_000))
 	heritage["annual_income"] = visitors_h * float(heritage.get("cultural_tourism", 0.50)) * (1.0 + float(heritage.get("unesco_sites", 3)) * 0.15) * 18.0

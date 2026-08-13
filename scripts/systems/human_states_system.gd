@@ -125,7 +125,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["human_states"] = human
 	
-		# ── لایه واقع‌گرایانه اختصاصی حالات انسانی (جایگزین قالب خودکار) — بخش ۳.۶۶ ──
+	# ── لایه واقع‌گرایانه اختصاصی حالات انسانی (جایگزین قالب خودکار) — بخش ۳.۶۶ ──
 	# خشم جمعی: تبعیض قومی (دور ۱۰) + فقر + تورم — سوخت بحران‌های اجتماعی است
 	var discrim_h = float(state.get("ethnicity", {}).get("discrimination", 0.20))
 	var anger_target = float(poverty) * 0.35 + float(inflation) * 0.30 + discrim_h * 0.20 + (1.0 - float(happiness)) * 0.15

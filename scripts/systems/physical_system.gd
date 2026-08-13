@@ -94,7 +94,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["physical"] = physical
 	
-		# ── لایه واقع‌گرایانه اختصاصی لایه اماکن (جایگزین قالب خودکار) — همگام‌سازی آینه با منابع معتبر ──
+	# ── لایه واقع‌گرایانه اختصاصی لایه اماکن (جایگزین قالب خودکار) — همگام‌سازی آینه با منابع معتبر ──
 	# سکونتگاه‌ها از سیستم مرجع (دور ۱۲) — نه رشد روزانه خودسرانه
 	var sd = state.get("settlements_detail", {})
 	var sd_det = physical.get("settlement_details", {})

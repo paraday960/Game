@@ -103,7 +103,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["ethnicity"] = ethnicity
 	
-		# ── لایه واقع‌گرایانه اختصاصی قومیت و هویت (جایگزین قالب خودکار) — بخش ۳.۳۱ ──
+	# ── لایه واقع‌گرایانه اختصاصی قومیت و هویت (جایگزین قالب خودکار) — بخش ۳.۳۱ ──
 	# شادی گروه‌های قومی: تابع تحمل و حقوق فرهنگی و تبعیض — نه مقدار ثابت؛ گروه اکثریت ملاک اقلیت نیست
 	var group_target = 0.40 + float(ethnicity.get("tolerance", 0.60)) * 0.25 + float(ethnicity.get("cultural_rights", 0.60)) * 0.25 - float(ethnicity.get("discrimination", 0.20)) * 0.35
 	var minority_happiness = 0.0

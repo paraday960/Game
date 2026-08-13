@@ -81,7 +81,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["transport_detail"] = transport
 	
-		# ── لایه واقع‌گرایانه اختصاصی راه‌ها و حمل‌ونقل (جایگزین قالب خودکار) — بخش ۳.۴۳ ──
+	# ── لایه واقع‌گرایانه اختصاصی راه‌ها و حمل‌ونقل (جایگزین قالب خودکار) — بخش ۳.۴۳ ──
 	# تراکم ترافیک: جمعیت شهری فزاینده، مسیر فشاینده، و حمل‌ونقل عمومی قوی کاهنده
 	var urban_pop_t = float(pop.get("total", 85_000_000.0)) * float(pop.get("urban_ratio", 0.75))
 	var pt_relief = float(state.get("public_transport", {}).get("coverage", 0.60)) * 0.20

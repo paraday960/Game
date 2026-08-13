@@ -89,7 +89,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["elites_detail"] = elites
 	
-		# ── لایه واقع‌گرایانه اختصاصی نخبگان (جایگزین قالب خودکار) — بخش ۳.۵۹ ──
+	# ── لایه واقع‌گرایانه اختصاصی نخبگان (جایگزین قالب خودکار) — بخش ۳.۵۹ ──
 	# فرار مغزها باید جمعیت نخبگان را واقعاً تحلیل ببرد — نه اینکه فقط یک شاخص بماند
 	var drain_share = float(elites.get("brain_drain", 0.15)) / 365.0 * 0.02
 	var return_share = float(elites.get("return_rate", 0.10)) / 365.0 * 0.015

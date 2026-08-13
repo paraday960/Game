@@ -63,7 +63,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["retail"] = retail
 	
-		# ── لایه واقع‌گرایانه اختصاصی بازار خرده‌فروشی (جایگزین قالب خودکار) — بخش ۳.۴۵ ──
+	# ── لایه واقع‌گرایانه اختصاصی بازار خرده‌فروشی (جایگزین قالب خودکار) — بخش ۳.۴۵ ──
 	# ساختار بازار در گذار: زنجیره‌ها با درآمد و دیجیتال رشد، بازار سنتی تحلیل تدریجی
 	var digital_r = float(state.get("technology", {}).get("branches", {}).get("دیجیتال", 0.20))
 	var income_r = float(econ.get("gdp_per_capita", 5000.0)) / 10000.0

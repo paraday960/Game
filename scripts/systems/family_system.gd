@@ -89,7 +89,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["family"] = family
 	
-		# ── لایه واقع‌گرایانه اختصاصی خانواده (جایگزین قالب خودکار) — بخش ۳.۳۸ ──
+	# ── لایه واقع‌گرایانه اختصاصی خانواده (جایگزین قالب خودکار) — بخش ۳.۳۸ ──
 	# اندازه خانوار: باروری بزرگ‌کننده، شهرنشینی کوچک‌کننده — سیستم خانوارها آن را می‌خواند
 	var urban = float(pop.get("urbanization", 0.74))
 	family["avg_household_size"] = clampf(2.6 + float(family.get("fertility", 1.8)) * 0.5 - urban * 0.8, 2.0, 5.5)

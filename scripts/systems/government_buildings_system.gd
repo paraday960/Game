@@ -75,7 +75,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["government_buildings"] = gov
 	
-		# ── لایه واقع‌گرایانه اختصاصی نهادهای دولتی (جایگزین قالب خودکار) — بخش ۳.۵۲ ──
+	# ── لایه واقع‌گرایانه اختصاصی نهادهای دولتی (جایگزین قالب خودکار) — بخش ۳.۵۲ ──
 	# دولت الکترونیک ضد فساد خُرد: شفافیت دیجیتال فضای رشوه اداری را تنگ می‌کند (فشار ملایم، نه بازنویسی)
 	var pol_gb = state.get("politics", {})
 	if float(gov.get("digital_government", 0.50)) > 0.65:

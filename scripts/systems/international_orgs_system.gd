@@ -76,7 +76,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["international_orgs"] = intl
 	state["economy"] = econ
 	
-		# ── لایه واقع‌گرایانه اختصاصی سازمان‌های بین‌المللی (جایگزین قالب خودکار) — بخش ۳.۶۸ ──
+	# ── لایه واقع‌گرایانه اختصاصی سازمان‌های بین‌المللی (جایگزین قالب خودکار) — بخش ۳.۶۸ ──
 	# جریان کمک‌های بین‌المللی به بودجه دولت واقعاً وارد شود — نه اینکه فقط عددی روی کاغذ بماند
 	econ["aid_inflow_daily"] = float(intl.get("aid_received", 500_000_000.0)) / 365.0
 	state["economy"] = econ

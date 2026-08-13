@@ -109,7 +109,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["workforce_detail"] = workforce
 	state["economy"]["unemployment"] = workforce["unemployed"]
 	
-		# ── لایه واقع‌گرایانه اختصاصی نیروی کار (جایگزین قالب خودکار) — بخش ۳.۵۴ ──
+	# ── لایه واقع‌گرایانه اختصاصی نیروی کار (جایگزین قالب خودکار) — بخش ۳.۵۴ ──
 	# گذار ساختاری اشتغال: صنعت پیشرفته و دیجیتال، سهم کشاورزی را می‌بلعد و خدمات/فناوری را می‌بردارد
 	var shift = float(tech_ind) * 0.0006 + float(digital) * 0.0004
 	workforce["farmers"] = clampf(float(workforce.get("farmers", 0.20)) - shift, 0.04, 0.45)

@@ -92,7 +92,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["industry_sites_detail"] = sites
 	
-		# ── لایه واقع‌گرایانه اختصاصی سایت‌های صنعتی (جایگزین قالب خودکار) — بخش ۳.۴۹ ──
+	# ── لایه واقع‌گرایانه اختصاصی سایت‌های صنعتی (جایگزین قالب خودکار) — بخش ۳.۴۹ ──
 	# انباشت تعمیرات: بودجه زیرساخت کمتر از آستانه → عقب‌ماندگی نگهداشت و کاهش بهره‌برداری
 	var infra_budget = float(econ.get("budget_allocations", {}).get("زیرساخت", 0.18))
 	var backlog_flow = (0.16 - infra_budget) * 0.004

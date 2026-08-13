@@ -81,7 +81,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["political_career"] = career
 	
-		# ── لایه واقع‌گرایانه اختصاصی مسیر شغلی سیاسی (جایگزین قالب خودکار) — بخش ۳.۷۲ ──
+	# ── لایه واقع‌گرایانه اختصاصی مسیر شغلی سیاسی (جایگزین قالب خودکار) — بخش ۳.۷۲ ──
 	# تداوم تصدی: بی‌ثباتی سیاسی و جنگ مدت تصدی وزرا و استاندارها را واقعاً کوتاه می‌کند
 	var at_war_pc = not state.get("world", {}).get("wars", {}).is_empty()
 	var tenure_target = 1.2 + float(stability) * 3.5 - (1.5 if at_war_pc else 0.0)

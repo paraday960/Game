@@ -77,7 +77,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["veterans"] = veterans
 	
-		# ── لایه واقع‌گرایانه اختصاصی کهنه‌سربازان (جایگزین قالب خودکار) — بخش ۳.۳۷ ──
+	# ── لایه واقع‌گرایانه اختصاصی کهنه‌سربازان (جایگزین قالب خودکار) — بخش ۳.۳۷ ──
 	# بحران صندوق: مانده منفی → فشار بر مستمری و اعتراض کهنه‌سربازان
 	if float(veterans.get("fund_balance", 500_000_000.0)) < 0.0:
 		veterans["pension"] = clampf(float(veterans.get("pension", 0.70)) - 0.0015, 0.15, 0.95)

@@ -87,7 +87,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["sports_youth"] = sports
 	
-		# ── لایه واقع‌گرایانه اختصاصی ورزش و جوانان (جایگزین قالب خودکار) — بخش ۳.۳۶ ──
+	# ── لایه واقع‌گرایانه اختصاصی ورزش و جوانان (جایگزین قالب خودکار) — بخش ۳.۳۶ ──
 	# چرخه المپیک هر ۴ سال: مدال‌ها تابع بستر مشارکت و امکانات هستند، نه تصادف محض
 	if tick > 0 and tick % (365 * 4) == 0 and float(sports.get("participation", 0.40)) > 0.30:
 		var medals = maxi(int(float(sports.get("participation", 0.40)) * float(sports.get("facilities", 0.50)) * 20.0), 1)

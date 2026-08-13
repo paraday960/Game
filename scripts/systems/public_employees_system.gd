@@ -90,7 +90,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["public_employees"] = emp
 	state["economy"] = econ
 	
-		# ── لایه واقع‌گرایانه اختصاصی کارمندان دولت (جایگزین قالب خودکار) — بخش ۳.۵۷ ──
+	# ── لایه واقع‌گرایانه اختصاصی کارمندان دولت (جایگزین قالب خودکار) — بخش ۳.۵۷ ──
 	# تورم بخش عمومی: نسبت کارمندان به جمعیت بیش از ۱۰٪ یعنی دولت چاق و ناکارآمد
 	var pop_pe = float(state.get("population", {}).get("total", 85_000_000))
 	var civil_ratio = float(emp.get("count", 2000000)) / maxf(pop_pe, 1.0)

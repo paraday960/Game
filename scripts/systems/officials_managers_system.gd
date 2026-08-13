@@ -75,7 +75,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["officials"] = officials
 	
-		# ── لایه واقع‌گرایانه اختصاصی دولتمردان (جایگزین قالب خودکار) — بخش ۳.۵۵ ──
+	# ── لایه واقع‌گرایانه اختصاصی دولتمردان (جایگزین قالب خودکار) — بخش ۳.۵۵ ──
 	# سرعت تصمیم‌گیری: دولت الکترونیک (دور ۱۲) کارایی مدیر را آزاد می‌کند، بار بروکراتیک خفه‌اش
 	var digi_om = float(state.get("government_buildings", {}).get("digital_government", 0.50))
 	var burden_om = float(state.get("government_buildings", {}).get("bureaucracy_burden", 0.40))

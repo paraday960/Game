@@ -126,139 +126,38 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["quantitative"] = quant
 	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("quantitative_temporal", {})
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
+	# ── لایه واقع‌گرایانه اختصاصی کمی-زمانی (جایگزین قالب خودکار) — بخش ۳.۶۴ ──
+	# همگام‌سازی فاز چرخه با مدل چرخه اقتصاد — دو منبع حقیقت برای یک پدیده نباید باشد
+	var cycle_phase_map = {"boom": "رونق", "growth": "رشد", "stagnation": "رکود", "recession": "بحران"}
+	var econ_phase = str(state.get("economy", {}).get("cycle", {}).get("phase", "growth"))
+	var mapped_phase = str(cycle_phase_map.get(econ_phase, "رشد"))
+	if mapped_phase != str(quant["business_cycle"].get("phase", "رونق")):
+		quant["business_cycle"]["phase"] = mapped_phase
+	# اعلام رسمی تغییر مرحله گذار جمعیتی — رویدادی که هر دهه یک‌بار رخ می‌دهد
+	var stage_now = int(quant["demographic_transition"].get("stage", 2))
+	var stage_announced = int(quant.get("demographic_stage_announced", stage_now))
+	if stage_now != stage_announced:
+		quant["demographic_stage_announced"] = stage_now
+		var stage_names = {1: "پیشاگذار", 2: "گذار زودرس", 3: "گذار دیررس", 4: "پساگذار"}
+		events.append({"type": "demographic_stage_shift", "stage": stage_now, "message": "کشور وارد مرحله %s گذار جمعیتی شد (مرحله %d)" % [str(stage_names.get(stage_now, "ناشناخته")), stage_now]})
+	# همگرایی فناوری: ظرفیت پژوهشی نخبگان (دور ۱۳) شکاف را تندتر می‌بندد
+	var elite_cap_q = float(state.get("technology", {}).get("elite_research_capacity", 0.60))
+	var gap_now = float(quant["convergence"].get("technology_gap", 0.5))
+	quant["convergence"]["technology_gap"] = clampf(gap_now - elite_cap_q * 0.00010, 0.05, 0.95)
+	# ثبت واقعی شوک در تاریخچه: افت ناگهانی جذب شوک یعنی شوک رخ داده
+	quant["prev_absorption"] = float(quant.get("prev_absorption", quant.get("shock_absorption", 0.60)))
+	if float(quant.get("shock_absorption", 0.60)) < float(quant["prev_absorption"]) - 0.05:
+		quant["shock_history"].append({"tick": tick, "type": "shock_detected", "absorption": quant["shock_absorption"], "season": str(quant["seasonality"].get("current_season", "بهار"))})
+		if quant["shock_history"].size() > 120:
+			quant["shock_history"] = quant["shock_history"].slice(-120)
+		if Deterministic.chance(0.3):
+			events.append({"type": "shock_registered", "message": "شوک سیستمیک ثبت شد - تاب‌آوری افت ناگهانی کرد", "absorption": quant["shock_absorption"]})
+	quant["prev_absorption"] = float(quant.get("shock_absorption", 0.60))
+	# شاخص ترکیب پیشرفت پنج‌ساله: HDI و جینی و تاب‌آوری در یک نگاه
+	if tick > 0 and tick % (365 * 5) == 0:
+		events.append({"type": "five_year_outlook", "message": "ارزیابی پنج‌ساله توسعه — HDI: %.2f | جینی: %.2f | تاب‌آوری شوک: %.2f" % [float(quant["macro_indicators"].get("hdi", 0.75)), float(quant["macro_indicators"].get("gini", 0.38)), float(quant.get("shock_absorption", 0.60))], "hdi": quant["macro_indicators"]["hdi"]})
+	state["quantitative"] = quant
 
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
-
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("quantitative_temporal",{}).has("efficiency"):
-		_efficiency = float(state["quantitative_temporal"].get("efficiency",0.60))
-	elif state.get("quantitative_temporal",{}).has("quality"):
-		_efficiency = float(state["quantitative_temporal"].get("quality",0.60))
-
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("quantitative_temporal") and state["quantitative_temporal"] is Dictionary:
-		state["quantitative_temporal"]["efficiency"] = _efficiency
-		state["quantitative_temporal"]["quality"] = clamp(float(state["quantitative_temporal"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
-
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("quantitative_temporal",{}).get("quality",0.60) if state.has("quantitative_temporal") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_quantitative_temporal","gap": _budget_gap, "message":"کسری بودجه نگهداری quantitative_temporal - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_quantitative_temporal","digital": _digital, "message":"جهش دیجیتال در quantitative_temporal - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_quantitative_temporal_extra","corruption": _corruption, "message":"فساد در quantitative_temporal - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_quantitative_temporal","gini": _gini, "message":"نابرابری اثر بر quantitative_temporal"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("quantitative_temporal",{}).get("productivity",0.60) if state.has("quantitative_temporal") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("quantitative_temporal") and state["quantitative_temporal"] is Dictionary:
-		state["quantitative_temporal"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("quantitative_temporal",{}).get("resilience",0.60) if state.has("quantitative_temporal") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("quantitative_temporal") and state["quantitative_temporal"] is Dictionary:
-		state["quantitative_temporal"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_quantitative_temporal","resilience": _resilience, "message":"تاب‌آوری پایین quantitative_temporal - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("quantitative_temporal",{}).get("coverage",0.70) if state.has("quantitative_temporal") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_quantitative_temporal","coverage": _coverage, "message":"پوشش quantitative_temporal پایین - دسترسی محدود"})
-
-
-	
-	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
-
-	_trust = float(_extra_politics.get("trust",0.55))
-	_corruption = float(_extra_politics.get("corruption",0.30))
-	_stability = float(_extra_politics.get("stability",0.60))
-	_happiness = float(_extra_pop.get("happiness",0.60))
-	_gini = float(state.get("welfare",{}).get("gini",0.38))
-	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
-
-	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
-	if state.has("quantitative_temporal") and state["quantitative_temporal"] is Dictionary:
-		_sys_q = float(state["quantitative_temporal"].get("quality",0.60) if state["quantitative_temporal"].has("quality") else state["quantitative_temporal"].get("efficiency",0.60) if state["quantitative_temporal"].has("efficiency") else 0.60)
-	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
-	if state.has("quantitative_temporal") and state["quantitative_temporal"] is Dictionary:
-		state["quantitative_temporal"]["quality"] = _sys_q
-
-	# نابرابری و نارضایتی
-	if _gini > 0.42 and Deterministic.chance(0.007):
-		events.append({"type":"inequality_quantitative_temporal_deep","gini": _gini, "message":"نابرابری اثر بر quantitative_temporal - شکاف طبقاتی"})
-
-	# فناوری دوگانه (نظامی-غیرنظامی)
-	if _digital > 0.65 and Deterministic.chance(0.006):
-		events.append({"type":"dual_use_tech_quantitative_temporal","digital": _digital, "message":"فناوری دوگانه در quantitative_temporal - کاربرد نظامی و غیرنظامی"})
-
-	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
-	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
-		events.append({"type":"climate_vulnerability_quantitative_temporal","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی quantitative_temporal"})
-
-	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
-	if _social_capital < 0.40 and Deterministic.chance(0.006):
-		events.append({"type":"low_social_capital_quantitative_temporal","capital": _social_capital, "message":"سرمایه اجتماعی پایین در quantitative_temporal"})
-
-	# اثر تورمی بر هزینه نگهداری
-	_inflation = float(_extra_econ.get("inflation",0.08))
-	if state.has("quantitative_temporal") and state["quantitative_temporal"] is Dictionary and state["quantitative_temporal"].has("maintenance_cost"):
-		state["quantitative_temporal"]["maintenance_cost"] = float(state["quantitative_temporal"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
-
-
-	
 	return {"success":true,"state":state,"events":events}
 
 func edu_to_life(edu_q: float) -> float:

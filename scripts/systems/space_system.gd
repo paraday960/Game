@@ -109,7 +109,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["space"] = space
 	
-		# ── لایه واقع‌گرایانه اختصاصی برنامه فضایی (جایگزین قالب خودکار) — بخش ۳.۴۱ ──
+	# ── لایه واقع‌گرایانه اختصاصی برنامه فضایی (جایگزین قالب خودکار) — بخش ۳.۴۱ ──
 	# ناوگان موشک: رشد تابع سطح فناوری و پایگاه‌های پرتاب؛ شکست پرتاب در سطوح پایین محتمل است
 	var launch_capacity = float(space.get("launch_sites", 1)) * (0.5 + float(space.get("level", 0.10)))
 	if float(space.get("level", 0.10)) > 0.40 and Deterministic.chance(0.006 * launch_capacity):

@@ -96,7 +96,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["fisheries"] = fish
 	
-		# ── لایه واقع‌گرایانه اختصاصی شیلات (جایگزین قالب خودکار) — بخش ۳.۳۹ ──
+	# ── لایه واقع‌گرایانه اختصاصی شیلات (جایگزین قالب خودکار) — بخش ۳.۳۹ ──
 	# بازتولید ذخایر: صید بیش از بازده پایدار → تحلیل؛ آبزی‌پروری و مناطق حفاظت‌شده → احیا
 	var sustainable_yield = 400000.0 * float(fish.get("stock_health", 0.65))
 	var overfishing = float(fish.get("catch", 500000.0)) - sustainable_yield

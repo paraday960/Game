@@ -84,7 +84,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["politicians_detail"] = pols
 	
-		# ── لایه واقع‌گرایانه اختصاصی سیاست‌مداران (جایگزین قالب خودکار) — بخش ۳.۵۶ ──
+	# ── لایه واقع‌گرایانه اختصاصی سیاست‌مداران (جایگزین قالب خودکار) — بخش ۳.۵۶ ──
 	# پاسخ‌گویی: استقلال قضایی × آزادی رسانه → سیاستمدار محاسبه‌گر
 	pols["accountability"] = clampf(float(judicial.get("independence", 0.55)) * 0.5 + float(media.get("media_freedom", 0.5)) * 0.5, 0.05, 0.95)
 	# اعتماد به سیاستمداران از عملکرد واقعی: فساد ادراک‌شده و قطبی‌شدن آن را می‌فرساید

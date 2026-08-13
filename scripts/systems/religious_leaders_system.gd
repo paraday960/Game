@@ -85,7 +85,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["religious_leaders"] = rel
 	
-		# ── لایه واقع‌گرایانه اختصاصی رهبران مذهبی (جایگزین قالب خودکار) — بخش ۳.۶۱ ──
+	# ── لایه واقع‌گرایانه اختصاصی رهبران مذهبی (جایگزین قالب خودکار) — بخش ۳.۶۱ ──
 	# ریسک افراطی‌گری: نفوذ بالا × اعتدال پایین → فشار رادیکالیزه که امنیت می‌تواند بخواند
 	var sec_rl = state.get("security", {})
 	sec_rl["extremism_risk"] = clampf((1.0 - float(rel.get("moderation", 0.60))) * float(rel.get("influence", 0.60)) * float(rel.get("youth_reach", 0.45)), 0.0, 0.90)

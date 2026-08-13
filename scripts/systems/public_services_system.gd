@@ -109,7 +109,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["public_services_detail"] = pub
 	
-		# ── لایه واقع‌گرایانه اختصاصی خدمات عمومی (جایگزین قالب خودکار) — بخش ۳.۴۸ ──
+	# ── لایه واقع‌گرایانه اختصاصی خدمات عمومی (جایگزین قالب خودکار) — بخش ۳.۴۸ ──
 	# پوشش واقعی از نسبت امکان به جمعیت: یک بیمارستان به‌ازای هر ۱۷۰ هزار نفر، یک مدرسه به‌ازای هر ۸۵۰۰ نفر
 	var hosp_ratio = float(pub.get("hospitals", 500)) / maxf(float(pop_total) / 170000.0, 1.0)
 	var school_ratio = float(pub.get("schools", 10000)) / maxf(float(pop_total) / 8500.0, 1.0)
