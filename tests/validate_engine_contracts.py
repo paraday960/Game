@@ -78,10 +78,29 @@ def check_duplicate_deep_blocks():
     else:
         print("✅ بلوک‌های عمیق: بدون تکرار")
 
+# ── ۵) هر نوع فرمان عمقی باید کیس صریح در _command_queue_key داشته باشد ──
+def check_queue_key_coverage():
+    cmd_src = open("scripts/core/command.gd", encoding="utf-8").read()
+    ui_src = open("scripts/ui/main_ui.gd", encoding="utf-8").read()
+    types = re.findall(r'\.new\("([a-z_]+)"', cmd_src)
+    missing = []
+    mq = re.search(r"func _command_queue_key.*?(?=\nfunc )", ui_src, re.S)
+    qk = mq.group(0) if mq else ""
+    for t in sorted(set(types)):
+        # کیس صریح = برچسب "t": و در ۱۲۰ نویسه بعد یک return (کیس چندخطی مجاز)
+        m = re.search(rf'"{t}":', qk)
+        if m is None or "return" not in qk[m.end():m.end() + 120]:
+            missing.append(t)
+    if missing:
+        FAIL.append("این نوع فرمان‌ها در _command_queue_key کیس صریح ندارند (دکمه‌های یک‌بار در نوبت غیرفعال نمی‌شوند): " + ", ".join(missing))
+    else:
+        print("✅ پوشش کلید صف تصمیم: همه نوع فرمان‌ها کیس صریح دارند")
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
 check_duplicate_deep_blocks()
+check_queue_key_coverage()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

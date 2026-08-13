@@ -7,10 +7,12 @@ python3 tests/validate_ui_architecture.py
 python3 tests/validate_country_data.py
 python3 tests/validate_world_map.py
 python3 tests/validate_country_maps.py
+python3 tests/validate_engine_contracts.py       # قراردادهای موتور: simulate_month، دترمینیسم RNG، کلیدهای state، بلوک تکراری
 godot --headless --path . --import                                  # آماده‌سازی (یک بار)
 godot --headless --path . res://tests/test_scene.tscn              # تست واحد: موتور، ۶۵ سیستم، AIها
 godot --headless --path . res://tests/test_long.tscn               # تست بلندمدت: ۳۶ ماه / بیش از ۱۰۰۰ روز داخلی
 godot --headless --path . -s res://tests/test_ui.gd                 # تست دود UI: همه تب‌ها + فرمان‌ها
+godot --headless --path . -s res://tests/test_press_buttons.gd     # تست تهاجمی: فشار همه دکمه‌ها + شکار پیام خالی
 
 # تست واقعی ENet در دو پردازش (میزبان را پس‌زمینه اجرا کنید، سپس کلاینت):
 godot --headless --path . -s res://tests/test_network_host.gd

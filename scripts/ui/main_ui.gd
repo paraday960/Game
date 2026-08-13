@@ -8270,7 +8270,22 @@ func _command_queue_key(cmd) -> String:
 		"basic_industry_action": return "basicind:" + str(p.get("action", ""))
 		"nation_brand_action": return "nationbrand:" + str(p.get("action", ""))
 		"ai_action": return "ai:" + str(p.get("action", ""))
-	return t + ":" + str(p)
+		"assassinate": return "assassinate:" + str(p.get("target", ""))
+		"leader_hidden": return "leader_hidden:" + str(p.get("hidden", false))
+		"country_select": return "country_select"
+		"next_tick": return "next_tick"
+		# عمق ۱۸ تا ۲۰: پیشوندها باید دقیقاً با متای دکمه‌ها (cmd_key) یکسان باشند
+		# وگرنه دکمه‌های «یک‌بار در نوبت» بعد از کلیک غیرفعال نمی‌شوند.
+		"tax_action": return "tax:" + str(p.get("action", ""))
+		"ev_action": return "ev:" + str(p.get("action", ""))
+		"health_tourism_action": return "ht:" + str(p.get("action", ""))
+		"defense_industry_action": return "di:" + str(p.get("action", ""))
+		"knowledge_economy_action": return "ke:" + str(p.get("action", ""))
+		"waste_mgmt_action": return "waste_mgmt:" + str(p.get("action", ""))
+		"aerospace_action": return "as:" + str(p.get("action", ""))
+		"petrochemical_action": return "petro:" + str(p.get("action", ""))
+		"pro_sports_action": return "psports:" + str(p.get("action", ""))
+	return t + ":" + JSON.stringify(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
 func _queue_decision(cmd, label: String) -> bool:
