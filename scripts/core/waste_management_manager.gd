@@ -21,8 +21,8 @@ func reset():
 	landfill_reduction = 0.0
 
 func _ensure(state: Dictionary):
-	if not state.has("waste_policy"):
-		state["waste_policy"] = {
+	if not state.has("waste_management_policy"):
+		state["waste_management_policy"] = {
 			"collection": collection,
 			"separation": separation,
 			"recycling": recycling,
@@ -34,46 +34,46 @@ func _ensure(state: Dictionary):
 
 func get_policy(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	return state["waste_policy"]
+	return state["waste_management_policy"]
 
 func expand_collection(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["waste_policy"]
+	var p: Dictionary = state["waste_management_policy"]
 	p["collection"] = clampf(float(p["collection"]) + 0.10, 0.0, 1.0)
-	state["waste_policy"] = p
+	state["waste_management_policy"] = p
 	return {"success": true}
 
 func source_separation(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["waste_policy"]
+	var p: Dictionary = state["waste_management_policy"]
 	p["separation"] = clampf(float(p["separation"]) + 0.12, 0.0, 1.0)
-	state["waste_policy"] = p
+	state["waste_management_policy"] = p
 	return {"success": true}
 
 func build_recycling(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["waste_policy"]
+	var p: Dictionary = state["waste_management_policy"]
 	p["recycling"] = clampf(float(p["recycling"]) + 0.12, 0.0, 1.0)
-	state["waste_policy"] = p
+	state["waste_management_policy"] = p
 	return {"success": true}
 
 func build_wte(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["waste_policy"]
+	var p: Dictionary = state["waste_management_policy"]
 	p["waste_to_energy"] = clampf(float(p["waste_to_energy"]) + 0.10, 0.0, 1.0)
-	state["waste_policy"] = p
+	state["waste_management_policy"] = p
 	return {"success": true}
 
 func reduce_landfill(state: Dictionary) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["waste_policy"]
+	var p: Dictionary = state["waste_management_policy"]
 	p["landfill_reduction"] = clampf(float(p["landfill_reduction"]) + 0.10, 0.0, 1.0)
-	state["waste_policy"] = p
+	state["waste_management_policy"] = p
 	return {"success": true}
 
 func simulate(state: Dictionary, tick: int) -> Dictionary:
 	_ensure(state)
-	var p: Dictionary = state["waste_policy"]
+	var p: Dictionary = state["waste_management_policy"]
 	var economy: Dictionary = state.get("economy", {})
 	var gdp: float = float(economy.get("gdp", 0.0))
 	var env: Dictionary = state.get("environment", {})
@@ -132,11 +132,13 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		state["health"] = health
 
 	emit_signal("recycling_rate_changed", recycling_rate)
-	state["waste_policy"] = p
+	state["waste_management_policy"] = p
 	return state
 
 func simulate_month(state: Dictionary, tick: int) -> Dictionary:
-	return simulate(state, tick)
+	# قرارداد مشترک چرخه ماهانه موتور: خروجی همیشه {state, events} است؛
+	# simulate خام state را برمی‌گرداند (سازگار با تست‌ها) پس اینجا بسته‌بندی می‌شود.
+	return {"state": simulate(state, tick), "events": []}
 
 func get_summary(state: Dictionary) -> Dictionary:
 	var p = get_policy(state)

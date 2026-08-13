@@ -140,4 +140,6 @@ func get_summary(state: Dictionary) -> Dictionary:
 
 # سازگاری با چرخه‌ی ماهانه‌ی GameEngine
 func simulate_month(state: Dictionary, turn: int) -> Dictionary:
-	return simulate(state, turn)
+	# قرارداد مشترک چرخه ماهانه موتور: خروجی همیشه {state, events} است؛
+	# simulate خام state را برمی‌گرداند (سازگار با تست‌ها) پس اینجا بسته‌بندی می‌شود.
+	return {"state": simulate(state, turn), "events": []}
