@@ -52,6 +52,9 @@ func init_default_state():
 		"supply_policy": {"strategic_reserve": 0.35, "diversification": 0.40, "domestic_capacity": 0.40, "stockpile_rotation": 0.30, "last_reserve": -99, "disruption": 0.20, "import_dependency": 0.45, "logistics_index": 0.45, "inventory_days": 60.0},
 		"care_policy": {"eldercare": 0.25, "childcare": 0.25, "home_care": 0.20, "paid_leave": 0.30, "care_workers": 0.25, "last_program": -99, "female_lfp": 0.35, "care_burden": 0.55, "informal_care": 0.70, "labor_force_gain": 0.0},
 		"science_policy": {"bilateral": 0.20, "joint_labs": 0.15, "scholarships": 0.25, "tech_consortium": 0.10, "last_agreement": -99, "knowledge_flow": 0.20, "brain_gain": 0.15, "co_publications": 0.10, "tech_absorption": 0.25},
+		"downstream_policy": {"refining": 0.35, "petrochemical": 0.30, "self_sufficiency": 0.40, "value_added": 0.25, "last_refinery": -99, "raw_export_share": 0.65, "fuel_security": 0.45, "product_exports": 0.10, "refining_capacity": 0.40},
+		"higher_ed_policy": {"funding": 0.30, "research": 0.25, "faculty": 0.30, "international": 0.15, "last_endowment": -99, "quality": 0.35, "graduates": 500000, "ranking": 0.20, "brain_gain": 0.10, "tuition_access": 0.55},
+		"food_chain_policy": {"storage": 0.25, "processing": 0.20, "logistics": 0.30, "safety": 0.40, "last_storage": -99, "waste": 0.35, "food_security": 0.55, "price_volatility": 0.40, "cold_chain": 0.20, "self_sufficiency": 0.60},
 		"clock": {
 			"year": 2027,
 			"month": 1,

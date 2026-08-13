@@ -31,7 +31,8 @@ const SUPPORTED_COMMANDS = [
 	"waste_action", "insurance_action", "rural_action",
 	"judicial_reform_action", "election_action", "fuel_action",
 	"housing_action", "startup_action", "sme_action",
-	"supply_action", "care_action", "science_action"
+	"supply_action", "care_action", "science_action",
+	"downstream_action", "higher_ed_action", "food_chain_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -680,6 +681,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "science_action":
 			if not str(cmd.payload.get("action", "")) in ["agreement", "lab", "scholarship", "consortium"]:
 				return {"valid": false, "reason": "اقدام علمی نامعتبر است"}
+		elif cmd.type == "downstream_action":
+			if not str(cmd.payload.get("action", "")) in ["refining", "petrochem", "selfsuff", "valuechain"]:
+				return {"valid": false, "reason": "اقدام پتروشیمی نامعتبر است"}
+		elif cmd.type == "higher_ed_action":
+			if not str(cmd.payload.get("action", "")) in ["funding", "research", "faculty", "international"]:
+				return {"valid": false, "reason": "اقدام آموزش عالی نامعتبر است"}
+		elif cmd.type == "food_chain_action":
+			if not str(cmd.payload.get("action", "")) in ["storage", "processing", "logistics", "safety"]:
+				return {"valid": false, "reason": "اقدام زنجیره غذا نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1629,6 +1639,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in science_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("science_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "downstream_action":
+		var ds_act := str(cmd.payload.get("action", ""))
+		var ds_result: Dictionary
+		match ds_act:
+			"refining": ds_result = DownstreamEnergyManager.expand_refining(snapshot, cmd.tick)
+			"petrochem": ds_result = DownstreamEnergyManager.expand_petrochemical(snapshot)
+			"selfsuff": ds_result = DownstreamEnergyManager.self_sufficiency_drive(snapshot)
+			_: ds_result = DownstreamEnergyManager.upgrade_value_chain(snapshot)
+		snapshot = ds_result.state
+		for ev in ds_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("downstream_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "higher_ed_action":
+		var he_act := str(cmd.payload.get("action", ""))
+		var he_result: Dictionary
+		match he_act:
+			"funding": he_result = HigherEducationManager.increase_funding(snapshot, cmd.tick)
+			"research": he_result = HigherEducationManager.research_grant(snapshot)
+			"faculty": he_result = HigherEducationManager.faculty_development(snapshot)
+			_: he_result = HigherEducationManager.internationalize(snapshot)
+		snapshot = he_result.state
+		for ev in he_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("higher_ed_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "food_chain_action":
+		var fc_act := str(cmd.payload.get("action", ""))
+		var fc_result: Dictionary
+		match fc_act:
+			"storage": fc_result = FoodValueChainManager.build_storage(snapshot, cmd.tick)
+			"processing": fc_result = FoodValueChainManager.expand_processing(snapshot)
+			"logistics": fc_result = FoodValueChainManager.improve_logistics(snapshot)
+			_: fc_result = FoodValueChainManager.enforce_safety(snapshot)
+		snapshot = fc_result.state
+		for ev in fc_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("food_chain_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1959,6 +2005,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = SupplyChainManager.ensure(snapshot)
 	snapshot = CareEconomyManager.ensure(snapshot)
 	snapshot = ScienceDiplomacyManager.ensure(snapshot)
+	snapshot = DownstreamEnergyManager.ensure(snapshot)
+	snapshot = HigherEducationManager.ensure(snapshot)
+	snapshot = FoodValueChainManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2309,6 +2358,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var science_result = ScienceDiplomacyManager.simulate_month(snapshot, turn)
 	snapshot = science_result.state
 	_collect_events(science_result, "science", snapshot, turn, generated_events, "science_event")
+	var downstream_result = DownstreamEnergyManager.simulate_month(snapshot, turn)
+	snapshot = downstream_result.state
+	_collect_events(downstream_result, "downstream", snapshot, turn, generated_events, "downstream_event")
+	var higher_ed_result = HigherEducationManager.simulate_month(snapshot, turn)
+	snapshot = higher_ed_result.state
+	_collect_events(higher_ed_result, "higher_ed", snapshot, turn, generated_events, "higher_ed_event")
+	var food_chain_result = FoodValueChainManager.simulate_month(snapshot, turn)
+	snapshot = food_chain_result.state
+	_collect_events(food_chain_result, "food_chain", snapshot, turn, generated_events, "food_chain_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

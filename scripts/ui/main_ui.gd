@@ -2842,10 +2842,12 @@ func _build_economy():
 	_build_forex_card(st)
 	_build_energy_card(st)
 	_build_fuel_card(st)
+	_build_downstream_card(st)
 	_build_industry_card(st)
 	_build_mining_card(st)
 	_build_sme_card(st)
 	_build_agriculture_card(st)
+	_build_food_chain_card(st)
 	_build_tourism_card(st)
 	_build_retail_card(st)
 	_build_creative_card(st)
@@ -5385,6 +5387,99 @@ func _on_science(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("technology")
 
+func _build_downstream_card(st: Dictionary):
+	var dp: Dictionary = st.get("downstream_policy", {})
+	if dp.is_empty():
+		return
+	var card = _card("🧪 پتروشیمی و پالایش")
+	_bar(card, "ظرفیت پالایش", float(dp.get("refining_capacity", 0.40)))
+	_bar(card, "پتروشیمی", float(dp.get("petrochemical", 0.30)))
+	_bar(card, "خودکفایی سوخت", float(dp.get("fuel_security", 0.45)))
+	_bar(card, "ارزش‌افزوده", float(dp.get("value_added", 0.25)))
+	_bar(card, "امنیت سوخت", float(dp.get("fuel_security", 0.45)))
+	_row(card, "سهم خام‌فروشی", PersianFormatter.format_percent(float(dp.get("raw_export_share", 0.65))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["refining", "🏗️ پالایش"], ["petrochem", "🧪 پتروشیمی"], ["selfsuff", "⛽ خودکفایی"], ["valuechain", "⬆️ ارزش‌افزوده"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_downstream.bind(a[0]))
+		_mark_decision_button(btn, "downstream:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "پالایش هر ۶ نوبت؛ نیازمند صنعت ۴+. پتروشیمی خام‌فروشی را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_downstream(action: String):
+	var cmd = GameCommandClass.create_downstream_action(action)
+	var labels := {"refining": "توسعه پالایشگاه", "petrochem": "توسعه پتروشیمی", "selfsuff": "خودکفایی سوخت", "valuechain": "ارتقای زنجیره ارزش"}
+	if _queue_decision(cmd, "🧪 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_higher_ed_card(st: Dictionary):
+	var hp: Dictionary = st.get("higher_ed_policy", {})
+	if hp.is_empty():
+		return
+	var card = _card("🎓 آموزش عالی و دانشگاه")
+	_bar(card, "کیفیت دانشگاه", float(hp.get("quality", 0.35)))
+	_bar(card, "تحقیقات دانشگاهی", float(hp.get("research", 0.25)))
+	_bar(card, "هیئت علمی", float(hp.get("faculty", 0.30)))
+	_bar(card, "بین‌المللی", float(hp.get("international", 0.15)))
+	_bar(card, "رتبه جهانی", float(hp.get("ranking", 0.20)))
+	_row(card, "فارغ‌التحصیلان", PersianFormatter.to_persian_digits(str(hp.get("graduates", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["funding", "💰 بودجه"], ["research", "🔬 گرنت"], ["faculty", "👨‍🏫 اساتید"], ["international", "🌐 تبادل"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_higher_ed.bind(a[0]))
+		_mark_decision_button(btn, "highered:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "افزایش بودجه هر ۵ نوبت. دانشگاه قوی بهره‌وری و نوآوری را بالا می‌برد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_higher_ed(action: String):
+	var cmd = GameCommandClass.create_higher_ed_action(action)
+	var labels := {"funding": "افزایش بودجه دانشگاه", "research": "گرنت پژوهشی", "faculty": "جذب هیئت علمی", "international": "بین‌المللی‌سازی"}
+	if _queue_decision(cmd, "🎓 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
+func _build_food_chain_card(st: Dictionary):
+	var fp: Dictionary = st.get("food_chain_policy", {})
+	if fp.is_empty():
+		return
+	var card = _card("🌾 زنجیره ارزش غذا")
+	_bar(card, "امنیت غذایی", float(fp.get("food_security", 0.55)))
+	_bar(card, "سردخانه", float(fp.get("storage", 0.25)))
+	_bar(card, "صنایع تبدیلی", float(fp.get("processing", 0.20)))
+	_bar(card, "لجستیک", float(fp.get("logistics", 0.30)))
+	_bar(card, "ایمنی غذا", float(fp.get("safety", 0.40)))
+	_bar(card, "ضایعات غذا", float(fp.get("waste", 0.35)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["storage", "🧊 سردخانه"], ["processing", "🏭 تبدیلی"], ["logistics", "🚚 لجستیک"], ["safety", "🔍 ایمنی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_food_chain.bind(a[0]))
+		_mark_decision_button(btn, "foodchain:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "سردخانه هر ۵ نوبت. کاهش ضایعات غذا تورم خوراک را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_food_chain(action: String):
+	var cmd = GameCommandClass.create_food_chain_action(action)
+	var labels := {"storage": "ساخت سردخانه", "processing": "صنایع تبدیلی", "logistics": "لجستیک غذا", "safety": "نظارت ایمنی غذا"}
+	if _queue_decision(cmd, "🌾 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -5510,6 +5605,7 @@ func _build_technology():
 
 	_build_research_card(state)
 	_build_startup_card(state)
+	_build_higher_ed_card(state)
 	_build_science_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
@@ -7493,6 +7589,9 @@ func _command_queue_key(cmd) -> String:
 		"supply_action": return "supply:" + str(p.get("action", ""))
 		"care_action": return "care:" + str(p.get("action", ""))
 		"science_action": return "science:" + str(p.get("action", ""))
+		"downstream_action": return "downstream:" + str(p.get("action", ""))
+		"higher_ed_action": return "highered:" + str(p.get("action", ""))
+		"food_chain_action": return "foodchain:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
