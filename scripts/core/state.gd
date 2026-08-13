@@ -18,8 +18,12 @@ func init_default_state():
 			"version": 0,
 			"tick": 0,
 			"seed": seed_value,
-			"command_receipts": [],
-			"clock": {
+		"command_receipts": [],
+		# سیاست‌های عمق: بورس اوراق بهادار، بنیاد ایثارگران، میراث فرهنگی
+		"stock_policy": {"policy": "none", "ipos": 0, "bubble": 0.0, "last_crash": -99, "last_support": -99, "watchdog": 0.0},
+		"veterans_policy": {"pension_level": 0.5, "employment_program": 0.4, "clinic": false, "parades": 0, "last_parade": -99, "satisfaction": 0.6},
+		"heritage_policy": {"restored": 0, "registered": 0, "festivals": 0, "last_festival": -99, "last_disaster": -99, "last_antiq": -99},
+		"clock": {
 			"year": 2027,
 			"month": 1,
 			"day": 1,
