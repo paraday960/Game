@@ -284,6 +284,18 @@ static func create_civic_action(action: String):
 	# action: opendata, councils, budget, ngos
 	return _self_script().new("civic_action", {"action": action})
 
+static func create_diaspora_action(action: String):
+	# action: summit, networks, diplomacy, return
+	return _self_script().new("diaspora_action", {"action": action})
+
+static func create_civil_defense_action(action: String):
+	# action: hardening, redundancy, shelters, stockpile
+	return _self_script().new("civil_defense_action", {"action": action})
+
+static func create_blue_economy_action(action: String):
+	# action: port, fleet, fishery, patrol
+	return _self_script().new("blue_economy_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort

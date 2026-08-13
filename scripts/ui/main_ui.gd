@@ -2714,6 +2714,7 @@ func _build_government():
 	_build_governors_card(state)
 	_build_ethnicity_card(state)
 	_build_civic_card(state)
+	_build_diaspora_card(state)
 
 	for ministry_id in CabinetManager.get_ministry_ids():
 		var ministry = CabinetManager.get_ministry(ministry_id)
@@ -4696,6 +4697,99 @@ func _on_civic(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("government")
 
+func _build_diaspora_card(st: Dictionary):
+	var dp: Dictionary = st.get("diaspora_policy", {})
+	if dp.is_empty():
+		return
+	var card = _card("🌍 دیاسپورا و دیپلماسی عمومی")
+	_bar(card, "اعتماد شبکه مهاجران", float(dp.get("trust", 0.45)))
+	_bar(card, "تعامل رسمی", float(dp.get("engagement", 0.35)))
+	_bar(card, "شبکه‌های تخصصی", float(dp.get("networks", 0.25)))
+	_bar(card, "دیپلماسی عمومی", float(dp.get("public_diplomacy", 0.20)))
+	_bar(card, "انگیزه بازگشت", float(dp.get("return_incentive", 0.15)))
+	_row(card, "حواله سالانه (میلیارد)", PersianFormatter.to_persian_digits("%.1f" % float(dp.get("remittance_b", 12.0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["summit", "🌐 اجلاس دیاسپورا"], ["networks", "🔗 شبکه تخصصی"], ["diplomacy", "📡 دیپلماسی عمومی"], ["return", "🧳 بازگشت نخبگان"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_diaspora.bind(a[0]))
+		_mark_decision_button(btn, "diaspora:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "اجلاس هر ۸ نوبت. تعامل بالا حواله ارزی، لابی، قدرت نرم و سرمایه‌گذاری می‌آورد؛ فساد و بی‌ثباتی اعتماد دیاسپورا را می‌شکند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_diaspora(action: String):
+	var cmd = GameCommandClass.create_diaspora_action(action)
+	var labels := {"summit": "اجلاس جهانی دیاسپورا", "networks": "توسعه شبکه‌های تخصصی", "diplomacy": "تقویت دیپلماسی عمومی", "return": "بسته بازگشت نخبگان"}
+	if _queue_decision(cmd, "🌍 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+func _build_civil_defense_card(st: Dictionary):
+	var cd: Dictionary = st.get("civil_defense_policy", {})
+	if cd.is_empty():
+		return
+	var card = _card("🛡️ پدافند غیرعامل و تاب‌آوری")
+	_bar(card, "شاخص تاب‌آوری", float(cd.get("resilience_index", 0.30)))
+	_bar(card, "حفاظت غیرنظامیان", float(cd.get("civilian_protection", 0.30)))
+	_bar(card, "سخت‌سازی هدف‌ها", float(cd.get("hardening", 0.25)))
+	_bar(card, "افزونگی زیرساخت", float(cd.get("redundancy", 0.20)))
+	_bar(card, "پوشش پناهگاه", float(cd.get("shelters", 0.20)))
+	_bar(card, "ذخیره راهبردی", float(cd.get("strategic_stock", 0.30)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["hardening", "🏗️ سخت‌سازی"], ["redundancy", "🔀 افزونگی"], ["shelters", "🏚️ پناهگاه"], ["stockpile", "📦 ذخیره راهبردی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_civil_defense.bind(a[0]))
+		_mark_decision_button(btn, "civil_defense:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "سخت‌سازی هر ۶ نوبت. پدافند به جای حمله، خسارت حمله، بحران و اختلال آبشاری را کم می‌کند و بازدارندگی را بالا می‌برد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_civil_defense(action: String):
+	var cmd = GameCommandClass.create_civil_defense_action(action)
+	var labels := {"hardening": "سخت‌سازی هدف‌های حیاتی", "redundancy": "افزونگی زیرساخت", "shelters": "توسعه پناهگاه", "stockpile": "ذخیره راهبردی"}
+	if _queue_decision(cmd, "🛡️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("military")
+
+func _build_blue_economy_card(st: Dictionary):
+	var be: Dictionary = st.get("blue_economy_policy", {})
+	if be.is_empty():
+		return
+	var card = _card("⚓ اقتصاد دریایی و شیلات")
+	_bar(card, "ظرفیت بنادر", float(be.get("port_capacity", 0.40)))
+	_bar(card, "ناوگان تجاری", float(be.get("merchant_fleet", 0.30)))
+	_bar(card, "کشتیرانی و کشتی‌سازی", float(be.get("shipbuilding", 0.20)))
+	_bar(card, "شیلات پایدار", float(be.get("sustainable_fisheries", 0.35)))
+	_bar(card, "گشت دریایی", float(be.get("coast_guard", 0.30)))
+	_row(card, "سهم اقتصاد دریا", PersianFormatter.format_percent(float(be.get("blue_gdp", 0.0)) / max(float(st.get("economy", {}).get("gdp", 1.0)), 1.0)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["port", "⚓ توسعه بندر"], ["fleet", "🚢 ناوگان تجاری"], ["fishery", "🐟 شیلات پایدار"], ["patrol", "🛥️ گشت دریایی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_blue_economy.bind(a[0]))
+		_mark_decision_button(btn, "blue_economy:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "بندر هر ۸، ناوگان هر ۱۰ و گشت فشرده هر ۴ نوبت. صید بی‌رویه ذخایر را می‌خشکاند؛ گشت قاچاق سوخت را می‌کاهد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_blue_economy(action: String):
+	var cmd = GameCommandClass.create_blue_economy_action(action)
+	var labels := {"port": "توسعه ظرفیت بندر", "fleet": "توسعه ناوگان تجاری", "fishery": "مدیریت پایدار شیلات", "patrol": "گشت دریایی"}
+	if _queue_decision(cmd, "⚓ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("military")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -4941,6 +5035,8 @@ func _build_military():
 	_build_cyber_card(st)
 	_build_generals_card(st)
 	_build_arms_card(st)
+	_build_civil_defense_card(st)
+	_build_blue_economy_card(st)
 
 	var development: Dictionary = st.get("military_development", {})
 	var doctrine_card = _card("🧭 دکترین نظامی")
@@ -6774,6 +6870,9 @@ func _command_queue_key(cmd) -> String:
 		"water_action": return "water:" + str(p.get("action", ""))
 		"research_action": return "research:" + str(p.get("action", ""))
 		"civic_action": return "civic:" + str(p.get("action", ""))
+		"diaspora_action": return "diaspora:" + str(p.get("action", ""))
+		"civil_defense_action": return "civil_defense:" + str(p.get("action", ""))
+		"blue_economy_action": return "blue_economy:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

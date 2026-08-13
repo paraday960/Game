@@ -24,7 +24,8 @@ const SUPPORTED_COMMANDS = [
 	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action",
 	"dilemma_resolve", "stock_action", "veterans_action", "heritage_action",
 	"transport_action", "retail_action", "ethnicity_action",
-	"water_action", "research_action", "civic_action"
+	"water_action", "research_action", "civic_action",
+	"diaspora_action", "civil_defense_action", "blue_economy_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -608,6 +609,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "civic_action":
 			if not str(cmd.payload.get("action", "")) in ["opendata", "councils", "budget", "ngos"]:
 				return {"valid": false, "reason": "اقدام مدنی نامعتبر است"}
+		elif cmd.type == "diaspora_action":
+			if not str(cmd.payload.get("action", "")) in ["summit", "networks", "diplomacy", "return"]:
+				return {"valid": false, "reason": "اقدام دیاسپورا نامعتبر است"}
+		elif cmd.type == "civil_defense_action":
+			if not str(cmd.payload.get("action", "")) in ["hardening", "redundancy", "shelters", "stockpile"]:
+				return {"valid": false, "reason": "اقدام پدافند غیرعامل نامعتبر است"}
+		elif cmd.type == "blue_economy_action":
+			if not str(cmd.payload.get("action", "")) in ["port", "fleet", "fishery", "patrol"]:
+				return {"valid": false, "reason": "اقدام اقتصاد دریایی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1305,6 +1315,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in civic_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("civic_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "diaspora_action":
+		var diaspora_act := str(cmd.payload.get("action", ""))
+		var diaspora_result: Dictionary
+		match diaspora_act:
+			"summit": diaspora_result = DiasporaManager.hold_summit(snapshot, cmd.tick)
+			"networks": diaspora_result = DiasporaManager.build_networks(snapshot)
+			"diplomacy": diaspora_result = DiasporaManager.public_diplomacy(snapshot)
+			_: diaspora_result = DiasporaManager.return_talent(snapshot)
+		snapshot = diaspora_result.state
+		for ev in diaspora_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("diaspora_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "civil_defense_action":
+		var cd_act := str(cmd.payload.get("action", ""))
+		var cd_result: Dictionary
+		match cd_act:
+			"hardening": cd_result = CivilDefenseManager.harden_targets(snapshot, cmd.tick)
+			"redundancy": cd_result = CivilDefenseManager.build_redundancy(snapshot)
+			"shelters": cd_result = CivilDefenseManager.build_shelters(snapshot)
+			_: cd_result = CivilDefenseManager.strategic_stockpile(snapshot)
+		snapshot = cd_result.state
+		for ev in cd_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("civil_defense_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "blue_economy_action":
+		var blue_act := str(cmd.payload.get("action", ""))
+		var blue_result: Dictionary
+		match blue_act:
+			"port": blue_result = BlueEconomyManager.expand_port(snapshot, cmd.tick)
+			"fleet": blue_result = BlueEconomyManager.expand_fleet(snapshot, cmd.tick)
+			"fishery": blue_result = BlueEconomyManager.sustainable_fisheries(snapshot)
+			_: blue_result = BlueEconomyManager.coast_guard_patrol(snapshot, cmd.tick)
+		snapshot = blue_result.state
+		for ev in blue_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("blue_economy_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1614,6 +1660,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = WaterManager.ensure(snapshot)
 	snapshot = ResearchManager.ensure(snapshot)
 	snapshot = CivicManager.ensure(snapshot)
+	snapshot = DiasporaManager.ensure(snapshot)
+	snapshot = CivilDefenseManager.ensure(snapshot)
+	snapshot = BlueEconomyManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1886,6 +1935,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var civic_result = CivicManager.simulate_month(snapshot, turn)
 	snapshot = civic_result.state
 	_collect_events(civic_result, "civic", snapshot, turn, generated_events, "civic_event")
+	# دیاسپورا: حواله ارزی، لابی، شبکه نخبگان و قدرت نرم
+	var diaspora_result = DiasporaManager.simulate_month(snapshot, turn)
+	snapshot = diaspora_result.state
+	_collect_events(diaspora_result, "diaspora", snapshot, turn, generated_events, "diaspora_event")
+	# پدافند غیرعامل: سخت‌سازی هدف‌ها، افزونگی، پناهگاه و ذخیره راهبردی
+	var civil_defense_result = CivilDefenseManager.simulate_month(snapshot, turn)
+	snapshot = civil_defense_result.state
+	_collect_events(civil_defense_result, "civil_defense", snapshot, turn, generated_events, "civil_defense_event")
+	# اقتصاد دریایی: بندر، ناوگان تجاری، شیلات پایدار و گشت ساحلی
+	var blue_economy_result = BlueEconomyManager.simulate_month(snapshot, turn)
+	snapshot = blue_economy_result.state
+	_collect_events(blue_economy_result, "blue_economy", snapshot, turn, generated_events, "blue_economy_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

@@ -30,6 +30,9 @@ func init_default_state():
 		"water_infrastructure": {"storage_bcm": 35.0, "treatment": 0.65, "wastewater_reuse": 0.12, "quality": 0.60, "rural_access": 0.72, "stress_index": 0.45},
 		"research_policy": {"university_funding": 0.45, "rnd_centers": 0.25, "tech_transfer": 0.20, "commercialization": 0.30, "brain_drain": 0.28, "papers": 0, "patents": 0, "last_center": -99, "last_grant": -99, "innovation_index": 0.35},
 		"civic_policy": {"transparency": 0.45, "local_councils": 0.35, "participatory_budget": 0.20, "ngo_space": 0.40, "watchdog": 0.25, "last_assembly": -99, "social_capital": 0.50, "protests_under": 0},
+		"diaspora_policy": {"engagement": 0.35, "networks": 0.25, "public_diplomacy": 0.20, "return_incentive": 0.15, "last_summit": -99, "remittance_b": 12.0, "soft_power_boost": 0.0, "trust": 0.45},
+		"civil_defense_policy": {"hardening": 0.25, "redundancy": 0.20, "shelters": 0.20, "strategic_stock": 0.30, "drills": 0.20, "last_drill": -99, "resilience_index": 0.30, "last_hardening": -99, "civilian_protection": 0.30},
+		"blue_economy_policy": {"port_capacity": 0.40, "merchant_fleet": 0.30, "sustainable_fisheries": 0.35, "coast_guard": 0.30, "shipbuilding": 0.20, "last_port": -99, "last_fleet": -99, "last_patrol": -99, "blue_gdp": 0.0, "container_throughput": 0.0},
 		"clock": {
 			"year": 2027,
 			"month": 1,
