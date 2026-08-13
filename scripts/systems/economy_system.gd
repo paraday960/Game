@@ -106,7 +106,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# بیکاری با فاز چرخه حرکت می‌کند (رونق اشتغال‌زا، رکود بیکارکننده)
 	var unemp: float = float(econ.get("unemployment", 0.08))
 	var unemp_drift: float = float({"boom": -0.00006, "growth": -0.00002, "stagnation": 0.00003, "recession": 0.00012}.get(str(cycle["phase"]), 0.0))
-	econ["unemployment"] = clampf(unemp + unemp_drift, 0.02, 0.30)
+	# قانون اوکن: رشد بالاتر از روند ۲٪ بیکاری را می‌کاهد و رشد زیر روند آن را بالا می‌برد
+	var okun: float = (real_growth - 0.02) * -0.0008
+	econ["unemployment"] = clampf(unemp + unemp_drift + okun, 0.02, 0.30)
 
 	# ==================== ب) درآمد دولت - مالیه عمومی عمیق ====================
 	var monthly_gdp = econ["gdp"] / 12.0
@@ -142,10 +144,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		for k in budget_alloc.keys():
 			budget_alloc[k] = float(budget_alloc[k]) / total_alloc
 
-	# هزینه هر بخش
-	var spending = econ["government_revenue"] * (0.92 + (1.0 if is_at_war else 0.03)) # در جنگ کسری بیشتر
-	if budget_alloc.has("ذخیره"):
-		spending *= (1.0 - budget_alloc["ذخیره"]*0.5) # ذخیره نصف هزینه نیست
+	# هزینه هر بخش - واقع‌گرایی: هزینه‌کرد = درآمد منهای سهمیه ذخیره (تصمیم بازیکن)
+	# قبلاً هزینه‌کرد از درآمد مشتق می‌شد و سهمیه ذخیره فقط نصف‌شمرده می‌شد؛
+	# حالا بازیکن با ذخیره واقعاً سیاست احتیاط/انبساط مالی را کنترل می‌کند
+	var saving_share: float = float(budget_alloc.get("ذخیره", 0.15))
+	var spending = econ["government_revenue"] * (1.0 - saving_share) * (2.2 if is_at_war else 1.0) # فشار جنگ: دو برابر
 
 	# هزینه جنگی اضافی - ۰.۲ تا ۱٪ GDP روزانه
 	var war_spending_extra = 0.0
