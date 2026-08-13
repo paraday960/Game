@@ -44,35 +44,35 @@ func expand_launch(state: Dictionary) -> Dictionary:
 	var tech: float = float(state.get("technology", {}).get("branches", {}).get("aerospace", 0.0)) if state.get("technology",{}).get("branches",{}).has("aerospace") else float(state.get("ai_policy",{}).get("adoption",0.1))
 	if tech < 0.25:
 		return {"success": false, "reason": "به فناوری فضایی بالاتری نیاز است"}
-	p["launch"] = clampf(float(p["launch"]) + 0.10, 0.0, 1.0)
+	p["launch"] = clampf(float(p.get("launch", 0.0)) + 0.10, 0.0, 1.0)
 	state["aerospace_policy"] = p
 	return {"success": true}
 
 func build_satellite_factory(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["aerospace_policy"]
-	p["manufacturing"] = clampf(float(p["manufacturing"]) + 0.12, 0.0, 1.0)
+	p["manufacturing"] = clampf(float(p.get("manufacturing", 0.0)) + 0.12, 0.0, 1.0)
 	state["aerospace_policy"] = p
 	return {"success": true}
 
 func invest_remote_sensing(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["aerospace_policy"]
-	p["remote_sensing"] = clampf(float(p["remote_sensing"]) + 0.12, 0.0, 1.0)
+	p["remote_sensing"] = clampf(float(p.get("remote_sensing", 0.0)) + 0.12, 0.0, 1.0)
 	state["aerospace_policy"] = p
 	return {"success": true}
 
 func invest_space_telecom(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["aerospace_policy"]
-	p["telecom"] = clampf(float(p["telecom"]) + 0.12, 0.0, 1.0)
+	p["telecom"] = clampf(float(p.get("telecom", 0.0)) + 0.12, 0.0, 1.0)
 	state["aerospace_policy"] = p
 	return {"success": true}
 
 func invest_rnd(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["aerospace_policy"]
-	p["rnd"] = clampf(float(p["rnd"]) + 0.12, 0.0, 1.0)
+	p["rnd"] = clampf(float(p.get("rnd", 0.0)) + 0.12, 0.0, 1.0)
 	state["aerospace_policy"] = p
 	return {"success": true}
 
@@ -84,11 +84,11 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	var military: Dictionary = state.get("military", {})
 	var research: float = float(state.get("research_policy", {}).get("innovation_index", 0.3))
 
-	var launch: float = float(p["launch"])
-	var mfg: float = float(p["manufacturing"])
-	var sensing: float = float(p["remote_sensing"])
-	var telecom: float = float(p["telecom"])
-	var rnd: float = float(p["rnd"])
+	var launch: float = float(p.get("launch", 0.0))
+	var mfg: float = float(p.get("manufacturing", 0.0))
+	var sensing: float = float(p.get("remote_sensing", 0.0))
+	var telecom: float = float(p.get("telecom", 0.0))
+	var rnd: float = float(p.get("rnd", 0.0))
 
 	# توان پرتاب و ساخت، احتمال پرتاب موفق را تعیین می‌کند
 	var launch_prob: float = clampf(launch * 0.5 + mfg * 0.3 + rnd * 0.2, 0.0, 0.95)

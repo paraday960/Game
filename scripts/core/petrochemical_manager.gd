@@ -41,7 +41,7 @@ func get_policy(state: Dictionary) -> Dictionary:
 func secure_feedstock(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["petrochemical_policy"]
-	p["feedstock"] = clampf(float(p["feedstock"]) + 0.10, 0.0, 1.0)
+	p["feedstock"] = clampf(float(p.get("feedstock", 0.0)) + 0.10, 0.0, 1.0)
 	state["petrochemical_policy"] = p
 	return {"success": true}
 
@@ -51,30 +51,30 @@ func build_plants(state: Dictionary) -> Dictionary:
 	var energy_sec: float = float(state.get("energy_policy", {}).get("energy_security", 0.4))
 	if energy_sec < 0.3:
 		return {"success": false, "reason": "به امنیت انرژی بیشتری نیاز است"}
-	p["plants"] = clampf(float(p["plants"]) + 0.12, 0.0, 1.0)
+	p["plants"] = clampf(float(p.get("plants", 0.0)) + 0.12, 0.0, 1.0)
 	state["petrochemical_policy"] = p
 	return {"success": true}
 
 func expand_downstream(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["petrochemical_policy"]
-	p["downstream"] = clampf(float(p["downstream"]) + 0.12, 0.0, 1.0)
+	p["downstream"] = clampf(float(p.get("downstream", 0.0)) + 0.12, 0.0, 1.0)
 	state["petrochemical_policy"] = p
 	return {"success": true}
 
 func invest_catalyst(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["petrochemical_policy"]
-	p["rnd"] = clampf(float(p["rnd"]) + 0.12, 0.0, 1.0)
+	p["rnd"] = clampf(float(p.get("rnd", 0.0)) + 0.12, 0.0, 1.0)
 	state["petrochemical_policy"] = p
 	return {"success": true}
 
 func boost_exports(state: Dictionary) -> Dictionary:
 	_ensure(state)
 	var p: Dictionary = state["petrochemical_policy"]
-	if float(p["output"]) < 0.3:
+	if float(p.get("output", 0.0)) < 0.3:
 		return {"success": false, "reason": "ابتدا تولید را افزایش دهید"}
-	p["exports"] = clampf(float(p["exports"]) + 0.12, 0.0, 1.0)
+	p["exports"] = clampf(float(p.get("exports", 0.0)) + 0.12, 0.0, 1.0)
 	state["petrochemical_policy"] = p
 	return {"success": true}
 
@@ -85,11 +85,11 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	var gdp: float = float(economy.get("gdp", 0.0))
 	var energy: Dictionary = state.get("energy_policy", {})
 
-	var feed: float = float(p["feedstock"])
-	var pl: float = float(p["plants"])
-	var down: float = float(p["downstream"])
-	var rnd: float = float(p["rnd"])
-	var exp: float = float(p["exports"])
+	var feed: float = float(p.get("feedstock", 0.0))
+	var pl: float = float(p.get("plants", 0.0))
+	var down: float = float(p.get("downstream", 0.0))
+	var rnd: float = float(p.get("rnd", 0.0))
+	var exp: float = float(p.get("exports", 0.0))
 
 	var output: float = clampf(
 		feed * 0.30 + pl * 0.35 + down * 0.20 + rnd * 0.15, 0.0, 1.0)

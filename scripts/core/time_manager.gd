@@ -92,6 +92,8 @@ func finish_simulation_day(state: Dictionary) -> Dictionary:
 	return state
 
 func finish_turn(state: Dictionary) -> Dictionary:
+	if not state.has("clock") or not state["clock"] is Dictionary:
+		state = reset(state)
 	var clock: Dictionary = state["clock"]
 	clock["day"] = 1
 	clock["month"] = int(clock.get("month", 1)) + 1

@@ -41,3 +41,5 @@ release.keystore
 # OS
 .DS_Store
 Desktop.ini
+godot
+/godot

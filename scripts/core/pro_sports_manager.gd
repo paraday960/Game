@@ -25,24 +25,24 @@ func _ensure(state: Dictionary):
 func get_policy(state: Dictionary) -> Dictionary:
 	_ensure(state); return state["pro_sports_policy"]
 
-func develop_leagues(state): _ensure(state); var p=state["pro_sports_policy"]; p["leagues"]=clampf(float(p["leagues"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func develop_leagues(state): _ensure(state); var p=state["pro_sports_policy"]; p["leagues"]=clampf(float(p.get("leagues", 0.0))+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
 func build_infrastructure(state):
 	_ensure(state); var p=state["pro_sports_policy"]
 	if float(state.get("economy",{}).get("gdp",0))<=0: return {"success":false,"reason":"اقتصاد فعالی وجود ندارد"}
-	p["infrastructure"]=clampf(float(p["infrastructure"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+	p["infrastructure"]=clampf(float(p.get("infrastructure", 0.0))+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
 func host_events(state):
 	_ensure(state); var p=state["pro_sports_policy"]
-	if float(p["infrastructure"])<0.3: return {"success":false,"reason":"به زیرساخت ورزشی بیشتری نیاز است"}
-	p["events"]=clampf(float(p["events"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
-func develop_academy(state): _ensure(state); var p=state["pro_sports_policy"]; p["academy"]=clampf(float(p["academy"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
-func boost_exports(state): _ensure(state); var p=state["pro_sports_policy"]; p["exports"]=clampf(float(p["exports"])+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+	if float(p.get("infrastructure", 0.0))<0.3: return {"success":false,"reason":"به زیرساخت ورزشی بیشتری نیاز است"}
+	p["events"]=clampf(float(p.get("events", 0.0))+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func develop_academy(state): _ensure(state); var p=state["pro_sports_policy"]; p["academy"]=clampf(float(p.get("academy", 0.0))+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
+func boost_exports(state): _ensure(state); var p=state["pro_sports_policy"]; p["exports"]=clampf(float(p.get("exports", 0.0))+0.12,0,1); state["pro_sports_policy"]=p; return {"success":true}
 
 func simulate(state: Dictionary, tick: int) -> Dictionary:
 	_ensure(state)
 	var p=state["pro_sports_policy"]
 	var econ=state.get("economy",{}); var gdp=float(econ.get("gdp",0))
 	var stability=float(state.get("politics",{}).get("stability",0.5))
-	var lg=float(p["leagues"]); var infra=float(p["infrastructure"]); var ev=float(p["events"]); var acad=float(p["academy"]); var exp=float(p["exports"])
+	var lg=float(p.get("leagues", 0.0)); var infra=float(p.get("infrastructure", 0.0)); var ev=float(p.get("events", 0.0)); var acad=float(p.get("academy", 0.0)); var exp=float(p.get("exports", 0.0))
 	var index=clampf(lg*0.25+infra*0.25+ev*0.20+acad*0.15+exp*0.15,0,1)*clampf(stability,0.3,1)
 	industry_index=index; p["index"]=index
 	if gdp>0:

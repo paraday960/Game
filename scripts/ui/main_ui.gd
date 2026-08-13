@@ -7934,6 +7934,8 @@ func _event_text_fa(event: Dictionary) -> String:
 	return translations.get(event_type, "یک رویداد جدید ثبت شد")
 
 func _toast(msg: String):
+	if msg == null or msg.strip_edges() == "":
+		return
 	toast_generation += 1
 	if is_instance_valid(toast_lbl):toast_lbl.text=msg
 	var severity="danger" if "⚠" in msg or "خطا" in msg or "ناموفق" in msg else ("success" if "✅" in msg or "شد" in msg or "ذخیره" in msg else "info")
