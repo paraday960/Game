@@ -92,137 +92,27 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["industry_sites_detail"] = sites
 	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("industry_sites", {})
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
+		# ── لایه واقع‌گرایانه اختصاصی سایت‌های صنعتی (جایگزین قالب خودکار) — بخش ۳.۴۹ ──
+	# انباشت تعمیرات: بودجه زیرساخت کمتر از آستانه → عقب‌ماندگی نگهداشت و کاهش بهره‌برداری
+	var infra_budget = float(econ.get("budget_allocations", {}).get("زیرساخت", 0.18))
+	var backlog_flow = (0.16 - infra_budget) * 0.004
+	sites["maintenance_backlog"] = clampf(float(sites.get("maintenance_backlog", 0.20)) + backlog_flow, 0.03, 0.85)
+	sites["utilization"] = clampf(float(sites.get("utilization", 0.75)) - float(sites.get("maintenance_backlog", 0.20)) * 0.0006, 0.10, 0.98)
+	# خاموشی برق (تأسیسات شهری دور ۱۲ → اقتصاد) خط تولید را می‌خواباند
+	var power_rel = float(econ.get("power_reliability", 1.0))
+	if power_rel < 0.70:
+		sites["utilization"] = clampf(float(sites.get("utilization", 0.75)) - (0.70 - power_rel) * 0.002, 0.10, 0.98)
+	# مصرف انرژی و آب از بهره‌برداری واقعی و اتوماسیون (اتوماسیون انرژی‌برتر ولی آب‌کاه)
+	sites["energy_consumption"] = 120.0 * float(sites.get("utilization", 0.75)) * (1.0 + float(sites.get("automation", 0.30)) * 0.15)
+	sites["water_consumption"] = 80.0 * float(sites.get("utilization", 0.75)) * (1.0 - float(sites.get("automation", 0.30)) * 0.10)
+	# ظرفیت صادرات از لجستیک واقعی بنادر و ریل (راه‌ها دور ۱۲)
+	sites["export_capacity"] = clampf(float(sites.get("export_capacity", 0.60)) * 0.997 + float(state.get("transport_detail", {}).get("logistics_efficiency", 0.65)) * 0.003, 0.10, 0.97)
+	if float(sites.get("maintenance_backlog", 0.20)) > 0.55 and Deterministic.chance(0.005):
+		events.append({"type": "industrial_breakdown", "message": "توقف خط تولید در شهرک صنعتی - انباشت تعمیرات فنی", "backlog": sites["maintenance_backlog"]})
+	if power_rel < 0.55 and Deterministic.chance(0.005):
+		events.append({"type": "factory_blackout", "message": "خاموشی برق صنایع - تولید فولاد و سیمان با ضرر مواجه شد"})
+	if float(sites.get("safety_index", 0.65)) < 0.40 and Deterministic.chance(0.004):
+		events.append({"type": "mine_explosion", "message": "انفجار در معدن زغال‌سنگ - کارگران محبوب؛ تحقیقات ایمنی آغاز شد"})
+	state["industry_sites_detail"] = sites
 
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
-
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("industry_sites",{}).has("efficiency"):
-		_efficiency = float(state["industry_sites"].get("efficiency",0.60))
-	elif state.get("industry_sites",{}).has("quality"):
-		_efficiency = float(state["industry_sites"].get("quality",0.60))
-
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("industry_sites") and state["industry_sites"] is Dictionary:
-		state["industry_sites"]["efficiency"] = _efficiency
-		state["industry_sites"]["quality"] = clamp(float(state["industry_sites"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
-
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("industry_sites",{}).get("quality",0.60) if state.has("industry_sites") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_industry_sites","gap": _budget_gap, "message":"کسری بودجه نگهداری industry_sites - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_industry_sites","digital": _digital, "message":"جهش دیجیتال در industry_sites - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_industry_sites_extra","corruption": _corruption, "message":"فساد در industry_sites - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_industry_sites","gini": _gini, "message":"نابرابری اثر بر industry_sites"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("industry_sites",{}).get("productivity",0.60) if state.has("industry_sites") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("industry_sites") and state["industry_sites"] is Dictionary:
-		state["industry_sites"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("industry_sites",{}).get("resilience",0.60) if state.has("industry_sites") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("industry_sites") and state["industry_sites"] is Dictionary:
-		state["industry_sites"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_industry_sites","resilience": _resilience, "message":"تاب‌آوری پایین industry_sites - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("industry_sites",{}).get("coverage",0.70) if state.has("industry_sites") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_industry_sites","coverage": _coverage, "message":"پوشش industry_sites پایین - دسترسی محدود"})
-
-
-	
-	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
-
-	_trust = float(_extra_politics.get("trust",0.55))
-	_corruption = float(_extra_politics.get("corruption",0.30))
-	_stability = float(_extra_politics.get("stability",0.60))
-	_happiness = float(_extra_pop.get("happiness",0.60))
-	_gini = float(state.get("welfare",{}).get("gini",0.38))
-	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
-
-	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
-	if state.has("industry_sites") and state["industry_sites"] is Dictionary:
-		_sys_q = float(state["industry_sites"].get("quality",0.60) if state["industry_sites"].has("quality") else state["industry_sites"].get("efficiency",0.60) if state["industry_sites"].has("efficiency") else 0.60)
-	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
-	if state.has("industry_sites") and state["industry_sites"] is Dictionary:
-		state["industry_sites"]["quality"] = _sys_q
-
-	# نابرابری و نارضایتی
-	if _gini > 0.42 and Deterministic.chance(0.007):
-		events.append({"type":"inequality_industry_sites_deep","gini": _gini, "message":"نابرابری اثر بر industry_sites - شکاف طبقاتی"})
-
-	# فناوری دوگانه (نظامی-غیرنظامی)
-	if _digital > 0.65 and Deterministic.chance(0.006):
-		events.append({"type":"dual_use_tech_industry_sites","digital": _digital, "message":"فناوری دوگانه در industry_sites - کاربرد نظامی و غیرنظامی"})
-
-	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
-	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
-		events.append({"type":"climate_vulnerability_industry_sites","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی industry_sites"})
-
-	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
-	if _social_capital < 0.40 and Deterministic.chance(0.006):
-		events.append({"type":"low_social_capital_industry_sites","capital": _social_capital, "message":"سرمایه اجتماعی پایین در industry_sites"})
-
-	# اثر تورمی بر هزینه نگهداری
-	_inflation = float(_extra_econ.get("inflation",0.08))
-	if state.has("industry_sites") and state["industry_sites"] is Dictionary and state["industry_sites"].has("maintenance_cost"):
-		state["industry_sites"]["maintenance_cost"] = float(state["industry_sites"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
-
-
-	
 	return {"success":true,"state":state,"events":events}
