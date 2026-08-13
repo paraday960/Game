@@ -22,7 +22,8 @@ const SUPPORTED_COMMANDS = [
 	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action",
 	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action",
 	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action",
-	"dilemma_resolve", "stock_action", "veterans_action", "heritage_action"
+	"dilemma_resolve", "stock_action", "veterans_action", "heritage_action",
+	"transport_action", "retail_action", "ethnicity_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -588,6 +589,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "heritage_action":
 			if not str(cmd.payload.get("action", "")) in ["restore", "register", "festival", "antiquities"]:
 				return {"valid": false, "reason": "اقدام میراثی نامعتبر است"}
+		elif cmd.type == "transport_action":
+			if not str(cmd.payload.get("action", "")) in ["metro", "brt", "subsidy", "fleet"]:
+				return {"valid": false, "reason": "اقدام حمل‌ونقلی نامعتبر است"}
+		elif cmd.type == "retail_action":
+			if not str(cmd.payload.get("action", "")) in ["price", "protect", "ecommerce", "bazaar"]:
+				return {"valid": false, "reason": "اقدام بازار نامعتبر است"}
+		elif cmd.type == "ethnicity_action":
+			if not str(cmd.payload.get("action", "")) in ["equal", "autonomy", "dialogue", "festival"]:
+				return {"valid": false, "reason": "اقدام قومی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1213,6 +1223,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in her_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("heritage_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "transport_action":
+		var trans_act := str(cmd.payload.get("action", ""))
+		var trans_result: Dictionary
+		match trans_act:
+			"metro": trans_result = TransportManager.build_metro(snapshot, cmd.tick)
+			"brt": trans_result = TransportManager.build_brt(snapshot, cmd.tick)
+			"subsidy": trans_result = TransportManager.raise_subsidy(snapshot)
+			_: trans_result = TransportManager.modernize_fleet(snapshot, cmd.tick)
+		snapshot = trans_result.state
+		for ev in trans_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("transport_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "retail_action":
+		var ret_act := str(cmd.payload.get("action", ""))
+		var ret_result: Dictionary
+		match ret_act:
+			"price": ret_result = RetailManager.toggle_price_control(snapshot)
+			"protect": ret_result = RetailManager.consumer_protection(snapshot)
+			"ecommerce": ret_result = RetailManager.boost_ecommerce(snapshot)
+			_: ret_result = RetailManager.renovate_bazaars(snapshot, cmd.tick)
+		snapshot = ret_result.state
+		for ev in ret_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("retail_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "ethnicity_action":
+		var eth_act := str(cmd.payload.get("action", ""))
+		var eth_result: Dictionary
+		match eth_act:
+			"equal": eth_result = EthnicityManager.equal_opportunities(snapshot)
+			"autonomy": eth_result = EthnicityManager.cultural_autonomy(snapshot)
+			"dialogue": eth_result = EthnicityManager.national_dialogue(snapshot, cmd.tick)
+			_: eth_result = EthnicityManager.ethnic_festival(snapshot, cmd.tick)
+		snapshot = eth_result.state
+		for ev in eth_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("ethnicity_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1516,6 +1562,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = StockMarketManager.ensure(snapshot)
 	snapshot = VeteransManager.ensure(snapshot)
 	snapshot = HeritageManager.ensure(snapshot)
+	snapshot = TransportManager.ensure(snapshot)
+	snapshot = RetailManager.ensure(snapshot)
+	snapshot = EthnicityManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1764,6 +1813,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var heritage_result = HeritageManager.simulate_month(snapshot, turn)
 	snapshot = heritage_result.state
 	_collect_events(heritage_result, "heritage", snapshot, turn, generated_events, "heritage_event")
+	# حمل‌ونقل عمومی: رضایت، هزینه یارانه، آلودگی و اعتصاب
+	var transport_result = TransportManager.simulate_month(snapshot, turn)
+	snapshot = transport_result.state
+	_collect_events(transport_result, "transport", snapshot, turn, generated_events, "transport_event")
+	# بازار مصرف: اعتماد مصرف‌کننده، سطح قیمت و اعتراضات گرانی
+	var retail_result = RetailManager.simulate_month(snapshot, turn)
+	snapshot = retail_result.state
+	_collect_events(retail_result, "retail", snapshot, turn, generated_events, "retail_event")
+	# همبستگی قومی: تنش هویتی، نمایندگی و بحران‌های قومی
+	var ethnicity_result = EthnicityManager.simulate_month(snapshot, turn)
+	snapshot = ethnicity_result.state
+	_collect_events(ethnicity_result, "ethnicity", snapshot, turn, generated_events, "ethnicity_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
