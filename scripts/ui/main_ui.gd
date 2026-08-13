@@ -2712,6 +2712,7 @@ func _build_government():
 	_build_security_card(state)
 	_build_factions_card(state)
 	_build_governors_card(state)
+	_build_ethnicity_card(state)
 
 	for ministry_id in CabinetManager.get_ministry_ids():
 		var ministry = CabinetManager.get_ministry(ministry_id)
@@ -2826,6 +2827,7 @@ func _build_economy():
 	_build_banking_card(st)
 	_build_stock_card(st)
 	_build_infrastructure_card(st)
+	_build_transport_card(st)
 	_build_climate_card(st)
 	_build_commodities_card(st)
 	_build_forex_card(st)
@@ -2833,6 +2835,7 @@ func _build_economy():
 	_build_industry_card(st)
 	_build_agriculture_card(st)
 	_build_tourism_card(st)
+	_build_retail_card(st)
 	_build_trade_policy_card(st)
 	_build_fdi_card(st)
 	_build_shadow_card(st)
@@ -4503,6 +4506,115 @@ func _compact_number(value: float) -> String:
 	if value >= 1.0e3:
 		return "%.1f هزار" % (value / 1.0e3)
 	return str(int(value))
+
+func _build_transport_card(st: Dictionary):
+	var pt: Dictionary = st.get("public_transport", {})
+	var tp: Dictionary = st.get("transport_policy", {})
+	if tp.is_empty():
+		return
+	var card = _card("🚇 حمل‌ونقل عمومی")
+	_bar(card, "پوشش شبکه", float(pt.get("coverage", 0.6)))
+	_bar(card, "رضایت مسافران", float(pt.get("satisfaction", 0.55)))
+	_bar(card, "قیمت‌مناسب بودن کرایه", float(pt.get("affordability", 0.7)))
+	_bar(card, "وقت‌شناسی", float(pt.get("punctuality", 0.75)))
+	_row(card, "خطوط مترو", PersianFormatter.to_persian_digits(str(pt.get("metro_lines", 0))))
+	_row(card, "خطوط BRT", PersianFormatter.to_persian_digits(str(pt.get("brt_lines", 0))))
+	_row(card, "سن ناوگان (سال)", PersianFormatter.to_persian_digits("%.1f" % float(pt.get("fleet_age", 7.0))))
+	_bar(card, "برقی‌سازی", float(pt.get("electrification", 0.15)))
+	_bar(card, "سطح یارانه کرایه", float(tp.get("subsidy_level", 0.5)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["metro", "🚇 خط مترو"], ["brt", "🚌 خط BRT"], ["subsidy", "💸 یارانه کرایه"], ["fleet", "🔋 ناوگان برقی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_transport.bind(a[0]))
+		_mark_decision_button(btn, "transport:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "مترو هر ۸ نوبت، ناوگان هر ۶ نوبت و BRT هر ۴ نوبت. یارانه کرایه هزینه ماهانه دارد؛ رضایت پایین → اعتصاب و بی‌ثباتی."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _build_retail_card(st: Dictionary):
+	var retail: Dictionary = st.get("retail", {})
+	var rp: Dictionary = st.get("retail_policy", {})
+	if rp.is_empty():
+		return
+	var card = _card("🛒 بازار مصرف و خرده‌فروشی")
+	_bar(card, "اعتماد مصرف‌کننده", float(rp.get("confidence", 0.6)))
+	_row(card, "سطح قیمت مصرف‌کننده", PersianFormatter.to_persian_digits("%.2f" % float(retail.get("price_level", 1.0))))
+	_bar(card, "رقابت بازار", float(retail.get("competition", 0.6)))
+	_bar(card, "سهم تجارت الکترونیک", float(retail.get("e_commerce_share", 0.15)))
+	_row(card, "تنظیم قیمت کالاهای اساسی", "فعال 🔴" if bool(rp.get("price_control", false)) else "غیرفعال ⚪")
+	_bar(card, "حمایت از مصرف‌کننده", float(rp.get("consumer_protection", 0.4)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["price", "🏷️ تنظیم قیمت"], ["protect", "🛡️ حمایت مصرف‌کننده"], ["ecommerce", "🛒 تجارت الکترونیک"], ["bazaar", "🏪 نوسازی بازار"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_retail.bind(a[0]))
+		_mark_decision_button(btn, "retail:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "تجارت الکترونیک به شاخه دیجیتال سطح ۶ نیاز دارد؛ تنظیم قیمت ارزانی می‌آورد ولی بازار سیاه می‌بالد؛ نوسازی بازار هر ۱۰ نوبت."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _build_ethnicity_card(st: Dictionary):
+	var eth: Dictionary = st.get("ethnicity", {})
+	var ep: Dictionary = st.get("ethnicity_policy", {})
+	if ep.is_empty():
+		return
+	var card = _card("🕊️ همبستگی قومی")
+	_bar(card, "تنش هویتی", float(eth.get("tension", 0.3)))
+	_bar(card, "ادغام ملی", float(eth.get("integration", 0.55)))
+	_bar(card, "تبعیض", float(eth.get("discrimination", 0.2)))
+	_bar(card, "حقوق فرهنگی", float(eth.get("cultural_rights", 0.6)))
+	_bar(card, "فرصت‌های برابر", float(ep.get("equal_programs", 0.4)))
+	_bar(card, "نمایندگی در دولت", float(ep.get("representation", 0.4)))
+	_row(card, "گفت‌وگوهای برگزارشده", PersianFormatter.to_persian_digits(str(ep.get("dialogues", 0))))
+	var groups: Array = eth.get("groups", [])
+	if not groups.is_empty():
+		var gtxt := ""
+		for g in groups:
+			if g is Dictionary:
+				gtxt += "%s %d٪  " % [str(g.get("name", "")), int(roundf(float(g.get("happiness", 0.5)) * 100.0))]
+		var gl = Label.new(); gl.text = "رضایت اقوام: " + gtxt
+		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; gl.add_theme_font_size_override("font_size", 13); gl.modulate = TEXT_FAINT
+		card.add_child(gl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["equal", "⚖️ فرصت‌های برابر"], ["autonomy", "🏳️ خودمختاری فرهنگی"], ["dialogue", "🤝 گفت‌وگوی ملی"], ["festival", "🎊 جشنواره اقوام"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_ethnicity.bind(a[0]))
+		_mark_decision_button(btn, "ethnicity:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "تنش بالا → بحران هویتی و جدایی‌طلبی. گفت‌وگو هر ۴ نوبت، جشنواره اقوام هر ۱۲ نوبت؛ خودمختاری فرهنگی پوپولیست‌ها را ناراضی می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_transport(action: String):
+	var cmd = GameCommandClass.create_transport_action(action)
+	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
+	if _queue_decision(cmd, "🚇 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _on_retail(action: String):
+	var cmd = GameCommandClass.create_retail_action(action)
+	var labels := {"price": "تغییر سیاست تنظیم قیمت", "protect": "تقویت حمایت از مصرف‌کننده", "ecommerce": "توسعه تجارت الکترونیک", "bazaar": "نوسازی بازارهای سنتی"}
+	if _queue_decision(cmd, "🛒 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _on_ethnicity(action: String):
+	var cmd = GameCommandClass.create_ethnicity_action(action)
+	var labels := {"equal": "برنامه فرصت‌های برابر", "autonomy": "خودمختاری فرهنگی مناطق", "dialogue": "گفت‌وگوی ملی اقوام", "festival": "جشنواره فرهنگ اقوام"}
+	if _queue_decision(cmd, "🕊️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
 
 func _build_sports_card(st: Dictionary):
 	var sp: Dictionary = st.get("sports_policy", {})
@@ -6553,6 +6665,9 @@ func _command_queue_key(cmd) -> String:
 		"stock_action": return "stock:" + str(p.get("action", ""))
 		"veterans_action": return "veterans:" + str(p.get("action", ""))
 		"heritage_action": return "heritage:" + str(p.get("action", ""))
+		"transport_action": return "transport:" + str(p.get("action", ""))
+		"retail_action": return "retail:" + str(p.get("action", ""))
+		"ethnicity_action": return "ethnicity:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
