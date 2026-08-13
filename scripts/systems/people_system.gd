@@ -130,139 +130,39 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["people"] = people
 	
-	# --- تکمیل عمق واقع‌گرایانه - بلوک افزوده خودکار برای رسیدن به ۱۵۰+ خط ---
-	# این بلوک اثرات ثانویه، تاب‌آوری، فساد، فناوری و رویدادهای چندلایه را اضافه می‌کند
-	var _sys_extra = state.get("people", {})
-	var _econ_extra = state.get("economy", {})
-	var _pop_extra = state.get("population", {})
-	var _pol_extra = state.get("politics", {})
-	var _infra_extra = state.get("infrastructure", {})
-	var _tech_extra = state.get("technology", {})
-	var _welfare_extra = state.get("welfare", {})
-	var _culture_extra = state.get("culture", {})
-	var _security_extra = state.get("security", {})
+		# ── لایه واقع‌گرایانه اختصاصی لایه آدم‌ها (جایگزین قالب خودکار) — همگام‌سازی آینه با منابع معتبر ──
+	# این لایه «آینه» است: مقادیرش باید از سیستم‌های مرجع دورهای بازرسی خوانده شود، نه تکرار ثابت
+	var hh = people.get("households_details", {})
+	hh["میانگین_اندازه"] = float(state.get("family", {}).get("avg_household_size", 3.3))
+	hh["دارای_مسکن"] = clampf(0.85 - float(state.get("physical", {}).get("housing_shortage", 0.10)) * 0.8, 0.20, 0.95)
+	people["households_details"] = hh
+	# شمار رهبران از سیستم دولتمردان واقعی (دور ۱۳/۱۶)
+	var ld = people.get("leaders", {})
+	ld["وزرا"] = int(state.get("officials", {}).get("ministers", 20))
+	ld["مدیران_ارشد"] = int(state.get("officials", {}).get("senior_managers", 5000))
+	people["leaders"] = ld
+	# نخبگان از جمعیت واقعی نخبگان که فرار مغزها (دور ۱۳) تحلیل می‌برد
+	var el = people.get("elites", {})
+	el["نخبه_علمی"] = int(state.get("elites_detail", {}).get("scientific", 10000))
+	el["هنرمند"] = int(state.get("elites_detail", {}).get("artistic", 15000))
+	el["ورزشکار"] = int(state.get("sports_youth", {}).get("clubs", 1200)) * 3
+	el["روحانی"] = int(state.get("religious_leaders", {}).get("count", 30000))
+	people["elites"] = el
+	# نیروهای امنیتی از شمار واقعی (دور ۱۱)
+	var sf_p = people.get("security_forces", {})
+	sf_p["ارتش"] = int(state.get("security_forces_detail", {}).get("army", 500000))
+	sf_p["پلیس"] = int(state.get("security_forces_detail", {}).get("police", 200000))
+	sf_p["مرزبان"] = int(state.get("security_forces_detail", {}).get("border", 50000))
+	people["security_forces"] = sf_p
+	# احساسات آینه از حالات انسانی به‌روزشده این تیک
+	var em_p = people.get("emotions", {})
+	em_p["خشم"] = float(state.get("human_states", {}).get("anger", 0.20))
+	em_p["ترس"] = float(state.get("human_states", {}).get("fear", 0.35))
+	people["emotions"] = em_p
+	if float(hh.get("میانگین_اندازه", 3.3)) < 2.6 and Deterministic.chance(0.004):
+		events.append({"type": "household_shrinkage", "message": "کوچک‌شدن خانوارها - نسل تک‌فرزندی‌ها مستقل شدند", "size": hh["میانگین_اندازه"]})
+	state["people"] = people
 
-	var _budget_keys = ["آموزش","بهداشت","ارتش","زیرساخت","رفاه","فناوری","امنیت","اداره","محیط","ذخیره"]
-	var _budget_eff = 0.0
-	for _bk in _budget_keys:
-		_budget_eff += float(_econ_extra.get("budget_allocations",{}).get(_bk,0.10))
-	_budget_eff = _budget_eff / max(len(_budget_keys),1)
-
-	var _stability = float(_pol_extra.get("stability",0.60))
-	var _trust = float(_pol_extra.get("trust",0.55))
-	var _corruption = float(_pol_extra.get("corruption",0.30))
-	var _happiness = float(_pop_extra.get("happiness",0.60))
-	var _growth = float(_econ_extra.get("growth_rate",0.02))
-	var _inflation = float(_econ_extra.get("inflation",0.08))
-	var _unemp = float(_econ_extra.get("unemployment",0.08))
-	var _infra_q = float(_infra_extra.get("quality",0.55))
-	var _digital = float(_tech_extra.get("branches",{}).get("دیجیتال",0.20) if _tech_extra.has("branches") else 0.20)
-	var _cohesion = float(_culture_extra.get("cohesion",0.65))
-
-	# اثر ثبات بر کارآمدی
-	var _efficiency = 0.5
-	if state.get("people",{}).has("efficiency"):
-		_efficiency = float(state["people"].get("efficiency",0.60))
-	elif state.get("people",{}).has("quality"):
-		_efficiency = float(state["people"].get("quality",0.60))
-
-	_efficiency = clamp(_efficiency*0.97 + _stability*0.02 + _trust*0.01 - _corruption*0.01 + Deterministic.next_range(-0.002,0.002), 0.05, 0.98)
-	if state.has("people") and state["people"] is Dictionary:
-		state["people"]["efficiency"] = _efficiency
-		state["people"]["quality"] = clamp(float(state["people"].get("quality",_efficiency))*0.98 + _efficiency*0.02, 0.05, 0.98)
-
-	# اثر رشد و تورم بر بودجه داخلی سیستم
-	var _sys_budget_share = float(_econ_extra.get("budget_allocations",{}).get("زیرساخت",0.15))
-	var _maintenance_need = float(state.get("people",{}).get("quality",0.60) if state.has("people") else 0.60) * 0.02 * float(_econ_extra.get("gdp",500e9)) * 0.008
-	var _actual_budget = float(_econ_extra.get("government_spending",95e9)) * _sys_budget_share
-	var _budget_gap = _actual_budget - _maintenance_need
-	if _budget_gap < 0 and Deterministic.chance(0.012):
-		events.append({"type":"budget_gap_people","gap": _budget_gap, "message":"کسری بودجه نگهداری people - فرسودگی"})
-
-	# اثر فناوری دیجیتال
-	if _digital > 0.60 and Deterministic.chance(0.009):
-		events.append({"type":"digital_boost_people","digital": _digital, "message":"جهش دیجیتال در people - اتوماسیون"})
-
-	# اثر فساد
-	if _corruption > 0.60 and Deterministic.chance(0.010):
-		events.append({"type":"corruption_people_extra","corruption": _corruption, "message":"فساد در people - بازرسی"})
-
-	# اثر نابرابری
-	var _gini = float(_welfare_extra.get("gini",0.38))
-	if _gini > 0.45 and Deterministic.chance(0.008):
-		events.append({"type":"inequality_people","gini": _gini, "message":"نابرابری اثر بر people"})
-
-	# اثر شادی و امید بر بهره‌وری
-	var _productivity = float(state.get("people",{}).get("productivity",0.60) if state.has("people") else 0.60)
-	_productivity = clamp(_productivity*0.98 + _happiness*0.01 + _growth*5.0*0.01 + _infra_q*0.01, 0.10, 0.95)
-	if state.has("people") and state["people"] is Dictionary:
-		state["people"]["productivity"] = _productivity
-
-	# تاب‌آوری در برابر شوک
-	var _resilience = float(state.get("people",{}).get("resilience",0.60) if state.has("people") else 0.60)
-	_resilience = clamp(_resilience*0.96 + _stability*0.02 + _trust*0.01 + _cohesion*0.01, 0.10, 0.95)
-	if state.has("people") and state["people"] is Dictionary:
-		state["people"]["resilience"] = _resilience
-
-	if _resilience < 0.32 and Deterministic.chance(0.011):
-		events.append({"type":"low_resilience_people","resilience": _resilience, "message":"تاب‌آوری پایین people - شکننده در برابر شوک"})
-
-	# اثر پوشش و دسترسی
-	var _coverage = float(state.get("people",{}).get("coverage",0.70) if state.has("people") else 0.70)
-	if _coverage < 0.50 and Deterministic.chance(0.010):
-		events.append({"type":"coverage_people","coverage": _coverage, "message":"پوشش people پایین - دسترسی محدود"})
-
-
-	
-	# --- لایه عمیق دوم: اقتصاد سیاسی، شبکه اجتماعی، فناوری دوگانه، تاب‌آوری اقلیمی ---
-	var _extra_politics = state.get("politics",{})
-	var _extra_econ = state.get("economy",{})
-	var _extra_pop = state.get("population",{})
-	var _extra_env = state.get("environment",{})
-	var _extra_tech = state.get("technology",{})
-	var _extra_culture = state.get("culture",{})
-
-	_trust = float(_extra_politics.get("trust",0.55))
-	_corruption = float(_extra_politics.get("corruption",0.30))
-	_stability = float(_extra_politics.get("stability",0.60))
-	_happiness = float(_extra_pop.get("happiness",0.60))
-	_gini = float(state.get("welfare",{}).get("gini",0.38))
-	_digital = float(_extra_tech.get("branches",{}).get("دیجیتال",0.20) if _extra_tech.has("branches") else 0.20)
-	var _green = float(_extra_env.get("green_energy",0.20) if _extra_env.has("green_energy") else 0.20)
-
-	# اثر اعتماد بر کارآمدی
-	var _sys_q = 0.60
-	if state.has("people") and state["people"] is Dictionary:
-		_sys_q = float(state["people"].get("quality",0.60) if state["people"].has("quality") else state["people"].get("efficiency",0.60) if state["people"].has("efficiency") else 0.60)
-	_sys_q = clamp(_sys_q*0.96 + _trust*0.02 + (1.0-_corruption)*0.02 + _happiness*0.01 + Deterministic.next_range(-0.001,0.001), 0.05, 0.98)
-	if state.has("people") and state["people"] is Dictionary:
-		state["people"]["quality"] = _sys_q
-
-	# نابرابری و نارضایتی
-	if _gini > 0.42 and Deterministic.chance(0.007):
-		events.append({"type":"inequality_people_deep","gini": _gini, "message":"نابرابری اثر بر people - شکاف طبقاتی"})
-
-	# فناوری دوگانه (نظامی-غیرنظامی)
-	if _digital > 0.65 and Deterministic.chance(0.006):
-		events.append({"type":"dual_use_tech_people","digital": _digital, "message":"فناوری دوگانه در people - کاربرد نظامی و غیرنظامی"})
-
-	# تاب‌آوری اقلیمی
-	var _climate_resilience = float(state.get("quantitative",{}).get("shock_absorption",0.60) if state.has("quantitative") else 0.60)
-	if _climate_resilience < 0.35 and Deterministic.chance(0.005):
-		events.append({"type":"climate_vulnerability_people","resilience": _climate_resilience, "message":"آسیب‌پذیری اقلیمی people"})
-
-	# شبکه اجتماعی و سرمایه اجتماعی
-	var _social_capital = float(_extra_culture.get("cohesion",0.65))*0.5 + _trust*0.3 + _happiness*0.2
-	if _social_capital < 0.40 and Deterministic.chance(0.006):
-		events.append({"type":"low_social_capital_people","capital": _social_capital, "message":"سرمایه اجتماعی پایین در people"})
-
-	# اثر تورمی بر هزینه نگهداری
-	_inflation = float(_extra_econ.get("inflation",0.08))
-	if state.has("people") and state["people"] is Dictionary and state["people"].has("maintenance_cost"):
-		state["people"]["maintenance_cost"] = float(state["people"]["maintenance_cost"]) * (1.0 + _inflation*0.5/365.0)
-
-
-	
 	return {"success": true, "state": state, "events": events}
 
 func education_quality(state: Dictionary) -> float:
