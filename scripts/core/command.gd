@@ -245,6 +245,9 @@ static func create_digital_action(action: String):
 static func create_sports_action(action: String):
 	return _self_script().new("sports_action", {"action": action})
 
+static func create_dilemma_resolve(choice: String):
+	return _self_script().new("dilemma_resolve", {"choice": choice})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
