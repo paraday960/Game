@@ -2713,6 +2713,7 @@ func _build_government():
 	_build_factions_card(state)
 	_build_governors_card(state)
 	_build_ethnicity_card(state)
+	_build_civic_card(state)
 
 	for ministry_id in CabinetManager.get_ministry_ids():
 		var ministry = CabinetManager.get_ministry(ministry_id)
@@ -2828,6 +2829,7 @@ func _build_economy():
 	_build_stock_card(st)
 	_build_infrastructure_card(st)
 	_build_transport_card(st)
+	_build_water_card(st)
 	_build_climate_card(st)
 	_build_commodities_card(st)
 	_build_forex_card(st)
@@ -4595,6 +4597,105 @@ func _build_ethnicity_card(st: Dictionary):
 	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
 	card.add_child(hint)
 
+func _build_water_card(st: Dictionary):
+	var wp: Dictionary = st.get("water_policy", {})
+	var wi: Dictionary = st.get("water_infrastructure", {})
+	if wp.is_empty():
+		return
+	var card = _card("💧 امنیت آبی")
+	_bar(card, "تنش آبی", float(wi.get("stress_index", 0.45)))
+	_bar(card, "ذخیره سدها و مخازن", clampf(float(wi.get("storage_bcm", 35.0)) / 100.0, 0.0, 1.0))
+	_bar(card, "سهم آب‌شیرین‌کن", float(wp.get("desalination", 0.05)))
+	_bar(card, "بازده آبیاری", float(wp.get("irrigation_efficiency", 0.35)))
+	_bar(card, "هدررفت شبکه", float(wp.get("leakage", 0.28)))
+	_bar(card, "بازچرخانی پساب", float(wi.get("wastewater_reuse", 0.12)))
+	_bar(card, "تراز سفره زیرزمینی", float(wp.get("aquifer", 0.70)))
+	_row(card, "ظرفیت ذخیره (میلیارد مترمکعب)", PersianFormatter.to_persian_digits("%.1f" % float(wi.get("storage_bcm", 35.0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["dam", "🛢️ سد جدید"], ["desal", "🌊 آب‌شیرین‌کن"], ["leakage", "🔧 کاهش هدررفت"], ["irrigation", "🌱 آبیاری نوین"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_water.bind(a[0]))
+		_mark_decision_button(btn, "water:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "سد هر ۱۲ نوبت و آب‌شیرین‌کن هر ۹ نوبت و نیازمند انرژی پاک سطح ۵ است. خشکسالی، نشت شبکه و برداشت بی‌رویه → بحران آب، فرونشست و ناامنی غذایی."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_water(action: String):
+	var cmd = GameCommandClass.create_water_action(action)
+	var labels := {"dam": "ساخت سد و مخزن", "desal": "توسعه آب‌شیرین‌کن", "leakage": "نوسازی شبکه آبرسانی", "irrigation": "گسترش آبیاری نوین"}
+	if _queue_decision(cmd, "💧 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _build_research_card(st: Dictionary):
+	var rp: Dictionary = st.get("research_policy", {})
+	if rp.is_empty():
+		return
+	var card = _card("🔬 پژوهش و نوآوری ملی")
+	_bar(card, "شاخص نوآوری", float(rp.get("innovation_index", 0.35)))
+	_bar(card, "بودجه دانشگاه‌ها", float(rp.get("university_funding", 0.45)))
+	_bar(card, "مراکز تحقیقات راهبردی", float(rp.get("rnd_centers", 0.25)))
+	_bar(card, "انتقال فناوری", float(rp.get("tech_transfer", 0.20)))
+	_bar(card, "تجاری‌سازی", float(rp.get("commercialization", 0.30)))
+	_bar(card, "فرار مغزها", float(rp.get("brain_drain", 0.28)))
+	_row(card, "مقاله‌های علمی", PersianFormatter.to_persian_digits(str(rp.get("papers", 0))))
+	_row(card, "اختراع‌های ثبت‌شده", PersianFormatter.to_persian_digits(str(rp.get("patents", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["university", "🎓 بودجه دانشگاه"], ["center", "🏛️ پژوهشگاه"], ["transfer", "🤝 انتقال فناوری"], ["talent", "🧲 بازگشت نخبگان"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_research.bind(a[0]))
+		_mark_decision_button(btn, "research:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "علم بنیادی بلندمدت است ولی نوآوری می‌سازد. مرکز پژوهشی هر ۸ نوبت، بسته نخبگان هر ۶ نوبت. فرار مغزها رشد و کیفیت آموزش را تخلیه می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_research(action: String):
+	var cmd = GameCommandClass.create_research_action(action)
+	var labels := {"university": "افزایش بودجه دانشگاه‌ها", "center": "احداث پژوهشگاه راهبردی", "transfer": "برنامه انتقال فناوری", "talent": "بسته ماندگاری نخبگان"}
+	if _queue_decision(cmd, "🔬 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("technology")
+
+func _build_civic_card(st: Dictionary):
+	var cp: Dictionary = st.get("civic_policy", {})
+	if cp.is_empty():
+		return
+	var card = _card("🤝 مشارکت مدنی و سرمایه اجتماعی")
+	_bar(card, "سرمایه اجتماعی", float(cp.get("social_capital", 0.50)))
+	_bar(card, "شفافیت و داده باز", float(cp.get("transparency", 0.45)))
+	_bar(card, "قدرت شوراهای محلی", float(cp.get("local_councils", 0.35)))
+	_bar(card, "بودجه‌ریزی مشارکتی", float(cp.get("participatory_budget", 0.20)))
+	_bar(card, "فضای سازمان‌های مردم‌نهاد", float(cp.get("ngo_space", 0.40)))
+	_bar(card, "دیده‌بان مدنی", float(cp.get("watchdog", 0.25)))
+	_row(card, "اعتراض فروخورده", PersianFormatter.to_persian_digits(str(cp.get("protests_under", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["opendata", "📂 داده باز"], ["councils", "🏘️ شوراهای محلی"], ["budget", "🗳️ بودجه مشارکتی"], ["ngos", "🕊️ حمایت از سمن‌ها"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_civic.bind(a[0]))
+		_mark_decision_button(btn, "civic:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "مشارکت مدنی اعتماد و کارآمدی می‌سازد و فشارها را پیش از انفجار تخلیه می‌کند. مجمع بودجه مشارکتی هر ۵ نوبت؛ سرکوب سمن‌ها اعتراض زیرزمینی انبار می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_civic(action: String):
+	var cmd = GameCommandClass.create_civic_action(action)
+	var labels := {"opendata": "قانون دسترسی آزاد به اطلاعات", "councils": "تقویت شوراهای محلی", "budget": "بودجه‌ریزی مشارکتی", "ngos": "حمایت از سازمان‌های مردم‌نهاد"}
+	if _queue_decision(cmd, "🤝 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -4717,6 +4818,8 @@ func _build_technology():
 			_on_start_research.bind(str(technology.get("id", "")), str(technology.get("name_fa", ""))))
 		_mark_decision_button(start_button, "res:" + str(technology.get("id", "")))
 		start_button.disabled = current != null
+
+	_build_research_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
 	var unlocked_names: Array = []
@@ -6668,6 +6771,9 @@ func _command_queue_key(cmd) -> String:
 		"transport_action": return "transport:" + str(p.get("action", ""))
 		"retail_action": return "retail:" + str(p.get("action", ""))
 		"ethnicity_action": return "ethnicity:" + str(p.get("action", ""))
+		"water_action": return "water:" + str(p.get("action", ""))
+		"research_action": return "research:" + str(p.get("action", ""))
+		"civic_action": return "civic:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

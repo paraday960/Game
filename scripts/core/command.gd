@@ -272,6 +272,18 @@ static func create_ethnicity_action(action: String):
 	# action: equal, autonomy, dialogue, festival
 	return _self_script().new("ethnicity_action", {"action": action})
 
+static func create_water_action(action: String):
+	# action: dam, desal, leakage, irrigation
+	return _self_script().new("water_action", {"action": action})
+
+static func create_research_action(action: String):
+	# action: university, center, transfer, talent
+	return _self_script().new("research_action", {"action": action})
+
+static func create_civic_action(action: String):
+	# action: opendata, councils, budget, ngos
+	return _self_script().new("civic_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort

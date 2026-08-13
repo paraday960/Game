@@ -26,6 +26,10 @@ func init_default_state():
 		"transport_policy": {"subsidy_level": 0.5, "last_metro": -99, "last_fleet": -99, "last_brt": -99, "metro_built": 0, "brt_built": 0},
 		"retail_policy": {"price_control": false, "consumer_protection": 0.4, "confidence": 0.6, "online_boost": 0, "last_bazaar": -99},
 		"ethnicity_policy": {"equal_programs": 0.4, "autonomy": 0.4, "dialogues": 0, "last_dialogue": -99, "last_festival": -99, "representation": 0.4},
+		"water_policy": {"leakage": 0.28, "desalination": 0.05, "dams": 0.30, "irrigation_efficiency": 0.35, "conservation": 0.25, "last_dam": -99, "last_desal": -99, "aquifer": 0.70},
+		"water_infrastructure": {"storage_bcm": 35.0, "treatment": 0.65, "wastewater_reuse": 0.12, "quality": 0.60, "rural_access": 0.72, "stress_index": 0.45},
+		"research_policy": {"university_funding": 0.45, "rnd_centers": 0.25, "tech_transfer": 0.20, "commercialization": 0.30, "brain_drain": 0.28, "papers": 0, "patents": 0, "last_center": -99, "last_grant": -99, "innovation_index": 0.35},
+		"civic_policy": {"transparency": 0.45, "local_councils": 0.35, "participatory_budget": 0.20, "ngo_space": 0.40, "watchdog": 0.25, "last_assembly": -99, "social_capital": 0.50, "protests_under": 0},
 		"clock": {
 			"year": 2027,
 			"month": 1,

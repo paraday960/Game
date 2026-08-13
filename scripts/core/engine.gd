@@ -23,7 +23,8 @@ const SUPPORTED_COMMANDS = [
 	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action",
 	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action",
 	"dilemma_resolve", "stock_action", "veterans_action", "heritage_action",
-	"transport_action", "retail_action", "ethnicity_action"
+	"transport_action", "retail_action", "ethnicity_action",
+	"water_action", "research_action", "civic_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -598,6 +599,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "ethnicity_action":
 			if not str(cmd.payload.get("action", "")) in ["equal", "autonomy", "dialogue", "festival"]:
 				return {"valid": false, "reason": "اقدام قومی نامعتبر است"}
+		elif cmd.type == "water_action":
+			if not str(cmd.payload.get("action", "")) in ["dam", "desal", "leakage", "irrigation"]:
+				return {"valid": false, "reason": "اقدام آبی نامعتبر است"}
+		elif cmd.type == "research_action":
+			if not str(cmd.payload.get("action", "")) in ["university", "center", "transfer", "talent"]:
+				return {"valid": false, "reason": "اقدام پژوهشی نامعتبر است"}
+		elif cmd.type == "civic_action":
+			if not str(cmd.payload.get("action", "")) in ["opendata", "councils", "budget", "ngos"]:
+				return {"valid": false, "reason": "اقدام مدنی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1259,6 +1269,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in eth_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("ethnicity_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "water_action":
+		var water_act := str(cmd.payload.get("action", ""))
+		var water_result: Dictionary
+		match water_act:
+			"dam": water_result = WaterManager.build_dam(snapshot, cmd.tick)
+			"desal": water_result = WaterManager.build_desalination(snapshot, cmd.tick)
+			"leakage": water_result = WaterManager.reduce_leakage(snapshot)
+			_: water_result = WaterManager.irrigation_upgrade(snapshot)
+		snapshot = water_result.state
+		for ev in water_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("water_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "research_action":
+		var research_act := str(cmd.payload.get("action", ""))
+		var research_result: Dictionary
+		match research_act:
+			"university": research_result = ResearchManager.fund_universities(snapshot)
+			"center": research_result = ResearchManager.build_research_center(snapshot, cmd.tick)
+			"transfer": research_result = ResearchManager.tech_transfer_program(snapshot)
+			_: research_result = ResearchManager.retain_talent(snapshot, cmd.tick)
+		snapshot = research_result.state
+		for ev in research_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("research_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "civic_action":
+		var civic_act := str(cmd.payload.get("action", ""))
+		var civic_result: Dictionary
+		match civic_act:
+			"opendata": civic_result = CivicManager.open_data(snapshot)
+			"councils": civic_result = CivicManager.empower_councils(snapshot)
+			"budget": civic_result = CivicManager.participatory_budget(snapshot, cmd.tick)
+			_: civic_result = CivicManager.protect_ngos(snapshot)
+		snapshot = civic_result.state
+		for ev in civic_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("civic_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1565,6 +1611,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = TransportManager.ensure(snapshot)
 	snapshot = RetailManager.ensure(snapshot)
 	snapshot = EthnicityManager.ensure(snapshot)
+	snapshot = WaterManager.ensure(snapshot)
+	snapshot = ResearchManager.ensure(snapshot)
+	snapshot = CivicManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1825,6 +1874,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var ethnicity_result = EthnicityManager.simulate_month(snapshot, turn)
 	snapshot = ethnicity_result.state
 	_collect_events(ethnicity_result, "ethnicity", snapshot, turn, generated_events, "ethnicity_event")
+	# امنیت آبی: سدها، نشت، آب‌شیرین‌کن، خشکسالی، فرونشست و امنیت غذایی
+	var water_result = WaterManager.simulate_month(snapshot, turn)
+	snapshot = water_result.state
+	_collect_events(water_result, "water", snapshot, turn, generated_events, "water_event")
+	# پژوهش ملی: دانشگاه، مراکز تحقیق، اختراع، فرار مغزها و بهره‌وری
+	var research_result = ResearchManager.simulate_month(snapshot, turn)
+	snapshot = research_result.state
+	_collect_events(research_result, "research", snapshot, turn, generated_events, "research_event")
+	# مشارکت مدنی: شفافیت، شوراها، سمن‌ها، سرمایه اجتماعی و اعتراض فروخورده
+	var civic_result = CivicManager.simulate_month(snapshot, turn)
+	snapshot = civic_result.state
+	_collect_events(civic_result, "civic", snapshot, turn, generated_events, "civic_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

@@ -153,8 +153,9 @@ const CRISES = [
 
 # اعتبارسنجی ایستا: نوع هر بحران باید قالب تصمیم فارسی متناظر در DecisionManager داشته باشد.
 func is_valid() -> bool:
+	var DecisionManagerClass = preload("res://scripts/core/decision_manager.gd")
 	for definition in CRISES:
-		if not DecisionManager.TEMPLATES.has(str(definition.get("type", ""))):
+		if not DecisionManagerClass.TEMPLATES.has(str(definition.get("type", ""))):
 			return false
 	return true
 
