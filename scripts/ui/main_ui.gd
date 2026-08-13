@@ -88,6 +88,9 @@ var chat_dock_btn: Button
 var tax_vat_slider: HSlider
 var ev_charge_bar: ProgressBar
 var ht_quality_bar: ProgressBar
+var defense_industry_bar: ProgressBar
+var knowledge_businesses_lbl: Label
+var recycling_rate_lbl: Label
 
 # ── سیستم طراحی «اتاق فرمان» — الهام از HOI4 / EU4 / Power & Revolution ──
 const ACCENT_GOLD = Color(0.93, 0.74, 0.33)
@@ -2869,6 +2872,7 @@ func _build_economy():
 	_build_creative_card(st)
 	_build_nation_brand_card(st)
 	_build_health_tourism_card(st)
+	_build_waste_management_card(st)
 	_build_supply_card(st)
 	_build_textile_card(st)
 	_build_tax_card(st)
@@ -5852,6 +5856,67 @@ func _on_health_tourism(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("society")
 
+func _build_defense_industry_card(st: Dictionary):
+	var dp: Dictionary = DefenseIndustryManager.get_policy(st)
+	var card = _card("🏭 صنعت دفاعی بومی")
+	_bar(card, "تولید", float(dp.get("production",0.15)))
+	_bar(card, "تحقیق دفاعی", float(dp.get("r_and_d",0.10)))
+	_bar(card, "خودکفایی", float(dp.get("self_suff",0.20)))
+	_bar(card, "نگهداری", float(dp.get("maintenance",0.30)))
+	_bar(card, "آموزش نیرو", float(dp.get("training",0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["production","🏭 تولید"],["rnd","🔬 تحقیق"],["maintenance","🔧 نگهداری"],["training","🎓 آموزش"],["exports","📦 صادرات"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_defense_industry.bind(a[0])); _mark_decision_button(b, "di:"+a[0]); row.add_child(b)
+
+func _on_defense_industry(action: String):
+	var cmd = GameCommandClass.create_defense_industry_action(action)
+	var labels := {"production":"گسترش تولید دفاعی","rnd":"تحقیق دفاعی","maintenance":"بهبود نگهداری","training":"آموزش پرسنل","exports":"اجازه صادرات دفاعی"}
+	if _queue_decision(cmd, "🏭 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("military")
+
+func _build_knowledge_economy_card(st: Dictionary):
+	var kp: Dictionary = KnowledgeEconomyManager.get_policy(st)
+	var card = _card("💡 اقتصاد دانش‌بنیان")
+	_bar(card, "پارک فناوری", float(kp.get("tech_parks",0.10)))
+	_bar(card, "مراکز رشد", float(kp.get("incubators",0.15)))
+	_bar(card, "دانش‌بنیان‌ها", float(kp.get("startups",0.10)))
+	_bar(card, "تجاری‌سازی", float(kp.get("commercialization",0.15)))
+	_bar(card, "سرمایه خطرپذیر", float(kp.get("venture_capital",0.05)))
+	var lbl = Label.new(); lbl.text = "شرکت‌های دانش‌بنیان: " + str(kp.get("businesses",0)); lbl.add_theme_font_size_override("font_size",14); lbl.modulate = ACCENT_GOLD; card.add_child(lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["park","🏛️ پارک"],["incubator","🌱 مرکز رشد"],["startup","🚀 دانش‌بنیان"],["commercialize","🔬 تجاری‌سازی"],["vc","💵 سرمایه"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_knowledge_economy.bind(a[0])); _mark_decision_button(b, "ke:"+a[0]); row.add_child(b)
+
+func _on_knowledge_economy(action: String):
+	var cmd = GameCommandClass.create_knowledge_economy_action(action)
+	var labels := {"park":"ساخت پارک فناوری","incubator":"توسعه مرکز رشد","startup":"حمایت از دانش‌بنیان‌ها","commercialize":"تجاری‌سازی پژوهش","vc":"جذب سرمایه خطرپذیر"}
+	if _queue_decision(cmd, "💡 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
+func _build_waste_management_card(st: Dictionary):
+	var wp: Dictionary = WasteManagementManager.get_policy(st)
+	var card = _card("♻️ مدیریت پسماند")
+	_bar(card, "جمع‌آوری", float(wp.get("collection",0.40)))
+	_bar(card, "تفکیک از مبدأ", float(wp.get("separation",0.15)))
+	_bar(card, "بازیافت", float(wp.get("recycling",0.20)))
+	_bar(card, "انرژی از زباله", float(wp.get("waste_to_energy",0.05)))
+	_bar(card, "نرخ بازیافت", float(wp.get("recycling_rate",0.0)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["collection","🚛 جمع‌آوری"],["separation","♻️ تفکیک"],["recycling","🔄 بازیافت"],["wte","⚡ انرژی"],["landfill","🗑️ کاهش دفن"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_waste_management.bind(a[0])); _mark_decision_button(b, "waste_mgmt:"+a[0]); row.add_child(b)
+
+func _on_waste_management(action: String):
+	var cmd = GameCommandClass.create_waste_management_action(action)
+	var labels := {"collection":"گسترش جمع‌آوری","separation":"تفکیک از مبدأ","recycling":"ساخت مرکز بازیافت","wte":"نیروگاه زباله‌سوز","landfill":"کاهش دفن زباله"}
+	if _queue_decision(cmd, "♻️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("society")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -6109,6 +6174,7 @@ func _build_military():
 	_build_generals_card(st)
 	_build_arms_card(st)
 	_build_civil_defense_card(st)
+	_build_defense_industry_card(st)
 	_build_blue_economy_card(st)
 
 	var development: Dictionary = st.get("military_development", {})

@@ -36,7 +36,8 @@ const SUPPORTED_COMMANDS = [
 	"pharma_action", "ip_action", "transit_action",
 	"disaster_action", "livestock_action", "textile_action",
 	"basic_industry_action", "nation_brand_action", "ai_action",
-	"tax_action", "ev_action", "health_tourism_action"
+	"tax_action", "ev_action", "health_tourism_action",
+	"defense_industry_action", "knowledge_economy_action", "waste_mgmt_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -730,6 +731,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "health_tourism_action":
 			if not str(cmd.payload.get("action", "")) in ["hospital", "quality", "wellness", "visa", "accreditation", "marketing"]:
 				return {"valid": false, "reason": "اقدام گردشگری سلامت نامعتبر است"}
+		elif cmd.type == "defense_industry_action":
+			if not str(cmd.payload.get("action", "")) in ["production", "rnd", "maintenance", "training", "exports"]:
+				return {"valid": false, "reason": "اقدام صنعت دفاعی نامعتبر است"}
+		elif cmd.type == "knowledge_economy_action":
+			if not str(cmd.payload.get("action", "")) in ["park", "incubator", "startup", "commercialize", "vc"]:
+				return {"valid": false, "reason": "اقدام اقتصاد دانش نامعتبر است"}
+		elif cmd.type == "waste_mgmt_action":
+			if not str(cmd.payload.get("action", "")) in ["collection", "separation", "recycling", "wte", "landfill"]:
+				return {"valid": false, "reason": "اقدام پسماند نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -2560,6 +2570,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var health_tourism_result = HealthTourismManager.simulate_month(snapshot, turn)
 	snapshot = health_tourism_result.state
 	_collect_events(health_tourism_result, "health_tourism", snapshot, turn, generated_events, "health_tourism_event")
+	var defense_industry_result = DefenseIndustryManager.simulate_month(snapshot, turn)
+	snapshot = defense_industry_result.state
+	_collect_events(defense_industry_result, "defense_industry", snapshot, turn, generated_events, "defense_industry_event")
+	var knowledge_economy_result = KnowledgeEconomyManager.simulate_month(snapshot, turn)
+	snapshot = knowledge_economy_result.state
+	_collect_events(knowledge_economy_result, "knowledge_economy", snapshot, turn, generated_events, "knowledge_economy_event")
+	var waste_mgmt_result = WasteManagementManager.simulate_month(snapshot, turn)
+	snapshot = waste_mgmt_result.state
+	_collect_events(waste_mgmt_result, "waste_mgmt", snapshot, turn, generated_events, "waste_mgmt_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
