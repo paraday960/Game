@@ -2846,6 +2846,7 @@ func _build_economy():
 	_build_downstream_card(st)
 	_build_industry_card(st)
 	_build_mining_card(st)
+	_build_basic_industry_card(st)
 	_build_sme_card(st)
 	_build_transit_card(st)
 	_build_agriculture_card(st)
@@ -2854,6 +2855,7 @@ func _build_economy():
 	_build_tourism_card(st)
 	_build_retail_card(st)
 	_build_creative_card(st)
+	_build_nation_brand_card(st)
 	_build_supply_card(st)
 	_build_textile_card(st)
 	_build_trade_policy_card(st)
@@ -5670,6 +5672,95 @@ func _on_textile(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("economy")
 
+func _build_basic_industry_card(st: Dictionary):
+	var bp: Dictionary = st.get("basic_industry_policy", {})
+	if bp.is_empty():
+		return
+	var card = _card("🔩 صنایع بنیادی")
+	_bar(card, "تولید", float(bp.get("output", 0.35)))
+	_bar(card, "فولاد", float(bp.get("steel", 0.35)))
+	_bar(card, "سیمان", float(bp.get("cement", 0.40)))
+	_bar(card, "یکپارچگی زنجیره", float(bp.get("integration", 0.25)))
+	_bar(card, "خودکفایی مصالح", float(bp.get("self_sufficiency", 0.60)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["steel", "🔩 فولاد"], ["cement", "🏭 سیمان"], ["integration", "🔗 یکپارچه"], ["efficiency", "⚡ بهره‌وری"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_basic_industry.bind(a[0]))
+		_mark_decision_button(btn, "basicind:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "فولاد هر ۶ نوبت؛ نیازمند صنعت ۴+. صنایع بنیادی ستون ساخت‌وساز هستند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_basic_industry(action: String):
+	var cmd = GameCommandClass.create_basic_industry_action(action)
+	var labels := {"steel": "توسعه فولاد", "cement": "توسعه سیمان", "integration": "یکپارچه‌سازی زنجیره", "efficiency": "بهبود بهره‌وری"}
+	if _queue_decision(cmd, "🔩 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_nation_brand_card(st: Dictionary):
+	var nb: Dictionary = st.get("nation_brand_policy", {})
+	if nb.is_empty():
+		return
+	var card = _card("🌟 برند ملی")
+	_bar(card, "شاخص برند", float(nb.get("brand_index", 0.35)))
+	_bar(card, "رویدادهای بین‌المللی", float(nb.get("events", 0.20)))
+	_bar(card, "میراث فرهنگی", float(nb.get("heritage", 0.40)))
+	_bar(card, "صادرات فرهنگی", float(nb.get("cultural_exports", 0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["branding", "📢 کمپین"], ["event", "🏟️ رویداد"], ["heritage", "🏛️ میراث"], ["exports", "🎬 صادرات فرهنگی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_nation_brand.bind(a[0]))
+		_mark_decision_button(btn, "nationbrand:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "کمپین برند هر ۵ نوبت. برند قوی گردشگر و سرمایه می‌آورد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_nation_brand(action: String):
+	var cmd = GameCommandClass.create_nation_brand_action(action)
+	var labels := {"branding": "کمپین برند ملی", "event": "میزبانی رویداد", "heritage": "معرفی میراث", "exports": "صادرات فرهنگی"}
+	if _queue_decision(cmd, "🌟 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
+func _build_ai_card(st: Dictionary):
+	var ap: Dictionary = st.get("ai_policy", {})
+	if ap.is_empty():
+		return
+	var card = _card("🤖 هوش مصنوعی و اتوماسیون")
+	_bar(card, "پذیرش AI", float(ap.get("adoption", 0.10)))
+	_bar(card, "رباتیک صنعتی", float(ap.get("robotics", 0.10)))
+	_bar(card, "بهره‌وری", float(ap.get("productivity", 0.15)))
+	_bar(card, "جابه‌جایی شغلی", float(ap.get("job_displacement", 0.0)))
+	_bar(card, "مهارت‌آموزی", float(ap.get("reskilling", 0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["adopt", "🤖 پذیرش"], ["robotics", "🦾 رباتیک"], ["reskill", "🎓 مهارت‌آموزی"], ["datainfra", "🛰️ داده"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_ai.bind(a[0]))
+		_mark_decision_button(btn, "ai:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "پذیرش AI نیازمند دیجیتال ۶+ است. بدون مهارت‌آموزی، بیکاری بالا می‌رود."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_ai(action: String):
+	var cmd = GameCommandClass.create_ai_action(action)
+	var labels := {"adopt": "پذیرش هوش مصنوعی", "robotics": "رباتیک صنعتی", "reskill": "مهارت‌آموزی دیجیتال", "datainfra": "زیرساخت داده"}
+	if _queue_decision(cmd, "🤖 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -5798,6 +5889,7 @@ func _build_technology():
 	_build_higher_ed_card(state)
 	_build_science_card(state)
 	_build_ip_card(state)
+	_build_ai_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
 	var unlocked_names: Array = []
@@ -7790,6 +7882,9 @@ func _command_queue_key(cmd) -> String:
 		"disaster_action": return "disaster:" + str(p.get("action", ""))
 		"livestock_action": return "livestock:" + str(p.get("action", ""))
 		"textile_action": return "textile:" + str(p.get("action", ""))
+		"basic_industry_action": return "basicind:" + str(p.get("action", ""))
+		"nation_brand_action": return "nationbrand:" + str(p.get("action", ""))
+		"ai_action": return "ai:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

@@ -34,7 +34,8 @@ const SUPPORTED_COMMANDS = [
 	"supply_action", "care_action", "science_action",
 	"downstream_action", "higher_ed_action", "food_chain_action",
 	"pharma_action", "ip_action", "transit_action",
-	"disaster_action", "livestock_action", "textile_action"
+	"disaster_action", "livestock_action", "textile_action",
+	"basic_industry_action", "nation_brand_action", "ai_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -710,6 +711,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "textile_action":
 			if not str(cmd.payload.get("action", "")) in ["mills", "cotton", "apparel", "branding"]:
 				return {"valid": false, "reason": "اقدام نساجی نامعتبر است"}
+		elif cmd.type == "basic_industry_action":
+			if not str(cmd.payload.get("action", "")) in ["steel", "cement", "integration", "efficiency"]:
+				return {"valid": false, "reason": "اقدام صنایع بنیادی نامعتبر است"}
+		elif cmd.type == "nation_brand_action":
+			if not str(cmd.payload.get("action", "")) in ["branding", "event", "heritage", "exports"]:
+				return {"valid": false, "reason": "اقدام برند ملی نامعتبر است"}
+		elif cmd.type == "ai_action":
+			if not str(cmd.payload.get("action", "")) in ["adopt", "robotics", "reskill", "datainfra"]:
+				return {"valid": false, "reason": "اقدام هوش مصنوعی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1767,6 +1777,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in tex_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("textile_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "basic_industry_action":
+		var bi_act := str(cmd.payload.get("action", ""))
+		var bi_result: Dictionary
+		match bi_act:
+			"steel": bi_result = BasicIndustryManager.expand_steel(snapshot, cmd.tick)
+			"cement": bi_result = BasicIndustryManager.expand_cement(snapshot)
+			"integration": bi_result = BasicIndustryManager.integrate_chain(snapshot)
+			_: bi_result = BasicIndustryManager.efficiency_program(snapshot)
+		snapshot = bi_result.state
+		for ev in bi_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("basic_industry_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "nation_brand_action":
+		var nb_act := str(cmd.payload.get("action", ""))
+		var nb_result: Dictionary
+		match nb_act:
+			"branding": nb_result = NationBrandManager.brand_campaign(snapshot, cmd.tick)
+			"event": nb_result = NationBrandManager.host_event(snapshot)
+			"heritage": nb_result = NationBrandManager.promote_heritage(snapshot)
+			_: nb_result = NationBrandManager.cultural_export(snapshot)
+		snapshot = nb_result.state
+		for ev in nb_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("nation_brand_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "ai_action":
+		var ai_act := str(cmd.payload.get("action", ""))
+		var ai_result: Dictionary
+		match ai_act:
+			"adopt": ai_result = AiIndustryManager.adopt_ai(snapshot, cmd.tick)
+			"robotics": ai_result = AiIndustryManager.industrial_robotics(snapshot)
+			"reskill": ai_result = AiIndustryManager.reskilling_program(snapshot)
+			_: ai_result = AiIndustryManager.data_infrastructure(snapshot)
+		snapshot = ai_result.state
+		for ev in ai_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("ai_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -2106,6 +2152,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = DisasterManager.ensure(snapshot)
 	snapshot = LivestockManager.ensure(snapshot)
 	snapshot = TextileManager.ensure(snapshot)
+	snapshot = BasicIndustryManager.ensure(snapshot)
+	snapshot = NationBrandManager.ensure(snapshot)
+	snapshot = AiIndustryManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2483,6 +2532,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var textile_result = TextileManager.simulate_month(snapshot, turn)
 	snapshot = textile_result.state
 	_collect_events(textile_result, "textile", snapshot, turn, generated_events, "textile_event")
+	var basic_industry_result = BasicIndustryManager.simulate_month(snapshot, turn)
+	snapshot = basic_industry_result.state
+	_collect_events(basic_industry_result, "basic_industry", snapshot, turn, generated_events, "basic_industry_event")
+	var nation_brand_result = NationBrandManager.simulate_month(snapshot, turn)
+	snapshot = nation_brand_result.state
+	_collect_events(nation_brand_result, "nation_brand", snapshot, turn, generated_events, "nation_brand_event")
+	var ai_result = AiIndustryManager.simulate_month(snapshot, turn)
+	snapshot = ai_result.state
+	_collect_events(ai_result, "ai", snapshot, turn, generated_events, "ai_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

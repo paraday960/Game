@@ -61,6 +61,9 @@ func init_default_state():
 		"disaster_policy": {"early_warning": 0.30, "shelter": 0.25, "response": 0.35, "relief_stock": 0.30, "last_drill": -99, "preparedness": 0.30, "risk": 0.45, "casualty_risk": 0.50, "recovery_speed": 0.35, "drills": 0},
 		"livestock_policy": {"industrial": 0.30, "vaccination": 0.45, "feed": 0.35, "breeding": 0.25, "last_program": -99, "self_suff": 0.65, "protein_security": 0.55, "herd_size": 0.50, "disease_risk": 0.30, "milk_production": 0.45, "meat_production": 0.40},
 		"textile_policy": {"raw_material": 0.35, "spinning": 0.30, "apparel": 0.40, "branding": 0.20, "last_mill": -99, "output": 0.35, "export_share": 0.20, "employment": 500000, "value_added": 0.30, "import_dep": 0.45},
+		"basic_industry_policy": {"steel": 0.35, "cement": 0.40, "integration": 0.25, "efficiency": 0.30, "last_capacity": -99, "output": 0.35, "self_sufficiency": 0.60, "exports": 0.15, "import_dep": 0.40, "construction_materials": 0.50},
+		"nation_brand_policy": {"branding": 0.25, "events": 0.20, "heritage": 0.40, "cultural_exports": 0.20, "last_event": -99, "brand_index": 0.35, "soft_power_gain": 0.10, "tourism_boost": 0.0, "media_image": 0.40},
+		"ai_policy": {"adoption": 0.10, "robotics": 0.10, "reskilling": 0.20, "data_infra": 0.20, "last_program": -99, "productivity": 0.15, "job_displacement": 0.0, "ai_exports": 0.0, "ethics": 0.40},
 		"clock": {
 			"year": 2027,
 			"month": 1,
