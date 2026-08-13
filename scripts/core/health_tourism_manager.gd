@@ -121,7 +121,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	p["last_tick"] = tick
 
 	if gdp > 0.0:
-		economy["gdp"] = gdp + new_revenue * 0.5
+		# واقع‌گرایی: اثر سطحی همگرا (هر ماه ۲۰٪ از فاصله تا هدف) به‌جای جمعِ بی‌پایان روی GDP
+		var boost_target: float = new_revenue * 0.5
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + new_revenue * 0.3
 		state["economy"] = economy
 

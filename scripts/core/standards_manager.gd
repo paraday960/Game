@@ -99,7 +99,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 
 	if gdp > 0.0:
 		# صادراتِ مطابق استاندارد: حق‌بیمه کیفی + دسترسی بازار
-		economy["gdp"] = gdp + gdp * (qi * 0.0018 + eg * 0.0012)
+		# واقع‌گرایی: اثر سطحی همگرا (هر ماه ۲۰٪ از فاصله تا هدف) به‌جای جمعِ بی‌پایان روی GDP
+		var boost_target: float = gdp * (qi * 0.0018 + eg * 0.0012)
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + gdp * eg * 0.0006
 		state["economy"] = economy
 

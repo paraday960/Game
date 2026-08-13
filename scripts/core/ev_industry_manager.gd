@@ -114,7 +114,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			float(p["ev_production"]) * 0.006 +
 			float(p["battery_research"]) * 0.002
 		)
-		economy["gdp"] = gdp + industry_gdp
+		# واقع‌گرایی: اثر سطحی همگرا (هر ماه ۲۰٪ از فاصله تا هدف) به‌جای جمعِ بی‌پایان روی GDP
+		var boost_target: float = industry_gdp
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		state["economy"] = economy
 
 	# کاهش آلودگی و وابستگی سوخت

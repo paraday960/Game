@@ -118,8 +118,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 
 	if gdp > 0.0:
 		# سهم اقتصاد دانش از GDP
-		var knowledge_gdp: float = gdp * knowledge_index * 0.008
-		economy["gdp"] = gdp + knowledge_gdp
+		# واقع‌گرایی: اثر سطحی همگرا (هر ماه ۲۰٪ از فاصله تا هدف) به‌جای جمعِ بی‌پایان روی GDP
+		var boost_target: float = gdp * knowledge_index * 0.008
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		# صادرات دانش‌بنیان
 		if patent_comm > 0.3:
 			economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + gdp * patent_comm * 0.001

@@ -101,7 +101,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 
 	if gdp > 0.0:
 		# سهم هوانوردی و بار هوایی در GDP + عوارض ترانزیت هاب به ارزها
-		economy["gdp"] = gdp + gdp * (cap * 0.0035 + crg * 0.0020)
+		# واقع‌گرایی: اثر سطحی همگرا (هر ماه ۲۰٪ از فاصله تا هدف) به‌جای جمعِ بی‌پایان روی GDP
+		var boost_target: float = gdp * (cap * 0.0035 + crg * 0.0020)
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + gdp * hb * 0.0008
 		state["economy"] = economy
 

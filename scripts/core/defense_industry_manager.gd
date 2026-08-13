@@ -106,10 +106,13 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	p["self_suff"] = new_self
 	p["last_tick"] = tick
 
-	# اثر اقتصادی: صنعت دفاعی به GDP و اشتغال
+	# تولید داخلی تجهیزات دفاعی - اثر سطحی همگرا (۲۰٪ در ماه) به‌جای جمعِ بی‌پایان روی GDP
 	if gdp > 0.0:
-		var defense_gdp: float = gdp * (prod * 0.006 + rnd * 0.002)
-		economy["gdp"] = gdp + defense_gdp
+		var boost_target: float = gdp * (prod * 0.006 + rnd * 0.002)
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		# درآمد صادرات دفاعی
 		if export_lvl > 0.0 and new_self > 0.50:
 			var export_rev: float = gdp * export_lvl * 0.003

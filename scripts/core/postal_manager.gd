@@ -99,7 +99,12 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 
 	if gdp > 0.0:
 		# تجارت الکترونیک و لجستیک کارآمد به GDP می‌افزایند
-		economy["gdp"] = gdp + gdp * (ec * 0.0022 + cap * 0.0010)
+		# واقع‌گرایی: اثر سطحی همگرا (هر ماه ۲۰٪ از فاصله تا هدف) به‌جای جمعِ بی‌پایان روی GDP
+		var boost_target: float = gdp * (ec * 0.0022 + cap * 0.0010)
+		var boost_prev: float = float(p.get("_gdp_boost", 0.0))
+		var boost_delta: float = (boost_target - boost_prev) * 0.20
+		economy["gdp"] = gdp + boost_delta
+		p["_gdp_boost"] = boost_prev + boost_delta
 		state["economy"] = economy
 
 	# بازار آنلاین → بهره‌وری بنگاه‌های کوچک
