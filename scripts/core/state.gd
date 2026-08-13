@@ -46,6 +46,9 @@ func init_default_state():
 		"judicial_reform_policy": {"digital_courts": 0.20, "specialized_courts": 0.20, "mediation": 0.20, "legal_aid": 0.25, "crime_prevention": 0.20, "last_digital": -99, "case_resolution": 0.45, "cost_of_delay": 0.30, "business_disputes": 0.40},
 		"election_policy": {"fairness": 0.55, "voter_access": 0.60, "party_pluralism": 0.50, "media_monitoring": 0.45, "campaign_finance": 0.40, "next_election_turn": 48, "legitimacy": 0.60, "turnout": 0.60, "last_election": -99, "suppressed": 0, "opposition_pressure": 0.30},
 		"fuel_policy": {"subsidy": 0.65, "ev_charging": 0.10, "emission_standard": 0.25, "public_fleet": 0.20, "last_reform": -99, "smuggling": 0.30, "fuel_demand": 0.70, "ev_share": 0.02, "fuel_revenue": 0.0},
+		"housing_policy": {"social_supply": 0.20, "mortgage_access": 0.35, "renewal": 0.15, "property_tax": 0.20, "construction": 0.40, "last_social": -99, "price_index": 0.50, "bubble": 0.25, "rent_burden": 0.35, "home_ownership": 0.60, "vacancy": 0.10},
+		"startup_policy": {"accelerators": 0.20, "vc_funding": 0.15, "incubators": 0.25, "regulatory_sandbox": 0.10, "last_fund": -99, "startups": 100, "unicorns": 0, "innovation_rate": 0.20, "failure_rate": 0.50, "tech_exports": 0.10},
+		"sme_policy": {"ease_business": 0.35, "micro_credit": 0.30, "supply_chain": 0.25, "formalization": 0.30, "last_credit": -99, "sme_share": 0.40, "jobs": 12000000, "business_count": 1500000, "credit_gap": 0.45, "productivity": 0.35},
 		"clock": {
 			"year": 2027,
 			"month": 1,

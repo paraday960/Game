@@ -29,7 +29,8 @@ const SUPPORTED_COMMANDS = [
 	"creative_action", "demographic_action", "watershed_action",
 	"prison_action", "statistics_action", "mining_action",
 	"waste_action", "insurance_action", "rural_action",
-	"judicial_reform_action", "election_action", "fuel_action"
+	"judicial_reform_action", "election_action", "fuel_action",
+	"housing_action", "startup_action", "sme_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -660,6 +661,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "fuel_action":
 			if not str(cmd.payload.get("action", "")) in ["reform", "charging", "emission", "fleet"]:
 				return {"valid": false, "reason": "اقدام سوخت نامعتبر است"}
+		elif cmd.type == "housing_action":
+			if not str(cmd.payload.get("action", "")) in ["social", "mortgage", "renewal", "regulate"]:
+				return {"valid": false, "reason": "اقدام مسکن نامعتبر است"}
+		elif cmd.type == "startup_action":
+			if not str(cmd.payload.get("action", "")) in ["fund", "accelerator", "sandbox", "braindrain"]:
+				return {"valid": false, "reason": "اقدام استارتاپ نامعتبر است"}
+		elif cmd.type == "sme_action":
+			if not str(cmd.payload.get("action", "")) in ["redtape", "microcredit", "supplychain", "formalize"]:
+				return {"valid": false, "reason": "اقدام SME نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1537,6 +1547,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in fuel_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("fuel_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "housing_action":
+		var housing_act := str(cmd.payload.get("action", ""))
+		var housing_result: Dictionary
+		match housing_act:
+			"social": housing_result = HousingManager.build_social_housing(snapshot, cmd.tick)
+			"mortgage": housing_result = HousingManager.mortgage_policy(snapshot)
+			"renewal": housing_result = HousingManager.urban_renewal(snapshot)
+			_: housing_result = HousingManager.regulate_market(snapshot)
+		snapshot = housing_result.state
+		for ev in housing_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("housing_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "startup_action":
+		var startup_act := str(cmd.payload.get("action", ""))
+		var startup_result: Dictionary
+		match startup_act:
+			"fund": startup_result = StartupManager.fund_vc(snapshot, cmd.tick)
+			"accelerator": startup_result = StartupManager.build_accelerator(snapshot)
+			"sandbox": startup_result = StartupManager.regulatory_sandbox(snapshot)
+			_: startup_result = StartupManager.reverse_brain_drain(snapshot)
+		snapshot = startup_result.state
+		for ev in startup_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("startup_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "sme_action":
+		var sme_act := str(cmd.payload.get("action", ""))
+		var sme_result: Dictionary
+		match sme_act:
+			"redtape": sme_result = SmeManager.cut_red_tape(snapshot)
+			"microcredit": sme_result = SmeManager.micro_credit_fund(snapshot, cmd.tick)
+			"supplychain": sme_result = SmeManager.supply_chain_finance(snapshot)
+			_: sme_result = SmeManager.formalize_businesses(snapshot)
+		snapshot = sme_result.state
+		for ev in sme_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("sme_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1861,6 +1907,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = JudicialReformManager.ensure(snapshot)
 	snapshot = ElectionManager.ensure(snapshot)
 	snapshot = FuelTransitionManager.ensure(snapshot)
+	snapshot = HousingManager.ensure(snapshot)
+	snapshot = StartupManager.ensure(snapshot)
+	snapshot = SmeManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2193,6 +2242,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var fuel_result = FuelTransitionManager.simulate_month(snapshot, turn)
 	snapshot = fuel_result.state
 	_collect_events(fuel_result, "fuel", snapshot, turn, generated_events, "fuel_event")
+	var housing_result = HousingManager.simulate_month(snapshot, turn)
+	snapshot = housing_result.state
+	_collect_events(housing_result, "housing", snapshot, turn, generated_events, "housing_event")
+	var startup_result = StartupManager.simulate_month(snapshot, turn)
+	snapshot = startup_result.state
+	_collect_events(startup_result, "startup", snapshot, turn, generated_events, "startup_event")
+	var sme_result = SmeManager.simulate_month(snapshot, turn)
+	snapshot = sme_result.state
+	_collect_events(sme_result, "sme", snapshot, turn, generated_events, "sme_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

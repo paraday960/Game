@@ -2844,6 +2844,7 @@ func _build_economy():
 	_build_fuel_card(st)
 	_build_industry_card(st)
 	_build_mining_card(st)
+	_build_sme_card(st)
 	_build_agriculture_card(st)
 	_build_tourism_card(st)
 	_build_retail_card(st)
@@ -5199,6 +5200,99 @@ func _on_fuel(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
+func _build_housing_card(st: Dictionary):
+	var hp: Dictionary = st.get("housing_policy", {})
+	if hp.is_empty():
+		return
+	var card = _card("🏠 بازار مسکن")
+	_bar(card, "شاخص قیمت مسکن", float(hp.get("price_index", 0.50)))
+	_bar(card, "حباب", float(hp.get("bubble", 0.25)))
+	_bar(card, "بار اجاره", float(hp.get("rent_burden", 0.35)))
+	_bar(card, "مسکن اجتماعی", float(hp.get("social_supply", 0.20)))
+	_bar(card, "دسترسی وام", float(hp.get("mortgage_access", 0.35)))
+	_bar(card, "نوسازی بافت فرسوده", float(hp.get("renewal", 0.15)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["social", "🏘️ اجتماعی"], ["mortgage", "🏦 وام"], ["renewal", "🏚️ نوسازی"], ["regulate", "📊 تنظیم"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_housing.bind(a[0]))
+		_mark_decision_button(btn, "housing:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "مسکن اجتماعی هر ۵ نوبت. وام آسان حباب می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_housing(action: String):
+	var cmd = GameCommandClass.create_housing_action(action)
+	var labels := {"social": "ساخت مسکن اجتماعی", "mortgage": "تسهیل وام مسکن", "renewal": "نوسازی بافت فرسوده", "regulate": "مالیات بر عایدی مسکن"}
+	if _queue_decision(cmd, "🏠 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("population")
+
+func _build_startup_card(st: Dictionary):
+	var sp: Dictionary = st.get("startup_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("🚀 کسب‌وکارهای نوپا")
+	_bar(card, "نرخ نوآوری", float(sp.get("innovation_rate", 0.20)))
+	_bar(card, "صندوق خطرپذیر", float(sp.get("vc_funding", 0.15)))
+	_bar(card, "شتاب‌دهنده‌ها", float(sp.get("accelerators", 0.20)))
+	_bar(card, "سندباکس مقرراتی", float(sp.get("regulatory_sandbox", 0.10)))
+	_bar(card, "نرخ شکست", float(sp.get("failure_rate", 0.50)))
+	_row(card, "شرکت‌های فعال", PersianFormatter.to_persian_digits(str(sp.get("startups", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["fund", "💰 صندوق"], ["accelerator", "🚀 شتاب‌دهنده"], ["sandbox", "📜 سندباکس"], ["braindrain", "🧠 بازگشت"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_startup.bind(a[0]))
+		_mark_decision_button(btn, "startup:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "صندوق هر ۶ نوبت. سندباکس به دیجیتال ۴+ نیاز دارد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_startup(action: String):
+	var cmd = GameCommandClass.create_startup_action(action)
+	var labels := {"fund": "صندوق خطرپذیر دولتی", "accelerator": "ایجاد شتاب‌دهنده", "sandbox": "سندباکس مقرراتی", "braindrain": "بازگشت نخبگان فناوری"}
+	if _queue_decision(cmd, "🚀 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("technology")
+
+func _build_sme_card(st: Dictionary):
+	var sp: Dictionary = st.get("sme_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("🏪 بنگاه‌های کوچک و متوسط")
+	_bar(card, "سهولت کسب‌وکار", float(sp.get("ease_business", 0.35)))
+	_bar(card, "وام خرد", float(sp.get("micro_credit", 0.30)))
+	_bar(card, "زنجیره تأمین", float(sp.get("supply_chain", 0.25)))
+	_bar(card, "رسمی‌سازی", float(sp.get("formalization", 0.30)))
+	_bar(card, "شکاف اعتباری", float(sp.get("credit_gap", 0.45)))
+	_bar(card, "بهره‌وری", float(sp.get("productivity", 0.35)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["redtape", "📝 مقررات‌زدایی"], ["microcredit", "🏦 وام خرد"], ["supplychain", "🔗 زنجیره"], ["formalize", "🧾 رسمی‌سازی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_sme.bind(a[0]))
+		_mark_decision_button(btn, "sme:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "وام خرد هر ۵ نوبت. SMEها بزرگ‌ترین کارفرما هستند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_sme(action: String):
+	var cmd = GameCommandClass.create_sme_action(action)
+	var labels := {"redtape": "مقررات‌زدایی کسب‌وکار", "microcredit": "صندوق وام خرد", "supplychain": "تأمین مالی زنجیره", "formalize": "تسهیل رسمی‌سازی"}
+	if _queue_decision(cmd, "🏪 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -5323,6 +5417,7 @@ func _build_technology():
 		start_button.disabled = current != null
 
 	_build_research_card(state)
+	_build_startup_card(state)
 
 	var unlocked_card = _card("✅ فناوری‌های تکمیل‌شده")
 	var unlocked_names: Array = []
@@ -5386,6 +5481,7 @@ func _build_population():
 	_build_demographic_card(GameState.state)
 	_build_culture_card(GameState.state)
 	_build_urban_card(GameState.state)
+	_build_housing_card(GameState.state)
 	_build_welfare_card(GameState.state)
 	_build_insurance_card(GameState.state)
 	_build_rural_card(GameState.state)
@@ -7297,6 +7393,9 @@ func _command_queue_key(cmd) -> String:
 		"judicial_reform_action": return "jr:" + str(p.get("action", ""))
 		"election_action": return "election:" + str(p.get("action", ""))
 		"fuel_action": return "fuel:" + str(p.get("action", ""))
+		"housing_action": return "housing:" + str(p.get("action", ""))
+		"startup_action": return "startup:" + str(p.get("action", ""))
+		"sme_action": return "sme:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
