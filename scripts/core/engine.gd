@@ -26,7 +26,8 @@ const SUPPORTED_COMMANDS = [
 	"transport_action", "retail_action", "ethnicity_action",
 	"water_action", "research_action", "civic_action",
 	"diaspora_action", "civil_defense_action", "blue_economy_action",
-	"creative_action", "demographic_action", "watershed_action"
+	"creative_action", "demographic_action", "watershed_action",
+	"prison_action", "statistics_action", "mining_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -628,6 +629,17 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "watershed_action":
 			if not str(cmd.payload.get("action", "")) in ["restore", "forest", "dust", "wetlands"]:
 				return {"valid": false, "reason": "اقدام آبخیزداری نامعتبر است"}
+		elif cmd.type == "prison_action":
+			if not str(cmd.payload.get("action", "")) in ["approach", "capacity", "education", "amnesty"]:
+				return {"valid": false, "reason": "اقدام زندان نامعتبر است"}
+			if str(cmd.payload.get("action", "")) == "approach" and not str(cmd.payload.get("approach", "")) in ["punitive", "balanced", "rehab"]:
+				return {"valid": false, "reason": "رویکرد کیفری نامعتبر است"}
+		elif cmd.type == "statistics_action":
+			if not str(cmd.payload.get("action", "")) in ["census", "infra", "independence", "opendata"]:
+				return {"valid": false, "reason": "اقدام آماری نامعتبر است"}
+		elif cmd.type == "mining_action":
+			if not str(cmd.payload.get("action", "")) in ["mine", "refinery", "safety", "formalize"]:
+				return {"valid": false, "reason": "اقدام معدنی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1397,6 +1409,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in water_shed_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("watershed_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "prison_action":
+		var prison_act := str(cmd.payload.get("action", ""))
+		var prison_result: Dictionary
+		match prison_act:
+			"approach": prison_result = PrisonManager.set_approach(snapshot, str(cmd.payload.get("approach", "balanced")))
+			"capacity": prison_result = PrisonManager.expand_capacity(snapshot, cmd.tick)
+			"education": prison_result = PrisonManager.education_program(snapshot)
+			_: prison_result = PrisonManager.amnesty_program(snapshot, cmd.tick)
+		snapshot = prison_result.state
+		for ev in prison_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("prison_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "statistics_action":
+		var stats_act := str(cmd.payload.get("action", ""))
+		var stats_result: Dictionary
+		match stats_act:
+			"census": stats_result = StatisticsManager.run_census(snapshot, cmd.tick)
+			"infra": stats_result = StatisticsManager.build_data_infra(snapshot)
+			"independence": stats_result = StatisticsManager.guarantee_independence(snapshot)
+			_: stats_result = StatisticsManager.open_data_initiative(snapshot)
+		snapshot = stats_result.state
+		for ev in stats_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("statistics_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "mining_action":
+		var mining_act := str(cmd.payload.get("action", ""))
+		var mining_result: Dictionary
+		match mining_act:
+			"mine": mining_result = MiningManager.develop_mine(snapshot, cmd.tick)
+			"refinery": mining_result = MiningManager.build_refinery(snapshot, cmd.tick)
+			"safety": mining_result = MiningManager.improve_safety(snapshot)
+			_: mining_result = MiningManager.formalize_mines(snapshot)
+		snapshot = mining_result.state
+		for ev in mining_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("mining_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1712,6 +1760,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = CreativeManager.ensure(snapshot)
 	snapshot = DemographicManager.ensure(snapshot)
 	snapshot = WatershedManager.ensure(snapshot)
+	snapshot = PrisonManager.ensure(snapshot)
+	snapshot = StatisticsManager.ensure(snapshot)
+	snapshot = MiningManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2008,6 +2059,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var watershed_result = WatershedManager.simulate_month(snapshot, turn)
 	snapshot = watershed_result.state
 	_collect_events(watershed_result, "watershed", snapshot, turn, generated_events, "watershed_event")
+	# زندان: ازدحام، بازاجتماعی‌سازی، عفو، خشونت و بازگشت به جرم
+	var prison_result = PrisonManager.simulate_month(snapshot, turn)
+	snapshot = prison_result.state
+	_collect_events(prison_result, "prison", snapshot, turn, generated_events, "prison_event")
+	# آمار ملی: دقت داده، استقلال مرکز آمار، داده باز و خطای سیاست‌گذاری
+	var stats_result = StatisticsManager.simulate_month(snapshot, turn)
+	snapshot = stats_result.state
+	_collect_events(stats_result, "statistics", snapshot, turn, generated_events, "statistics_event")
+	# معدن: اکتشاف، فرآوری، ایمنی، خام‌فروشی و آلودگی معادن
+	var mining_result = MiningManager.simulate_month(snapshot, turn)
+	snapshot = mining_result.state
+	_collect_events(mining_result, "mining", snapshot, turn, generated_events, "mining_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

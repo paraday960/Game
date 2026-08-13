@@ -36,6 +36,10 @@ func init_default_state():
 		"creative_policy": {"funding": 0.25, "education": 0.25, "platform": 0.15, "export": 0.15, "cinema": 0.35, "music": 0.40, "games": 0.15, "crafts": 0.45, "last_festival": -99, "creative_gdp": 0.0, "jobs": 0, "creative_index": 0.30, "piracy": 0.45},
 		"demographic_policy": {"fertility_incentive": 0.20, "childcare": 0.25, "elderly_care": 0.20, "retraining": 0.15, "last_pro_natal": -99, "last_pension": -99, "window": 0.55, "aging_index": 0.25, "pension_fund": 0.55, "dependency_ratio": 0.45, "median_age": 31.0},
 		"watershed_policy": {"restoration": 0.20, "check_dams": 0.15, "forestry": 0.25, "dust_control": 0.20, "wetlands": 0.20, "last_restoration": -99, "soil_health": 0.55, "desertification": 0.45, "dust": 0.40, "forest_cover": 0.20, "erosion_rate": 0.35},
+		"prison_policy": {"approach": "balanced", "parole": 0.30, "capacity_expansion": 0.30, "prison_labor": 0.25, "education": 0.30, "last_amnesty": -99, "last_expansion": -99, "recidivism_target": 0.35},
+		"prison": {"population": 80000, "capacity": 100000, "overcrowding": 0.80, "rehabilitation": 0.40, "recidivism": 0.35, "conditions": 0.55, "education_prison": 0.35, "work_programs": 0.30, "security_level": 0.70, "violence_rate": 0.05, "escapes": 5},
+		"statistics_policy": {"census_quality": 0.50, "data_infrastructure": 0.40, "independence": 0.55, "open_data": 0.30, "id_coverage": 0.85, "last_census": -99, "accuracy": 0.75, "trust_in_data": 0.55, "underreporting": 0.20},
+		"mining_policy": {"exploration": 0.30, "processing": 0.25, "safety": 0.40, "formalization": 0.35, "last_mine": -99, "last_refinery": -99, "output": 0.0, "reserves": 0.65, "accident_risk": 0.30, "raw_export_share": 0.70},
 		"clock": {
 			"year": 2027,
 			"month": 1,

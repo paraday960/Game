@@ -308,6 +308,21 @@ static func create_watershed_action(action: String):
 	# action: restore, forest, dust, wetlands
 	return _self_script().new("watershed_action", {"action": action})
 
+static func create_prison_action(action: String):
+	# action: capacity, education, amnesty
+	return _self_script().new("prison_action", {"action": action})
+
+static func create_prison_approach(approach: String):
+	return _self_script().new("prison_action", {"action": "approach", "approach": approach})
+
+static func create_statistics_action(action: String):
+	# action: census, infra, independence, opendata
+	return _self_script().new("statistics_action", {"action": action})
+
+static func create_mining_action(action: String):
+	# action: mine, refinery, safety, formalize
+	return _self_script().new("mining_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort

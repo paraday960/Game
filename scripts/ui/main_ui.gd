@@ -2710,6 +2710,8 @@ func _build_government():
 	_build_succession_card(state)
 	_build_education_card(state)
 	_build_security_card(state)
+	_build_prison_card(state)
+	_build_statistics_card(state)
 	_build_factions_card(state)
 	_build_governors_card(state)
 	_build_ethnicity_card(state)
@@ -2837,6 +2839,7 @@ func _build_economy():
 	_build_forex_card(st)
 	_build_energy_card(st)
 	_build_industry_card(st)
+	_build_mining_card(st)
 	_build_agriculture_card(st)
 	_build_tourism_card(st)
 	_build_retail_card(st)
@@ -4886,6 +4889,118 @@ func _on_watershed(action: String):
 	var cmd = GameCommandClass.create_watershed_action(action)
 	var labels := {"restore": "احیای آبخیز و پخش سیلاب", "forest": "جنگل‌کاری و احیای مرتع", "dust": "مقابله با کانون ریزگرد", "wetlands": "احیای تا‌لاب‌ها"}
 	if _queue_decision(cmd, "⛰️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _build_prison_card(st: Dictionary):
+	var pp: Dictionary = st.get("prison_policy", {})
+	var prison: Dictionary = st.get("prison", {})
+	if pp.is_empty():
+		return
+	var card = _card("🔐 زندان و سیاست کیفری")
+	var approach_names := {"punitive": "سخت‌گیرانه", "balanced": "متعادل", "rehab": "بازپرورانه"}
+	var approach_name: String = str(approach_names.get(str(pp.get("approach", "balanced")), "متعادل"))
+	_row(card, "رویکرد", approach_name)
+	_bar(card, "ازدحام زندان", clampf(float(prison.get("overcrowding", 0.8)) / 2.0, 0.0, 1.0))
+	_bar(card, "بازاجتماعی‌سازی", float(prison.get("rehabilitation", 0.4)))
+	_bar(card, "بازگشت به جرم", float(prison.get("recidivism", 0.35)))
+	_bar(card, "شرایط زندان", float(prison.get("conditions", 0.55)))
+	_bar(card, "آموزش در زندان", float(pp.get("education", 0.30)))
+	_bar(card, "آزادی مشروط", float(pp.get("parole", 0.30)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["punitive", "⚖️ سخت‌گیرانه"], ["rehab", "🌱 بازپرورانه"], ["capacity", "🏗️ ظرفیت"], ["amnesty", "🕊️ عفو"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		if a[0] in ["punitive", "rehab"]:
+			btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_prison_approach.bind(a[0]))
+			_mark_decision_button(btn, "prison:approach:" + a[0])
+		else:
+			var act_id = "capacity" if a[0] == "capacity" else "amnesty"
+			btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_prison.bind(act_id))
+			_mark_decision_button(btn, "prison:" + act_id)
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "رویکرد سختگیرانه جمعیت و هزینه را بالا می‌برد؛ بازپروری بازگشت به جرم را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+	var edu_btn = _mk_btn(card, "📚 برنامه آموزشی زندان", Vector2(180, 38), _on_prison.bind("education"))
+	_mark_decision_button(edu_btn, "prison:education")
+
+func _on_prison(action: String):
+	var cmd = GameCommandClass.create_prison_action(action)
+	var labels := {"capacity": "توسعه ظرفیت زندان", "education": "آموزش در زندان", "amnesty": "عفو و آزادی مشروط"}
+	if _queue_decision(cmd, "🔐 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+func _on_prison_approach(approach: String):
+	var cmd = GameCommandClass.create_prison_approach(approach)
+	var labels := {"punitive": "سیاست کیفری سخت‌گیرانه", "rehab": "سیاست کیفری بازپرورانه"}
+	if _queue_decision(cmd, "🔐 " + labels.get(approach, approach)):
+		_toast(labels.get(approach, approach) + " ثبت شد")
+		_switch_tab("government")
+
+func _build_statistics_card(st: Dictionary):
+	var sp: Dictionary = st.get("statistics_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("📊 آمار ملی و حاکمیت داده")
+	_bar(card, "دقت آمار", float(sp.get("accuracy", 0.75)))
+	_bar(card, "اعتماد به داده", float(sp.get("trust_in_data", 0.55)))
+	_bar(card, "استقلال مرکز آمار", float(sp.get("independence", 0.55)))
+	_bar(card, "زیرساخت داده", float(sp.get("data_infrastructure", 0.40)))
+	_bar(card, "پوشش کد ملی", float(sp.get("id_coverage", 0.85)))
+	_bar(card, "کم‌گمارشی", float(sp.get("underreporting", 0.20)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["census", "📋 سرشماری"], ["infra", "🗄️ پایگاه داده"], ["independence", "📜 استقلال"], ["opendata", "🔓 داده باز"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_statistics.bind(a[0]))
+		_mark_decision_button(btn, "stats:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "سرشماری هر ۱۰ نوبت. آمار دقیق خطای سیاست را کم می‌کند؛ دستکاری آمار اعتماد را می‌شکند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_statistics(action: String):
+	var cmd = GameCommandClass.create_statistics_action(action)
+	var labels := {"census": "اجرای سرشماری ملی", "infra": "تقویت زیرساخت داده", "independence": "تضمین استقلال آمار", "opendata": "درگاه داده باز"}
+	if _queue_decision(cmd, "📊 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+func _build_mining_card(st: Dictionary):
+	var mp: Dictionary = st.get("mining_policy", {})
+	if mp.is_empty():
+		return
+	var card = _card("⛏️ معدن و صنایع استخراجی")
+	_bar(card, "ذخایر معدنی", float(mp.get("reserves", 0.65)))
+	_bar(card, "سطح تولید", float(mp.get("output", 0.0)))
+	_bar(card, "فرآوری داخل", float(mp.get("processing", 0.25)))
+	_bar(card, "ایمنی معادن", float(mp.get("safety", 0.40)))
+	_bar(card, "ساماندهی معادن", float(mp.get("formalization", 0.35)))
+	_bar(card, "ریسک حادثه", float(mp.get("accident_risk", 0.30)))
+	_row(card, "سهم خام‌فروشی", PersianFormatter.format_percent(float(mp.get("raw_export_share", 0.70))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["mine", "⛏️ توسعه معدن"], ["refinery", "🏭 فرآوری"], ["safety", "🦺 ایمنی"], ["formalize", "📋 ساماندهی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_mining.bind(a[0]))
+		_mark_decision_button(btn, "mining:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "فرآوری داخل نیازمند فناوری صنعت ۶+ است؛ ارزش افزوده می‌سازد و خام‌فروشی را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_mining(action: String):
+	var cmd = GameCommandClass.create_mining_action(action)
+	var labels := {"mine": "اکتشاف و توسعه معدن", "refinery": "احداث واحد فرآوری", "safety": "ارتقای ایمنی معادن", "formalize": "ساماندهی معادن کوچک"}
+	if _queue_decision(cmd, "⛏️ " + labels.get(action, action)):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
@@ -6976,6 +7091,9 @@ func _command_queue_key(cmd) -> String:
 		"creative_action": return "creative:" + str(p.get("action", ""))
 		"demographic_action": return "demographic:" + str(p.get("action", ""))
 		"watershed_action": return "watershed:" + str(p.get("action", ""))
+		"prison_action": return "prison:" + str(p.get("action", "")) + (":" + str(p.get("approach", "")) if str(p.get("action", "")) == "approach" else "")
+		"statistics_action": return "stats:" + str(p.get("action", ""))
+		"mining_action": return "mining:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
