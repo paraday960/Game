@@ -5,6 +5,7 @@ extends Control
 # بدون تصویر خارجی؛ همه‌چیز با رسم برداری (خودکفا و رایگان).
 # ============================================================
 
+const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 const GOLD := Color(1.0, 0.83, 0.30)
 const TEAL := Color(0.30, 0.88, 0.86)
 const BLUE := Color(0.42, 0.68, 1.0)
@@ -56,6 +57,25 @@ func celebrate(celebration: Dictionary) -> void:
 	# صدا و لرزش
 	FeedbackManager.play_celebration()
 
+# متن را با فونت و عرض واقعی به چند خط می‌شکند تا هرگز از کادر بیرون نزند
+func _wrap_text(font: Font, text: String, max_width: float, font_size: int) -> Array:
+	var lines: Array = []
+	if text.is_empty():
+		return lines
+	var words := text.split(" ")
+	var current := ""
+	for word in words:
+		var test := current + (" " if current != "" else "") + word
+		if font.get_string_size(test, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= max_width:
+			current = test
+		else:
+			if current != "":
+				lines.append(current)
+			current = word
+	if current != "":
+		lines.append(current)
+	return lines
+
 func _process(delta: float) -> void:
 	_frames += 1
 	var changed := false
@@ -86,22 +106,45 @@ func _draw() -> void:
 			draw_set_transform(Vector2(float(p["x"]), float(p["y"])), float(p["rot"]), Vector2.ONE)
 			draw_rect(Rect2(-float(p["w"]) * 0.5, -float(p["h"]) * 0.5, float(p["w"]), float(p["h"])), p["color"], true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	# بنر مرکزی
+	# بنر مرکزی — متن فارسی با شکستن خودکار خط داخل کادر
 	if _banner_alpha > 0.0:
 		var cw := size.x
 		var banner_w := minf(cw - 40.0, 760.0)
-		var banner_h := 150.0
+		# بنر و متن هر دو با مقیاس یکسان؛ متن همیشه داخل بنر و بنر داخل صفحه
+		var banner_w_scaled := banner_w * _banner_scale
+		var text_w := banner_w_scaled - 28.0
+		var font := PersianFont
+		# محاسبه ارتفاع واقعی متن (چندخطی) تا بنر دقیقاً اندازه متن باشد
+		var title_size := int(30.0 * _banner_scale)
+		var title_lines: int = _wrap_text(font, _banner_title, text_w, title_size).size()
+		var sub_lines: int = 0
+		var sub_size := 21
+		if _banner_subtitle != "":
+			sub_lines = _wrap_text(font, _banner_subtitle, text_w, sub_size).size()
+		# ارتفاع دینامیک بنر: تیتر + زیرتیتر + فاصله‌ها
+		var banner_h := 80.0 + float(title_lines) * 36.0 + float(sub_lines) * 26.0
+		banner_h = maxf(banner_h, 120.0)
 		var center := Vector2(cw * 0.5, size.y * 0.24)
-		var rect := Rect2(center - Vector2(banner_w * 0.5, banner_h * 0.5) * _banner_scale, Vector2(banner_w, banner_h) * _banner_scale)
+		var rect := Rect2(center - Vector2(banner_w_scaled * 0.5, banner_h * 0.5 * _banner_scale), Vector2(banner_w_scaled, banner_h * _banner_scale))
 		# پس‌زمینه
 		draw_rect(rect, Color(0.01, 0.03, 0.05, 0.94 * _banner_alpha), true)
 		draw_rect(rect, Color(_banner_severity.r, _banner_severity.g, _banner_severity.b, 0.9 * _banner_alpha), false, 3.0)
-		# تیتر
-		var font := ThemeDB.fallback_font
-		var font_size := int(30.0 * _banner_scale)
-		var title_pos := Vector2(center.x, rect.position.y + 52.0 * _banner_scale)
-		draw_string(font, title_pos, _banner_title, HORIZONTAL_ALIGNMENT_CENTER, banner_w * _banner_scale - 20.0, font_size, Color(1, 1, 1, _banner_alpha))
+		# تیتر — شکستن دستی خطوط و مرکزچینی واقعی (متن هرگز از کادر بیرون نمی‌زند)
+		# draw_string با width فقط برای align است و متن را محدود نمی‌کند؛
+		# بنابراین هر خط را با عرض واقعی اندازه می‌گیریم و دستی مرکز می‌کنیم.
+		var title_lines_arr := _wrap_text(font, _banner_title, text_w, title_size)
+		var title_y := rect.position.y + 30.0 * _banner_scale
+		for line in title_lines_arr:
+			var line_w: float = font.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x
+			var line_x: float = center.x - line_w * 0.5
+			draw_string(font, Vector2(line_x, title_y), str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, Color(1, 1, 1, _banner_alpha))
+			title_y += float(title_size + 6)
 		# زیرتیتر
 		if _banner_subtitle != "":
-			var sub_pos := Vector2(center.x, rect.position.y + 96.0 * _banner_scale)
-			draw_string(font, sub_pos, _banner_subtitle, HORIZONTAL_ALIGNMENT_CENTER, banner_w * _banner_scale - 20.0, 21, Color(0.85, 0.9, 0.95, _banner_alpha * 0.9))
+			var sub_lines_arr := _wrap_text(font, _banner_subtitle, text_w, sub_size)
+			var sub_y := title_y + 8.0
+			for line in sub_lines_arr:
+				var line_w2: float = font.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size).x
+				var line_x2: float = center.x - line_w2 * 0.5
+				draw_string(font, Vector2(line_x2, sub_y), str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, sub_size, Color(0.85, 0.9, 0.95, _banner_alpha * 0.9))
+				sub_y += float(sub_size + 5)
