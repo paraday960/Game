@@ -153,7 +153,8 @@ func set_campaign_ready(value:bool):
 	if not competitive_mode:return
 	if is_host:
 		MultiplayerCampaignManager.set_ready(host_id,value);_broadcast_lobby()
-	else:rpc_id(1,"_receive_campaign_ready",value)
+	elif multiplayer.has_multiplayer_peer():
+		rpc_id(1,"_receive_campaign_ready",value)
 
 func start_competitive_campaign()->Dictionary:
 	if not competitive_mode or not is_host:return _error("فقط میزبان رقابتی می‌تواند کمپین را آغاز کند")
@@ -194,7 +195,9 @@ func _stun_query(stun_host: String, stun_port: int) -> Dictionary:
 	msg.encode_u32(4, 0x2112A442)      # magic cookie
 	for i in range(12):
 		msg[8 + i] = (randi() & 0xFF)
-	sock.set_dest_address(stun_host, stun_port)
+	if sock.set_dest_address(stun_host, stun_port) != OK:
+		sock.close()
+		return {}
 	sock.put_packet(msg)
 	var deadline := Time.get_ticks_msec() + 1500
 	while Time.get_ticks_msec() < deadline:
@@ -340,7 +343,7 @@ func send_command(cmd: GameCommandClass) -> bool:
 		pending_commands.append(cmd)
 		emit_signal("command_received", cmd)
 		return true
-	if multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+	if multiplayer.multiplayer_peer == null or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
 		_error("هنوز اتصال به میزبان برقرار نشده است")
 		return false
 	cmd.player_id = str(multiplayer.get_unique_id())
@@ -451,6 +454,8 @@ func send_chat_message(text:String)->bool:
 		var result=MultiplayerCampaignManager.add_chat_message(host_id, clean)
 		if result.success: _broadcast_chat(result.message)
 		return result.success
+	if multiplayer.multiplayer_peer == null or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		return false
 	rpc_id(1,"_receive_chat",clean)
 	return true
 

@@ -7583,14 +7583,18 @@ func _on_host_remote():
 		return
 	var pub := str(result.get("public_address", ""))
 	if bool(result.get("upnp", false)):
-		remote_upnp_lbl.text = "✅ پورت روی روتر باز شد (UPnP)"
+		if is_instance_valid(remote_upnp_lbl):
+			remote_upnp_lbl.text = "✅ پورت روی روتر باز شد (UPnP)"
 	else:
-		remote_upnp_lbl.text = "⚠️ UPnP فعال نشد؛ اگر اتصال راه دور برقرار نشد، پورت را دستی باز کنید یا VPN بزنید"
+		if is_instance_valid(remote_upnp_lbl):
+			remote_upnp_lbl.text = "⚠️ UPnP فعال نشد؛ اگر اتصال راه دور برقرار نشد، پورت را دستی باز کنید یا VPN بزنید"
 	if pub.is_empty():
-		remote_code_lbl.text = "آدرس عمومی یافت نشد (اینترنت؟)"
+		if is_instance_valid(remote_code_lbl):
+			remote_code_lbl.text = "آدرس عمومی یافت نشد (اینترنت؟)"
 		_toast("🌐 میزبانی راه دور شروع شد ولی آدرس عمومی پیدا نشد")
 	else:
-		remote_code_lbl.text = "📋 کد اتصال: " + pub
+		if is_instance_valid(remote_code_lbl):
+			remote_code_lbl.text = "📋 کد اتصال: " + pub
 		_toast("🌐 کد اتصال راه دور آماده است — برای دوستت بفرست")
 	_refresh_network_status()
 
@@ -8545,6 +8549,12 @@ func _execute_tick_async(cmds:Array):
 	if ok:_toast("شبیه‌سازی ماه با موفقیت کامل شد")
 
 func _finish_tick_result(result:Dictionary,refresh_page:bool)->bool:
+	if result == null or not result is Dictionary:
+		# موتور در مسیر محاسبه شکست خورد و پاسخ معتبر نداد؛ UI نباید قفل بماند.
+		_show_report_after_tick = false
+		FeedbackManager.play_alert()
+		_toast("خطا: موتور شبیه‌سازی پاسخ معتبری برنگرداند — نوبت تغییر نکرد")
+		return false
 	if result.success:
 		GameState.set_state(result.state,result.version,result.tick)
 		if not P2PManager.is_network_active() or P2PManager.is_host:SaveManager.maybe_autosave(result.tick)
