@@ -90,6 +90,8 @@ jobs:
           # ۲) تزریق keystore مستقیم به preset (مسیر مطلق) - اطمینان مضاعف
           sed -i "s|keystore/debug=\"\"|keystore/debug=\"$PWD/debug.keystore\"|" export_presets.cfg
           grep -q 'keystore/debug_user' export_presets.cfg || sed -i 's|keystore/debug=.*|&\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"|' export_presets.cfg
+          # keystore ریلیز هم مسیر مطلق می‌گیرد (فایل در گام Export ساخته می‌شود)
+          sed -i "s|keystore/release=\"ci-release.keystore\"|keystore/release=\"$PWD/ci-release.keystore\"|" export_presets.cfg
           grep 'keystore' export_presets.cfg
 
       - name: Godot Import and parse validation
@@ -134,11 +136,20 @@ jobs:
           cat /tmp/competitive-client.log
           test "$COMP_HOST_STATUS" -eq 0 -a "$COMP_CLIENT_STATUS" -eq 0
 
-      - name: Export Android APK (Debug)
+      - name: Export Android APK (Release)
         run: |
           mkdir -p build
-          # Godot 4 exports via --export-debug
-          godot --headless --path . --export-debug "Android" build/country-sim-debug.apk --verbose
+          # کلید امضای موقت CI (هر اجرا ساخته می‌شود؛ در ریپو ذخیره نمی‌شود).
+          # برای انتشار رسمی Google Play باید keystore اختصاصی خود را جایگزین کنید.
+          if [ ! -f ci-release.keystore ]; then
+            keytool -genkeypair -v -keystore ci-release.keystore -alias game \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Country Simulator, OU=Game, O=OpenSource, L=Internet, C=US"
+          fi
+          # خروجی release به‌جای debug: تمپلیت release موتور بسیار کوچک‌تر است
+          # (libgodot_android.so دیباگ ~۷۶ مگابایت بود)
+          godot --headless --path . --export-release "Android" build/country-sim.apk --verbose
           ls -lh build/
 
       - name: Export Linux (for testing)
@@ -167,7 +178,7 @@ jobs:
             این نسخه به صورت خودکار توسط GitHub Actions ساخته شده است.
             
             ### نصب:
-            - فایل `country-sim-debug.apk` را دانلود کنید
+            - فایل `country-sim.apk` را دانلود کنید
             - در گوشی گزینه "نصب از منابع ناشناس" را فعال کنید
             - نصب کنید
             
@@ -177,6 +188,6 @@ jobs:
             
             ✅ رایگان و متن‌باز - مطابق قانون ۵ پروژه
           files: |
-            build/country-sim-debug.apk
+            build/country-sim.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

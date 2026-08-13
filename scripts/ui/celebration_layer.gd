@@ -26,6 +26,7 @@ func _ready() -> void:
 	set_process(true)
 
 func celebrate(celebration: Dictionary) -> void:
+	set_process(true)
 	var sev: String = str(celebration.get("severity", "gold"))
 	match sev:
 		"gold": _banner_severity = GOLD
@@ -98,6 +99,10 @@ func _process(delta: float) -> void:
 		changed = true
 	if changed:
 		queue_redraw()
+	elif _banner_alpha <= 0.0 and not _confetti_active:
+		# باتری: وقتی هیچ جشنی فعال نیست، پردازش فریم‌به‌فریم کاملاً می‌ایستد
+		# و با فراخوانی بعدی celebrate دوباره روشن می‌شود.
+		set_process(false)
 
 func _draw() -> void:
 	# کاغذرنگی

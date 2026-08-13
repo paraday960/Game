@@ -15,6 +15,9 @@ var _enabled := true
 var _timer := 0.0
 var _note_index := 0
 var _volume := 0.06
+# کش نوت‌های پیش‌ساخته: تولید ۶۶ هزار نمونه WAV در GDScript هر ۳ ثانیه
+# یک جهش CPU پنهان بود؛ هر نوت فقط یک‌بار ساخته و بعداً استفاده مجدد می‌شود.
+var _note_cache: Array = []
 
 func _ready() -> void:
 	_enabled = bool(SettingsManager.get_value("music_enabled", true))
@@ -37,9 +40,12 @@ func _process(delta: float) -> void:
 		_play_note()
 
 func _play_note() -> void:
-	var freq: float = PENTATONIC[_note_index % PENTATONIC.size()]
+	var idx := _note_index % PENTATONIC.size()
 	_note_index += 1
-	_player.stream = _build_note_stream(freq, NOTE_SECONDS)
+	if idx >= _note_cache.size():
+		# اولین اجرای هر نوت: تولید و کش؛ دفعات بعد فقط پخش
+		_note_cache.append(_build_note_stream(PENTATONIC[idx], NOTE_SECONDS))
+	_player.stream = _note_cache[idx]
 	_player.play()
 
 func _build_note_stream(freq: float, seconds: float) -> AudioStreamWAV:

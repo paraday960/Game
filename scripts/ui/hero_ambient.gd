@@ -22,6 +22,9 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(delta: float) -> void:
+	# باتری: وقتی این لایه پشت تب‌های دیگر پنهان است هیچ پردازشی نمی‌شود
+	if not is_visible_in_tree():
+		return
 	_accum += delta
 	if _accum < 1.0 / 24.0:
 		return
