@@ -21,7 +21,8 @@ const SUPPORTED_COMMANDS = [
 	"epidemic_action", "arms_action", "cyber_action", "migration_action", "culture_action",
 	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action",
 	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action",
-	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action"
+	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action",
+	"dilemma_resolve"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -578,6 +579,11 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "sports_action":
 			if not str(cmd.payload.get("action", "")) in ["grassroots", "league", "doping", "host"]:
 				return {"valid": false, "reason": "اقدام ورزشی نامعتبر است"}
+		elif cmd.type == "dilemma_resolve":
+			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
+				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
+			if state.get("dilemmas", {}).get("active", {}).is_empty():
+				return {"valid": false, "reason": "معضل فعالی نیست"}
 		elif cmd.type == "assassinate":
 			var target_a = str(cmd.payload.get("target", ""))
 			if not WorldManager.countries.has(target_a):
@@ -1156,6 +1162,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in sport_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("sports_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "dilemma_resolve":
+		var dilemma_result = DilemmaManager.resolve(snapshot, str(cmd.payload.get("choice", "a")))
+		snapshot = dilemma_result.state
+		for ev in dilemma_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("dilemma_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1455,6 +1467,7 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = AmbassadorManager.ensure(snapshot)
 	snapshot = DigitalManager.ensure(snapshot)
 	snapshot = SportsManager.ensure(snapshot)
+	snapshot = DilemmaManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1687,6 +1700,10 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var sports_result = SportsManager.simulate_month(snapshot, turn)
 	snapshot = sports_result.state
 	_collect_events(sports_result, "sports", snapshot, turn, generated_events, "sports_event")
+	# معضلات راهبردی: ظهور و انقضای انتخاب‌های دشوار
+	var dilemma_result = DilemmaManager.simulate_month(snapshot, turn)
+	snapshot = dilemma_result.state
+	_collect_events(dilemma_result, "dilemmas", snapshot, turn, generated_events, "dilemma_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
