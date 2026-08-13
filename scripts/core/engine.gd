@@ -22,7 +22,7 @@ const SUPPORTED_COMMANDS = [
 	"education_action", "agriculture_action", "tourism_action", "urban_action", "security_action",
 	"infra_action", "climate_action", "welfare_action", "space_action", "trade_policy_action",
 	"banking_action", "fdi_action", "ambassador_action", "digital_action", "sports_action",
-	"dilemma_resolve"
+	"dilemma_resolve", "stock_action", "veterans_action", "heritage_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -579,6 +579,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "sports_action":
 			if not str(cmd.payload.get("action", "")) in ["grassroots", "league", "doping", "host"]:
 				return {"valid": false, "reason": "اقدام ورزشی نامعتبر است"}
+		elif cmd.type == "stock_action":
+			if not str(cmd.payload.get("action", "")) in ["ipo", "support", "capgains", "watchdog"]:
+				return {"valid": false, "reason": "اقدام بورسی نامعتبر است"}
+		elif cmd.type == "veterans_action":
+			if not str(cmd.payload.get("action", "")) in ["pension", "employment", "clinic", "parade"]:
+				return {"valid": false, "reason": "اقدام ایثارگری نامعتبر است"}
+		elif cmd.type == "heritage_action":
+			if not str(cmd.payload.get("action", "")) in ["restore", "register", "festival", "antiquities"]:
+				return {"valid": false, "reason": "اقدام میراثی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1168,6 +1177,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in dilemma_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("dilemma_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "stock_action":
+		var stock_act := str(cmd.payload.get("action", ""))
+		var stock_result: Dictionary
+		match stock_act:
+			"ipo": stock_result = StockMarketManager.ipo(snapshot)
+			"support": stock_result = StockMarketManager.support_market(snapshot, cmd.tick)
+			"capgains": stock_result = StockMarketManager.capgains_tax(snapshot)
+			_: stock_result = StockMarketManager.watchdog(snapshot)
+		snapshot = stock_result.state
+		for ev in stock_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("stock_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "veterans_action":
+		var vet_act := str(cmd.payload.get("action", ""))
+		var vet_result: Dictionary
+		match vet_act:
+			"pension": vet_result = VeteransManager.raise_pension(snapshot)
+			"employment": vet_result = VeteransManager.employment_plan(snapshot)
+			"clinic": vet_result = VeteransManager.veterans_clinic(snapshot)
+			_: vet_result = VeteransManager.veterans_parade(snapshot, cmd.tick)
+		snapshot = vet_result.state
+		for ev in vet_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("veterans_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "heritage_action":
+		var her_act := str(cmd.payload.get("action", ""))
+		var her_result: Dictionary
+		match her_act:
+			"restore": her_result = HeritageManager.restore_sites(snapshot)
+			"register": her_result = HeritageManager.register_unesco(snapshot)
+			"festival": her_result = HeritageManager.heritage_festival(snapshot, cmd.tick)
+			_: her_result = HeritageManager.antiquities_crackdown(snapshot, cmd.tick)
+		snapshot = her_result.state
+		for ev in her_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("heritage_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1468,6 +1513,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = DigitalManager.ensure(snapshot)
 	snapshot = SportsManager.ensure(snapshot)
 	snapshot = DilemmaManager.ensure(snapshot)
+	snapshot = StockMarketManager.ensure(snapshot)
+	snapshot = VeteransManager.ensure(snapshot)
+	snapshot = HeritageManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -1704,6 +1752,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var dilemma_result = DilemmaManager.simulate_month(snapshot, turn)
 	snapshot = dilemma_result.state
 	_collect_events(dilemma_result, "dilemmas", snapshot, turn, generated_events, "dilemma_event")
+	# بورس اوراق بهادار: شاخص، حباب، سقوط و درآمد مالیات عایدی
+	var stock_result = StockMarketManager.simulate_month(snapshot, turn)
+	snapshot = stock_result.state
+	_collect_events(stock_result, "stock_market", snapshot, turn, generated_events, "stock_event")
+	# بنیاد ایثارگران: پویایی شمار، هزینه مستمری و رضایت کهنه‌سربازان
+	var veterans_result = VeteransManager.simulate_month(snapshot, turn)
+	snapshot = veterans_result.state
+	_collect_events(veterans_result, "veterans", snapshot, turn, generated_events, "veterans_event")
+	# میراث فرهنگی: فرسایش، بلایا و درآمد گردشگری تاریخی
+	var heritage_result = HeritageManager.simulate_month(snapshot, turn)
+	snapshot = heritage_result.state
+	_collect_events(heritage_result, "heritage", snapshot, turn, generated_events, "heritage_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state
