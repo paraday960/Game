@@ -43,6 +43,24 @@ const SUPPORTED_COMMANDS = [
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
+# ── هزینه اقدامات عمرانی/سیاستی (واقع‌گرایی) ──
+# سهم از GDP سالانه که با هر اقدام موفق به بدهی ملی افزوده می‌شود (تأمین مالی بدهی‌محور)؛
+# بهره و سقف بدهی توسط سیستم اقتصاد (۳.۱۰) پیامدسازی می‌شود. نرخ‌گذاری قانونی (مالیات) رایگان است.
+const ACTION_COST_SHARES = {
+	"aviation_action": {"airports": 0.006, "fleet": 0.004, "safety": 0.0008, "hub": 0.005, "cargo": 0.002},
+	"postal_action": {"network": 0.004, "sorting": 0.002, "lastmile": 0.003, "ecommerce": 0.0010, "tracking": 0.0006},
+	"standards_action": {"metrology": 0.0012, "labs": 0.0020, "accreditation": 0.0008, "surveillance": 0.0004, "export_gate": 0.0008},
+	"aerospace_action": {"launch": 0.008, "factory": 0.006, "sensing": 0.003, "telecom": 0.003, "rnd": 0.002},
+	"petrochemical_action": {"feedstock": 0.002, "plants": 0.006, "downstream": 0.004, "catalyst": 0.002, "exports": 0.001},
+	"pro_sports_action": {"leagues": 0.0015, "infrastructure": 0.004, "events": 0.0008, "academy": 0.002, "exports": 0.0006},
+	"defense_industry_action": {"production": 0.005, "rnd": 0.003, "maintenance": 0.001, "training": 0.001, "exports": 0.0005},
+	"knowledge_economy_action": {"park": 0.004, "incubator": 0.002, "startup": 0.0015, "commercialize": 0.001, "vc": 0.0008},
+	"waste_mgmt_action": {"collection": 0.003, "separation": 0.001, "recycling": 0.003, "wte": 0.004, "landfill": 0.002},
+	"ev_action": {"battery": 0.005, "research": 0.002, "production": 0.004, "charging": 0.003, "recycling": 0.0015},
+	"health_tourism_action": {"hospital": 0.005, "quality": 0.001, "wellness": 0.002, "visa": 0.0002, "accreditation": 0.0008, "marketing": 0.0006},
+	"tax_action": {"compliance": 0.0010, "digital": 0.0015, "bracket": 0.0002},
+}
+
 signal tick_completed(new_state, events)
 signal tick_failed(reason)
 signal tick_progress(day, total_days, phase)
@@ -1865,6 +1883,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: di_result = DefenseIndustryManager.allow_exports(snapshot)
 		if di_result.get("success", false):
 			snapshot = DefenseIndustryManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), di_act)
 	elif cmd.type == "knowledge_economy_action":
 		var ke_act := str(cmd.payload.get("action", ""))
 		var ke_result: Dictionary
@@ -1876,6 +1895,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: ke_result = KnowledgeEconomyManager.attract_vc(snapshot)
 		if ke_result.get("success", false):
 			snapshot = KnowledgeEconomyManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), ke_act)
 	elif cmd.type == "waste_mgmt_action":
 		var wm_act := str(cmd.payload.get("action", ""))
 		var wm_result: Dictionary
@@ -1887,6 +1907,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: wm_result = WasteManagementManager.reduce_landfill(snapshot)
 		if wm_result.get("success", false):
 			snapshot = WasteManagementManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), wm_act)
 	elif cmd.type == "aerospace_action":
 		var as_act := str(cmd.payload.get("action", ""))
 		var as_result: Dictionary
@@ -1898,6 +1919,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: as_result = AerospaceManager.invest_rnd(snapshot)
 		if as_result.get("success", false):
 			snapshot = AerospaceManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), as_act)
 	elif cmd.type == "petrochemical_action":
 		var pe_act := str(cmd.payload.get("action", ""))
 		var pe_result: Dictionary
@@ -1909,6 +1931,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: pe_result = PetrochemicalManager.boost_exports(snapshot)
 		if pe_result.get("success", false):
 			snapshot = PetrochemicalManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), pe_act)
 	elif cmd.type == "pro_sports_action":
 		var ps_act := str(cmd.payload.get("action", ""))
 		var ps_result: Dictionary
@@ -1920,6 +1943,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: ps_result = ProSportsManager.boost_exports(snapshot)
 		if ps_result.get("success", false):
 			snapshot = ProSportsManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), ps_act)
 	elif cmd.type == "aviation_action":
 		var av_act := str(cmd.payload.get("action", ""))
 		var av_result: Dictionary
@@ -1931,6 +1955,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: av_result = AviationManager.develop_cargo(snapshot)
 		if av_result.get("success", false):
 			snapshot = AviationManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), av_act)
 	elif cmd.type == "postal_action":
 		var po_act := str(cmd.payload.get("action", ""))
 		var po_result: Dictionary
@@ -1942,6 +1967,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: po_result = PostalManager.improve_tracking(snapshot)
 		if po_result.get("success", false):
 			snapshot = PostalManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), po_act)
 	elif cmd.type == "standards_action":
 		var st_act := str(cmd.payload.get("action", ""))
 		var st_result: Dictionary
@@ -1953,6 +1979,46 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: st_result = StandardsManager.strengthen_export_gate(snapshot)
 		if st_result.get("success", false):
 			snapshot = StandardsManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), st_act)
+	elif cmd.type == "tax_action":
+		# عمق ۱۸ - دیسپچ اجرایی مالیات (قبلاً فقط اعتبارسنجی می‌شد و اجرا نمی‌شد!)
+		var tx_act := str(cmd.payload.get("action", ""))
+		var tx_result: Dictionary
+		match tx_act:
+			"compliance": tx_result = TaxManager.improve_compliance(snapshot)
+			"digital": tx_result = TaxManager.deploy_digital_invoicing(snapshot)
+			"bracket": tx_result = TaxManager.add_bracket(snapshot)
+			_: tx_result = TaxManager.set_rate(snapshot, tx_act, float(cmd.payload.get("value", 0.2)))
+		if tx_result.get("success", false):
+			snapshot = TaxManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), tx_act)
+	elif cmd.type == "ev_action":
+		# عمق ۱۸ - دیسپچ اجرایی خودرو/باطری (قبلاً اجرا نمی‌شد)
+		var ev_act := str(cmd.payload.get("action", ""))
+		var ecar_result: Dictionary
+		match ev_act:
+			"battery": ecar_result = EvIndustryManager.build_battery_factory(snapshot)
+			"research": ecar_result = EvIndustryManager.invest_battery_research(snapshot)
+			"production": ecar_result = EvIndustryManager.expand_ev_production(snapshot)
+			"charging": ecar_result = EvIndustryManager.build_charging_network(snapshot)
+			_: ecar_result = EvIndustryManager.expand_recycling(snapshot)
+		if ecar_result.get("success", false):
+			snapshot = EvIndustryManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), ev_act)
+	elif cmd.type == "health_tourism_action":
+		# عمق ۱۸ - دیسپچ اجرایی گردشگری سلامت (قبلاً اجرا نمی‌شد)
+		var ht_act := str(cmd.payload.get("action", ""))
+		var ht_result: Dictionary
+		match ht_act:
+			"hospital": ht_result = HealthTourismManager.build_international_hospital(snapshot)
+			"quality": ht_result = HealthTourismManager.improve_quality(snapshot)
+			"wellness": ht_result = HealthTourismManager.develop_wellness(snapshot)
+			"visa": ht_result = HealthTourismManager.facilitate_visa(snapshot)
+			"accreditation": ht_result = HealthTourismManager.international_accreditation(snapshot)
+			_: ht_result = HealthTourismManager.marketing_campaign(snapshot)
+		if ht_result.get("success", false):
+			snapshot = HealthTourismManager.simulate(snapshot, cmd.tick)
+			snapshot = _charge_action_cost(snapshot, str(cmd.type), ht_act)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -2753,6 +2819,21 @@ func _collect_events(block: Dictionary, system_name: String, snapshot: Dictionar
 		var wrapped = {"system": system_name, "event": evt.duplicate(true), "simulation_day": TimeManager.get_total_days(snapshot)}
 		generated_events.append(wrapped)
 		EventLog.log_event(log_type, evt, turn, snapshot.get("version", 0))
+
+# شارژ هزینه اقدام عمرانی روی بدهی ملی (فقط پس از موفقیت اقدام فراخوانده می‌شود)
+func _charge_action_cost(snapshot: Dictionary, cmd_type: String, action: String) -> Dictionary:
+	var share: float = float(ACTION_COST_SHARES.get(cmd_type, {}).get(action, 0.0))
+	if share <= 0.0:
+		return snapshot
+	var econ: Dictionary = snapshot.get("economy", {})
+	if econ.is_empty():
+		return snapshot
+	var gdp: float = float(econ.get("gdp", 0.0))
+	if gdp <= 0.0:
+		return snapshot
+	econ["national_debt"] = float(econ.get("national_debt", 0.0)) + gdp * share
+	snapshot["economy"] = econ
+	return snapshot
 
 func _compute_daily_systems(snapshot: Dictionary, turn: int, simulation_day: int) -> Dictionary:
 	var generated_events: Array = []

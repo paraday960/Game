@@ -46,6 +46,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if Deterministic.chance(0.05):
 		var mig_change = Deterministic.next_range(-5000, 20000) * attractiveness
 		pop["migration_net"] += mig_change
+	# واقع‌گرایی: مهاجرت خالص انباشته نمی‌شود؛ بازگشت تدریجی به تعادل + سقف ±۲٪ جمعیت
+	# تا ورودی تصادفی روزانه در بلندمدت به جابه‌جایی غیرواقعی میلیونی تبدیل نشود
+	var mig_cap: float = max(float(pop.get("total", 85_000_000.0)) * 0.02, 10000.0)
+	pop["migration_net"] = clampf(float(pop.get("migration_net", 0.0)) * 0.999, -mig_cap, mig_cap)
 		pop["migration_net"] = clamp(pop["migration_net"], -100000, 200000)
 
 	var total_growth_rate = natural_growth + migration_rate
