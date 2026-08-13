@@ -27,7 +27,8 @@ const SUPPORTED_COMMANDS = [
 	"water_action", "research_action", "civic_action",
 	"diaspora_action", "civil_defense_action", "blue_economy_action",
 	"creative_action", "demographic_action", "watershed_action",
-	"prison_action", "statistics_action", "mining_action"
+	"prison_action", "statistics_action", "mining_action",
+	"waste_action", "insurance_action", "rural_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -640,6 +641,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "mining_action":
 			if not str(cmd.payload.get("action", "")) in ["mine", "refinery", "safety", "formalize"]:
 				return {"valid": false, "reason": "اقدام معدنی نامعتبر است"}
+		elif cmd.type == "waste_action":
+			if not str(cmd.payload.get("action", "")) in ["collection", "recycling", "landfill", "circular"]:
+				return {"valid": false, "reason": "اقدام پسماند نامعتبر است"}
+		elif cmd.type == "insurance_action":
+			if not str(cmd.payload.get("action", "")) in ["universal", "health", "agri", "regulation"]:
+				return {"valid": false, "reason": "اقدام بیمه‌ای نامعتبر است"}
+		elif cmd.type == "rural_action":
+			if not str(cmd.payload.get("action", "")) in ["roads", "internet", "processing", "nomads"]:
+				return {"valid": false, "reason": "اقدام روستایی نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1445,6 +1455,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in mining_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("mining_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "waste_action":
+		var waste_act := str(cmd.payload.get("action", ""))
+		var waste_result: Dictionary
+		match waste_act:
+			"collection": waste_result = WasteManager.expand_collection(snapshot)
+			"recycling": waste_result = WasteManager.build_recycling(snapshot, cmd.tick)
+			"landfill": waste_result = WasteManager.build_sanitary_landfill(snapshot)
+			_: waste_result = WasteManager.circular_economy(snapshot, cmd.tick)
+		snapshot = waste_result.state
+		for ev in waste_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("waste_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "insurance_action":
+		var ins_act := str(cmd.payload.get("action", ""))
+		var ins_result: Dictionary
+		match ins_act:
+			"universal": ins_result = InsuranceManager.universal_scheme(snapshot, cmd.tick)
+			"health": ins_result = InsuranceManager.expand_health(snapshot)
+			"agri": ins_result = InsuranceManager.expand_agri(snapshot)
+			_: ins_result = InsuranceManager.strengthen_regulation(snapshot)
+		snapshot = ins_result.state
+		for ev in ins_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("insurance_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "rural_action":
+		var rural_act := str(cmd.payload.get("action", ""))
+		var rural_result: Dictionary
+		match rural_act:
+			"roads": rural_result = RuralManager.build_rural_roads(snapshot, cmd.tick)
+			"internet": rural_result = RuralManager.expand_rural_internet(snapshot)
+			"processing": rural_result = RuralManager.build_agro_processing(snapshot)
+			_: rural_result = RuralManager.support_nomads(snapshot)
+		snapshot = rural_result.state
+		for ev in rural_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("rural_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1763,6 +1809,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = PrisonManager.ensure(snapshot)
 	snapshot = StatisticsManager.ensure(snapshot)
 	snapshot = MiningManager.ensure(snapshot)
+	snapshot = WasteManager.ensure(snapshot)
+	snapshot = InsuranceManager.ensure(snapshot)
+	snapshot = RuralManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2071,6 +2120,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var mining_result = MiningManager.simulate_month(snapshot, turn)
 	snapshot = mining_result.state
 	_collect_events(mining_result, "mining", snapshot, turn, generated_events, "mining_event")
+	# پسماند: جمع‌آوری، بازیافت، دفن بهداشتی و اقتصاد چرخه‌ای
+	var waste_result = WasteManager.simulate_month(snapshot, turn)
+	snapshot = waste_result.state
+	_collect_events(waste_result, "waste", snapshot, turn, generated_events, "waste_event")
+	# بیمه: نفوذ، توانگری، بیمه درمان/کشاورزی/سپرده و جذب خسارت بحران
+	var insurance_result = InsuranceManager.simulate_month(snapshot, turn)
+	snapshot = insurance_result.state
+	_collect_events(insurance_result, "insurance", snapshot, turn, generated_events, "insurance_event")
+	# روستایی: راه، اینترنت، صنایع تبدیلی، عشایر و جلوگیری از مهاجرت بی‌رویه
+	var rural_result = RuralManager.simulate_month(snapshot, turn)
+	snapshot = rural_result.state
+	_collect_events(rural_result, "rural", snapshot, turn, generated_events, "rural_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

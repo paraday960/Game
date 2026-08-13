@@ -40,6 +40,9 @@ func init_default_state():
 		"prison": {"population": 80000, "capacity": 100000, "overcrowding": 0.80, "rehabilitation": 0.40, "recidivism": 0.35, "conditions": 0.55, "education_prison": 0.35, "work_programs": 0.30, "security_level": 0.70, "violence_rate": 0.05, "escapes": 5},
 		"statistics_policy": {"census_quality": 0.50, "data_infrastructure": 0.40, "independence": 0.55, "open_data": 0.30, "id_coverage": 0.85, "last_census": -99, "accuracy": 0.75, "trust_in_data": 0.55, "underreporting": 0.20},
 		"mining_policy": {"exploration": 0.30, "processing": 0.25, "safety": 0.40, "formalization": 0.35, "last_mine": -99, "last_refinery": -99, "output": 0.0, "reserves": 0.65, "accident_risk": 0.30, "raw_export_share": 0.70},
+		"waste_policy": {"collection": 0.65, "sanitary_landfill": 0.30, "recycling": 0.18, "compost": 0.10, "wte": 0.05, "circular": 0.15, "last_plant": -99, "last_circular": -99, "recycling_rate": 0.15, "landfill_dependency": 0.75, "illegal_dumping": 0.35},
+		"insurance_policy": {"penetration": 0.30, "health_insurance": 0.45, "agri_insurance": 0.15, "deposit_insurance": 0.40, "reinsurance": 0.30, "regulation": 0.50, "last_scheme": -99, "solvency": 0.70, "claims": 0.0, "premium_gdp": 0.0, "default_risk": 0.15},
+		"rural_policy": {"rural_roads": 0.40, "rural_internet": 0.25, "agro_processing": 0.20, "nomadic_services": 0.30, "micro_credit": 0.25, "last_road": -99, "rural_pop_share": 0.25, "depopulation": 0.40, "rural_income": 0.40, "food_sovereignty": 0.50},
 		"clock": {
 			"year": 2027,
 			"month": 1,

@@ -323,6 +323,18 @@ static func create_mining_action(action: String):
 	# action: mine, refinery, safety, formalize
 	return _self_script().new("mining_action", {"action": action})
 
+static func create_waste_action(action: String):
+	# action: collection, recycling, landfill, circular
+	return _self_script().new("waste_action", {"action": action})
+
+static func create_insurance_action(action: String):
+	# action: universal, health, agri, regulation
+	return _self_script().new("insurance_action", {"action": action})
+
+static func create_rural_action(action: String):
+	# action: roads, internet, processing, nomads
+	return _self_script().new("rural_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort

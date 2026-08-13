@@ -2834,6 +2834,7 @@ func _build_economy():
 	_build_transport_card(st)
 	_build_water_card(st)
 	_build_watershed_card(st)
+	_build_waste_card(st)
 	_build_climate_card(st)
 	_build_commodities_card(st)
 	_build_forex_card(st)
@@ -5004,6 +5005,102 @@ func _on_mining(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("economy")
 
+func _build_waste_card(st: Dictionary):
+	var wp: Dictionary = st.get("waste_policy", {})
+	if wp.is_empty():
+		return
+	var card = _card("♻️ پسماند و اقتصاد چرخه‌ای")
+	_bar(card, "جمع‌آوری پسماند", float(wp.get("collection", 0.65)))
+	_bar(card, "نرخ بازیافت", float(wp.get("recycling_rate", 0.15)))
+	_bar(card, "دفن بهداشتی", float(wp.get("sanitary_landfill", 0.30)))
+	_bar(card, "بازیابی انرژی", float(wp.get("wte", 0.05)))
+	_bar(card, "اقتصاد چرخه‌ای", float(wp.get("circular", 0.15)))
+	_bar(card, "رهاسازی غیرقانونی", float(wp.get("illegal_dumping", 0.35)))
+	_row(card, "وابستگی به دفن", PersianFormatter.format_percent(float(wp.get("landfill_dependency", 0.75))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["collection", "🚛 جمع‌آوری"], ["recycling", "♻️ بازیافت"], ["landfill", "🏞️ دفن بهداشتی"], ["circular", "🔄 چرخه‌ای"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_waste.bind(a[0]))
+		_mark_decision_button(btn, "waste:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "کارخانه بازیافت هر ۶ نوبت. اقتصاد چرخه‌ای نیازمند صنعت ۶+ است؛ زباله رهاشده بیماری و آلودگی می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_waste(action: String):
+	var cmd = GameCommandClass.create_waste_action(action)
+	var labels := {"collection": "توسعه جمع‌آوری مکانیزه", "recycling": "احداث کارخانه بازیافت", "landfill": "دفن بهداشتی و زباله‌سوز", "circular": "برنامه اقتصاد چرخه‌ای"}
+	if _queue_decision(cmd, "♻️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _build_insurance_card(st: Dictionary):
+	var ip: Dictionary = st.get("insurance_policy", {})
+	if ip.is_empty():
+		return
+	var card = _card("🛡️ صنعت بیمه و حفاظت مالی")
+	_bar(card, "ضریب نفوذ بیمه", float(ip.get("penetration", 0.30)))
+	_bar(card, "توانگری مالی", float(ip.get("solvency", 0.70)))
+	_bar(card, "بیمه درمان تکمیلی", float(ip.get("health_insurance", 0.45)))
+	_bar(card, "بیمه کشاورزی", float(ip.get("agri_insurance", 0.15)))
+	_bar(card, "بیمه سپرده بانکی", float(ip.get("deposit_insurance", 0.40)))
+	_bar(card, "نظارت و اتکایی", float(ip.get("regulation", 0.50)))
+	_bar(card, "ریسک ورشکستگی", float(ip.get("default_risk", 0.15)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["universal", "📋 فراگیر"], ["health", "🏥 درمان"], ["agri", "🌾 کشاورزی"], ["regulation", "⚖️ نظارت"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_insurance.bind(a[0]))
+		_mark_decision_button(btn, "insurance:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "طرح فراگیر هر ۸ نوبت. بیمه قوی خسارت بحران را جذب می‌کند؛ نظارت ضعیف حباب و ورشکستگی می‌آورد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_insurance(action: String):
+	var cmd = GameCommandClass.create_insurance_action(action)
+	var labels := {"universal": "طرح بیمه فراگیر", "health": "گسترش بیمه درمان", "agri": "بیمه کشاورزی", "regulation": "تقویت مقررات بیمه"}
+	if _queue_decision(cmd, "🛡️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+func _build_rural_card(st: Dictionary):
+	var rp: Dictionary = st.get("rural_policy", {})
+	if rp.is_empty():
+		return
+	var card = _card("🌾 توسعه روستایی و عشایری")
+	_bar(card, "راه روستایی", float(rp.get("rural_roads", 0.40)))
+	_bar(card, "اینترنت روستایی", float(rp.get("rural_internet", 0.25)))
+	_bar(card, "صنایع تبدیلی", float(rp.get("agro_processing", 0.20)))
+	_bar(card, "درآمد روستایی", float(rp.get("rural_income", 0.40)))
+	_bar(card, "امنیت غذایی سرزمینی", float(rp.get("food_sovereignty", 0.50)))
+	_bar(card, "مهاجرت بی‌رویه", float(rp.get("depopulation", 0.40)))
+	_bar(card, "خدمات عشایری", float(rp.get("nomadic_services", 0.30)))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["roads", "🛣️ راه"], ["internet", "📡 اینترنت"], ["processing", "🏭 تبدیلی"], ["nomads", "🐑 عشایر"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_rural.bind(a[0]))
+		_mark_decision_button(btn, "rural:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "راه روستایی هر ۵ نوبت. اینترنت به دیجیتال ۴ نیاز دارد. مهاجرت بی‌رویه حاشیه‌نشینی و فقر شهری را زیاد می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_rural(action: String):
+	var cmd = GameCommandClass.create_rural_action(action)
+	var labels := {"roads": "توسعه راه روستایی", "internet": "اینترنت روستایی", "processing": "صنایع تبدیلی کشاورزی", "nomads": "خدمات عشایری و وام خرد"}
+	if _queue_decision(cmd, "🌾 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -5192,6 +5289,8 @@ func _build_population():
 	_build_culture_card(GameState.state)
 	_build_urban_card(GameState.state)
 	_build_welfare_card(GameState.state)
+	_build_insurance_card(GameState.state)
+	_build_rural_card(GameState.state)
 	_build_sports_card(GameState.state)
 	_build_veterans_card(GameState.state)
 	_build_heritage_card(GameState.state)
@@ -7094,6 +7193,9 @@ func _command_queue_key(cmd) -> String:
 		"prison_action": return "prison:" + str(p.get("action", "")) + (":" + str(p.get("approach", "")) if str(p.get("action", "")) == "approach" else "")
 		"statistics_action": return "stats:" + str(p.get("action", ""))
 		"mining_action": return "mining:" + str(p.get("action", ""))
+		"waste_action": return "waste:" + str(p.get("action", ""))
+		"insurance_action": return "insurance:" + str(p.get("action", ""))
+		"rural_action": return "rural:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
