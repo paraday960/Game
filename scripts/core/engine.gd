@@ -28,7 +28,8 @@ const SUPPORTED_COMMANDS = [
 	"diaspora_action", "civil_defense_action", "blue_economy_action",
 	"creative_action", "demographic_action", "watershed_action",
 	"prison_action", "statistics_action", "mining_action",
-	"waste_action", "insurance_action", "rural_action"
+	"waste_action", "insurance_action", "rural_action",
+	"judicial_reform_action", "election_action", "fuel_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -650,6 +651,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "rural_action":
 			if not str(cmd.payload.get("action", "")) in ["roads", "internet", "processing", "nomads"]:
 				return {"valid": false, "reason": "اقدام روستایی نامعتبر است"}
+		elif cmd.type == "judicial_reform_action":
+			if not str(cmd.payload.get("action", "")) in ["digital", "specialized", "mediation", "legalaid"]:
+				return {"valid": false, "reason": "اقدام اصلاح قضایی نامعتبر است"}
+		elif cmd.type == "election_action":
+			if not str(cmd.payload.get("action", "")) in ["hold", "monitoring", "access", "pluralism"]:
+				return {"valid": false, "reason": "اقدام انتخاباتی نامعتبر است"}
+		elif cmd.type == "fuel_action":
+			if not str(cmd.payload.get("action", "")) in ["reform", "charging", "emission", "fleet"]:
+				return {"valid": false, "reason": "اقدام سوخت نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1491,6 +1501,42 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in rural_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("rural_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "judicial_reform_action":
+		var jr_act := str(cmd.payload.get("action", ""))
+		var jr_result: Dictionary
+		match jr_act:
+			"digital": jr_result = JudicialReformManager.digitalize_courts(snapshot, cmd.tick)
+			"specialized": jr_result = JudicialReformManager.specialized_courts(snapshot)
+			"mediation": jr_result = JudicialReformManager.mediation_program(snapshot)
+			_: jr_result = JudicialReformManager.legal_aid(snapshot)
+		snapshot = jr_result.state
+		for ev in jr_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("judicial_reform_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "election_action":
+		var el_act := str(cmd.payload.get("action", ""))
+		var el_result: Dictionary
+		match el_act:
+			"hold": el_result = ElectionManager.hold_election(snapshot, cmd.tick)
+			"monitoring": el_result = ElectionManager.strengthen_monitoring(snapshot)
+			"access": el_result = ElectionManager.improve_voter_access(snapshot)
+			_: el_result = ElectionManager.party_pluralism(snapshot)
+		snapshot = el_result.state
+		for ev in el_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("election_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "fuel_action":
+		var fuel_act := str(cmd.payload.get("action", ""))
+		var fuel_result: Dictionary
+		match fuel_act:
+			"reform": fuel_result = FuelTransitionManager.reform_subsidy(snapshot, cmd.tick)
+			"charging": fuel_result = FuelTransitionManager.build_charging(snapshot)
+			"emission": fuel_result = FuelTransitionManager.emission_standard(snapshot)
+			_: fuel_result = FuelTransitionManager.electrify_public_fleet(snapshot)
+		snapshot = fuel_result.state
+		for ev in fuel_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("fuel_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -1812,6 +1858,9 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	snapshot = WasteManager.ensure(snapshot)
 	snapshot = InsuranceManager.ensure(snapshot)
 	snapshot = RuralManager.ensure(snapshot)
+	snapshot = JudicialReformManager.ensure(snapshot)
+	snapshot = ElectionManager.ensure(snapshot)
+	snapshot = FuelTransitionManager.ensure(snapshot)
 	snapshot = TechnologyManager.migrate_state(snapshot)
 	var seasonal_result = SeasonalManager.simulate_month(snapshot, turn)
 	snapshot = seasonal_result.state
@@ -2132,6 +2181,18 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var rural_result = RuralManager.simulate_month(snapshot, turn)
 	snapshot = rural_result.state
 	_collect_events(rural_result, "rural", snapshot, turn, generated_events, "rural_event")
+	# اصلاح قضایی: دیجیتال، تخصصی، میانجی‌گری و اطاله دادرسی
+	var jr_result = JudicialReformManager.simulate_month(snapshot, turn)
+	snapshot = jr_result.state
+	_collect_events(jr_result, "judicial_reform", snapshot, turn, generated_events, "judicial_reform_event")
+	# انتخابات: مشروعیت، مشارکت، نظارت، تکثر و فشار مخالفان
+	var el_result = ElectionManager.simulate_month(snapshot, turn)
+	snapshot = el_result.state
+	_collect_events(el_result, "election", snapshot, turn, generated_events, "election_event")
+	# سوخت و گذار انرژی: یارانه، ایستگاه شارژ، استاندارد و ناوگان برقی
+	var fuel_result = FuelTransitionManager.simulate_month(snapshot, turn)
+	snapshot = fuel_result.state
+	_collect_events(fuel_result, "fuel", snapshot, turn, generated_events, "fuel_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

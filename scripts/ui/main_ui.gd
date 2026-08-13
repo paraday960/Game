@@ -2707,6 +2707,8 @@ func _build_government():
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75, 0.82, 0.92); summary.add_child(hint)
 	_build_parliament_card(state)
 	_build_judiciary_card(state)
+	_build_judicial_reform_card(state)
+	_build_election_card(state)
 	_build_succession_card(state)
 	_build_education_card(state)
 	_build_security_card(state)
@@ -2839,6 +2841,7 @@ func _build_economy():
 	_build_commodities_card(st)
 	_build_forex_card(st)
 	_build_energy_card(st)
+	_build_fuel_card(st)
 	_build_industry_card(st)
 	_build_mining_card(st)
 	_build_agriculture_card(st)
@@ -5101,6 +5104,101 @@ func _on_rural(action: String):
 		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
 		_switch_tab("population")
 
+func _build_judicial_reform_card(st: Dictionary):
+	var jrp: Dictionary = st.get("judicial_reform_policy", {})
+	if jrp.is_empty():
+		return
+	var card = _card("⚖️ اصلاحات قضایی و عدالت ترمیمی")
+	_bar(card, "سرعت رسیدگی", float(jrp.get("case_resolution", 0.45)))
+	_bar(card, "دادگاه الکترونیک", float(jrp.get("digital_courts", 0.20)))
+	_bar(card, "دادگاه‌های تخصصی", float(jrp.get("specialized_courts", 0.20)))
+	_bar(card, "میانجی‌گری", float(jrp.get("mediation", 0.20)))
+	_bar(card, "معاضدت حقوقی", float(jrp.get("legal_aid", 0.25)))
+	_row(card, "هزینه اطاله دادرسی", PersianFormatter.format_percent(float(jrp.get("cost_of_delay", 0.30))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["digital", "💻 دیجیتال"], ["specialized", "🏛️ تخصصی"], ["mediation", "🤝 میانجی"], ["legalaid", "🧑‍⚖️ معاضدت"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_judicial_reform.bind(a[0]))
+		_mark_decision_button(btn, "jr:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "دیجیتال‌سازی به فناوری دیجیتال ۴+ نیاز دارد. اطاله دادرسی هزینه اقتصادی و بی‌اعتمادی می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_judicial_reform(action: String):
+	var cmd = GameCommandClass.create_judicial_reform_action(action)
+	var labels := {"digital": "دیجیتالی کردن دادگاه‌ها", "specialized": "دادگاه‌های تخصصی", "mediation": "میانجی‌گری و عدالت ترمیمی", "legalaid": "معاضدت حقوقی"}
+	if _queue_decision(cmd, "⚖️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+func _build_election_card(st: Dictionary):
+	var ep: Dictionary = st.get("election_policy", {})
+	if ep.is_empty():
+		return
+	var card = _card("🗳️ انتخابات و رقابت سیاسی")
+	_bar(card, "مشروعیت", float(ep.get("legitimacy", 0.60)))
+	_bar(card, "مشارکت", float(ep.get("turnout", 0.60)))
+	_bar(card, "انصاف انتخابات", float(ep.get("fairness", 0.55)))
+	_bar(card, "دسترسی رأی‌دهندگان", float(ep.get("voter_access", 0.60)))
+	_bar(card, "تکثر احزاب", float(ep.get("party_pluralism", 0.50)))
+	_bar(card, "فشار مخالفان", float(ep.get("opposition_pressure", 0.30)))
+	_row(card, "نوبت تا انتخابات", PersianFormatter.to_persian_digits(str(ep.get("next_election_turn", 48))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["hold", "🗳️ برگزاری"], ["monitoring", "🔍 نظارت"], ["access", "🚻 دسترسی"], ["pluralism", "🏛️ تکثر"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_election.bind(a[0]))
+		_mark_decision_button(btn, "election:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "برگزاری انتخابات تنها در زمان مقرر ممکن است. انتخابات منصفانه مشروعیت می‌سازد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_election(action: String):
+	var cmd = GameCommandClass.create_election_action(action)
+	var labels := {"hold": "برگزاری انتخابات", "monitoring": "تقویت نظارت انتخابات", "access": "بهبود دسترسی به صندوق", "pluralism": "تکثر احزاب"}
+	if _queue_decision(cmd, "🗳️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("government")
+
+func _build_fuel_card(st: Dictionary):
+	var fp: Dictionary = st.get("fuel_policy", {})
+	if fp.is_empty():
+		return
+	var card = _card("⛽ سوخت و گذار انرژی حمل‌ونقل")
+	_bar(card, "یارانه سوخت", float(fp.get("subsidy", 0.65)))
+	_bar(card, "ایستگاه شارژ برقی", float(fp.get("ev_charging", 0.10)))
+	_bar(card, "استاندارد آلایندگی", float(fp.get("emission_standard", 0.25)))
+	_bar(card, "ناوگان عمومی برقی", float(fp.get("public_fleet", 0.20)))
+	_bar(card, "قاچاق سوخت", float(fp.get("smuggling", 0.30)))
+	_bar(card, "سهم خودروی برقی", float(fp.get("ev_share", 0.02)))
+	_row(card, "تقاضای سوخت", PersianFormatter.format_percent(float(fp.get("fuel_demand", 0.70))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["reform", "💰 اصلاح یارانه"], ["charging", "⚡ شارژ برقی"], ["emission", "🚗 استاندارد"], ["fleet", "🚍 ناوگان برقی"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_fuel.bind(a[0]))
+		_mark_decision_button(btn, "fuel:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "اصلاح یارانه هر ۱۰ نوبت. ایستگاه شارژ به انرژی پاک ۴+ نیاز دارد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_fuel(action: String):
+	var cmd = GameCommandClass.create_fuel_action(action)
+	var labels := {"reform": "اصلاح یارانه سوخت", "charging": "توسعه ایستگاه شارژ", "emission": "استاندارد آلایندگی", "fleet": "ناوگان عمومی برقی"}
+	if _queue_decision(cmd, "⛽ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -7196,6 +7294,9 @@ func _command_queue_key(cmd) -> String:
 		"waste_action": return "waste:" + str(p.get("action", ""))
 		"insurance_action": return "insurance:" + str(p.get("action", ""))
 		"rural_action": return "rural:" + str(p.get("action", ""))
+		"judicial_reform_action": return "jr:" + str(p.get("action", ""))
+		"election_action": return "election:" + str(p.get("action", ""))
+		"fuel_action": return "fuel:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود

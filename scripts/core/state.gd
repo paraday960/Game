@@ -43,6 +43,9 @@ func init_default_state():
 		"waste_policy": {"collection": 0.65, "sanitary_landfill": 0.30, "recycling": 0.18, "compost": 0.10, "wte": 0.05, "circular": 0.15, "last_plant": -99, "last_circular": -99, "recycling_rate": 0.15, "landfill_dependency": 0.75, "illegal_dumping": 0.35},
 		"insurance_policy": {"penetration": 0.30, "health_insurance": 0.45, "agri_insurance": 0.15, "deposit_insurance": 0.40, "reinsurance": 0.30, "regulation": 0.50, "last_scheme": -99, "solvency": 0.70, "claims": 0.0, "premium_gdp": 0.0, "default_risk": 0.15},
 		"rural_policy": {"rural_roads": 0.40, "rural_internet": 0.25, "agro_processing": 0.20, "nomadic_services": 0.30, "micro_credit": 0.25, "last_road": -99, "rural_pop_share": 0.25, "depopulation": 0.40, "rural_income": 0.40, "food_sovereignty": 0.50},
+		"judicial_reform_policy": {"digital_courts": 0.20, "specialized_courts": 0.20, "mediation": 0.20, "legal_aid": 0.25, "crime_prevention": 0.20, "last_digital": -99, "case_resolution": 0.45, "cost_of_delay": 0.30, "business_disputes": 0.40},
+		"election_policy": {"fairness": 0.55, "voter_access": 0.60, "party_pluralism": 0.50, "media_monitoring": 0.45, "campaign_finance": 0.40, "next_election_turn": 48, "legitimacy": 0.60, "turnout": 0.60, "last_election": -99, "suppressed": 0, "opposition_pressure": 0.30},
+		"fuel_policy": {"subsidy": 0.65, "ev_charging": 0.10, "emission_standard": 0.25, "public_fleet": 0.20, "last_reform": -99, "smuggling": 0.30, "fuel_demand": 0.70, "ev_share": 0.02, "fuel_revenue": 0.0},
 		"clock": {
 			"year": 2027,
 			"month": 1,

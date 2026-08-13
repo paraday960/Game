@@ -335,6 +335,18 @@ static func create_rural_action(action: String):
 	# action: roads, internet, processing, nomads
 	return _self_script().new("rural_action", {"action": action})
 
+static func create_judicial_reform_action(action: String):
+	# action: digital, specialized, mediation, legalaid
+	return _self_script().new("judicial_reform_action", {"action": action})
+
+static func create_election_action(action: String):
+	# action: hold, monitoring, access, pluralism
+	return _self_script().new("election_action", {"action": action})
+
+static func create_fuel_action(action: String):
+	# action: reform, charging, emission, fleet
+	return _self_script().new("fuel_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
