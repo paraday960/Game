@@ -69,6 +69,9 @@ var _cache_layer: String = ""
 var _comparison_unit_a: String = ""
 var _comparison_unit_b: String = ""
 var fx_layer: Control
+# کش بافت اقیانوس: گرادیان عمقی فقط به اندازه وابسته است و هر فریم بازسازی می‌شود (۳۲ نوار)
+var _ocean_gradient: GradientTexture2D = null
+var _ocean_tex_size := Vector2i.ZERO
 
 func _ready():
 	custom_minimum_size = Vector2(0, 820)
@@ -204,11 +207,9 @@ func _update_projection():
 	_base_scale = min(_viewport.size.x / 2.0, _viewport.size.y)
 
 func _draw_ocean():
-	# گرادیان عمق — اقیانوس باز تیره، عمق‌های کم روشن‌تر (سبک نقشه ناوبری)
-	for index in range(32):
-		var ratio = float(index) / 31.0
-		var band = Rect2(0, size.y * ratio, size.x, size.y / 31.0 + 1.0)
-		draw_rect(band, OCEAN_TOP.lerp(OCEAN_BOTTOM, ratio), true)
+	# گرادیان عمق — یک بافت کش‌شده به‌جای ۳۲ نوار جداگانه (فقط با تغییر اندازه بازسازی می‌شود)
+	_ensure_ocean_texture()
+	draw_texture_rect(_ocean_gradient, Rect2(Vector2.ZERO, size), false)
 	var world_top_left = _normalized_to_screen(Vector2(0.0, 0.0), false)
 	var world_bottom_right = _normalized_to_screen(Vector2(1.0, 1.0), false)
 	var world_rect = Rect2(world_top_left, world_bottom_right - world_top_left)
@@ -224,6 +225,22 @@ func _draw_ocean():
 	var equator_y = _normalized_to_screen(Vector2(0.5, 0.5), false).y
 	if equator_y > -50.0 and equator_y < size.y + 50.0:
 		draw_line(Vector2(0, equator_y), Vector2(size.x, equator_y), Color(0.35, 0.60, 0.70, 0.10), 1.0, true)
+
+func _ensure_ocean_texture():
+	var target := Vector2i(max(2, int(size.x)), max(2, int(size.y)))
+	if _ocean_gradient != null and _ocean_tex_size == target:
+		return
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 1.0])
+	g.colors = PackedColorArray([OCEAN_TOP, OCEAN_BOTTOM])
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.width = target.x
+	tex.height = target.y
+	tex.fill_from = Vector2(0, 0)
+	tex.fill_to = Vector2(0, 1)
+	_ocean_gradient = tex
+	_ocean_tex_size = target
 
 func _draw_graticule():
 	var alpha = clamp(0.10 + log(zoom_level) * 0.035, 0.10, 0.24)
@@ -242,6 +259,10 @@ func _draw_graticule():
 func _draw_countries(low_detail:bool=false):
 	for code in countries.keys():
 		var code_string = str(code)
+		# حذف زودهنگام کشورهای خارج از صفحه: بدون این گام، در زوم کشوری
+		# همه ۲۶ هزار رأس جهان هر فریم ترنسفورم می‌شد در حالی که فقط کسری قابل دیدن است.
+		if not _country_bbox_visible(code_string):
+			continue
 		var fill = _country_fill(code_string)
 		var border = Color(0.36, 0.57, 0.65, 0.72)
 		var width = clamp(0.7 + log(zoom_level) * 0.20, 0.7, 1.8)
@@ -252,11 +273,16 @@ func _draw_countries(low_detail:bool=false):
 		if code_string == selected_country:
 			fill = fill.lightened(0.08); border = Color(1.0, 0.79, 0.22); width += 1.3
 		var is_focus := code_string == player_country or code_string == hovered_country or code_string == selected_country
+		# خطوط بدون آنتی‌آلیاس حین حرکت: پن/زوم هر فریم بازترسیم می‌شود و AA خط چندضلعی‌ها
+		# بزرگ‌ترین هزینه CPU در حالت حرکت است؛ پس از توقف، فریم نهایی با کیفیت کامل رسم می‌شود.
+		var aa := not low_detail
 		for polygon in GeographyManager.get_polygons(code_string):
 			var outer = _screen_ring(polygon.outer)
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
-			if (not low_detail or is_focus) and polygon.get("fillable",true) and not Geometry2D.triangulate_polygon(outer).is_empty():
+			# Godot 4 خودش داخل draw_polygon مثلث‌سازی می‌کند؛ پیش‌بررسی سنگین
+			# Geometry2D.triangulate_polygon فقط کار را دو برابر می‌کرد. نگهبان سبک مساحت کافی است.
+			if (not low_detail or is_focus) and polygon.get("fillable",true) and _polygon_area(outer) > 1.5:
 				# نورپردازی سه‌بعدی: گرادیان رأس‌به‌رأس — نور از بالا-چپ، سایه در پایین
 				_draw_polygon_lighted(outer, fill)
 				# سایه توپوگرافی: نوار تیره لبه پایین هر چندضلعی (حس برجستگی ۳بعدی)
@@ -266,19 +292,19 @@ func _draw_countries(low_detail:bool=false):
 						shade_pts.append(v)
 					# فقط برای چندضلعی‌های بزرگ‌تر از یک حد — صرفه‌جویی
 					if _polygon_area(outer) > 4200.0:
-						draw_polyline(shade_pts, Color(0.0, 0.01, 0.02, 0.10), 5.0, true)
+						draw_polyline(shade_pts, Color(0.0, 0.01, 0.02, 0.10), 5.0, aa)
 			if not low_detail or is_focus:
 				for hole in polygon.holes:
 					var screen_hole=_screen_ring(hole)
-					if screen_hole.size()>=3 and _polygon_visible(screen_hole) and not Geometry2D.triangulate_polygon(screen_hole).is_empty():draw_colored_polygon(screen_hole,OCEAN_TOP)
+					if screen_hole.size()>=3 and _polygon_visible(screen_hole) and _polygon_area(screen_hole) > 1.5:draw_colored_polygon(screen_hole,OCEAN_TOP)
 			var ring = outer.duplicate(); ring.append(outer[0])
 			# سایه ساحلی: خشکی از اقیانوس بلند می‌شود (سبک نقشه سینمایی).
 			if not low_detail or is_focus:
-				draw_polyline(ring, Color(0.0, 0.008, 0.016, 0.32), width + 4.0, true)
+				draw_polyline(ring, Color(0.0, 0.008, 0.016, 0.32), width + 4.0, aa)
 				# هاله اختصاصی کشور بازیکن — هویت بصری HOI4.
 				if code_string == player_country:
-					draw_polyline(ring, Color(0.35, 0.85, 1.0, 0.20), width + 6.5, true)
-			draw_polyline(ring, border, width, true)
+					draw_polyline(ring, Color(0.35, 0.85, 1.0, 0.20), width + 6.5, aa)
+			draw_polyline(ring, border, width, aa)
 
 func _draw_admin_detail(code: String):
 	for unit in CountryGeographyManager.get_units(code):
@@ -294,7 +320,7 @@ func _draw_admin_detail(code: String):
 			var outer = _screen_ring(polygon.outer)
 			if outer.size() < 3 or not _polygon_visible(outer):
 				continue
-			if polygon.get("fillable", true) and not Geometry2D.triangulate_polygon(outer).is_empty():
+			if polygon.get("fillable", true) and _polygon_area(outer) > 1.5:
 				_draw_polygon_lighted(outer, fill)
 				_unit_screen_records.append({"id": unit_id, "outer": outer})
 			var ring = outer.duplicate(); ring.append(outer[0])
@@ -1395,6 +1421,20 @@ func _polygon_visible(points: PackedVector2Array) -> bool:
 		minimum.x = min(minimum.x, point.x); minimum.y = min(minimum.y, point.y)
 		maximum.x = max(maximum.x, point.x); maximum.y = max(maximum.y, point.y)
 	return Rect2(minimum, maximum - minimum).intersects(_viewport.grow(12.0))
+
+# حذف محافظه‌کارانه کشور بیرون از صفحه با bbox نرمالایزشده (از پیش محاسبه‌شده در GeographyManager).
+# کشورهای عبورکننده از خط ۱۸۰ درجه باکس پهن می‌سازند و حذف نمی‌شوند (ایمن).
+func _country_bbox_visible(code: String) -> bool:
+	var box: Rect2 = GeographyManager.get_bounds(code)
+	if box.size.x <= 0.0 or box.size.y <= 0.0:
+		return true
+	var minimum := Vector2(INF, INF)
+	var maximum := Vector2(-INF, -INF)
+	for corner in [box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)]:
+		var p := _normalized_to_screen(corner, true)
+		minimum.x = minf(minimum.x, p.x); minimum.y = minf(minimum.y, p.y)
+		maximum.x = maxf(maximum.x, p.x); maximum.y = maxf(maximum.y, p.y)
+	return Rect2(minimum, maximum - minimum).intersects(_viewport.grow(16.0))
 
 func _segment_near_view(start: Vector2, finish: Vector2) -> bool:
 	var minimum = Vector2(min(start.x, finish.x), min(start.y, finish.y))
