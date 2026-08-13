@@ -248,6 +248,18 @@ static func create_sports_action(action: String):
 static func create_dilemma_resolve(choice: String):
 	return _self_script().new("dilemma_resolve", {"choice": choice})
 
+static func create_stock_action(action: String):
+	# action: ipo, support, capgains, watchdog
+	return _self_script().new("stock_action", {"action": action})
+
+static func create_veterans_action(action: String):
+	# action: pension, employment, clinic, parade
+	return _self_script().new("veterans_action", {"action": action})
+
+static func create_heritage_action(action: String):
+	# action: restore, register, festival, antiquities
+	return _self_script().new("heritage_action", {"action": action})
+
 # === نقشه‌محور: حمله به مسیرهای تجاری ===
 static func create_trade_route_attack(route_id: String, route_type: String, operation: String, from_country: String = "", to_country: String = ""):
 	# operation: raid, blockade, sabotage, cyber, drone_strike, protect, escort
