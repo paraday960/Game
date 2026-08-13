@@ -10,12 +10,62 @@ var campaign_turn := 0
 var peer_registry: Dictionary = {} # peer_id -> {name,country_id,ready}
 var country_states: Dictionary = {} # country_id -> full State
 var pending_by_country: Dictionary = {}
+# ردیابی پایان نوبت جاری: country_id -> true
+var turn_finished: Dictionary = {}
+# پیام‌های چت درون‌بازی (حلقه‌ای برای جلوگیری از رشد بی‌نهایت)
+const MAX_CHAT_MESSAGES := 200
+var chat_messages: Array = []
 
 signal lobby_changed(lobby)
 signal campaign_advanced(turn)
+signal turn_finished_changed(finished_map)
+signal chat_message_received(message)
 
 func reset():
-	active=false;started=false;campaign_turn=0;peer_registry.clear();country_states.clear();pending_by_country.clear()
+	active=false;started=false;campaign_turn=0
+	peer_registry.clear();country_states.clear();pending_by_country.clear()
+	turn_finished.clear();chat_messages.clear()
+
+# ── پایان نوبت همگام ──
+# بازیکنی که دستورات خود را ثبت کرده «پایان نوبت» می‌زند. نوبت تنها وقتی
+# جلو می‌رود که همه کشورهای انسانی پایان نوبت را علامت زده باشند.
+func mark_turn_finished(peer_id: String) -> Dictionary:
+	if not started or not peer_registry.has(peer_id):
+		return {"success": false, "reason": "بازیکن عضو کمپین فعال نیست"}
+	var country_id := str(peer_registry[peer_id].get("country_id", ""))
+	turn_finished[country_id] = true
+	var snap := get_turn_finished_snapshot()
+	emit_signal("turn_finished_changed", snap)
+	return {"success": true, "finished": snap.duplicate(true), "all_finished": all_turns_finished()}
+
+func unmark_turn_finished(peer_id: String):
+	if not peer_registry.has(peer_id): return
+	var country_id := str(peer_registry[peer_id].get("country_id", ""))
+	turn_finished.erase(country_id)
+	emit_signal("turn_finished_changed", get_turn_finished_snapshot())
+
+func all_turns_finished() -> bool:
+	if not started or peer_registry.is_empty(): return false
+	for player in peer_registry.values():
+		var cid := str(player.get("country_id", ""))
+		if not turn_finished.get(cid, false):
+			return false
+	return true
+
+func get_turn_finished_snapshot() -> Dictionary:
+	# نگاشت country_id -> {name, finished} برای نمایش پنجره
+	var snap: Dictionary = {}
+	for player in peer_registry.values():
+		var cid := str(player.get("country_id", ""))
+		snap[cid] = {
+			"name": str(player.get("name", "بازیکن")),
+			"finished": bool(turn_finished.get(cid, false))
+		}
+	return snap
+
+func has_finished(peer_id: String) -> bool:
+	if not peer_registry.has(peer_id): return false
+	return bool(turn_finished.get(str(peer_registry[peer_id].get("country_id", "")), false))
 
 func create_lobby(host_peer_id:String,player_name:String,country_id:String)->Dictionary:
 	reset();active=true
@@ -48,7 +98,7 @@ func all_ready()->bool:
 func start_campaign(base_state:Dictionary)->Dictionary:
 	if started:return {"success":false,"reason":"کمپین قبلاً آغاز شده است"}
 	if not all_ready():return {"success":false,"reason":"همه بازیکنان آماده نیستند"}
-	country_states.clear();pending_by_country.clear();campaign_turn=0
+	country_states.clear();pending_by_country.clear();campaign_turn=0;turn_finished.clear();chat_messages.clear()
 	for player in peer_registry.values():
 		var country_id=str(player.get("country_id",""));country_states[country_id]=_create_country_state(base_state,country_id);pending_by_country[country_id]=[]
 	started=true;emit_signal("lobby_changed",get_lobby_snapshot());return {"success":true,"countries":country_states.size()}
@@ -61,6 +111,8 @@ func enqueue_command(peer_id:String,command)->Dictionary:
 
 func advance_month()->Dictionary:
 	if not started:return {"success":false,"reason":"کمپین آغاز نشده است"}
+	if not all_turns_finished():
+		return {"success":false,"reason":"هنوز همه بازیکنان پایان نوبت را نزدند","waiting":get_turn_finished_snapshot()}
 	campaign_turn+=1
 	var results:Dictionary={}
 	var ids=country_states.keys();ids.sort()
@@ -70,8 +122,42 @@ func advance_month()->Dictionary:
 		if not result.success:return {"success":false,"reason":"کشور %s: %s"%[WorldManager.get_country_name(country_id),result.reason],"country_id":country_id}
 		country_states[country_id]=result.state;pending_by_country[country_id]=[];results[country_id]=result
 	_reconcile_human_countries()
+	# همه نوبت‌ها اجرا شد؛ پرچم‌ها برای نوبت بعد صفر شوند
+	turn_finished.clear()
 	emit_signal("campaign_advanced",campaign_turn)
+	emit_signal("turn_finished_changed",get_turn_finished_snapshot())
 	return {"success":true,"turn":campaign_turn,"states":country_states.duplicate(true),"results":results}
+
+# ── چت درون‌بازی ──
+func add_chat_message(peer_id: String, text: String, msg_type: String = "chat") -> Dictionary:
+	var clean := text.strip_edges() if text != null else ""
+	if clean.length() == 0:
+		return {"success": false, "reason": "پیام خالی است"}
+	if clean.length() > 500:
+		clean = clean.substr(0, 500)
+	var player_name := "بازیکن"
+	if peer_registry.has(peer_id):
+		player_name = str(peer_registry[peer_id].get("name", "بازیکن"))
+	var country_id := str(peer_registry.get(peer_id, {}).get("country_id", ""))
+	var msg := {
+		"peer_id": peer_id,
+		"name": player_name,
+		"country_id": country_id,
+		"text": clean,
+		"type": msg_type,
+		"turn": campaign_turn,
+		"timestamp": Time.get_unix_time_from_system()
+	}
+	chat_messages.append(msg)
+	if chat_messages.size() > MAX_CHAT_MESSAGES:
+		chat_messages.pop_front()
+	emit_signal("chat_message_received", msg)
+	return {"success": true, "message": msg}
+
+func get_recent_chat(count: int = 50) -> Array:
+	if chat_messages.size() <= count:
+		return chat_messages.duplicate()
+	return chat_messages.slice(chat_messages.size() - count)
 
 func get_state_for_peer(peer_id:String)->Dictionary:
 	if not peer_registry.has(peer_id):return {}

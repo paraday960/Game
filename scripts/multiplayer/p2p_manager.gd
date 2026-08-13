@@ -39,6 +39,8 @@ signal state_snapshot_received(state, version, tick)
 signal campaign_lobby_received(lobby)
 signal network_status_changed(status)
 signal network_error(message)
+signal turn_finished_changed(finished_map)
+signal chat_received(message)
 
 func _ready():
 	multiplayer.peer_connected.connect(_on_peer_connected)
@@ -46,6 +48,10 @@ func _ready():
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	if not MultiplayerCampaignManager.turn_finished_changed.is_connected(_on_campaign_turn_finished_changed):
+		MultiplayerCampaignManager.turn_finished_changed.connect(_on_campaign_turn_finished_changed)
+	if not MultiplayerCampaignManager.chat_message_received.is_connected(_on_campaign_chat_received):
+		MultiplayerCampaignManager.chat_message_received.connect(_on_campaign_chat_received)
 	start_local_mode()
 
 func start_local_mode():
@@ -158,10 +164,16 @@ func start_competitive_campaign()->Dictionary:
 func advance_competitive_month(local_commands:Array)->Dictionary:
 	if not competitive_mode or not is_host or not MultiplayerCampaignManager.started:return {"success":false,"reason":"کمپین رقابتی آماده نیست"}
 	for command in local_commands:MultiplayerCampaignManager.enqueue_command(host_id,command)
+	if not MultiplayerCampaignManager.has_finished(host_id):
+		MultiplayerCampaignManager.mark_turn_finished(host_id)
+		_broadcast_turn_finished()
+	if not MultiplayerCampaignManager.all_turns_finished():
+		var waiting=MultiplayerCampaignManager.get_turn_finished_snapshot()
+		return {"success":false,"reason":"در انتظار پایان نوبت سایر بازیکنان","waiting":waiting,"all_finished":false}
 	var result=MultiplayerCampaignManager.advance_month()
 	if not result.success:return result
 	_broadcast_campaign_states()
-	return {"success":true,"state":MultiplayerCampaignManager.get_state_for_peer(host_id),"turn":result.turn}
+	return {"success":true,"state":MultiplayerCampaignManager.get_state_for_peer(host_id),"turn":result.turn,"all_finished":true}
 
 func disconnect_game():
 	start_local_mode()
@@ -379,6 +391,88 @@ func get_status() -> Dictionary:
 		"connection": connection
 	}
 
+# ── پایان نوبت همگام ──
+func mark_turn_finished():
+	if not competitive_mode or not MultiplayerCampaignManager.started: return false
+	if is_host:
+		MultiplayerCampaignManager.mark_turn_finished(host_id)
+		_broadcast_turn_finished()
+		return true
+	rpc_id(1, "_receive_turn_finished")
+	return true
+
+func unmark_turn_finished():
+	if not competitive_mode or not MultiplayerCampaignManager.started: return
+	if is_host:
+		MultiplayerCampaignManager.unmark_turn_finished(host_id)
+		_broadcast_turn_finished()
+	else:
+		rpc_id(1, "_receive_turn_unfinished")
+
+func all_turns_finished() -> bool:
+	return MultiplayerCampaignManager.all_turns_finished()
+
+func get_turn_finished_map() -> Dictionary:
+	return MultiplayerCampaignManager.get_turn_finished_snapshot()
+
+func has_local_finished() -> bool:
+	return MultiplayerCampaignManager.has_finished(host_id)
+
+@rpc("any_peer","call_remote","reliable")
+func _receive_turn_finished():
+	if not is_host or not competitive_mode: return
+	var sender=str(multiplayer.get_remote_sender_id())
+	MultiplayerCampaignManager.mark_turn_finished(sender)
+	_broadcast_turn_finished()
+
+@rpc("any_peer","call_remote","reliable")
+func _receive_turn_unfinished():
+	if not is_host or not competitive_mode: return
+	var sender=str(multiplayer.get_remote_sender_id())
+	MultiplayerCampaignManager.unmark_turn_finished(sender)
+	_broadcast_turn_finished()
+
+func _broadcast_turn_finished():
+	var snap=MultiplayerCampaignManager.get_turn_finished_snapshot()
+	emit_signal("turn_finished_changed", snap)
+	if not peers.is_empty():
+		rpc("_receive_turn_finished_map", snap)
+
+@rpc("authority","call_remote","reliable")
+func _receive_turn_finished_map(finished_map:Dictionary):
+	emit_signal("turn_finished_changed", finished_map)
+
+# ── چت درون‌بازی ──
+func send_chat_message(text:String)->bool:
+	var clean=text.strip_edges()
+	if clean.is_empty(): return false
+	if clean.length()>500: clean=clean.substr(0,500)
+	if is_host:
+		var result=MultiplayerCampaignManager.add_chat_message(host_id, clean)
+		if result.success: _broadcast_chat(result.message)
+		return result.success
+	rpc_id(1,"_receive_chat",clean)
+	return true
+
+@rpc("any_peer","call_remote","reliable")
+func _receive_chat(text:String):
+	if not is_host or not competitive_mode: return
+	var sender=str(multiplayer.get_remote_sender_id())
+	var result=MultiplayerCampaignManager.add_chat_message(sender, text)
+	if result.success: _broadcast_chat(result.message)
+
+func _broadcast_chat(message:Dictionary):
+	emit_signal("chat_received", message)
+	if not peers.is_empty():
+		rpc("_receive_chat_broadcast", message)
+
+@rpc("authority","call_remote","reliable")
+func _receive_chat_broadcast(message:Dictionary):
+	emit_signal("chat_received", message)
+
+func get_recent_chat(count:int=50)->Array:
+	return MultiplayerCampaignManager.get_recent_chat(count)
+
 @rpc("any_peer","call_remote","reliable")
 func _request_campaign_join(player_name:String,country_id:String):
 	if not is_host or not competitive_mode:return
@@ -508,3 +602,9 @@ func _disconnect_transport():
 func _error(message: String) -> Dictionary:
 	emit_signal("network_error", message)
 	return {"success": false, "reason": message}
+
+func _on_campaign_turn_finished_changed(finished_map):
+	emit_signal("turn_finished_changed", finished_map)
+
+func _on_campaign_chat_received(message):
+	emit_signal("chat_received", message)

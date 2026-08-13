@@ -79,6 +79,12 @@ var network_player_name_edit: LineEdit
 var network_port_spin: SpinBox
 var network_status_lbl: Label
 var campaign_lobby_lbl: Label
+var turn_waiting_dialog: AcceptDialog
+var turn_waiting_list: VBoxContainer
+var chat_panel: PanelContainer
+var chat_log: RichTextLabel
+var chat_input: LineEdit
+var chat_dock_btn: Button
 
 # ── سیستم طراحی «اتاق فرمان» — الهام از HOI4 / EU4 / Power & Revolution ──
 const ACCENT_GOLD = Color(0.93, 0.74, 0.33)
@@ -289,6 +295,9 @@ func _ready():
 	P2PManager.campaign_lobby_received.connect(_on_campaign_lobby)
 	P2PManager.network_status_changed.connect(_on_network_status_changed)
 	P2PManager.network_error.connect(_on_network_error)
+	P2PManager.turn_finished_changed.connect(_on_turn_finished_changed)
+	P2PManager.chat_received.connect(_on_chat_received)
+	_build_multiplayer_overlays()
 	print("رابط کاربری اصلی لود شد - شبیه‌ساز کشور")
 
 func _notification(what:int):
@@ -7363,6 +7372,7 @@ func _on_campaign_lobby(lobby:Dictionary):
 	var names:Array=[]
 	for player in lobby.get("players",{}).values():names.append("%s: %s %s"%[player.get("name","بازیکن"),WorldManager.get_country_name(str(player.get("country_id",""))),"✅" if player.get("ready",false) else "⏳"])
 	campaign_lobby_lbl.text="لابی رقابتی: "+(" | ".join(names) if not names.is_empty() else "غیرفعال")
+	_refresh_chat_visibility()
 
 func _on_random_port():
 	# پورت تصادفی در بازه امن (شبیه‌سازی چند تلاش برای یافتن پورت آزاد)
@@ -7509,6 +7519,9 @@ func _on_network_state_snapshot(state: Dictionary, version: int, tick: int):
 	_render_events()
 	_switch_tab(current_tab)
 	_toast("🌐 وضعیت نوبت ماهانه %s از میزبان همگام شد" % PersianFormatter.to_persian_digits(str(tick)))
+	_refresh_chat_visibility()
+	if turn_waiting_dialog != null and turn_waiting_dialog.visible:
+		turn_waiting_dialog.hide()
 
 # ============================================================
 # تب سامانه‌ها — نمای کلی ۶۵ سیستم
@@ -7754,9 +7767,168 @@ func _on_apply_budget():
 # کنترل‌های فوتر
 # ============================================================
 func _on_next_tick_pressed():
-	# پایان نوبت: همه تصمیم‌های ثبت‌شده یکجا اجرا می‌شوند و گزارش نوبت نمایش داده می‌شود.
+	if P2PManager.competitive_mode and MultiplayerCampaignManager.started:
+		_finish_multiplayer_turn()
+		return
 	_show_report_after_tick = true
 	_run_tick_with(queued_commands.duplicate())
+
+func _finish_multiplayer_turn():
+	var cmds = queued_commands.duplicate()
+	if P2PManager.is_host:
+		for cmd in cmds:
+			MultiplayerCampaignManager.enqueue_command(P2PManager.host_id, cmd)
+		_clear_decision_queue()
+		MultiplayerCampaignManager.mark_turn_finished(P2PManager.host_id)
+		P2PManager._broadcast_turn_finished()
+	else:
+		for cmd in cmds:
+			P2PManager.send_command(cmd)
+		_clear_decision_queue()
+		P2PManager.mark_turn_finished()
+	_show_turn_waiting_dialog(MultiplayerCampaignManager.get_turn_finished_snapshot())
+
+func _show_turn_waiting_dialog(finished_map):
+	if turn_waiting_dialog == null: _build_turn_waiting_dialog()
+	_populate_turn_waiting(finished_map)
+	turn_waiting_dialog.popup_centered(Vector2i(420,380))
+
+func _build_turn_waiting_dialog():
+	turn_waiting_dialog = AcceptDialog.new()
+	turn_waiting_dialog.title = "⏳ پایان نوبت"
+	turn_waiting_dialog.dialog_text = "در انتظار پایان نوبت سایر بازیکنان..."
+	turn_waiting_dialog.ok_button_text = "بستن"
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(380,250)
+	turn_waiting_list = VBoxContainer.new()
+	turn_waiting_list.add_theme_constant_override("separation", 8)
+	scroll.add_child(turn_waiting_list)
+	turn_waiting_dialog.add_child(scroll)
+	add_child(turn_waiting_dialog)
+
+func _populate_turn_waiting(finished_map):
+	if turn_waiting_list == null: return
+	for c in turn_waiting_list.get_children(): c.queue_free()
+	var all_done := true
+	var ids = finished_map.keys(); ids.sort()
+	for cid in ids:
+		var info = finished_map[cid]
+		var row = HBoxContainer.new()
+		var icon = Label.new()
+		var is_done = bool(info.get("finished", false))
+		icon.text = "✅" if is_done else "⏳"
+		icon.add_theme_font_size_override("font_size", 22)
+		row.add_child(icon)
+		var nl = Label.new()
+		nl.text = str(info.get("name","بازیکن"))
+		nl.add_theme_font_size_override("font_size", 20)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(nl)
+		var st = Label.new()
+		st.text = "آماده" if is_done else "در حال بازی..."
+		st.modulate = ACCENT_GREEN if is_done else TEXT_MUTED
+		st.add_theme_font_size_override("font_size", 17)
+		row.add_child(st)
+		turn_waiting_list.add_child(row)
+		if not is_done: all_done = false
+	if turn_waiting_dialog != null:
+		turn_waiting_dialog.dialog_text = "همه پایان نوبت زدند — در حال اجرا..." if all_done else "در انتظار پایان نوبت سایر بازیکنان..."
+
+func _on_turn_finished_changed(finished_map):
+	if turn_waiting_dialog != null and turn_waiting_dialog.visible:
+		_populate_turn_waiting(finished_map)
+		var all_done := true
+		for v in finished_map.values():
+			if not bool((v as Dictionary).get("finished", false)):
+				all_done = false; break
+		if all_done and P2PManager.is_host:
+			turn_waiting_dialog.dialog_text = "در حال اجرای نوبت..."
+			call_deferred("_run_advance_after_all_finished")
+
+func _run_advance_after_all_finished():
+	var result = MultiplayerCampaignManager.advance_month()
+	if result.success:
+		var cs:Dictionary = result.get("state", {})
+		if not cs.is_empty():
+			GameState.set_state(cs, int(cs.get("version",0)), int(cs.get("tick",0)))
+			SaveManager.maybe_autosave(GameState.tick)
+			_refresh_header(); _render_events()
+		if turn_waiting_dialog != null:
+			turn_waiting_dialog.hide()
+		P2PManager._broadcast_campaign_states()
+		_engagement_pulse(); FeedbackManager.play_success()
+		_show_report_after_tick = true
+		if _show_report_after_tick:
+			_show_report_after_tick = false
+			call_deferred("_show_turn_report")
+
+func _on_chat_received(message):
+	if chat_log == null: return
+	chat_log.append_text("[b]%s:[/b] %s\n" % [str(message.get("name","بازیکن")), str(message.get("text",""))])
+	chat_log.scroll_to_line(chat_log.get_line_count())
+
+func _on_chat_submitted(text):
+	if text.strip_edges().is_empty(): return
+	if P2PManager.competitive_mode and MultiplayerCampaignManager.started:
+		P2PManager.send_chat_message(text)
+	chat_input.text = ""
+
+func _toggle_chat():
+	if chat_panel != null: chat_panel.visible = not chat_panel.visible
+
+func _build_multiplayer_overlays():
+	turn_waiting_dialog = null; turn_waiting_list = null
+	chat_panel = PanelContainer.new()
+	chat_panel.visible = false
+	chat_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	chat_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	chat_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	chat_panel.custom_minimum_size = Vector2(320,360)
+	var margin = MarginContainer.new()
+	for side in ["margin_left","margin_right","margin_top","margin_bottom"]:
+		margin.add_theme_constant_override(side, 8)
+	chat_panel.add_child(margin)
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	margin.add_child(vbox)
+	var title = Label.new()
+	title.text = "💬 چت بازی"
+	title.add_theme_font_size_override("font_size", 18)
+	title.modulate = ACCENT_GOLD
+	vbox.add_child(title)
+	chat_log = RichTextLabel.new()
+	chat_log.bbcode_enabled = true
+	chat_log.fit_content = false
+	chat_log.scroll_active = true
+	chat_log.custom_minimum_size = Vector2(300,260)
+	chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(chat_log)
+	chat_input = LineEdit.new()
+	chat_input.placeholder_text = "پیام بنویسید و Enter بزنید..."
+	chat_input.add_theme_font_size_override("font_size", 16)
+	chat_input.text_submitted.connect(_on_chat_submitted)
+	vbox.add_child(chat_input)
+	add_child(chat_panel)
+	chat_dock_btn = Button.new()
+	chat_dock_btn.text = "💬"
+	chat_dock_btn.tooltip_text = "چت درون‌بازی"
+	chat_dock_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	chat_dock_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	chat_dock_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	chat_dock_btn.position = Vector2(-60,-60)
+	chat_dock_btn.custom_minimum_size = Vector2(52,52)
+	chat_dock_btn.pressed.connect(_toggle_chat)
+	add_child(chat_dock_btn)
+	_refresh_chat_visibility()
+
+func _refresh_chat_visibility():
+	var in_mp = P2PManager.competitive_mode and MultiplayerCampaignManager.started
+	if chat_dock_btn != null: chat_dock_btn.visible = in_mp
+	if chat_panel != null and not in_mp: chat_panel.visible = false
+	if in_mp and chat_log != null:
+		chat_log.clear()
+		for msg in MultiplayerCampaignManager.get_recent_chat(50):
+			_on_chat_received(msg)
 
 func _on_auto_pressed():
 	auto_tick = !auto_tick
