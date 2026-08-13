@@ -612,7 +612,12 @@ func _draw_national_network(code: String):
 	var start = _normalized_to_screen(capital.point)
 	var is_player = code == player_country
 	var transport = full_state.get("transport_detail", {}) if is_player else {}
-	var road_quality = float(transport.get("roads_quality", _country_layer_value(code, countries[code])))
+	# پیش‌فرض فقط وقتی محاسبه می‌شود که کلید نباشد (آرگومان .get مشتاقانه اجرا می‌شود)
+	var road_quality: float
+	if transport.has("roads_quality"):
+		road_quality = float(transport["roads_quality"])
+	else:
+		road_quality = _country_layer_value(code, countries[code])
 	var rail_quality = float(transport.get("rail_quality", road_quality * 0.85))
 	var road_color = Color(0.74, 0.34, 0.15).lerp(Color(1.0, 0.81, 0.26), road_quality)
 	for index in range(1, min(11, cities.size())):

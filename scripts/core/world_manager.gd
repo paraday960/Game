@@ -74,12 +74,16 @@ func ensure_world(state: Dictionary) -> Dictionary:
 	var world: Dictionary = state["world"]
 	world["data_version"] = data_version
 	world["player_country"] = player_id
-	world["countries"] = world.get("countries", _runtime_countries())
+	# توجه: آرگومان پیش‌فرض .get در GDScript مشتاقانه ارزیابی می‌شود؛
+	# بدون بررسی has()، جدول ۱۹۵ کشور هر روز از نو ساخته می‌شد (هزینه پنهان سنگین).
+	if not world.has("countries"):
+		world["countries"] = _runtime_countries()
 	world["wars"] = world.get("wars", {})
 	world["war_history"] = world.get("war_history", [])
 	world["alliances"] = world.get("alliances", [])
 	world["trade_agreements"] = world.get("trade_agreements", [])
-	world["npc_relations"] = world.get("npc_relations", _build_npc_relations(player_id))
+	if not world.has("npc_relations"):
+		world["npc_relations"] = _build_npc_relations(player_id)
 	world["npc_wars"] = world.get("npc_wars", {})
 	world["npc_alliances"] = world.get("npc_alliances", [])
 	world["npc_trade_agreements"] = world.get("npc_trade_agreements", [])

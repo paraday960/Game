@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -104,6 +104,7 @@ jobs:
           python3 tests/validate_country_data.py
           python3 tests/validate_world_map.py
           python3 tests/validate_country_maps.py
+          python3 tests/validate_engine_contracts.py
           godot --headless --path . res://tests/test_scene.tscn
           godot --headless --path . res://tests/test_long.tscn
           godot --headless --path . -s res://tests/test_ui.gd
