@@ -2824,6 +2824,7 @@ func _build_economy():
 	_mark_decision_button(_mk_btn(macro, "اعمال تعرفه گمرکی", Vector2(220, 46), _on_apply_tariff), "tariff")
 	_build_cycle_card(st)
 	_build_banking_card(st)
+	_build_stock_card(st)
 	_build_infrastructure_card(st)
 	_build_climate_card(st)
 	_build_commodities_card(st)
@@ -4384,6 +4385,125 @@ func _on_digital(action: String):
 		_switch_tab("technology")
 
 # ── ورزش و سلامت عمومی ──
+func _build_stock_card(st: Dictionary):
+	var sm: Dictionary = st.get("stock_market", {})
+	var sp: Dictionary = st.get("stock_policy", {})
+	if sp.is_empty():
+		return
+	var card = _card("📈 بورس اوراق بهادار")
+	_row(card, "شاخص کل", PersianFormatter.to_persian_digits("%.0f" % float(sm.get("index", 1000.0))))
+	_bar(card, "اعتماد سرمایه‌گذار", float(sm.get("investor_confidence", 0.6)))
+	var bubble := float(sp.get("bubble", 0.0))
+	var bubble_row = HBoxContainer.new(); bubble_row.add_theme_constant_override("separation", 4); card.add_child(bubble_row)
+	var bl = Label.new(); bl.text = "حباب قیمتی"; bl.custom_minimum_size = Vector2(150, 0); bl.add_theme_font_size_override("font_size", 13); bubble_row.add_child(bl)
+	var bp = ProgressBar.new(); bp.min_value = 0.0; bp.max_value = 1.0; bp.value = bubble; bp.size_flags_horizontal = Control.SIZE_EXPAND_FILL; bp.show_percentage = false
+	var bubble_color := Color(0.25, 0.75, 0.35) if bubble < 0.35 else (Color(0.9, 0.7, 0.2) if bubble < 0.55 else Color(0.9, 0.3, 0.25))
+	bp.add_theme_stylebox_override("fill", _solid_style(bubble_color))
+	bubble_row.add_child(bp)
+	_row(card, "شرکت‌های پذیرفته‌شده", PersianFormatter.to_persian_digits(str(sm.get("listed_companies", 0))))
+	_row(card, "عرضه‌های اولیه انجام‌شده", PersianFormatter.to_persian_digits(str(sp.get("ipos", 0))))
+	_row(card, "سیاست مالیاتی", "مالیات بر عایدی فعال" if str(sp.get("policy", "none")) == "capgains" else "بدون مالیات عایدی")
+	_row(card, "نهاد ناظر", PersianFormatter.format_percent(float(sp.get("watchdog", 0.0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["ipo", "🏦 عرضه اولیه"], ["support", "🛡️ حمایت از بازار"], ["capgains", "🧾 مالیات عایدی"], ["watchdog", "🔍 تقویت ناظر"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_stock.bind(a[0]))
+		_mark_decision_button(btn, "stock:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "شاخص با رشد و ثبات صعود می‌کند؛ حباب زیاد یعنی سقوط نزدیک است. حمایت با ذخایر ارزی هر ۶ نوبت؛ عرضه اولیه خزانه را پر می‌کند؛ ناظر قوی فساد و دستکاری را کم می‌کند."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _build_veterans_card(st: Dictionary):
+	var vt: Dictionary = st.get("veterans", {})
+	var vp: Dictionary = st.get("veterans_policy", {})
+	if vp.is_empty():
+		return
+	var card = _card("🎖️ بنیاد ایثارگران و کهنه‌سربازان")
+	_row(card, "شمار کهنه‌سربازان", PersianFormatter.to_persian_digits(_compact_number(float(vt.get("count", 0)))))
+	_bar(card, "رضایت ایثارگران", float(vp.get("satisfaction", 0.6)))
+	_bar(card, "سطح مستمری", float(vp.get("pension_level", 0.5)))
+	_bar(card, "طرح اشتغال", float(vp.get("employment_program", 0.4)))
+	_bar(card, "پوشش درمانی", float(vt.get("health_care", 0.65)))
+	_row(card, "بیمارستان تخصصی", "فعال 🟢" if bool(vp.get("clinic", false)) else "غیرفعال ⚪")
+	_row(card, "مراسم بزرگداشت", PersianFormatter.to_persian_digits(str(vp.get("parades", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["pension", "💵 افزایش مستمری"], ["employment", "👷 طرح اشتغال"], ["clinic", "🏥 بیمارستان"], ["parade", "🎖️ بزرگداشت"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_veterans.bind(a[0]))
+		_mark_decision_button(btn, "veterans:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "در جنگ، شمار جانبازان می‌شکفد. اگر مستمری و اشتغال ناکافی باشد رضایت می‌ریزد و ثبات آسیب می‌بیند؛ بزرگداشت هر ۱۲ نوبت محبوبیت و همبستگی می‌آورد."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _build_heritage_card(st: Dictionary):
+	var hr: Dictionary = st.get("heritage", {})
+	var hp: Dictionary = st.get("heritage_policy", {})
+	if hp.is_empty():
+		return
+	var card = _card("🏛️ میراث فرهنگی و گردشگری تاریخی")
+	_row(card, "محوطه‌های تاریخی", PersianFormatter.to_persian_digits(str(hr.get("sites", 0))))
+	_bar(card, "حفاظت از میراث", float(hr.get("preservation", 0.6)))
+	_row(card, "ثبت جهانی (یونسکو)", PersianFormatter.to_persian_digits(str(hr.get("unesco_sites", 0))))
+	_bar(card, "گردشگری فرهنگی", float(hr.get("cultural_tourism", 0.5)))
+	_row(card, "مرمت‌های انجام‌شده", PersianFormatter.to_persian_digits(str(hp.get("restored", 0))))
+	_row(card, "جشنواره‌های برگزارشده", PersianFormatter.to_persian_digits(str(hp.get("festivals", 0))))
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["restore", "🧱 مرمت محوطه‌ها"], ["register", "🌍 ثبت جهانی"], ["festival", "🎭 جشنواره"], ["antiquities", "🚔 ضد قاچاق"]]:
+		var btn = Button.new(); btn.text = a[1]
+		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_heritage.bind(a[0]))
+		_mark_decision_button(btn, "heritage:" + a[0])
+		row.add_child(btn)
+	var hint = Label.new()
+	hint.text = "میراث درآمد گردشگری و قدرت نرم می‌آورد؛ فرسایش و بلایا آن را تهدید می‌کند. ثبت جهانی تا ۶ محوطه، قدرت نرم را جهش می‌دهد؛ جشنواره هر ۱۲ نوبت."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
+	card.add_child(hint)
+
+func _on_stock(action: String):
+	var cmd = GameCommandClass.create_stock_action(action)
+	var labels := {"ipo": "عرضه اولیه سهام", "support": "حمایت از بازار", "capgains": "سیاست مالیات عایدی", "watchdog": "تقویت نهاد ناظر"}
+	if _queue_decision(cmd, "📈 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _on_veterans(action: String):
+	var cmd = GameCommandClass.create_veterans_action(action)
+	var labels := {"pension": "افزایش مستمری ایثارگران", "employment": "طرح اشتغال جانبازان", "clinic": "بیمارستان تخصصی", "parade": "مراسم بزرگداشت"}
+	if _queue_decision(cmd, "🎖️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+func _on_heritage(action: String):
+	var cmd = GameCommandClass.create_heritage_action(action)
+	var labels := {"restore": "مرمت محوطه‌های تاریخی", "register": "پرونده ثبت جهانی", "festival": "جشنواره بین‌المللی میراث", "antiquities": "عملیات ضد قاچاق آثار"}
+	if _queue_decision(cmd, "🏛️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("population")
+
+func _solid_style(color: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.set_corner_radius_all(4)
+	return sb
+
+func _compact_number(value: float) -> String:
+	if value >= 1.0e9:
+		return "%.1f میلیارد" % (value / 1.0e9)
+	if value >= 1.0e6:
+		return "%.1f میلیون" % (value / 1.0e6)
+	if value >= 1.0e3:
+		return "%.1f هزار" % (value / 1.0e3)
+	return str(int(value))
+
 func _build_sports_card(st: Dictionary):
 	var sp: Dictionary = st.get("sports_policy", {})
 	if sp.is_empty():
@@ -4549,6 +4669,8 @@ func _build_population():
 	_build_urban_card(GameState.state)
 	_build_welfare_card(GameState.state)
 	_build_sports_card(GameState.state)
+	_build_veterans_card(GameState.state)
+	_build_heritage_card(GameState.state)
 	
 	var st = GameState.state
 	var pop = st.get("population", {})
@@ -6428,6 +6550,9 @@ func _command_queue_key(cmd) -> String:
 		"digital_action": return "digital:" + str(p.get("action", ""))
 		"sports_action": return "sports:" + str(p.get("action", ""))
 		"dilemma_resolve": return "dilemma:" + str(p.get("choice", ""))
+		"stock_action": return "stock:" + str(p.get("action", ""))
+		"veterans_action": return "veterans:" + str(p.get("action", ""))
+		"heritage_action": return "heritage:" + str(p.get("action", ""))
 	return t + ":" + str(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
