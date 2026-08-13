@@ -38,7 +38,8 @@ const SUPPORTED_COMMANDS = [
 	"basic_industry_action", "nation_brand_action", "ai_action",
 	"tax_action", "ev_action", "health_tourism_action",
 	"defense_industry_action", "knowledge_economy_action", "waste_mgmt_action",
-	"aerospace_action", "petrochemical_action", "pro_sports_action"
+	"aerospace_action", "petrochemical_action", "pro_sports_action",
+	"aviation_action", "postal_action", "standards_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
 
@@ -750,6 +751,15 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "pro_sports_action":
 			if not str(cmd.payload.get("action", "")) in ["leagues", "infrastructure", "events", "academy", "exports"]:
 				return {"valid": false, "reason": "اقدام اقتصاد ورزش نامعتبر است"}
+		elif cmd.type == "aviation_action":
+			if not str(cmd.payload.get("action", "")) in ["airports", "fleet", "safety", "hub", "cargo"]:
+				return {"valid": false, "reason": "اقدام هوانوردی نامعتبر است"}
+		elif cmd.type == "postal_action":
+			if not str(cmd.payload.get("action", "")) in ["network", "sorting", "lastmile", "ecommerce", "tracking"]:
+				return {"valid": false, "reason": "اقدام پست و لجستیک نامعتبر است"}
+		elif cmd.type == "standards_action":
+			if not str(cmd.payload.get("action", "")) in ["metrology", "labs", "accreditation", "surveillance", "export_gate"]:
+				return {"valid": false, "reason": "اقدام استاندارد و کیفیت نامعتبر است"}
 		elif cmd.type == "dilemma_resolve":
 			if not str(cmd.payload.get("choice", "")) in ["a", "b"]:
 				return {"valid": false, "reason": "انتخاب معضل نامعتبر است"}
@@ -1910,6 +1920,39 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			_: ps_result = ProSportsManager.boost_exports(snapshot)
 		if ps_result.get("success", false):
 			snapshot = ProSportsManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "aviation_action":
+		var av_act := str(cmd.payload.get("action", ""))
+		var av_result: Dictionary
+		match av_act:
+			"airports": av_result = AviationManager.expand_airports(snapshot)
+			"fleet": av_result = AviationManager.expand_fleet(snapshot)
+			"safety": av_result = AviationManager.improve_safety(snapshot)
+			"hub": av_result = AviationManager.develop_hub(snapshot)
+			_: av_result = AviationManager.develop_cargo(snapshot)
+		if av_result.get("success", false):
+			snapshot = AviationManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "postal_action":
+		var po_act := str(cmd.payload.get("action", ""))
+		var po_result: Dictionary
+		match po_act:
+			"network": po_result = PostalManager.expand_network(snapshot)
+			"sorting": po_result = PostalManager.mechanize_sorting(snapshot)
+			"lastmile": po_result = PostalManager.improve_lastmile(snapshot)
+			"ecommerce": po_result = PostalManager.boost_ecommerce(snapshot)
+			_: po_result = PostalManager.improve_tracking(snapshot)
+		if po_result.get("success", false):
+			snapshot = PostalManager.simulate(snapshot, cmd.tick)
+	elif cmd.type == "standards_action":
+		var st_act := str(cmd.payload.get("action", ""))
+		var st_result: Dictionary
+		match st_act:
+			"metrology": st_result = StandardsManager.invest_metrology(snapshot)
+			"labs": st_result = StandardsManager.accredit_labs(snapshot)
+			"accreditation": st_result = StandardsManager.expand_accreditation(snapshot)
+			"surveillance": st_result = StandardsManager.improve_surveillance(snapshot)
+			_: st_result = StandardsManager.strengthen_export_gate(snapshot)
+		if st_result.get("success", false):
+			snapshot = StandardsManager.simulate(snapshot, cmd.tick)
 	elif cmd.type == "assassinate":
 		var a_target = str(cmd.payload.get("target", ""))
 		var a_result = LeaderManager.attempt_assassination(snapshot, a_target, cmd.tick)
@@ -2665,6 +2708,15 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var pro_sports_result = ProSportsManager.simulate_month(snapshot, turn)
 	snapshot = pro_sports_result.state
 	_collect_events(pro_sports_result, "pro_sports", snapshot, turn, generated_events, "pro_sports_event")
+	var aviation_result = AviationManager.simulate_month(snapshot, turn)
+	snapshot = aviation_result.state
+	_collect_events(aviation_result, "aviation", snapshot, turn, generated_events, "aviation_event")
+	var postal_result = PostalManager.simulate_month(snapshot, turn)
+	snapshot = postal_result.state
+	_collect_events(postal_result, "postal", snapshot, turn, generated_events, "postal_event")
+	var standards_result = StandardsManager.simulate_month(snapshot, turn)
+	snapshot = standards_result.state
+	_collect_events(standards_result, "standards", snapshot, turn, generated_events, "standards_event")
 	# فراکسیون‌های سیاسی: جابه‌جایی وفاداری/نفوذ، بحران‌ها و اثر نفوذ بر کشور
 	var faction_result = FactionManager.simulate_month(snapshot, turn)
 	snapshot = faction_result.state

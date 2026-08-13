@@ -2878,6 +2878,9 @@ func _build_economy():
 	_build_textile_card(st)
 	_build_tax_card(st)
 	_build_ev_card(st)
+	_build_aviation_card(st)
+	_build_postal_card(st)
+	_build_standards_card(st)
 	_build_trade_policy_card(st)
 	_build_fdi_card(st)
 	_build_shadow_card(st)
@@ -5976,6 +5979,70 @@ func _on_pro_sports(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("society")
 
+# ── عمق ۲۱: هوانوردی، پست و لجستیک، استاندارد و کیفیت ──
+func _build_aviation_card(st: Dictionary):
+	var ap: Dictionary = AviationManager.get_policy(st)
+	var card = _card("✈️ هوانوردی و خطوط هوایی")
+	_bar(card, "ظرفیت فرودگاهی", float(ap.get("airports",0.15)))
+	_bar(card, "ناوگان ملی", float(ap.get("fleet",0.10)))
+	_bar(card, "ایمنی ناوبری", float(ap.get("safety",0.40)))
+	_bar(card, "هاب ترانزیت", float(ap.get("hub",0.05)))
+	_bar(card, "بار هوایی", float(ap.get("cargo",0.10)))
+	var lbl = Label.new(); lbl.text = "مسافران سالانه: " + str(ap.get("passengers_m",25)) + " میلیون نفر"; lbl.add_theme_font_size_override("font_size",14); lbl.modulate = ACCENT_GOLD; card.add_child(lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["airports","🛫 فرودگاه"],["fleet","✈️ ناوگان"],["safety","🛡️ ایمنی"],["hub","🌐 هاب"],["cargo","📦 بار"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_aviation.bind(a[0])); _mark_decision_button(b, "av:"+a[0]); row.add_child(b)
+
+func _on_aviation(action: String):
+	var cmd = GameCommandClass.create_aviation_action(action)
+	var labels := {"airports":"توسعه فرودگاه‌ها","fleet":"تقویت ناوگان هوایی ملی","safety":"بهبود ایمنی ناوبری","hub":"توسعه هاب ترانزیت","cargo":"توسعه بار هوایی"}
+	if _queue_decision(cmd, "✈️ " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _build_postal_card(st: Dictionary):
+	var pp: Dictionary = PostalManager.get_policy(st)
+	var card = _card("📮 پست و لجستیک ملی")
+	_bar(card, "شبکه توزیع", float(pp.get("network",0.30)))
+	_bar(card, "پردازش مکانیزه", float(pp.get("sorting",0.15)))
+	_bar(card, "تحویل آخرین مایل", float(pp.get("lastmile",0.20)))
+	_bar(card, "تجارت الکترونیک", float(pp.get("ecommerce",0.25)))
+	_bar(card, "رهگیری مرسولات", float(pp.get("tracking",0.10)))
+	var lbl = Label.new(); lbl.text = "مرسولات سالانه: " + str(pp.get("parcels_m",500)) + " میلیون قطعه"; lbl.add_theme_font_size_override("font_size",14); lbl.modulate = ACCENT_GOLD; card.add_child(lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["network","🚚 شبکه"],["sorting","⚙️ پردازش"],["lastmile","🏍️ تحویل"],["ecommerce","🛒 آنلاین"],["tracking","📡 رهگیری"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_postal.bind(a[0])); _mark_decision_button(b, "post:"+a[0]); row.add_child(b)
+
+func _on_postal(action: String):
+	var cmd = GameCommandClass.create_postal_action(action)
+	var labels := {"network":"گسترش شبکه توزیع سراسری","sorting":"مکانیزه‌سازی پردازش","lastmile":"بهبود تحویل آخرین مایل","ecommerce":"تسهیل تجارت الکترونیک","tracking":"رهگیری هوشمند مرسولات"}
+	if _queue_decision(cmd, "📮 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
+func _build_standards_card(st: Dictionary):
+	var sp: Dictionary = StandardsManager.get_policy(st)
+	var card = _card("📏 استاندارد و زیرساخت کیفیت")
+	_bar(card, "مترولوژی", float(sp.get("metrology",0.20)))
+	_bar(card, "آزمایشگاه‌های معتمد", float(sp.get("labs",0.15)))
+	_bar(card, "اعتباردهی و گواهی", float(sp.get("accreditation",0.10)))
+	_bar(card, "بازرسی بازار", float(sp.get("surveillance",0.25)))
+	_bar(card, "دروازه کیفیت صادرات", float(sp.get("export_gate",0.15)))
+	var lbl = Label.new(); lbl.text = "بنگاه‌های گواهی‌شده: " + str(sp.get("certified_firms",1200)); lbl.add_theme_font_size_override("font_size",14); lbl.modulate = ACCENT_GOLD; card.add_child(lbl)
+	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+	for a in [["metrology","⚖️ مترولوژی"],["labs","🔬 آزمایشگاه"],["accreditation","🎖️ اعتبار"],["surveillance","🔍 بازرسی"],["export_gate","🚢 صادرات"]]:
+		var b = Button.new(); b.text = a[1]; b.add_theme_font_size_override("font_size",11); b.custom_minimum_size = Vector2(0,34)
+		b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_standards.bind(a[0])); _mark_decision_button(b, "std:"+a[0]); row.add_child(b)
+
+func _on_standards(action: String):
+	var cmd = GameCommandClass.create_standards_action(action)
+	var labels := {"metrology":"سرمایه‌گذاری مترولوژی","labs":"اعتباربخشی آزمایشگاه‌ها","accreditation":"گسترش اعتباردهی ملی","surveillance":"بازرسی و نظارت بر بازار","export_gate":"تقویت دروازه کیفیت صادرات"}
+	if _queue_decision(cmd, "📏 " + labels.get(action, action)):
+		_toast(labels.get(action, action) + " ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("economy")
+
 func _on_transport(action: String):
 	var cmd = GameCommandClass.create_transport_action(action)
 	var labels := {"metro": "خط متروی جدید", "brt": "توسعه خطوط BRT", "subsidy": "افزایش یارانه کرایه", "fleet": "نوسازی ناوگان برقی"}
@@ -8287,6 +8354,10 @@ func _command_queue_key(cmd) -> String:
 		"aerospace_action": return "as:" + str(p.get("action", ""))
 		"petrochemical_action": return "petro:" + str(p.get("action", ""))
 		"pro_sports_action": return "psports:" + str(p.get("action", ""))
+		# عمق ۲۱: پیشوندها باید دقیقاً با متای دکمه‌ها (cmd_key) یکسان باشند
+		"aviation_action": return "av:" + str(p.get("action", ""))
+		"postal_action": return "post:" + str(p.get("action", ""))
+		"standards_action": return "std:" + str(p.get("action", ""))
 	return t + ":" + JSON.stringify(p)
 
 # ثبت یک تصمیم در صف نوبت؛ تصمیم هم‌خانواده قبلی جایگزین می‌شود
