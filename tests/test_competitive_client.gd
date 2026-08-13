@@ -19,6 +19,9 @@ func _on_lobby(lobby:Dictionary):
 	if lobby.get("players",{}).size()==2 and not lobby.get("started",false):p2p.set_campaign_ready(true)
 	if lobby.get("started",false) and not command_sent:
 		command_sent=true
+		# پایان نوبت پیش از فرمان ارسال می‌شود تا وقتی فرمان به میزبان رسید،
+		# همه بازیکنان «پایان نوبت» را زده باشند (RPCهای مطمئن به ترتیب می‌رسند)
+		p2p.mark_turn_finished()
 		var cmd=load("res://scripts/core/command.gd").create_tax_set(0.33)
 		if not p2p.send_command(cmd):printerr("COMPETITIVE COMMAND SEND FAILED");finished.emit()
 

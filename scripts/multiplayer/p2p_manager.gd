@@ -395,22 +395,29 @@ func get_status() -> Dictionary:
 	}
 
 # ── پایان نوبت همگام ──
-func mark_turn_finished():
-	if not competitive_mode or not MultiplayerCampaignManager.started: return false
+func mark_turn_finished() -> bool:
+	if not competitive_mode: return false
 	if is_host:
+		if not MultiplayerCampaignManager.started: return false
 		MultiplayerCampaignManager.mark_turn_finished(host_id)
 		_broadcast_turn_finished()
 		return true
+	# کلاینت: رجیستری کمپین فقط روی میزبان است؛ همین که اتصال برقرار باشد،
+	# پایان نوبت باید به میزبان ارسال شود (وگرنه نوبت چندنفره هرگز جلو نمی‌رود).
+	if multiplayer.multiplayer_peer == null or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		return false
 	rpc_id(1, "_receive_turn_finished")
 	return true
 
 func unmark_turn_finished():
-	if not competitive_mode or not MultiplayerCampaignManager.started: return
+	if not competitive_mode: return
 	if is_host:
+		if not MultiplayerCampaignManager.started: return
 		MultiplayerCampaignManager.unmark_turn_finished(host_id)
 		_broadcast_turn_finished()
 	else:
-		rpc_id(1, "_receive_turn_unfinished")
+		if multiplayer.multiplayer_peer != null and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+			rpc_id(1, "_receive_turn_unfinished")
 
 func all_turns_finished() -> bool:
 	return MultiplayerCampaignManager.all_turns_finished()
