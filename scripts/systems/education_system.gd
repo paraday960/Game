@@ -25,7 +25,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var edu_budget_share = econ.get("budget_allocations", {}).get("آموزش", 0.08)
-	var edu_budget = econ.get("government_spending", 0.0) * edu_budget_share
+	var edu_budget = econ.get("government_spend_base", 0.0) * edu_budget_share
 
 	# فرمول‌ها - ۳.۲۰.۳
 	# نرخ سواد = f(پوشش مدرسه، کیفیت، بودجه)

@@ -25,7 +25,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var budget_share = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * 0.35
-	var urban_budget = econ.get("government_spending",0.0) * budget_share
+	var urban_budget = econ.get("government_spend_base",0.0) * budget_share
 	var total_pop = pop.get("total",85_000_000.0)
 	var infra_q = infra.get("quality",0.55)
 	var digital = state.get("technology",{}).get("branches",{}).get("دیجیتال",0.20)

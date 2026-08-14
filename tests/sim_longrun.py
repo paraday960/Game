@@ -56,6 +56,9 @@ def initial_state():
         "poverty": 0.15, "gini": 0.38, "social_safety": 0.60,
         # صندوق بازنشستگی (بازرسی ۱۴۰۵ — دور دهم؛ pay-as-you-go + بافر)
         "pension_age": 65.0, "pension_balance": 1e9, "elderly_share": 0.10,
+        # سوخت و یارانه (بازرسی ۱۴۰۵ — دور دوازدهم؛ mini-model شکاف قیمت پمپ‌بنز)
+        "fuel_subsidy": 0.65, "gasoline_price": 18000.0, "fuel_smuggling": 0.15,
+        "fuel_cost_monthly": 425e6,
         # منابع (ممیزی انرژی: تقاضای نسبی + جاذب تولید + انبار واقعی)
         "res_prod": {"برق": 15.0, "نفت": 8.0, "غذا": 10.0},
         "res_dem": {"برق": 12.0, "نفت": 6.0, "غذا": 9.0},
@@ -148,7 +151,16 @@ def step_day(s):
         revenue *= 0.9   # اختلال جنگی در مالیه
     s["last_revenue_monthly"] = revenue   # دفتر تشخیص: برای تریپ‌وایر سهم خزانه در run()
     saving = s["alloc"]["ذخیره"]
-    spending = revenue * (1.0 - saving) * (2.2 if mobil > 0 else 1.0)
+    # ظرف بودجهٔ اختیاری (همگام با economy_system.gd — دور دوازدهم): پیش از این
+    # ردیف‌های اختیاری (بهداشت/رفاه) از جمع کل هزینه‌کرد تغذیه می‌شدند و یارانهٔ
+    # سوخت (~۱۲٪+) آن‌ها را فانتوم باد می‌کرد — سلامت خط پایه از سال ۷ به سقف
+    # ۰٫۹۵ می‌چسبید و اثر سیاست در سناریوی انبساطی مرده بود. حالا ردیف‌ها فقط از
+    # ظرف پایه می‌خوانند؛ spending جمع واقعی کل باقی می‌ماند (بدهی/تریپ‌وایر).
+    spend_base = revenue * (1.0 - saving) * (2.2 if mobil > 0 else 1.0)
+    spending = spend_base
+    # هزینهٔ واقعی یارانهٔ سوخت (دور یازدهم engine / دور دوازدهم آینه): نرخ ماهانهٔ
+    # روز قبل از mini-model سوخت (تأخیر یک‌روزه ناچیز است)
+    spending += s.get("fuel_cost_monthly", 0.0)
     # بازرسی واحد ۱۴۰۵: استهلاک انبارهٔ هزینه‌های یک‌بارمصرف (در سناریوهای آینه نویسنده‌ای
     # ندارد → ۰؛ خط برای وفاداری ساختاری به economy_system نگه داشته می‌شود)
     spending += s.get("oneoff_pool", 0.0) / DPM
@@ -272,7 +284,7 @@ def step_day(s):
 
     # ── health_system (کیفیت با بودجه) ──
     hb_share = s["alloc"]["بهداشت"]
-    hb_budget = spending * hb_share
+    hb_budget = spend_base * hb_share  # ردیف اختیاری ← ظرف پایه (دور دوازدهم)
     hb_norm = max(s["gdp"], 1.0) * 0.02 / 12.0   # نُرم ۲٪ GDP عمومی (طبق مستندات تعادل)
     s["health_q"] = clamp(s["health_q"] + (hb_share - 0.08) * 0.01
                           + clamp(hb_budget / hb_norm - 1.0, -1.0, 1.0) * 0.001
@@ -309,7 +321,7 @@ def step_day(s):
     work_sh = clamp(1.0 - s["elderly_share"] - child_sh, 0.30, 0.80)
     oblig_m = s["pop_total"] * s["elderly_share"] * elig * pc_month * 0.55
     contrib_m = s["pop_total"] * work_sh * pc_month * 0.09
-    topup_m = spending * s["alloc"]["رفاه"] * 0.5
+    topup_m = spend_base * s["alloc"]["رفاه"] * 0.5  # ردیف اختیاری ← ظرف پایه (دور دوازدهم)
     flow_d = contrib_m + topup_m - oblig_m  # نرخ ماهانه
     new_bal = s["pension_balance"] + flow_d / 30.0 + s["pension_balance"] * 0.03 / 365.0
     if new_bal < 0.0:
@@ -317,6 +329,26 @@ def step_day(s):
         new_bal = 0.0
     s["pension_balance"] = new_bal
     s["pension_solvency"] = (contrib_m + topup_m) / max(oblig_m, 1.0)
+
+    # ── mini-model سوخت (همگام با fuel_stations_system + fuel_transition_manager) ──
+    # بازرسی ۱۴۰۵ (دور دوازدهم): قیمت پمپ = EM به سمت هدف (نفت × ارز × یارانه)؛
+    # شکاف با همسایهٔ یارانه‌صفر ⇒ قاچاق؛ هزینهٔ یارانه = شکاف × مصرف (دلار/سال)؛
+    # اصلاح یارانه = فشار تورمی مداوم تا وقتی یارانه هست. در engine هفتگی/ماهانه؛
+    # آینه روزانه با معادل /۶ (EM هفتگی) و /۳۰ (نرخ ماهانه).
+    oil_p = 75.0 * s.get("resource_price_index", 1.0)
+    gas_target = (oil_p * 1050.0 * s["exchange_rate"] * (1.0 - s["fuel_subsidy"] * 0.8)
+                  + 4000.0)
+    s["gasoline_price"] = (s["gasoline_price"] * (1.0 - 0.015 / 6.0)
+                           + gas_target * (0.015 / 6.0) + s["inflation"] * 0.5)
+    neighbor_p = oil_p * 1050.0 * s["exchange_rate"] * 1.08 + 4000.0
+    gap = max(0.0, neighbor_p - s["gasoline_price"])
+    smug_t = (0.08 + gap / max(neighbor_p, 1.0) * 0.45 - 0.60 * 0.25 + (1.0 - 0.60) * 0.10)
+    s["fuel_smuggling"] = clamp(s["fuel_smuggling"] + (smug_t - s["fuel_smuggling"]) * (0.03 / 6.0),
+                                0.01, 0.70)
+    cost_annual = gap * 80_000_000.0 * 365.0 / max(oil_p * 1500.0, 1.0)
+    s["fuel_cost_monthly"] = cost_annual / 12.0
+    # فشار تورمی یارانه (fuel_transition: هر ماه (۱−یارانه)×۰٫۰۰۳ به سطح تورم)
+    s["inflation"] = clamp(s["inflation"] + (1.0 - s["fuel_subsidy"]) * 0.003 / 30.0, -0.02, 1.5)
 
     # ── central_bank_system (قاعدهٔ تیلور یکتا — پس از اتحاد دولایه، بازرسی بانک مرکزی) ──
     # بازرسی نرخ واقعی ۱۴۰۵: r* صریح ۲٪ به‌جای π*؛ لنگر عرضهٔ پول = نرخ نامی خنثی (π*+r*)
@@ -862,6 +894,43 @@ def run_reserve_inflow_suite():
     return ok
 
 
+def run_subsidy_reform_suite():
+    """سناریوی دهم: اصلاح تدریجی یارانهٔ سوخت (۴ مرحلهٔ −۰٫۱۵ هر ~۱۰ ماه، از ماه ۱۲)
+    — بازرسی ۱۴۰۵ دور دوازدهم: زنجیرهٔ قیمت پمپ‌بنز → شکاف → هزینهٔ خزانه + قاچاق.
+    مسیر engine: «اصلاح یارانه» در fuel_transition_manager (کول‌داون ۱۰ نوبت)."""
+    print("═══ سناریوی اصلاح یارانهٔ سوخت: هزینه و قاچاق پایین، قیمت پمپ آزاد، خزانه سبک‌تر ═══")
+    base, _ = run(verbose=False)
+    def reform(day, s):
+        for d0 in (365, 665, 965, 1265):
+            if day == d0:
+                s["fuel_subsidy"] = max(0.10, s["fuel_subsidy"] - 0.15)
+    ref, _ = run(verbose=False, policy_hook=reform)
+    print("پایان مسیر: یارانه %.2f | پمپ %.0f→%.0f | قاچاق %.2f→%.2f | هزینه %.0f→%.0fM/ماه | بدهی/GDP %.0f%% در برابر %.0f%%" % (
+        ref["fuel_subsidy"], base["gasoline_price"], ref["gasoline_price"],
+        base["fuel_smuggling"], ref["fuel_smuggling"],
+        base["fuel_cost_monthly"] / 1e6, ref["fuel_cost_monthly"] / 1e6,
+        ref["national_debt"] / ref["gdp"] * 100, base["national_debt"] / base["gdp"] * 100))
+    checks = [
+        ("اصلاح: نرخ یارانه به کف ۰٫۱۰ رسید (۴ مرحله اعمال شد)", ref["fuel_subsidy"] <= 0.10 + 1e-9),
+        ("اصلاح: قیمت پمپ ≥۱٫۴ برابر شد (قیمت واقعی آزاد شد)",
+         ref["gasoline_price"] >= base["gasoline_price"] * 1.4),
+        ("اصلاح: هزینهٔ ماهانهٔ یارانه دست‌کم ۵۵٪ کمتر از بدون‌اصلاح",
+         ref["fuel_cost_monthly"] < base["fuel_cost_monthly"] * 0.45),
+        ("اصلاح: قاچاق دست‌کم ۴۰٪ کمتر از بدون‌اصلاح",
+         ref["fuel_smuggling"] < base["fuel_smuggling"] * 0.60),
+        ("اصلاح: بدهی کمتر از بدون‌اصلاح (پاداش خزانه واقعی است نه رایگان)",
+         ref["national_debt"] < base["national_debt"] - 5e9),
+        ("اصلاح: تورم نهایی مهارشده (فشار موقت، بدون ابرتورم)", ref["inflation"] < 0.25),
+        ("اصلاح: بدون فروپاشی ثبات (≥۰٫۳۵)", ref["stability"] >= 0.35),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
+
 def run_horizon30_suite():
     """سناریوی نهم: افق ۳۰ ساله (۱۰٬۹۵۰ روز) — شکار باگهای خیلی‌بلندمدت که آینهٔ
     ۱۰ساله نمی‌بیند. کشف‌های نخستین اجرا: ratchet تنش (جمع فقط‌مثبت → به سقف
@@ -928,6 +997,8 @@ if __name__ == "__main__":
     ok = run_gdp_boost_suite() and ok
     print()
     ok = run_reserve_inflow_suite() and ok
+    print()
+    ok = run_subsidy_reform_suite() and ok
     print()
     ok = run_horizon30_suite() and ok
     print()

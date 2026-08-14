@@ -31,13 +31,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var infra = state.get("infrastructure", {})
 	var elites = state.get("elites_detail", {})
 
-	var budget = econ.get("budget_allocations", {}).get("فناوری", 0.04) * econ.get("government_spending", 95e9)
+	var budget = econ.get("budget_allocations", {}).get("فناوری", 0.04) * econ.get("government_spend_base", 95e9)
 	var gdp = econ.get("gdp", 500e9)
 
 	# نرخ تحقیق = f(بودجه R&D، دانشمندان، دانشگاه، آموزش، زیرساخت دیجیتال)
 	# (پایه بالاتر برای بالانس «قابل اتمام در ~۱ ساعت»: سطوح ۳۰ شاخه‌های اصلی)
 	var base_rate = 26.0
-	var budget_factor = (budget / max(econ.get("government_spending",95e9)*0.04, 1.0))
+	var budget_factor = (budget / max(econ.get("government_spend_base",95e9)*0.04, 1.0))
 	budget_factor = clamp(budget_factor, 0.2, 3.0)
 	var edu_factor = edu.get("quality",0.55)*1.5 + edu.get("literacy",0.85)*0.5
 	var infra_factor = infra.get("quality",0.55)*0.5 + infra.get("telecom",0.70)*0.5

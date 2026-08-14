@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var culture_budget_share = economy.get("budget_allocations", {}).get("محیط", 0.03)  # فرهنگ از بودجه محیط/اداره
-	var culture_budget = economy.get("government_spending",0.0) * 0.03  # 3٪
+	var culture_budget = economy.get("government_spend_base",0.0) * 0.03  # 3٪
 
 	# فرمول‌ها - ۳.۲۲.۳
 	# افکار عمومی = f(رسانه، رویدادها، سیاست)

@@ -22,7 +22,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var welfare_budget_share = econ.get("budget_allocations", {}).get("رفاه", 0.15)
-	var welfare_budget = econ.get("government_spending", 0.0) * welfare_budget_share
+	var welfare_budget = econ.get("government_spend_base", 0.0) * welfare_budget_share
 
 	# فرمول‌ها - ۳.۲۱.۳
 	# بیکاری: منبع واحد economy_system است (لنگر NAIRU با تعدیل مهارت + اوکن + بسیج/فناوری).

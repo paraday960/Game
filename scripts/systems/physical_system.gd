@@ -71,7 +71,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# ساخت مسکن واقعی: ۲۰٪ بودجه زیرساخت به واحد مسکونی تبدیل می‌شود (~۱۲۰هزار دلار/واحد).
 	# (جمله قدیمی روی شمارنده facilities می‌نوشت که world_manager هر بار از نو محاسبه می‌کند — مرده بود)
-	var housing_build_daily: float = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * econ.get("government_spending",0.0) * 0.2 * 12.0 / 120000.0 / 365.0
+	var housing_build_daily: float = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * econ.get("government_spend_base",0.0) * 0.2 * 12.0 / 120000.0 / 365.0
 	physical["housing_units"] += int(housing_build_daily)
 	physical["housing_build_daily"] = housing_build_daily  # نرخ واقعی — مصرف‌کننده: settlements_system
 

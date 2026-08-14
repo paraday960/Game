@@ -22,7 +22,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var fisheries_budget_share = economy.get("budget_allocations",{}).get("محیط",0.03) * 0.3 + 0.01
-	var fisheries_budget = economy.get("government_spending",0.0) * fisheries_budget_share
+	var fisheries_budget = economy.get("government_spend_base",0.0) * fisheries_budget_share
 
 	# صید = f(ناوگان، ذخایر، فناوری، پایداری)
 	var fleet_factor = fish["fleet_size"] / 1000.0

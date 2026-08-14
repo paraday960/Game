@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var transport_budget_share = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * 0.4
-	var transport_budget = econ.get("government_spending",0.0) * transport_budget_share
+	var transport_budget = econ.get("government_spend_base",0.0) * transport_budget_share
 
 	# کیفیت راه‌ها = f(بودجه، نگهداری، ترافیک)
 	var maintenance_need = transport["roads_km"] * 10000.0  # هزینه نگهداری

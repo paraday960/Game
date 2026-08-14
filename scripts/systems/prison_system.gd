@@ -71,7 +71,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# بودجه - تورم
 	# بودجه زندان از ۱۰٪ تخصیص امنیتی (سالیانه) تغذیه می‌شود — قابل سیاست‌گذاری توسط بازیکن
-	var prison_budget_annual: float = econ.get("government_spending", 0.0) * 12.0 * float(econ.get("budget_allocations", {}).get("امنیت", 0.05)) * 0.10
+	var prison_budget_annual: float = econ.get("government_spend_base", 0.0) * 12.0 * float(econ.get("budget_allocations", {}).get("امنیت", 0.05)) * 0.10
 	prison["budget"] = prison["budget"] * 0.995 + prison_budget_annual * 0.005
 
 	# رویدادها

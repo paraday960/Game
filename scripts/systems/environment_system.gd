@@ -25,7 +25,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var env_budget_share = econ.get("budget_allocations",{}).get("محیط", 0.03)
-	var env_budget = econ.get("government_spending",0.0) * env_budget_share
+	var env_budget = econ.get("government_spend_base",0.0) * env_budget_share
 
 	# فرمول‌ها - ۳.۲۴.۳
 	# کیفیت محیط = f(آلودگی، انتشار، حفاظت)

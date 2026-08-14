@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var agri_budget_share = 0.05  # از زیرساخت و منابع
-	var agri_budget = econ.get("government_spending",0.0) * agri_budget_share
+	var agri_budget = econ.get("government_spend_base",0.0) * agri_budget_share
 
 	# فرمول‌ها
 	# تولید کشاورزی = f(زمین آبی، مکانیزاسیون، کود، آب، اقلیم، فناوری)

@@ -326,6 +326,59 @@ def check_veterans_fund_wiring():
         FAIL.append("بحران شانسی ۱٪ صندوق کهنه‌سربازان برگشته است")
 
 
+def check_discretionary_base_channel():
+    # بازرسی ۱۴۰۵ (دور دوازدهم): ردیف‌های بودجهٔ اختیاری فقط از ظرف پایه
+    # (government_spend_base = درآمد × (۱−ذخیره) × ضریب جنگ) تغذیه می‌شوند —
+    # نه از جمع کل هزینه‌کرد که یارانه‌ها/یک‌بارمصرف‌ها/هزینهٔ جنگ را هم دارد.
+    # باگِ قبل: یارانهٔ سوخت ردیف بهداشت را ~۱۲٪ می‌باداند → سلامت خط پایه به
+    # سقف ۰٫۹۵ چسبید و اثر سیاست انبساطی در آینه مُرد. بازگشت = شکست این پین.
+    es = open("scripts/systems/economy_system.gd", encoding="utf-8").read()
+    i_base = es.find('econ["government_spend_base"] = spending')
+    i_pc = es.find("spending += pc_total")
+    i_oneoff = es.find("spending += oneoff_month")
+    i_total = es.find('econ["government_spending"] = spending')
+    if 0 < i_base < min(i_pc, i_oneoff, i_total):
+        print("✅ ظرف بودجهٔ اختیاری پیش از یارانه/یک‌بارمصرف/جنگ منتشر می‌شود")
+    else:
+        FAIL.append("economy_system: government_spend_base باید پیش از افزودن هر هزینهٔ قانونی/یک‌باره منتشر شود")
+    st = open("scripts/core/state.gd", encoding="utf-8").read()
+    if '"government_spend_base"' in st:
+        print("✅ state.gd ظرف پایه را مقداردهی اولیه می‌کند")
+    else:
+        FAIL.append("state.gd: مقدار اولیه government_spend_base حذف شده")
+    # سرشماری سخت‌گیرانهٔ خوانندگان «جمع کل»: فقط مالک خزانه (کسری/بدهی)، state
+    # (مقداردهی) و UI (نمایش واقعی هزینهٔ دولت) حق خواندن government_spending را
+    # دارند؛ هر خوانندهٔ جدید ردیفی باید به ظرف پایه سوییچ کند.
+    TOTAL_READERS = {"scripts/systems/economy_system.gd", "scripts/core/state.gd",
+                     "scripts/ui/main_ui.gd"}
+    seen, base_readers = set(), set()
+    for f in glob.glob("scripts/**/*.gd", recursive=True):
+        for ln in open(f, encoding="utf-8"):
+            if ln.lstrip().startswith("#"):
+                continue
+            if "government_spending" in ln:
+                seen.add(f)
+                if f not in TOTAL_READERS:
+                    FAIL.append(f"{f}: خواندن ردیفی از government_spending (باید government_spend_base باشد)")
+            if "government_spend_base" in ln:
+                base_readers.add(f)
+    extra = seen - TOTAL_READERS
+    if not extra:
+        print(f"✅ سرشماری خواننده‌های جمع کل = {len(seen)} (فقط مالک/مقداردهی/نمایش)")
+    # ظرف پایه باید دست‌کم توسط مالک + state + همهٔ ردیف‌ها خوانده شود (سرشماری فعلی ۲۹)
+    if len(base_readers) >= 28:
+        print(f"✅ ظرف پایه توسط {len(base_readers)} فایل مصرف/منتشر می‌شود (سرشماری ≥ ۲۸)")
+    else:
+        FAIL.append(f"خوانندگان government_spend_base به {len(base_readers)} افت کرد — ردیف‌ها به کل برگشته‌اند؟")
+    # آینهٔ بلندمدت باید همان تفکیک را داشته باشد
+    sim = open("tests/sim_longrun.py", encoding="utf-8").read()
+    if ("spend_base" in sim and "hb_budget = spend_base" in sim
+            and "topup_m = spend_base" in sim):
+        print("✅ آینهٔ بلندمدت: ردیف بهداشت/رفاه از ظرف پایه تغذیه می‌شود")
+    else:
+        FAIL.append("آینهٔ sim_longrun: تفکیک spend_base از spending گم شده")
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
@@ -338,6 +391,7 @@ check_pension_fund_wiring()
 check_fuel_subsidy_wiring()
 check_cadence_units_365()
 check_veterans_fund_wiring()
+check_discretionary_base_channel()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

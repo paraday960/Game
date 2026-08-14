@@ -35,7 +35,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# زیرساخت گردشگری با بودجه
 	var tourism_budget_share = 0.02
-	var tourism_budget = economy.get("government_spending",0.0) * tourism_budget_share
+	var tourism_budget = economy.get("government_spend_base",0.0) * tourism_budget_share
 	tourism["infrastructure"] = clamp(tourism["infrastructure"] + (tourism_budget / 2_000_000_000.0 - 0.5) * 0.001, 0.1, 0.95)
 
 	# ایمنی

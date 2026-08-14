@@ -25,7 +25,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# بودجه بهداشت
 	var health_budget_share = econ.get("budget_allocations", {}).get("بهداشت", 0.10)
-	var health_budget = econ.get("government_spending", 0.0) * health_budget_share
+	var health_budget = econ.get("government_spend_base", 0.0) * health_budget_share
 
 	# فرمول‌ها - ۳.۱۹.۳
 	# سلامت جمعیت = f(دسترسی، کیفیت، پیشگیری، تغذیه، محیط)

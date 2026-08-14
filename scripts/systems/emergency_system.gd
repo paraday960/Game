@@ -24,7 +24,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var env = state.get("environment", {})
 
 	var emergency_budget_share = econ.get("budget_allocations",{}).get("امنیت",0.05) * 0.3
-	var emergency_budget = econ.get("government_spending",0.0) * emergency_budget_share
+	var emergency_budget = econ.get("government_spend_base",0.0) * emergency_budget_share
 	emergency["budget_share"] = emergency_budget_share
 
 	# آمادگی = f(بودجه، آموزش، تجهیزات، تجربه، فناوری)

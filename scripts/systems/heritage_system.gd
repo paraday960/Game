@@ -21,7 +21,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var heritage_budget_share = economy.get("budget_allocations",{}).get("محیط",0.03) * 0.5 + 0.01
-	var heritage_budget = economy.get("government_spending",0.0) * heritage_budget_share
+	var heritage_budget = economy.get("government_spend_base",0.0) * heritage_budget_share
 
 	# حفاظت = f(بودجه، فناوری، مدیریت، تهدید)
 	var tech_digital = state.get("technology",{}).get("branches",{}).get("دیجیتال",0.20)

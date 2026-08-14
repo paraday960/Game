@@ -21,7 +21,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var sports_budget_share = econ.get("budget_allocations", {}).get("رفاه",0.15) * 0.15
-	var sports_budget = econ.get("government_spending",0.0) * sports_budget_share
+	var sports_budget = econ.get("government_spend_base",0.0) * sports_budget_share
 
 	# مشارکت ورزش = f(امکانات، درآمد، زمان، فرهنگ)
 	var facilities = sports["facilities"]

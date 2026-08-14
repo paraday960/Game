@@ -88,6 +88,8 @@ func init_default_state():
 			"foreign_reserves": 60_000_000_000.0,
 			"celebration_tracking": {"last_stage": "دولت نوپا", "last_achievement_count": 0, "last_high_score": 0.0, "last_pop_mark": 0, "last_gdp_mark": 0},
 			"government_spending": 95_000_000_000.0,
+			# ظرف بودجهٔ اختیاری (پیش از افزودن یارانه‌ها/یک‌بارمصرف‌ها/جنگ) — ردیف‌ها از این می‌خوانند
+			"government_spend_base": 80_000_000_000.0,
 			"deficit": 5_000_000_000.0,  # قرارداد واحد: مثبت یعنی کسری
 			"national_debt": 200_000_000_000.0,
 			"debt_to_gdp": 0.4,

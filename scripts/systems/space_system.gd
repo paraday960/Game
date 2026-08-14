@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var space_budget_share = econ.get("budget_allocations",{}).get("فناوری",0.04) * 0.25 + 0.005
-	var space_budget = econ.get("government_spending",0.0) * space_budget_share
+	var space_budget = econ.get("government_spend_base",0.0) * space_budget_share
 	space["budget_share"] = space_budget_share
 
 	# سطح فضایی = f(بودجه، فناوری، آموزش، تحقیق، همکاری)

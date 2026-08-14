@@ -422,7 +422,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ==================== ۱۳) محاسبات نهایی قدرت و آمادگی - چندضربی واقعی ====================
 	var budget_share_val = econ.get("budget_allocations", {}).get("ارتش", 0.08)
 	mil["budget_share"] = budget_share_val
-	var mil_budget = econ.get("government_spending", 95e9) * budget_share_val
+	var mil_budget = econ.get("government_spend_base", 95e9) * budget_share_val
 
 	var maintenance_ratio = float(BalanceConfig.get_value("military.maintenance", 0.15))
 	var maintenance_cost = mil["power"] * 10_000_000.0 * maintenance_ratio / 12.0

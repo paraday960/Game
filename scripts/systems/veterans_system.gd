@@ -19,7 +19,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var veterans_budget_share = econ.get("budget_allocations",{}).get("رفاه",0.15) * 0.15 + econ.get("budget_allocations",{}).get("ارتش",0.08) * 0.1
-	var veterans_budget = econ.get("government_spending",0.0) * veterans_budget_share
+	var veterans_budget = econ.get("government_spend_base",0.0) * veterans_budget_share
 
 	# شمار کهنه‌سربازان (بازرسی ۱۴۰۵ — دور دوازدهم): تک‌مالک شد. قبلاً دو مدل
 	# دونویسنده بودند: این سیستم با واحد شکسته (+۲٫۷k/ماه) و مدیر ماهانه با

@@ -24,7 +24,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var family_budget_share = econ.get("budget_allocations",{}).get("رفاه",0.15) * 0.3
-	var family_budget = econ.get("government_spending",0.0) * family_budget_share
+	var family_budget = econ.get("government_spend_base",0.0) * family_budget_share
 	family["family_support_budget"] = family_budget_share
 
 	# نرخ ازدواج = f(اقتصاد، فرهنگ، سن، مسکن)

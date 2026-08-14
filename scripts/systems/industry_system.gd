@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var industry_budget_share = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * 0.5
-	var industry_budget = econ.get("government_spending",0.0) * industry_budget_share
+	var industry_budget = econ.get("government_spend_base",0.0) * industry_budget_share
 
 	# تولید صنعتی = f(سرمایه، انرژی، نیروی کار، فناوری)
 	var energy = resources.get("inventory",{}).get("برق",100.0) / 100.0

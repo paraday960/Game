@@ -55,7 +55,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	judicial["crime_rate"] = clamp(crime, 5.0, 500.0)
 
 	# هزینه قضایی = f(پرونده‌ها، کارآمدی، زیرساخت)
-	var courts_budget = econ.get("budget_allocations", {}).get("اداره", 0.07) * econ.get("government_spending", 1.0) * 0.15
+	var courts_budget = econ.get("budget_allocations", {}).get("اداره", 0.07) * econ.get("government_spend_base", 1.0) * 0.15
 	# تراکم پرونده با بودجه کمتر می‌شود
 	if courts_budget > judicial["case_backlog"] * 100.0:
 		judicial["case_backlog"] = max(1000, judicial["case_backlog"] - 50)

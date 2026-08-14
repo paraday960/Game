@@ -21,7 +21,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var admin_budget_share = econ.get("budget_allocations", {}).get("اداره", 0.07)
-	var admin_budget = econ.get("government_spending", 0.0) * admin_budget_share
+	var admin_budget = econ.get("government_spend_base", 0.0) * admin_budget_share
 
 	# کارآمدی اداره = f(بودجه، فساد، فناوری، تمرکززدایی)
 	var corruption = politics.get("corruption", 0.30)

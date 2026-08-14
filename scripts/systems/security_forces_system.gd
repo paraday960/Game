@@ -26,7 +26,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var intelligence = state.get("intelligence", {})
 
 	var budget_share = econ.get("budget_allocations", {}).get("ارتش", 0.08) + econ.get("budget_allocations", {}).get("امنیت", 0.05)
-	var spending = econ.get("government_spending", 95e9) * budget_share
+	var spending = econ.get("government_spend_base", 95e9) * budget_share
 	var corruption = pol.get("corruption", 0.30)
 	var stability = pol.get("stability", 0.60)
 

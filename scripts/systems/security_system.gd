@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# بودجه پلیس
 	var police_budget_share = econ.get("budget_allocations", {}).get("امنیت", 0.05)
-	var police_budget = econ.get("government_spending", 0.0) * police_budget_share
+	var police_budget = econ.get("government_spend_base", 0.0) * police_budget_share
 
 	# فرمول‌ها - ۳.۱۸.۳
 	# امنیت عمومی = f(نیروی پلیس، تجهیزات، آموزش، بازدارندگی)

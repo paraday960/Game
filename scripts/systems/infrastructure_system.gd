@@ -25,7 +25,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var tech = state.get("technology", {})
 
 	var budget_share = econ.get("budget_allocations", {}).get("زیرساخت", 0.18)
-	var budget = budget_share * econ.get("government_spending", 95e9)
+	var budget = budget_share * econ.get("government_spend_base", 95e9)
 	var gdp = econ.get("gdp", 500e9)
 	var growth = econ.get("growth_rate", 0.02)
 	var total_pop = pop.get("total", 85_000_000.0)
