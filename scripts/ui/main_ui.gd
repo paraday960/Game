@@ -3032,6 +3032,11 @@ func _build_forex_card(st: Dictionary):
 	var rate := float(st.get("central_bank", {}).get("exchange_rate", 1.0))
 	var card = _card("💱 سیاست ارزی")
 	_row(card, "نرخ ارز", PersianFormatter.to_persian_digits("%.2f" % rate))
+	# بازرسی تراز پرداخت‌ها: ذخایر حالا مخزن مرجع واحد است که تراز تجاری تغذیه می‌کند
+	var econ_fx: Dictionary = st.get("economy", {})
+	var reserves_v := float(econ_fx.get("foreign_reserves", 0.0))
+	var res_gdp_ratio := reserves_v / maxf(float(econ_fx.get("gdp", 1.0)), 1.0)
+	_row(card, "ذخایر ارزی", PersianFormatter.format_money(reserves_v), _color_for(clampf(res_gdp_ratio / 0.15, 0.0, 1.0)))
 	_row(card, "صرف بازار سیاه", PersianFormatter.to_persian_digits("%.0f٪" % (float(forex.get("black_premium", 0.05)) * 100.0)), _color_for(1.0 - clampf(float(forex.get("black_premium", 0.05)) * 5.0, 0.0, 1.0)))
 	_row(card, "کنترل سرمایه", "فعال" if bool(forex.get("capital_control", false)) else "غیرفعال")
 	var inter := clampf(float(forex.get("intervention", 0.0)), 0.0, 1.0)
@@ -3384,6 +3389,14 @@ func _build_trade_policy_card(st: Dictionary):
 	_bar(card, "ذخیره راهبردی واردات", float(tp.get("strategic_imports", 0.2)))
 	_bar(card, "امنیت زنجیره تأمین", float(tp.get("supply_security", 0.3)))
 	_row(card, "مأموریت‌های تجاری", PersianFormatter.to_persian_digits(str(tp.get("trade_missions", 0))))
+	# بازرسی تراز پرداخت‌ها: این اعداد حالا واقعاً زنده‌اند (مدل سهم هدف از GDP)
+	var exports_v := float(trade.get("exports", 0.0))
+	var imports_v := float(trade.get("imports", 0.0))
+	var balance_v := exports_v - imports_v
+	_row(card, "صادرات سالانه", PersianFormatter.format_money(exports_v))
+	_row(card, "واردات سالانه", PersianFormatter.format_money(imports_v))
+	_row(card, "تراز تجاری", PersianFormatter.format_money(balance_v), _color_for(0.5 + signf(balance_v) * 0.5))
+	_row(card, "درآمد گمرکی ماهانه", PersianFormatter.format_money(float(trade.get("customs_revenue", 0.0))))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["diversify", "📦 تنوع صادرات"], ["imports", "📦 ذخیره واردات"], ["mission", "🤝 مأموریت (۱)"], ["supply", "🔗 زنجیره امن"]]:
 		var btn = Button.new(); btn.text = a[1]
