@@ -31,8 +31,12 @@ def initial_state():
         "gdp": 500_000_000_000.0, "growth_rate": 0.02, "real_growth": 0.02,
         "inflation": 0.08, "unemployment": 0.08, "tax_rate": 0.20,
         "national_debt": 200_000_000_000.0,
-        "exports": 80e9, "imports": 70e9,
+        "exports": 80e9, "imports": 70e9, "trade_balance": 10e9,
         "avg_wage": 4000.0,
+        # تجارت و ارز (بازرسی تراز پرداخت‌ها — مدل سهم هدف از GDP + مخزن واحد ذخایر)
+        "tariff_rate": 0.15, "customs_eff": 0.60, "export_div": 0.55,
+        "industry_adv": 0.15, "exchange_rate": 1.0,
+        "foreign_reserves": 60e9,
         # central bank (policy_mode=independent)
         "interest_rate": 0.15, "money_supply": 1.0, "inflation_target": 0.05,
         "independence": 0.70,
@@ -113,7 +117,8 @@ def step_day(s):
     tax_eff = 0.75 + (1.0 - s["corruption"]) * 0.2 + s["infra_q"] * 0.05
     tax_rev = s["tax_rate"] * monthly_gdp * tax_eff
     resource_rev = (80.0 * 120e6 + 70.0 * 60e6) / 12.0
-    customs = s["imports"] * 0.08 * 0.08 / 12.0     # بدون tariff_rate در state
+    # گمرک ماهانه = واردات سالانه/۱۲ × تعرفه × کارآمدی (بازرسی: ternary باگ‌دار قبلی حذف)
+    customs = s["imports"] / 12.0 * s["tariff_rate"] * s["customs_eff"]
     seign = s["money_supply"] * 0.005 * monthly_gdp * 0.1
     revenue = (tax_rev + resource_rev + customs + seign)
     revenue = max(revenue * (1.0 - (s["corruption"] * 0.06 + s["informal"] * 0.08)), 1e9)
@@ -140,9 +145,18 @@ def step_day(s):
         s["inflation"] -= 0.004 / DPM
     s["inflation"] = clamp(s["inflation"], -0.03, 0.60)
 
-    # تجارت
-    s["exports"] *= 1.0 + real_growth * 0.3 / 365.0 - sanct_pen * 0.2 / 365.0
-    s["imports"] *= 1.0 + (s["pop_total"] / 85e6 - 1.0) * 0.1 / 365.0
+    # ── trade_system (بازرسی تراز پرداخت‌ها: مالکیت یکتا، مدل سهم هدف از GDP) ──
+    # صادرات: رقابت‌پذیری + نرخ ارز + تنوع − تحریم؛ واردات: تعرفه − محاصره + اقتصاد جنگی
+    block_pen = 0.05 if s.get("shock_blockaded", False) else 0.0
+    exp_block_pen = 0.07 if s.get("shock_blockaded", False) else 0.0  # محاصره صادرات را هم می‌بندد
+    comps = s["industry_adv"] * 0.5 + s["customs_eff"] * 0.3 - s["inflation"] * 0.5
+    fx_bonus = (s["exchange_rate"] - 1.0) * 0.5
+    exp_share_t = clamp(0.13 + comps * 0.03 + fx_bonus * 0.02 + s["export_div"] * 0.02
+                        - n_sanc * 0.008 - exp_block_pen, 0.06, 0.25)
+    s["exports"] = max(s["exports"] * 0.997 + s["gdp"] * exp_share_t * 0.003, 1e9)
+    imp_share_t = clamp(0.16 - s["tariff_rate"] * 0.25 - block_pen + war_eco * 0.02, 0.05, 0.30)
+    s["imports"] = max(s["imports"] * 0.997 + s["gdp"] * imp_share_t * 0.003, 1e9)
+    s["trade_balance"] = s["exports"] - s["imports"]
 
     # ── population_system (مدل هدف+بازگشت میانگین، τ≈۷ماه) ──
     welfare_effect = (gdp_pc / 5000.0 - 1.0) * 0.5 + s["poverty"] * -2.0
@@ -247,6 +261,14 @@ def step_day(s):
     money_change = (0.15 - s["interest_rate"]) * 0.01 + growth_gap * 0.005
     s["money_supply"] = clamp(s["money_supply"] + money_change * 0.01, 0.5, 1.8)
 
+    # ذخایر ارزیِ واحد (بازرسی: cb/econ ادغام شدند) + نرخ ارز شناور
+    # (در بازی بانک مرکزی تراز تیکِ قبل را می‌خواند؛ این‌جا همان تیک — تفاوت یک‌روزه ناچیز)
+    s["foreign_reserves"] = max(s["foreign_reserves"] + s["trade_balance"] / 365.0 * 0.3, 0.0)
+    trade_anchor = max(s["gdp"] * 0.2, 1e9)
+    exch_change = (-s["trade_balance"] / trade_anchor * 0.02 * 0.01
+                   - (s["inflation"] - 0.03) * 0.02 + (s["interest_rate"] - 0.05) * 0.03)
+    s["exchange_rate"] = clamp(s["exchange_rate"] + exch_change * 0.01, 0.2, 5.0)
+
 def run(years=10, verbose=True, policy_hook=None):
     s = initial_state()
     hist = []
@@ -264,13 +286,15 @@ def run(years=10, verbose=True, policy_hook=None):
                 y = s
                 print("سال %2d | GDP %5.0fB (سرانه %5.0f$) | رشد %+.1f%% | تورم %5.1f%% | بیکاری %4.1f%% | "
                       "بدهی/GDP %4.0f%% | جمعیت %5.1fM | تولد %4.1f مرگ %4.1f | شادی %.2f ثبات %.2f | "
-                      "سلامت %.2f آموزش %.2f فقر %.2f | نرخ‌بهره %.2f پول %.2f" % (
+                      "سلامت %.2f آموزش %.2f فقر %.2f | نرخ‌بهره %.2f پول %.2f | "
+                      "تراز %+5.1fB ذخیره %4.0fB ارز %.2f" % (
                           day // 365, y["gdp"] / 1e9, y["gdp"] / y["pop_total"],
                           y["growth_rate"] * 100, y["inflation"] * 100, y["unemployment"] * 100,
                           y["national_debt"] / y["gdp"] * 100, y["pop_total"] / 1e6,
                           y["birth_rate"], y["death_rate"],
                           y["happiness"], y["stability"], y["health_q"], y["edu_q"],
-                          y["poverty"], y["interest_rate"], y["money_supply"]))
+                          y["poverty"], y["interest_rate"], y["money_supply"],
+                          y["trade_balance"] / 1e9, y["foreign_reserves"] / 1e9, y["exchange_rate"]))
     return s, hist
 
 def check_bounds(s, hist):
@@ -297,6 +321,12 @@ def check_bounds(s, hist):
         ("انرژی: تقاضای برق با اقتصاد رشد می‌کند (≥۱۴ تا سال ۱۰، از ۱۲)", s["res_dem"]["برق"] >= 14.0),
         ("انرژی: تولید برق به تقاضا+حاشیه همگرا می‌شود (فاصله < ۴ واحد)", abs(s["res_prod"]["برق"] - s["res_dem"]["برق"]) < 4.0),
         ("GDP سرانه ۱۰ساله در محدودهٔ واقعی (۰٫۹× تا ۱٫۶×)", 0.9 <= gdp_pc_f / gdp_pc0 <= 1.6),
+        # ── تجارت و تراز پرداخت‌ها (بازرسی فاز تجارت) ──
+        ("تجارت: سهم صادرات از GDP واقع‌بینانه (۶٪ تا ۲۸٪)", 0.06 < s["exports"] / s["gdp"] < 0.28),
+        ("تجارت: سهم واردات از GDP واقع‌بینانه (۵٪ تا ۳۰٪)", 0.05 < s["imports"] / s["gdp"] < 0.30),
+        ("تجارت: تراز نهایی مهارشده (<۵٪ GDP — بدون انفجار مازاد/کسری)", abs(s["trade_balance"]) < 0.05 * s["gdp"]),
+        ("ذخایر ارزی: مثبت و مهارشده (<۴۰۰ میلیارد)", 0.0 < s["foreign_reserves"] < 400e9),
+        ("نرخ ارز: در دالان معقول بدون چسبیدن به دیوارهٔ clamp", 0.25 < s["exchange_rate"] < 4.5),
     ]
     # پایداری مسیر: تورم در هیچ سالی ابرتورم نشود؛ شادی زیر آستانهٔ شورش نیاید
     for y, snap in hist[2:]:   # دو سال اول گذار آزاد
@@ -434,6 +464,48 @@ def run_sanctions_suite():
             FAIL.append(name); ok = False
     return ok
 
+def run_blockade_suite():
+    """سناریوی چهارم: جنگ اقتصادی — محاصرهٔ واردات (سال ۲ تا ۴) + ۲ تحریم دائمی
+    + کاهش ارزش اضطراری ۱۸٪ (اهرم واقعی forex روی تراز). اثبات اثر و بازیابی."""
+    base, base_hist = run(verbose=False)
+    snap = {}
+    def war_econ(day, s):
+        if day == 365:
+            s["shock_blockaded"] = True
+            s["shock_sanctions"] = 2
+        elif day == 400:
+            # کاهش ارزش ۱۸٪: ضربهٔ یک‌بارهٔ واقعی به تجارت و تورم (مثل forex_manager.devalue)
+            s["exchange_rate"] = min(s["exchange_rate"] * 1.18, 5.0)
+            s["exports"] *= 1.0 + 0.18 * 0.6
+            s["imports"] *= 1.0 + 0.18 * 0.4
+            s["inflation"] = clamp(s["inflation"] + 0.18 * 0.3, 0.0, 1.5)
+        elif day == 365 * 4:
+            s.pop("shock_blockaded", None)   # پایان محاصره در آستانهٔ سال پنجم
+        if day == 730:
+            snap.update(dict(s))   # میانهٔ محاصره
+    x, _ = run(verbose=False, policy_hook=war_econ)
+    b_y2 = base_hist[1][1]   # خط پایه پایان سال ۲
+    print("═══ سناریوی محاصرهٔ اقتصادی: بلوکاد سال ۲ تا ۴ + ۲ تحریم دائمی + کاهش ارزش ۱۸٪ ═══")
+    print("میانهٔ محاصره: صادرات %.0fB واردات %.0fB تراز %+.1fB | پایان: صادرات %.0fB تراز %+.1fB ذخیره %.0fB ارز %.2f" % (
+        snap["exports"] / 1e9, snap["imports"] / 1e9, snap["trade_balance"] / 1e9,
+        x["exports"] / 1e9, x["trade_balance"] / 1e9, x["foreign_reserves"] / 1e9, x["exchange_rate"]))
+    checks = [
+        ("محاصره: واردات در بلوکاد افت می‌کند (≥۸٪ زیر خط پایه)", snap["imports"] < b_y2["imports"] * 0.92),
+        ("محاصره: صادرات زیر ۲ تحریم افت می‌کند (<۹۷٪ خط پایه)", snap["exports"] < b_y2["exports"] * 0.97),
+        ("جنگ اقتصادی: اثر ماندگار — ذخایر پایانی زیر خط پایه", x["foreign_reserves"] < base["foreign_reserves"] - 5e9),
+        ("بازیابی: واردات پس از محاصره برمی‌گردد (>+۸٪ نسبت به میانهٔ بلوکاد)", x["imports"] > snap["imports"] * 1.08),
+        ("کاهش ارزش: نرخ ارز بلندمدت ضعیف‌تر از خط پایه می‌ماند", x["exchange_rate"] > base["exchange_rate"] * 1.02),
+        ("جنگ اقتصادی: بدون فروپاشی (GDP ≥ ۸۰٪ خط پایه، ثبات ≥ ۰٫۳۵)",
+         x["gdp"] >= base["gdp"] * 0.80 and x["stability"] >= 0.35),
+        ("جنگ اقتصادی: ذخایر منفی نمی‌شود و ارز داخل clamp", x["foreign_reserves"] >= 0.0 and 0.2 <= x["exchange_rate"] <= 5.0),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 def _apply_shock(s):
     """فعال‌سازی رژیم جنگ تمام‌عیار روی آینه (ایدمپوتنت)."""
     s["shock_mobil"] = 4.0
@@ -457,6 +529,8 @@ if __name__ == "__main__":
     ok = run_policy_suites(s) and ok
     print()
     ok = run_sanctions_suite() and ok
+    print()
+    ok = run_blockade_suite() and ok
     print()
     ok = run_shock_suite() and ok
     print()

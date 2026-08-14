@@ -51,7 +51,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر راهبرد
 	econ["industrial_growth_bonus"] = float(info.get("growth", 0.0))
-	econ["exports"] = float(econ.get("exports", 1.0)) * (1.0 + float(info.get("export", 0.0)))
+	# بازرسی تراز پرداخت‌ها: اهرم صادراتی به مخزن واقعی trade وصل شد (econ.exports خواننده نداشت)
+	var trade_d: Dictionary = state.get("trade", {})
+	trade_d["exports"] = float(trade_d.get("exports", 80.0e9)) * (1.0 + float(info.get("export", 0.0)))
+	state["trade"] = trade_d
 	# شرکت‌های دولتی: اشتغال و ثبات ولی ناکارآمدی و فساد
 	econ["soe_employment"] = soe * 0.1
 	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 - soe * 0.001)

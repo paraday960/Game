@@ -132,14 +132,16 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var oil_price = 82.0 # دلار
 	var resource_revenue = oil_inventory * 120_000_000.0 + gas_inventory * 60_000_000.0 # ساده‌سازی
 
-	# درآمد گمرک و تجارت
-	var customs_revenue = trade.get("imports",70e9) * 0.08 * (1.0 + econ.get("tariff_rate",0.15) if econ.has("tariff_rate") else 0.08)
+	# درآمد گمرک و تجارت — واردات سالانه × تعرفه × کارآمدی گمرک → نرخ ماهانه
+	# (بازرسی تراز پرداخت‌ها: ternary قبلی باگ‌دار بود و عملاً ۰٫۶۴٪ واردات می‌داد —
+	#  چون tariff_rate در دیکشنری trade است نه economy — یعنی ~۱۴ برابر کمتر از طراحی)
+	var customs_revenue = trade.get("imports",70e9) / 12.0 * float(trade.get("tariff_rate",0.15)) * float(trade.get("customs_efficiency",0.60))
 
 	# درآمد خلق پول (سینیوریج) - بانک مرکزی
 	var seigniorage = central_bank.get("money_supply",1.0) * 0.005 * monthly_gdp
 
 	# درآمد کل
-	econ["government_revenue"] = tax_revenue + resource_revenue/12.0 + customs_revenue/12.0 + seigniorage*0.1
+	econ["government_revenue"] = tax_revenue + resource_revenue/12.0 + customs_revenue + seigniorage*0.1
 	var corruption_loss = corruption * 0.06 + float(private_sector.get("informal_economy",0.25))*0.08
 	econ["government_revenue"] *= (1.0 - corruption_loss)
 	econ["government_revenue"] = max(econ["government_revenue"], 1_000_000_000.0)
@@ -246,12 +248,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	econ["avg_wage"] = avg_wage
 
 	# ==================== و) تجارت، تراز، جیره‌بندی ====================
-	trade["exports"] = trade.get("exports", 80e9) * (1.0 + real_growth*0.3/365.0 - sanction_penalty*0.2/365.0)
-	trade["imports"] = trade.get("imports", 70e9) * (1.0 + (pop.get("total",85e6)/85e6 -1.0)*0.1/365.0 + war_economy*0.1/365.0)
-	if world.get("wars",{}).size() > 0 and mil.get("logistics_detail",{}).get("is_blockaded",false):
-		trade["imports"] *= (1.0 - 0.15/365.0) # محاصره واردات کم
-	trade["balance"] = trade["exports"] - trade["imports"]
-	trade["trade_deficit"] = -trade["balance"] if trade["balance"] < 0 else 0.0
+	# (بازرسی تراز پرداخت‌ها) صادرات/واردات/تراز از این پس مالکیت یکتای trade_system است
+	# (مدل «سهم هدف از GDP + بازگشت») — اهرم‌های رشد/تحریم/محاصره/جنگ به آن منتقل شد.
+	# این سیستم فقط trade را می‌خواند (گمرک و هشدارها) و دیگر نمی‌نویسد؛ پیش‌تر نویسندگی
+	# موازی این‌جا باعث رشد دوگانهٔ روزانهٔ صادرات در کنار لایهٔ دوم trade_system می‌شد.
 
 	# جیره‌بندی - در جنگ تمام‌عیار
 	var rationing = mil.get("mobilization",{}).get("rationing",false)

@@ -1,5 +1,14 @@
 extends BaseSystem
-# ۳.۲۹ تجارت خارجی و گمرک - پیاده‌سازی کامل
+# ۳.۲۹ تجارت خارجی و گمرک — مالکیت یکتای صادرات/واردات/تراز (بازرسی تراز پرداخت‌ها)
+#
+# مدل: «سهم هدف از GDP + بازگشت تدریجی» — صادرات و واردات به‌جای رشد مکانیکی
+# انباشتگر، هر روز ۰٫۳٪ (τ≈۱۱ ماه) به سمت هدفی حرکت می‌کنند که از GDP و سیاست‌ها
+# تعیین می‌شود؛ در نتیجه با رشد اقتصاد هم‌مقیاس‌اند و تراز در بلندمدت منفجر نمی‌شود.
+# اهرم‌های بازیکن (تعرفه، کاهش ارزش، مأموریت تجاری) و شوک‌ها (تحریم، محاصره، جنگ)
+# از این کانال اثر واقعی می‌گذارند.
+# (پیش از بازرسی سه نویسندهٔ هم‌پوشان — بلوک AR همین‌جا، لایهٔ رقابت‌پذیری انتهایی و
+#  بخش تجارت economy_system — هر روز با ضربه‌های متفاوت exports/imports را می‌نوشتند؛
+#  بلوک اول این سیستم کاملاً محاسبه و دور ریخته می‌شد و اثر تحریم pow هم مرده بود.)
 
 func compute(state: Dictionary, tick: int) -> Dictionary:
 	var trade = state.get("trade", {})
@@ -7,7 +16,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var diplomacy = state.get("diplomacy", {})
 	var industry = state.get("industry", {})
 	var agriculture = state.get("agriculture", {})
-	var resources = state.get("resources", {})
+	var mil = state.get("military", {})
 
 	trade["exports"] = trade.get("exports", 80_000_000_000.0)
 	trade["imports"] = trade.get("imports", 70_000_000_000.0)
@@ -23,35 +32,41 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	var events = []
 
-	# تراز تجاری = صادرات - واردات
 	var gdp = econ.get("gdp", 500_000_000_000.0)
-	var infra_q = state.get("infrastructure",{}).get("quality",0.55)
 	var central_bank_rate = state.get("central_bank",{}).get("exchange_rate",1.0)
 
-	# صادرات = f(تولید صنعتی، کشاورزی، منابع، نرخ ارز، روابط، تعرفه خارجی)
-	var industrial_export = industry.get("output",100.0) * 500_000_000.0
-	var agri_export = agriculture.get("production",100.0) * 200_000_000.0
-	var resource_export = resources.get("inventory",{}).get("نفت",80.0) * 300_000_000.0
-	var exchange_effect = 1.0 / central_bank_rate  # ارز ضعیف‌تر → صادرات بیشتر
-	var diplomacy_effect = diplomacy.get("influence",40.0) / 100.0 + 0.5
-	var export_base = (industrial_export + agri_export + resource_export) * exchange_effect * diplomacy_effect * infra_q
-	trade["exports"] = trade["exports"] * 0.995 + export_base * 0.005
+	# تحریم‌های ورودی (فقط اعمال‌شده علیه بازیکن؛ تحریم‌هایی که خود بازیکن صادر کرده بی‌اثر)
+	var incoming_sanctions := 0
+	for sanction in diplomacy.get("sanctions", []):
+		if not sanction is Dictionary or sanction.get("by", "foreign") != "player":
+			incoming_sanctions += 1
 
-	# واردات = f(مصرف، تولید داخلی، نرخ ارز، تعرفه)
-	var consumption = pop_total(state) / 85_000_000.0 * 50_000_000_000.0
-	var domestic_coverage = (industry.get("output",100.0) + agriculture.get("production",100.0)) / 200.0
-	var import_demand = consumption * (1.5 - domestic_coverage)
-	var tariff_effect = 1.0 - trade["tariff_rate"] * 0.5
-	import_demand *= tariff_effect / exchange_effect
-	trade["imports"] = trade["imports"] * 0.995 + import_demand * 0.005
+	# وضعیت محاصره/جنگ (برای هر دو سمت تراز)
+	var blockaded: bool = bool(mil.get("logistics_detail", {}).get("is_blockaded", false))
+	var war_economy_t: float = float(mil.get("mobilization", {}).get("war_economy", 0.0))
 
-	# تراز
-	trade["balance"] = trade["exports"] - trade["imports"]
+	# ── صادرات: سهم هدف از GDP ← رقابت‌پذیری + نرخ ارز + تنوع صادراتی − تحریم − محاصره ──
+	# محاصرهٔ دریایی صادرات را سخت‌تر از واردات می‌زند (نفت/کالا راهی برای خروج ندارد)
+	var comps: float = float(industry.get("advanced", 0.15)) * 0.5 + float(trade["customs_efficiency"]) * 0.3 - float(econ.get("inflation", 0.08)) * 0.5
+	var fx_bonus: float = (float(central_bank_rate) - 1.0) * 0.5  # ارز ضعیف‌تر → کالای صادراتی ارزان‌تر و رقابتی‌تر
+	var export_share_t: float = clamp(0.13 + comps * 0.03 + fx_bonus * 0.02 + float(trade["export_diversity"]) * 0.02 - incoming_sanctions * 0.008 - (0.07 if blockaded else 0.0), 0.06, 0.25)
+	trade["export_share_target"] = export_share_t
+	trade["exports"] = maxf(float(trade["exports"]) * 0.997 + gdp * export_share_t * 0.003, 1_000_000_000.0)
 
-	# درآمد گمرک = واردات × نرخ تعرفه × کارآمدی
-	trade["customs_revenue"] = trade["imports"] * trade["tariff_rate"] * trade["customs_efficiency"] / 12.0
+	# ── واردات: سهم هدف ← تعرفه (اهرم بازیکن)، محاصرهٔ دریایی، اقتصاد جنگی، پوشش تولید داخل ──
+	var domestic_coverage: float = (float(industry.get("output", 100.0)) + float(agriculture.get("production", 100.0))) / 200.0
+	var import_share_t: float = clamp(0.16 - float(trade["tariff_rate"]) * 0.25 - (0.05 if blockaded else 0.0) + war_economy_t * 0.02 + (1.0 - domestic_coverage) * 0.04, 0.05, 0.30)
+	trade["import_share_target"] = import_share_t
+	trade["imports"] = maxf(float(trade["imports"]) * 0.997 + gdp * import_share_t * 0.003, 1_000_000_000.0)
 
-	# تعرفه - سیاست تجاری
+	# ── تراز تجاری ──
+	trade["balance"] = float(trade["exports"]) - float(trade["imports"])
+	trade["trade_deficit"] = maxf(-float(trade["balance"]), 0.0)
+
+	# آمار درآمد گمرکی (نرخ ماهانه) — واریز واقعی به خزانه در economy_system لحاظ می‌شود
+	trade["customs_revenue"] = float(trade["imports"]) * float(trade["tariff_rate"]) * float(trade["customs_efficiency"]) / 12.0
+
+	# تعرفه - سیاست تجاری (حلقهٔ منفی واقع‌گرایانه: کسری مزمن → تعرفه → واردات کمتر)
 	# اگر کسری تجاری شدید، افزایش تعرفه پیشنهاد می‌شود
 	if trade["balance"] < -20_000_000_000.0 and Deterministic.chance(0.01):
 		trade["tariff_rate"] = clamp(trade["tariff_rate"] + 0.01, 0.05, 0.50)
@@ -79,19 +94,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# انطباق WTO
 	trade["wto_compliance"] = clamp(trade["wto_compliance"] + Deterministic.next_range(-0.002, 0.003), 0.2, 0.95)
 
-	# اثر بر اقتصاد
-	econ["government_revenue"] = econ.get("government_revenue",0.0) + trade["customs_revenue"]
-	state["economy"] = econ
-
-	# اثر دیپلماسی: فقط تحریم‌های اعمال‌شده علیه بازیکن
-	var incoming_sanctions = 0
-	for sanction in diplomacy.get("sanctions", []):
-		if not sanction is Dictionary or sanction.get("by", "foreign") != "player":
-			incoming_sanctions += 1
-	if incoming_sanctions > 0:
-		trade["exports"] *= pow(0.95, incoming_sanctions)
-		trade["imports"] *= pow(0.90, incoming_sanctions)
-		events.append({"type": "sanction_trade_effect", "message": "تحریم‌های خارجی تجارت را محدود کرد", "balance": trade["balance"]})
+	# اطلاع‌رسانی اثر تحریم (اثر واقعی از طریق جریمهٔ سهم صادرات اعمال شد؛ اینجا فقط خبر)
+	if incoming_sanctions > 0 and Deterministic.chance(0.008):
+		events.append({"type": "sanction_trade_effect", "message": "تحریم‌های خارجی تجارت را محدود کرد", "balance": trade["balance"], "sanctions": incoming_sanctions})
 
 	# رویدادها
 	if trade["import_dependency"] > 0.7 and Deterministic.chance(0.01):
@@ -104,20 +109,5 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type": "export_diversification_success", "message": "تنوع صادرات موفق - کاهش وابستگی به نفت"})
 
 	state["trade"] = trade
-	
-	# ── لایه واقع‌گرایانه اختصاصی تجارت (جایگزین قالب خودکار تکراری) — بخش ۳.۲۹ ──
-	# رقابت‌پذیری صادرات: صنعت پیشرفته و گمرک کارآمد؛ تورم بالا فرساینده
-	var comps_t: float = float(industry.get("advanced", 0.15)) * 0.5 + float(trade.get("customs_efficiency", 0.60)) * 0.3 - float(econ.get("inflation", 0.08)) * 0.5
-	trade["exports"] = maxf(float(trade.get("exports", 80_000_000_000.0)) * (1.0 + comps_t * 0.0006), 5_000_000_000.0)
-	# واردات با رشد داخلی بالا و با تعرفه مهار می‌شود
-	var imp_drive: float = float(econ.get("growth_rate", 0.02)) * 2.0 - float(trade.get("tariff_rate", 0.15)) * 0.3
-	trade["imports"] = maxf(float(trade.get("imports", 70_000_000_000.0)) * (1.0 + imp_drive * 0.0006), 5_000_000_000.0)
-	trade["balance"] = float(trade.get("exports", 80_000_000_000.0)) - float(trade.get("imports", 70_000_000_000.0))
-	if float(trade.get("balance", 0.0)) < -30_000_000_000.0 and Deterministic.chance(0.005):
-		events.append({"type": "trade_deficit_warning", "message": "هشدار تراز تجاری - کسری بزرگ؛ فشار بر ذخایر ارزی", "balance": trade["balance"]})
-	state["trade"] = trade
 
 	return {"success": true, "state": state, "events": events}
-
-func pop_total(state: Dictionary) -> float:
-	return state.get("population",{}).get("total",85_000_000)

@@ -28,9 +28,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# وابستگی به نفت: صادرات نفتی سهم بزرگ دارد
 	var oil_share := 0.7 - diversity * 0.5
 	trade["oil_export_share"] = clampf(oil_share, 0.1, 0.9)
-	# نوسان قیمت نفت با تنوع کم، درآمد را می‌لرزاند
+	# نوسان قیمت نفت با تنوع کم، صادرات واقعی را می‌لرزاند (بازرسی: به مخزن trade وصل شد)
 	var volatility := (oil_price - 75.0) / 75.0 * (1.0 - diversity)
-	econ["exports"] = float(econ.get("exports", 1.0)) * (1.0 + volatility * 0.05)
+	trade["exports"] = float(trade.get("exports", 80.0e9)) * (1.0 + volatility * 0.05)
 	# ذخیره راهبردی واردات: بحران عرضه را مهار می‌کند
 	var supply_shock := (1.0 - supply) * 0.01 - imports * 0.005
 	if Deterministic.chance(clampf(supply_shock, 0.005, 0.06)):
@@ -82,8 +82,10 @@ func trade_mission(state: Dictionary) -> Dictionary:
 	state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + float(state["economy"].get("gdp", 1.0)) * 0.001
 	tp["trade_missions"] = int(tp.get("trade_missions", 0)) + 1
 	state["trade_policy"] = tp
-	# قرارداد تازه: صادرات و روابط با کشورهای تصادفی
-	state["economy"]["exports"] = float(state["economy"].get("exports", 1.0)) * 1.015
+	# قرارداد تازه: صادرات واقعی و روابط با کشورهای تصادفی (بازرسی: به مخزن trade وصل شد)
+	var tr: Dictionary = state.get("trade", {})
+	tr["exports"] = float(tr.get("exports", 80.0e9)) * 1.015
+	state["trade"] = tr
 	state["diplomacy"]["influence"] = clampf(float(state["diplomacy"].get("influence", 40.0)) + 1.5, 0.0, 100.0)
 	var relations: Dictionary = state.get("diplomacy", {}).get("relations", {})
 	if not relations.is_empty():

@@ -63,9 +63,13 @@ func devalue(state: Dictionary, percent: float) -> Dictionary:
 	cb["exchange_rate"] = clampf(float(cb.get("exchange_rate", 1.0)) * (1.0 + percent / 100.0), 0.2, 5.0)
 	state["central_bank"] = cb
 	var econ: Dictionary = state.get("economy", {})
-	# صادرات ارزان‌تر → رشد صادرات؛ تورم وارداتی → تورم
-	econ["exports"] = float(econ.get("exports", 1.0)) * (1.0 + percent / 100.0 * 0.6)
-	econ["imports"] = float(econ.get("imports", 1.0)) * (1.0 + percent / 100.0 * 0.4)
+	# صادرات ارزان‌تر → جهش صادرات؛ هزینهٔ واردات بالاتر (بازرسی تراز پرداخت‌ها:
+	# پیش‌تر روی econ.exports/imports می‌نوشت که هیچ خواننده‌ای نداشت — این اهرم مرده بود.
+	# حالا مستقیم به تراز واقعی state.trade ضربه می‌زند و trade_system به تدریج به هدف برمی‌گرداند)
+	var trade: Dictionary = state.get("trade", {})
+	trade["exports"] = float(trade.get("exports", 80.0e9)) * (1.0 + percent / 100.0 * 0.6)
+	trade["imports"] = float(trade.get("imports", 70.0e9)) * (1.0 + percent / 100.0 * 0.4)
+	state["trade"] = trade
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + percent / 100.0 * 0.3, 0.0, 1.5)
 	var forex: Dictionary = state["forex"]
 	forex["black_premium"] = clampf(float(forex.get("black_premium", 0.05)) + percent / 100.0 * 0.4, 0.0, 0.6)

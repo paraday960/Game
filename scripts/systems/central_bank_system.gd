@@ -69,9 +69,17 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var exchange_change = -trade_effect * 0.01 - inflation_diff * 0.02 + interest_diff * 0.03
 	cb["exchange_rate"] = clamp(cb["exchange_rate"] + exchange_change * 0.01, 0.2, 5.0)
 
-	# ذخایر ارزی
-	cb["foreign_reserves"] += trade_balance / 365.0 * 0.3  # 30٪ تراز به ذخایر
-	cb["foreign_reserves"] = max(cb["foreign_reserves"], 1_000_000_000.0)
+	# ذخایر ارزی — مخزن مرجع state.economy.foreign_reserves است (بازرسی تراز پرداخت‌ها).
+	# پیش‌تر تراز تجاری به cb.foreign_reserves می‌ریخت که نه در UI دیده می‌شد و نه هزینه‌کردهای
+	# واقعی (مداخله ارزی، بازار کالا، سازمان‌ها — همگی از economy.foreign_reserves کم می‌کنند)
+	# با آن ارتباط داشتند: split-brain؛ بازیکن با کسری تجاری دائم هرگز ذخایرش را خالی نمی‌دید.
+	# از این پس هر دو نام یک مخزن واحد را نشان می‌دهند و کسری تجاری واقعاً ذخایر را می‌خورد.
+	var reserves_now: float = float(economy.get("foreign_reserves", 60_000_000_000.0))
+	reserves_now += trade_balance / 365.0 * 0.3  # 30٪ تراز سالانه به ذخایر
+	reserves_now = max(reserves_now, 0.0)
+	economy["foreign_reserves"] = reserves_now
+	cb["foreign_reserves"] = reserves_now  # آینهٔ سازگاری برای سیوهای قدیمی
+	state["economy"] = economy
 
 	# پایداری بانکی = f(بدهی، رشد اعتباری، نرخ بهره)
 	var credit_risk = abs(cb["credit_growth"] - 0.10) * 2.0 + debt_to_gdp * 0.2 + abs(cb["interest_rate"] - 0.10) * 0.5
@@ -98,8 +106,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type": "hyperinflation_warning", "message": "هشدار ابرتورم - تورم %s٪" % str(int(inflation*100)), "inflation": inflation})
 		cb["interest_rate"] += 0.02
 
-	if cb["foreign_reserves"] < 10_000_000_000.0 and Deterministic.chance(0.01):
-		events.append({"type": "reserve_crisis", "message": "بحران ذخایر ارزی - فشار بر نرخ ارز", "reserves": cb["foreign_reserves"]})
+	if reserves_now < 10_000_000_000.0 and Deterministic.chance(0.01):
+		events.append({"type": "reserve_crisis", "message": "بحران ذخایر ارزی - فشار بر نرخ ارز", "reserves": reserves_now})
 		cb["exchange_rate"] *= 1.05
 
 	if Deterministic.chance(0.005):
