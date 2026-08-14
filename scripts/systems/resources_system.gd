@@ -23,7 +23,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	res["extraction_rate"] = res.get("extraction_rate", {"نفت":0.02,"گاز":0.02,"آهن":0.01})
 	res["refining_capacity"] = res.get("refining_capacity", {"نفت":80.0,"مواد_صنعتی":70.0})
 	res["distribution_efficiency"] = res.get("distribution_efficiency", 0.75)
-	res["blackout_risk"] = res.get("blackout_risk", 0.10)
+	# blackout_risk مرده بود: نسخه محاسبه‌شده در energy_policy (energy_manager) است و UI همان را نشان می‌دهد
 	res["water_stress"] = res.get("water_stress", 0.30)
 
 	# آستانهها و ثابتها از منبع واحد بالانس (data/balance.json)
@@ -174,11 +174,15 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if res["food_crisis"]:
 		pop["happiness"] = clamp(float(pop.get("happiness",0.60)) - 0.008, 0.05, 0.95)
 
-	# لجستیک نظامی - سوخت و مهمات از منابع
+	# لجستیک نظامی - پیوند صنعت→ارتش به‌صورت «جاذب ضعیف» اعمال می‌شود (نه بازنویسی کامل)؛
+	# در غیر این صورت مصرف روزانه military_system هر روز صفر می‌شد و در جنگ طولانی
+	# ذخیره مهمات/سوخت هرگز ته نمی‌کشید (shadow-write).
 	var logi = mil.get("logistics_detail", {})
 	if not logi.is_empty():
-		logi["fuel_stock_days"] = float(res["inventory"].get("نفت",80.0))/80.0*30.0
-		logi["ammo_stock_days"] = float(res["inventory"].get("مواد_صنعتی",65.0))/65.0*25.0
+		var fuel_target: float = float(res["inventory"].get("نفت",80.0))/80.0*30.0
+		var ammo_target: float = float(res["inventory"].get("مواد_صنعتی",65.0))/65.0*25.0
+		logi["fuel_stock_days"] = clampf(float(logi.get("fuel_stock_days", fuel_target)) * 0.98 + fuel_target * 0.02, 0.5, 60.0)
+		logi["ammo_stock_days"] = clampf(float(logi.get("ammo_stock_days", ammo_target)) * 0.98 + ammo_target * 0.02, 0.5, 60.0)
 		mil["logistics_detail"] = logi
 
 	state["resources"] = res

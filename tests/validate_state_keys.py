@@ -95,6 +95,10 @@ def extract_browsable_sections():
     with open(engine_path, encoding="utf-8") as fh:
         engine_src = fh.read()
     sections.update(re.findall(r'systems\["([a-z_]+)"\]', engine_src))
+    # ثبت پویا: حلقه‌هایی مانند for name in remaining: systems[name] = load(...)
+    for arr_var, arr_body in re.findall(r'var (\w+)\s*=\s*\[([^\]]+)\]', engine_src):
+        if re.search(r'for \w+ in ' + re.escape(arr_var) + r'[\s\S]{0,200}?systems\[\w+\]\s*=', engine_src):
+            sections.update(re.findall(r'"([a-z_]+)"', arr_body))
     with open(ui_path, encoding="utf-8") as fh:
         ui_src = fh.read()
     alias_block = re.search(

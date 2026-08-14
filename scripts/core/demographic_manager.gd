@@ -91,9 +91,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if family.has("fertility"):
 		family["fertility"] = fertility
 		state["family"] = family
-	pop["birth_rate"] = clampf(fertility * 6.0, 4.0, 30.0)
-	# رشد جمعیت خالص: باروری بالا مثبت، سالخوردگی منفی
-	pop["growth_rate"] = clampf((fertility - 2.1) * 0.003 - aging * 0.002, -0.02, 0.03)
+	# birth_rate و growth_rate متعلق به population_system است (روزانه و از مدل کامل جمعیت)؛
+	# بازنویسی ماهانه این مدیر هر بار فقط یک روز دوام می‌آورد و نوسان مصنوعی می‌ساخت — حذف شد.
+	# خروجی معنادار این مدیر: family.fertility (خط ۹۲ بالا)
 	state["population"] = pop
 
 	# رضایت جوانان/سالمندان
