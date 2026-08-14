@@ -306,9 +306,21 @@ def step_day(s):
         s["exchange_rate"] = clamp(s["exchange_rate"] * (1.0 - fade), 0.2, 5.0)
         s["fx_premium"] -= fade
 
+# آشکارساز «چسبیدن به دیوارهٔ clamp» (بازرسی واقع‌گرایی ۱۴۰۵): هر متغیر کلیدی
+# که سهم بزرگی از عمر ۱۰ساله را روی کف/سقفش بگذراند، تعادلش غیرواقعی است
+# (مثل کشف قبلی urban_ratio و vaccination). eps = ۱٪ دامنه.
+BOUND_WATCH = {
+    "unemployment": (0.015, 0.40), "inflation": (-0.03, 0.60),
+    "birth_rate": (5.0, 35.0), "death_rate": (4.0, 25.0),
+    "happiness": (0.05, 0.95), "trust": (0.05, 0.95), "tension": (0.0, 1.0),
+    "health_q": (0.1, 0.95), "edu_q": (0.1, 0.95), "poverty": (0.02, 0.60),
+    "interest_rate": (0.01, 0.60), "money_supply": (0.5, 1.8),
+    "exchange_rate": (0.2, 5.0), "urban_ratio": (0.0, 0.95), "crowding": (0.0, 1.5),
+}
 def run(years=10, verbose=True, policy_hook=None):
     s = initial_state()
     hist = []
+    pin_days = {k: 0 for k in BOUND_WATCH}
     for day in range(1, DAYS + 1):
         if policy_hook is not None:
             policy_hook(day, s)
@@ -317,6 +329,13 @@ def run(years=10, verbose=True, policy_hook=None):
             if isinstance(v, float) and (v != v or v in (float("inf"), float("-inf"))):
                 FAIL.append(f"NaN/Inf در «{k}» در روز {day}")
                 return s, hist
+        for pk in BOUND_WATCH:
+            plo, phi = BOUND_WATCH[pk]
+            pv = s.get(pk)
+            if isinstance(pv, float):
+                eps = (phi - plo) * 0.01
+                if pv <= plo + eps or pv >= phi - eps:
+                    pin_days[pk] += 1
         if day % 365 == 0:
             hist.append((day // 365, dict(s)))
             if verbose:
@@ -332,7 +351,11 @@ def run(years=10, verbose=True, policy_hook=None):
                           y["happiness"], y["stability"], y["health_q"], y["edu_q"],
                           y["poverty"], y["interest_rate"], y["money_supply"],
                           y["trade_balance"] / 1e9, y["foreign_reserves"] / 1e9, y["exchange_rate"]))
+    global LAST_PIN
+    LAST_PIN = pin_days
     return s, hist
+
+LAST_PIN = {}
 
 def check_bounds(s, hist):
     """ادعاهای پایداری — هر نقض = شکست تست."""
@@ -370,6 +393,12 @@ def check_bounds(s, hist):
         checks.append((f"سال {y}: بدون ابرتورم (>۴۰٪)", snap["inflation"] <= 0.40))
         checks.append((f"سال {y}: شادی بالای آستانهٔ شورش (۰٫۳۰)", snap["happiness"] > 0.30))
         checks.append((f"سال {y}: ثبات بالای ۰٫۳۵", snap["stability"] > 0.35))
+    # نگهبان چسبیدن به مرز: هر متغیر تحت پایش باید کمتر از ۴۰٪ عمر را روی کف/سقف
+    # clamp بگذراند — چسبیدن مداوم = تعادل غیرواقعی (مثل کشف‌های urban_ratio و vaccination)
+    for pk in sorted(BOUND_WATCH):
+        share = LAST_PIN.get(pk, 0) / float(DAYS)
+        checks.append(("نگهبان مرز «%s» — چسبیدن %.0f٪ < ۴۰٪" % (pk, share * 100.0),
+                       share < 0.40))
     ok = True
     for name, passed in checks:
         if passed:
