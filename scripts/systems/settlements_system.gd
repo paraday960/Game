@@ -43,7 +43,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# پاک می‌گشت (shadow-write)؛ حالا اهرم‌ها داخل همین مدل اثر می‌گذارند.
 	var rural_policy: Dictionary = state.get("rural_policy", {})
 	var rural_stay: float = clampf((float(rural_policy.get("rural_roads", 0.40)) + float(rural_policy.get("rural_internet", 0.25)) + float(rural_policy.get("micro_credit", 0.25)) + float(rural_policy.get("agro_processing", 0.20))) * 0.10, 0.0, 0.45)
-	var urban_attraction = ((gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2) * (1.0 - rural_stay)
+	# بازخورد ظرفیت (تعمیق سکونتگاه‌ها): با نزدیک‌شدن تراکم به هدف، جاذبهٔ شهر خودبه‌خود
+	# می‌افتد — شهرها بی‌نهایت جمعیت نمی‌بلعند و فشار به شهرسازی/مسکن می‌رسد
+	var est_urban_area: float = settlements["cities_large"]*250.0 + settlements["cities_medium"]*80.0 + settlements["cities_small"]*25.0
+	var density_target: float = 7000.0 + float(settlements.get("housing_quality", 0.6)) * 6000.0
+	settlements["crowding"] = clampf((urban_pop / max(est_urban_area, 1.0)) / max(density_target, 1.0), 0.0, 1.5)
+	var capacity_factor: float = clampf(1.6 - float(settlements["crowding"]), 0.15, 1.6)
+	var urban_attraction = ((gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2) * (1.0 - rural_stay) * capacity_factor
 	settlements["migration_urban"] = total_pop * urbanization_rate / 365.0 * urban_attraction
 	urban_pop += settlements["migration_urban"]
 	urban_pop = clampf(urban_pop, total_pop*0.05, total_pop*0.90)
@@ -54,8 +60,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	pop["total"] = total_pop
 	pop["urban_ratio"] = clampf(urban_pop / max(total_pop,1.0), 0.0, 0.90)
 
-	# تراکم - جمعیت شهری / مساحت مصنوعی شهری
-	var est_urban_area = settlements["cities_large"]*250.0 + settlements["cities_medium"]*80.0 + settlements["cities_small"]*25.0 # km2
+	# تراکم - جمعیت شهری / مساحت مصنوعی شهری (مساحت از بلوک ظرفیت بالا محاسبه شده)
 	settlements["density"] = urban_pop / max(est_urban_area,1.0)
 
 	# گسترش بی‌رویه = رشد شهری سریع بدون زیرساخت
@@ -77,8 +82,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# دسترسی به خدمات - زیرساخت
 	settlements["service_access"] = clamp(infra["quality"]*0.4 + infra_coverage*0.3 + settlements["housing_quality"]*0.2 + 0.10, 0.2, 0.98)
 
-	# ساخت مسکن جدید
-	var construction = infra.get("investment",5e9)/1e9 * 0.05 + gdp_pc/5000.0*100000.0
+	# ساخت مسکن جدید — از نرخ واقعی روزانهٔ سیستم فیزیکی خوانده می‌شود (×۳۶۵)
+	# قبلاً فرمول موازی ~۱۰۰هزار/سال مستقل از تولید واقعی (~۲۹هزار/سال) گزارش می‌کرد
+	var construction = float(state.get("physical",{}).get("housing_build_daily", 80.0)) * 365.0
 	settlements["new_houses_per_year"] = int(construction)
 	if tick % 180 == 0:
 		settlements["new_houses_per_year"] = int(construction * (0.8 + Deterministic.next_range(0.0,0.4)))
@@ -107,6 +113,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["population"] = pop
 
 	# رویدادها
+	if float(settlements.get("crowding", 0.0)) > 1.2 and Deterministic.chance(0.012):
+		events.append({"type":"urban_crowding","crowding": settlements["crowding"], "message":"شهرهای بزرگ از ظرفیت تراکم گذشتند — اجاره سنگین می‌شود و مهاجرت کند می‌گردد"})
+
 	if settlements["sprawl"] > 0.62 and Deterministic.chance(0.015):
 		events.append({"type":"urban_sprawl_crisis","sprawl": settlements["sprawl"], "message":"گسترش بی‌رویه شهری - تخریب باغات و ترافیک سنگین"})
 

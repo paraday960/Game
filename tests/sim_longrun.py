@@ -39,12 +39,16 @@ def initial_state():
         # population
         "pop_total": 85_000_000.0, "birth_rate": 15.0, "death_rate": 8.0,
         "migration_net": 10000.0, "happiness": 0.60, "satisfaction": 0.62,
-        "participation": 0.65, "workforce": 55_000_000.0,
+        "participation": 0.65, "workforce": 55_000_000.0, "urban_ratio": 0.75,
         # politics
         "stability": 0.60, "trust": 0.55, "corruption": 0.30, "tension": 0.35,
         # social
         "health_q": 0.60, "edu_q": 0.55, "literacy": 0.85,
         "poverty": 0.15, "gini": 0.38, "social_safety": 0.60,
+        # سکونتگاه‌ها (تعمیق فاز B: بازخورد ظرفیت)
+        "urban_pop": 85_000_000.0 * 0.75, "cities_large": 50, "cities_medium": 200,
+        "cities_small": 350, "density": 1700.0, "crowding": 0.16,
+        "service_access": 0.70, "housing_quality": 0.60,
         # ثابت‌های کند (در افق ۱۰ساله تقریباً ایستا)
         "skill_avg": 0.55, "skill_match": 0.60, "infra_q": 0.55,
         "infra_cap": 0.60, "tech_ind": 0.20, "tech_dig": 0.20,
@@ -147,6 +151,18 @@ def step_day(s):
     s["happiness"] = s["happiness"] * 0.95 + clamp(h_target, 0.05, 0.95) * 0.05
     s["satisfaction"] = s["happiness"] * 0.9 + s["trust"] * 0.1
 
+    # ── settlements_system (مهاجرت با بازخورد ظرفیت تراکم) ──
+    area = s["cities_large"] * 250.0 + s["cities_medium"] * 80.0 + s["cities_small"] * 25.0
+    d_target = 7000.0 + s["housing_quality"] * 6000.0
+    s["crowding"] = clamp((s["urban_pop"] / max(area, 1.0)) / d_target, 0.0, 1.5)
+    capacity_factor = clamp(1.6 - s["crowding"], 0.15, 1.6)
+    rural_stay = min((0.40 + 0.25 + 0.25 + 0.20) * 0.10, 0.45)
+    attr = ((gdp_pc / 5000.0) * 0.3 + s["infra_q"] * 0.3 + s["service_access"] * 0.2 + 0.2) * (1.0 - rural_stay) * capacity_factor
+    s["urban_pop"] = clamp(s["urban_pop"] + s["pop_total"] * 0.012 / 365.0 * attr,
+                           s["pop_total"] * 0.05, s["pop_total"] * 0.90)
+    s["urban_ratio"] = clamp(s["urban_pop"] / s["pop_total"], 0.0, 0.90)
+    s["density"] = s["urban_pop"] / max(area, 1.0)
+
     # ── politics_system ──
     econ_effect = ((-0.1 if s["unemployment"] > 0.12 else 0.0) + (-0.1 if s["inflation"] > 0.12 else 0.0)
                    + (-0.05 if mobil > 0 else 0.0))
@@ -233,6 +249,9 @@ def check_bounds(s, hist):
         ("ثبات نهایی (۰٫۳ تا ۰٫۹۵)", 0.30 <= s["stability"] <= 0.95),
         ("کیفیت سلامت بالای کف بحران (≥۰٫۴)", s["health_q"] >= 0.40),
         ("فقر نهایی زیر ۳۵٪", s["poverty"] <= 0.35),
+        ("نسبت شهری معقول (۵۰٪ تا ۹۰٪)", 0.50 <= s["urban_ratio"] <= 0.90),
+        ("تراکم شهری مهارشده (<۱۶k نفر/km² — بازخورد ظرفیت کار می‌کند)", s["density"] < 16000),
+        ("crowding نهایی زیر ۱٫۳۵", s["crowding"] < 1.35),
         ("GDP سرانه ۱۰ساله در محدودهٔ واقعی (۰٫۹× تا ۱٫۶×)", 0.9 <= gdp_pc_f / gdp_pc0 <= 1.6),
     ]
     # پایداری مسیر: تورم در هیچ سالی ابرتورم نشود؛ شادی زیر آستانهٔ شورش نیاید
