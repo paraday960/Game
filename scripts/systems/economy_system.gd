@@ -182,6 +182,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# کانال هزینه اقدامات بازیکن و برنامه‌های مدیران — دقیقاً یک‌بار مصرف و صفر می‌شود
 	spending += float(econ.get("extra_spending_daily", 0.0))
 	econ["extra_spending_daily"] = 0.0
+	# کانال هزینهٔ سیاست‌های فعال (بازرسی ۱۴۰۵): نرخ ماهانه که policy_manager انتشار
+	# می‌دهد؛ صفر نمی‌شود چون نرخِ پایدار است، نه انباشتگر یک‌بارمصرف. منفی = صرفه‌جویی.
+	spending += float(econ.get("policy_spending_monthly", 0.0))
 	econ["government_spending"] = spending
 	econ["budget_allocations"] = budget_alloc
 

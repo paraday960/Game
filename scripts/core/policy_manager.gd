@@ -122,11 +122,21 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	var max_capital = float(BalanceConfig.get_value("politics.policy_capital_max", 5.0))
 	var regen = float(BalanceConfig.get_value("politics.policy_capital_regen", 0.01))
 	policy_state["political_capital"] = min(max_capital, float(policy_state["political_capital"]) + regen)
+	var daily_cost := 0.0
 	for policy_id in policy_state["active"].keys():
 		if not policies.has(policy_id):
 			continue
+		daily_cost += float(policies[policy_id].get("daily_cost", 0.0))
 		for effect in policies[policy_id].get("effects", []):
 			_apply_effect(state, effect)
+	# کانال هزینهٔ سیاست‌ها (بازرسی ۱۴۰۵): پیش‌تر هر سیاست مستقیم روی national_debt
+	# می‌نشست و چرخهٔ بودجه/کسری/تورم را دور می‌زد؛ حالا هزینه به‌صورت «نرخ ماهانه»
+	# منتشر می‌شود و economy_system آن را در government_spending مصرف می‌کند —
+	# مالکیت یکتای خزانه حفظ می‌شود و کسری واقعی هزینهٔ سیاست را نشان می‌دهد.
+	# daily_cost می‌تواند منفی باشد (انضباط مالی = صرفه‌جویی → هزینه کمتر).
+	var econ: Dictionary = state.get("economy", {})
+	econ["policy_spending_monthly"] = daily_cost * 30.0
+	state["economy"] = econ
 	state["policies"] = policy_state
 	var events: Array = []
 	if tick > 0 and tick % 90 == 0 and not policy_state["active"].is_empty():

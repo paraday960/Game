@@ -3515,6 +3515,9 @@ func _build_policy_center():
 	var card = _card("📜 مرکز سیاست‌گذاری عمومی")
 	_bar(card, "سرمایه سیاسی", capital / max(float(BalanceConfig.get_value("politics.policy_capital_max", 5.0)), 1.0))
 	_row(card, "سیاست‌های فعال", PersianFormatter.to_persian_digits(str(active.size())))
+	# هزینهٔ ماهانهٔ سیاست‌های فعال — از کانال بودجه (بازرسی ۱۴۰۵: قبلاً مستقیم به بدهی می‌رفت)
+	var policy_monthly: float = float(GameState.state.get("economy", {}).get("policy_spending_monthly", 0.0))
+	_row(card, "هزینهٔ ماهانهٔ سیاست‌ها", PersianFormatter.format_money(policy_monthly), _color_for(0.5 - clampf(policy_monthly / 2_000_000_000.0, -0.5, 0.5)))
 	var hint = Label.new()
 	hint.text = "سیاست‌ها هر روز اثر دارند، سرمایه سیاسی مصرف می‌کنند و با لغو متوقف می‌شوند. راهبردهای متعارض هم‌زمان فعال نمی‌شوند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -3531,6 +3534,11 @@ func _build_policy_center():
 		row.add_child(info)
 		var title = Label.new()
 		title.text = "%s %s — %s" % ["✅" if enabled else "◻️", definition.get("name_fa", policy_id), definition.get("category_fa", "")]
+		var pol_cost: float = float(definition.get("daily_cost", 0.0)) * 30.0
+		if pol_cost != 0.0:
+			title.text += "  ·  هزینه: %s/ماه" % PersianFormatter.format_money(abs(pol_cost))
+			if pol_cost < 0.0:
+				title.text = title.text.replace("هزینه:", "صرفه‌جویی:")
 		title.add_theme_font_size_override("font_size", 16)
 		title.modulate = Color(0.45, 1.0, 0.6) if enabled else Color.WHITE
 		info.add_child(title)

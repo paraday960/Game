@@ -73,7 +73,30 @@ if bad_paths:
 else:
     print("✅ هر %d مسیر اثر رجیستری به کلید واقعی state اشاره می‌کند" % len(reg_paths))
 
-# به‌روزرسانی خودکار این تست با ویرایش دستی policies.json سازگار است؛ فقط قرارداد بالا مهم است.
+# ── کانال هزینهٔ سیاست‌ها (بازرسی ۱۴۰۵) ────────────────────────────────
+# قرارداد منفی: هیچ اثری نباید مستقیم روی economy.national_debt بنشیند — هزینهٔ
+# سیاست باید از کانال بودجه (policy_spending_monthly) عبور کند تا کسری واقعی نشان دهد.
+for pol in registry.get("policies", []):
+    for eff in pol.get("effects", []):
+        if str(eff.get("path", "")) == "economy.national_debt":
+            fail.append("اثر دورزنندهٔ بودجه در سیاست %s: ممانعت از national_debt مستقیم" % pol.get("id"))
+    if "daily_cost" not in pol:
+        fail.append("سیاست بدون daily_cost: %s" % pol.get("id"))
+    elif abs(float(pol.get("daily_cost", 0.0))) > 25_000_000:
+        fail.append("daily_cost غیرواقعی در %s" % pol.get("id"))
+if not any("national_debt" in str(e.get("path", "")) for pol in registry.get("policies", []) for e in pol.get("effects", [])):
+    print("✅ هیچ سیاستی مستقیم به بدهی نمی‌ریزد (کانال بودجه یکتا)")
+pm = io.open("scripts/core/policy_manager.gd", encoding="utf-8").read()
+if '"policy_spending_monthly"' in pm and "daily_cost" in pm:
+    print("✅ policy_manager نرخ ماهانهٔ هزینهٔ سیاست‌ها را منتشر می‌کند")
+else:
+    fail.append("policy_manager دیگر policy_spending_monthly منتشر نمی‌کند")
+es = io.open("scripts/systems/economy_system.gd", encoding="utf-8").read()
+if '"policy_spending_monthly"' in es:
+    print("✅ economy_system هزینهٔ سیاست‌ها را در بودجه مصرف می‌کند")
+else:
+    fail.append("economy_system کانال policy_spending_monthly را مصرف نمی‌کند")
+
 if fail:
     print("\n❌ شکست قرارداد زنجیرهٔ AI→سیاست:")
     for x in fail:
