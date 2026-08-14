@@ -29,6 +29,14 @@ WHITELIST = {
     "last_sample_tick",  # مسیر مهاجرت اسکیمای قدیمی در analytics_manager (خوانده→erase می‌شود)
     "last_pension",      # مهاجرت‌یافته به welfare_policy.last_pension (بازرسی latch)
 }
+# دفترچهٔ زمانی صرف (ledger): «آخرین رویداد» فقط برای نمایش/روایت است، گارد ندارد.
+# هر مورد جدید باید در همین‌جا با دلیل ثبت شود؛ خانوادهٔ latch واقعی (بازرسی ۱۴۰۵)
+# سیم‌کشی شد: last_election (کول‌داون انتخابات زودهنگام)، last_investment_tick
+# (کول‌داون طرح شهرداری)، last_strike (مهار ریسک اعتصاب ۶نوبته).
+LEDGER_WHITELIST = {
+    "last_tick",        # مهر زمانی دفتری مدیران سیاست (aerospace/aviation/…) — فقط روایت
+    "last_unlocks",     # دفترچهٔ بازشدن پیشرفت‌ها (progression/save) — فقط روایت
+}
 
 files = sorted(glob.glob("scripts/**/*.gd", recursive=True))
 stat = collections.defaultdict(lambda: {"w": [], "r": [], "init": []})
@@ -79,6 +87,16 @@ for key in sorted(stat):
     if stat[key]["init"] and not stat[key]["w"] and not stat[key]["r"]:
         loc = stat[key]["init"][0]
         FAIL.append("R3 latch یتیم «%s» در %s:%d — فقط مقدار اولیه دارد؛ یا حذف یا به‌کار ببرید یا فهرست سفید با توجیه" % (key, loc[0], loc[1]))
+
+# R4: نوشتهٔ واقعی ولی بدون هیچ گارد/خوانندهٔ last_* (latch یتیم — خانوادهٔ کشف‌شدهٔ
+# بازرسی ۱۴۰۵: last_election/last_investment_tick/last_strike؛ last_operation_tick
+# به دلیل نبود هیچ نویسنده‌ای حذف شد). دفترچهٔ روایت در LEDGER_WHITELIST.
+for key in sorted(stat):
+    if key in WHITELIST or key in LEDGER_WHITELIST:
+        continue
+    if stat[key]["w"] and not stat[key]["r"]:
+        loc = stat[key]["w"][0]
+        FAIL.append("R4 latch یتیم «%s» — در %s:%d نوشته می‌شود ولی هیچ گارد/خواننده‌ای ندارد" % (key, loc[0], loc[1]))
 
 if FAIL:
     print("❌ بازرسی latch/cooldown شکست خورد:")

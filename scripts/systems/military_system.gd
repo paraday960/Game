@@ -331,7 +331,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	operations["defensive_operations"] = operations.get("defensive_operations", []) # تدافعی: area_defense, mobile_defense, defense_in_depth, retrograde, delay
 	operations["special_operations"] = operations.get("special_operations", []) # ویژه: raid, sabotage, decapitation, hostage_rescue, psyops
 	operations["strategic_operations"] = operations.get("strategic_operations", []) # راهبردی: strategic_bombing, SEAD, interdiction, blockade, nuclear_deterrence
-	operations["last_operation_tick"] = operations.get("last_operation_tick", 0)
+	# latch بازرسی ۱۴۰۵: کلید last_operation_tick حذف شد — init-only بدون هیچ
+	# نویسنده‌ای در هیچ‌کجا (کول‌داون مرده بود؛ scaffolding توصیفی نباید latch بنماید)
 
 	# ==================== ۹) تلفات و پزشکی - واقعی ====================
 	var casualties = mil.get("casualties_detail", {})

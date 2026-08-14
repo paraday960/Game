@@ -51,6 +51,10 @@ func apply_action(state: Dictionary, action: String, turn: int) -> Dictionary:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure_state(state)
 	var municipal: Dictionary = state["municipal_services"]
+	# latch بازرسی ۱۴۰۵: last_investment_tick از کلید نوشته‌بی‌خوان به کول‌داون واقعی بدل شد —
+	# شهرداری حداکثر هر ۲ نوبت یک‌بار طرح سرمایه‌گذاری جدید شروع می‌کند (ظرفیت اجرای واقعی)
+	if turn - int(municipal.get("last_investment_tick", -99)) < 2:
+		return {"success": false, "reason": "شهرداری در میانهٔ اجرای طرح قبلی است؛ طرح جدید نوبت بعد", "state": state, "events": []}
 	var gdp = max(float(state.get("economy", {}).get("gdp", 1.0)), 1.0)
 	var cost = 0.0
 	var message = ""

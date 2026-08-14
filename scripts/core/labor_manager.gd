@@ -47,6 +47,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		"wage_control":
 			risk += 0.10
 	risk += unions_power * 0.15
+	# latch بازرسی ۱۴۰۵: last_strike از کلید نوشته‌بی‌خوان به مهار واقعی بدل شد —
+	# خستگی پس از اعتصاب: تا ۶ نوبت پس از اعتصاب قبلی، ریسک اعتصاب تازه سقف ۰٫۴۵ دارد
+	if turn - int(lab.get("last_strike", -99)) < 6:
+		risk = minf(risk, 0.45)
 	lab["strike_risk"] = clampf(risk, 0.05, 0.95)
 
 	# اثر سیاست دستمزدی

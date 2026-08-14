@@ -95,6 +95,10 @@ func hold_election(state: Dictionary, turn: int) -> Dictionary:
 	var ep: Dictionary = state["election_policy"]
 	if int(ep.get("next_election_turn", 48)) > 1:
 		return {"success": false, "reason": "هنوز زمان انتخابات فرا نرسیده است", "state": state, "events": []}
+	# latch بازرسی ۱۴۰۵: last_election از کلید نوشته‌بی‌خوان به کول‌داون واقعی بدل شد —
+	# انتخابات زودهنگام حداقل یک سال پس از دور قبلی ممکن است (پایداری نهادها)
+	if turn - int(ep.get("last_election", -99)) < 12:
+		return {"success": false, "reason": "انتخابات زودهنگام حداقل یک سال پس از دور قبلی ممکن است", "state": state, "events": []}
 	var fairness := float(ep.get("fairness", 0.55))
 	var turnout := float(ep.get("turnout", 0.60))
 	var legitimacy := clampf(fairness * 0.5 + turnout * 0.3 + 0.2, 0.1, 0.98)
