@@ -138,6 +138,9 @@ for chain in chains:
         for key in ("on_enter_effects", "persist_effects", "resolve_effects"):
             for eff in stage.get(key, []):
                 check_effect(eff, sw)
+                # تعادل: ضرب باید min/max داشته باشد تا از کنترل خارج نشود (دور سیزدهم)
+                if eff.get("op") == "mul" and ("min" not in eff or "max" not in eff):
+                    fail.append("%s: mul بدون min/max (خطر خروج از محدوده): %s" % (sw, eff.get("path")))
 
 # ── دترمینیسم رجیستری ───────────────────────────────────────────────────
 raw = io.open("data/crisis_chains.json", encoding="utf-8").read()

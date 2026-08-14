@@ -114,13 +114,15 @@
               "path": "central_bank.exchange_rate",
               "op": "mul",
               "value": 1.08,
-              "min": 0.01
+              "min": 0.2,
+              "max": 5.0
             },
             {
               "path": "economy.foreign_reserves",
               "op": "mul",
               "value": 0.97,
-              "min": 0.0
+              "min": 0.0,
+              "max": 1000000000000000.0
             },
             {
               "path": "shadow.size",
@@ -225,13 +227,15 @@
               "path": "trade.balance",
               "op": "mul",
               "value": 0.97,
-              "min": 0.0
+              "min": -1000000000000000.0,
+              "max": 1000000000000000.0
             },
             {
               "path": "economy.foreign_reserves",
               "op": "mul",
               "value": 0.98,
-              "min": 0.0
+              "min": 0.0,
+              "max": 1000000000000000.0
             }
           ],
           "persist_effects": [
@@ -239,7 +243,8 @@
               "path": "trade.balance",
               "op": "mul",
               "value": 0.998,
-              "min": 0.0
+              "min": -1000000000000000.0,
+              "max": 1000000000000000.0
             },
             {
               "path": "stock_market.investor_confidence",
@@ -259,7 +264,8 @@
               "path": "central_bank.exchange_rate",
               "op": "mul",
               "value": 1.12,
-              "min": 0.01
+              "min": 0.2,
+              "max": 5.0
             },
             {
               "path": "commodities.prices.نفت",
@@ -333,7 +339,8 @@
               "path": "central_bank.exchange_rate",
               "op": "mul",
               "value": 0.92,
-              "min": 0.01
+              "min": 0.2,
+              "max": 5.0
             },
             {
               "path": "shadow.size",
@@ -360,7 +367,8 @@
             "path": "trade.balance",
             "op": "mul",
             "value": 0.9992,
-            "min": 0.0
+            "min": -1000000000000000.0,
+            "max": 1000000000000000.0
           }
         ]
       }
@@ -604,7 +612,8 @@
               "path": "economy.foreign_reserves",
               "op": "mul",
               "value": 0.97,
-              "min": 0.0
+              "min": 0.0,
+              "max": 1000000000000000.0
             },
             {
               "path": "central_bank.interest_rate",
@@ -891,7 +900,8 @@
               "path": "trade.balance",
               "op": "mul",
               "value": 0.98,
-              "min": 0.0
+              "min": -1000000000000000.0,
+              "max": 1000000000000000.0
             }
           ],
           "persist_effects": [
@@ -913,7 +923,8 @@
               "path": "resources.inventory.نفت",
               "op": "mul",
               "value": 0.94,
-              "min": 0.0
+              "min": 0.0,
+              "max": 150.0
             },
             {
               "path": "transport_detail.logistics_efficiency",
@@ -979,7 +990,8 @@
               "path": "resources.inventory.نفت",
               "op": "mul",
               "value": 1.05,
-              "min": 0.0
+              "min": 0.0,
+              "max": 150.0
             }
           ]
         }
@@ -1200,7 +1212,8 @@
               "path": "economy.policy_costs.فشار صندوق بازنشستگی",
               "op": "mul",
               "value": 1.1,
-              "min": 0.0
+              "min": 0.0,
+              "max": 1000000000000.0
             },
             {
               "path": "welfare.pension_pressure_structural",
@@ -1235,7 +1248,8 @@
               "path": "population.workforce",
               "op": "mul",
               "value": 0.985,
-              "min": 0.0
+              "min": 1.0,
+              "max": 1000000000.0
             },
             {
               "path": "economy.unemployment",
@@ -1281,7 +1295,8 @@
               "path": "economy.policy_costs.فشار صندوق بازنشستگی",
               "op": "mul",
               "value": 0.92,
-              "min": 0.0
+              "min": 0.0,
+              "max": 1000000000000.0
             },
             {
               "path": "politics.trust",
@@ -1354,7 +1369,8 @@
               "path": "economy.foreign_reserves",
               "op": "mul",
               "value": 0.98,
-              "min": 0.0
+              "min": 0.0,
+              "max": 1000000000000000.0
             }
           ],
           "persist_effects": [
@@ -1390,7 +1406,8 @@
               "path": "central_bank.exchange_rate",
               "op": "mul",
               "value": 1.05,
-              "min": 0.01
+              "min": 0.2,
+              "max": 5.0
             }
           ],
           "persist_effects": [
@@ -1443,7 +1460,8 @@
               "path": "central_bank.exchange_rate",
               "op": "mul",
               "value": 0.96,
-              "min": 0.01
+              "min": 0.2,
+              "max": 5.0
             }
           ]
         }
