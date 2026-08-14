@@ -42,9 +42,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if sanctions > 0:
 		supply = clampf(supply - sanctions * 0.01, 0.05, 1.0)
 		tp["supply_security"] = supply
-	# تنوع صادرات: صنعت صادراتی رشد
-	if diversity > 0.5:
-		econ["gdp"] = float(econ.get("gdp", 1.0)) * 1.001
+	# تنوع صادرات: صنعت صادراتی رشد — ممیزی GDP (۱۴۰۵، دور دهم): ×۱٫۰۰۱ ماهانه با
+	# گیتِ شرطِ ساختاریِ پایدار (diversity > ۰٫۵) دریفت رشد مداومِ پنهانِ بدون سقف
+	# بود (+۱٫۲٪/سال تا بی‌نهایت — طبقه‌بند گیتِ گذرا آن را با رویداد اشتباه می‌گرفت).
+	# مهاجرت به کانال مالک-یکتای sector_boosts: همان نرخ، حالا سقف‌دار و دیده‌شونده.
+	var tp_boosts: Dictionary = econ.get("sector_boosts", {})
+	tp_boosts["تنوع صادراتی"] = 0.012 if diversity > 0.5 else 0.0
+	econ["sector_boosts"] = tp_boosts
 	state["trade_policy"] = tp
 	state["economy"] = econ
 	state["trade"] = trade

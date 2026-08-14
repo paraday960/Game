@@ -172,6 +172,27 @@ def main():
     check("C5b) همهٔ نویسه‌های باقی‌ماندهٔ GDP گیت شرطی/شانسی دارند (بدون دریفت مداوم)",
           not ungated, "بدون گیت: %s" % ", ".join(ungated))
 
+    # ── C5c: گیت سخت‌گیرانهٔ فایل‌های بازبینی‌شده (درس دور دهم بازرسی) ──
+    # سایت «تنوع صادراتی» trade_policy گیت `if diversity > 0.5` داشت: شرطِ
+    # ساختاریِ پایدار و همیشه‌روشن که طبقه‌بند پنجره‌ای C5b آن را «رویداد گذرا»
+    # می‌خواند ⇒ دریفت رشد پنهان +۱٫۲٪/سال تا بی‌نهایت. این رجیستری برای فایل‌های
+    # بازبینی‌شده توکن گذرای شانسی اجباری می‌خواهد تا گیتِ ساختاری نقاب به چهره
+    # نزند؛ فایل تازه فقط با بازبینی دستی و توکن صریح وارد می‌شود.
+    STRICT_GATE = {
+        "scripts/core/trade_policy_manager.gd": r"Deterministic\.chance\(",
+    }
+    for sf, token in sorted(STRICT_GATE.items()):
+        sf_lines = read(os.path.join(ROOT, sf)).splitlines()
+        bad_strict = []
+        for n, line in collect_write_sites(os.path.join(ROOT, sf)):
+            if is_convergent_level_site(sf, line):
+                continue
+            ctx = "\n".join(sf_lines[max(0, n - 5):n])
+            if not re.search(token, ctx):
+                bad_strict.append("%s:%d" % (sf, n))
+        check("C5c) نویسه‌های باقی‌ماندهٔ %s گیتِ گذرای شانسیِ سخت‌گیرانه دارند" % sf,
+              not bad_strict, "ساختاری/نامطمئن: %s" % ", ".join(bad_strict))
+
     # ── C8: نمایش کانال‌ها در UI (بازرسی ۱۴۰۵ج) ─────────────────────────
     # کانال‌های GDP و ورودی ذخایر برای بازیکن دیده می‌شوند — در غیر این صورت
     # سیم‌کشی مدل «جعبهٔ سیاه» می‌ماند و قراردادِ نمایش زنجیره‌اثر نقض است.

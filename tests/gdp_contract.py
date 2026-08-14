@@ -76,6 +76,8 @@ MIGRATED = {
     "scripts/core/demographic_manager.gd": ["پنجرهٔ جمعیت"],
     "scripts/core/diaspora_manager.gd": ["حواله‌های دیاسپورا"],
     "scripts/core/labor_manager.gd": ["هزینهٔ حداقل دستمزد"],
+    # دور دهم: تنوع صادراتی از ×۱٫۰۰۱ ماهانهٔ پنهان (گیتِ شرطِ ساختاری پایدار)
+    "scripts/core/trade_policy_manager.gd": ["تنوع صادراتی"],
     "scripts/systems/military_system.gd": ["هزینهٔ جنگ (فرسایش)"],
     "scripts/systems/interdependency_system.gd": ["ریسک آبشاری شبکه"],
     "scripts/systems/people_system.gd": ["بهره‌وری انسانی"],
@@ -207,7 +209,8 @@ BUDGET = {
     "scripts/core/dilemma_manager.gd": 2,          # پیامد رویداد انتخابی گذرا
     "scripts/core/retail_manager.gd": 1,           # رونق مصرف (رویداد شانسی)
     "scripts/core/migration_manager.gd": 1,        # سود مهاجرتی (رویداد شرطی)
-    "scripts/core/trade_policy_manager.gd": 2,     # ضربهٔ تحریم/توافق (گذرا)
+    # دور دهم: سایت دوم (تنوع صادراتی) گیتِ ساختاریِ پایدار داشت، نه گذرا → کانال
+    "scripts/core/trade_policy_manager.gd": 1,     # شوک زنجیرهٔ تأمین (شانسی)
     "scripts/core/faction_manager.gd": 1,          # آشوب داخلی گذرا
     "scripts/core/labor_manager.gd": 1,            # اعتصاب سراسری (رویداد شانسی)
     "scripts/core/demographic_manager.gd": 0,
