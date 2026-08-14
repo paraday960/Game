@@ -70,6 +70,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if sec < 0.30 and Deterministic.chance(0.05):
+		# قحطی فقط خبر نیست: تورم، لطمه به شادی و موج فقر واقعی
+		econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + 0.006, 0.0, 1.0)
+		state["population"]["happiness"] = clampf(float(state["population"].get("happiness", 0.60)) - 0.020, 0.05, 1.0)
+		state["welfare"]["poverty"] = clampf(float(state.get("welfare", {}).get("poverty", 0.15)) + 0.010, 0.02, 0.60)
+		state["economy"] = econ
 		events.append({"type": "food_crisis", "message": "🍞 ناامنی غذایی! کمبود و گرانی نان و کالاهای اساسی برخاست"})
 	elif waste > 0.50 and Deterministic.chance(0.04):
 		events.append({"type": "food_waste", "message": "🗑️ ضایعات بالای غذا در مسیر تولید تا مصرف؛ امنیت غذایی تضعیف شد"})

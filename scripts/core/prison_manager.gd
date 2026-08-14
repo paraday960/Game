@@ -125,6 +125,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	elif recidivism < 0.20 and Deterministic.chance(0.03):
 		events.append({"type": "rehab_success", "message": "🌱 برنامه‌های بازاجتماعی‌سازی جواب داد؛ بازگشت به جرم به کمترین میزان رسید"})
 	elif prison["escapes"] > 8 and Deterministic.chance(0.04):
+		# مجرمان فراری آزادند: امنیت عمومی و اعتماد به دولت فرومی‌ریزد
+		state["security"]["public_security"] = clampf(float(state.get("security", {}).get("public_security", 0.70)) - 0.02, 0.05, 1.0)
+		state["politics"]["trust"] = clampf(float(state.get("politics", {}).get("trust", 0.55)) - 0.010, 0.05, 1.0)
 		events.append({"type": "prison_escape", "message": "🚔 فرار دسته‌جمعی از زندان؛ انتقادها از امنیت زندان‌ها بالا گرفت"})
 
 	state["prison"] = prison

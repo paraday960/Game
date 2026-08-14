@@ -45,6 +45,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		fdi["companies"] = int(fdi.get("companies", 0)) + 1
 		events.append({"type": "fdi_boom", "message": "🏢 سرمایه‌گذار بزرگ خارجی کارخانه جدید افتتاح کرد؛ هزاران شغل ایجاد شد"})
 	elif inflow < 0.08 and Deterministic.chance(0.05):
+		# خروج سرمایه یعنی تخلیه ارز و رکود سرمایه‌گذاری — اثر واقعی نه صرفاً اعلام
+		econ["foreign_reserves"] = maxf(float(econ.get("foreign_reserves", 0.0)) * 0.98, 0.0)
+		econ["private_investment"] = clampf(float(econ.get("private_investment", 0.15)) - 0.010, 0.03, 0.40)
+		state["economy"] = econ
 		events.append({"type": "fdi_flee", "message": "✈️ سرمایه‌گذاران خارجی کشور را ترک می‌کنند؛ اعتماد از دست رفته"})
 	state["fdi_policy"] = fdi
 	state["economy"] = econ

@@ -68,6 +68,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if drug_sec < 0.30 and Deterministic.chance(0.05):
+		# بیمار بدون دارو واقعاً ضربه می‌خورد: سلامت و شادی پایین می‌آید
+		state["health"]["quality"] = clampf(float(state.get("health", {}).get("quality", 0.60)) - 0.020, 0.1, 0.95)
+		state["population"]["happiness"] = clampf(float(state["population"].get("happiness", 0.60)) - 0.010, 0.05, 1.0)
 		events.append({"type": "drug_shortage", "message": "💊 کمبود دارو! بیماران و بیمارستان‌ها تحت فشار"})
 	elif local_prod > 0.65 and Deterministic.chance(0.025):
 		events.append({"type": "pharma_export", "message": "🧪 صادرات داروی داخلی رشد کرد؛ ارزآوری سلامت بالا رفت"})

@@ -72,6 +72,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if credit_gap > 0.65 and Deterministic.chance(0.05):
+		# موج تعطیلی بنگاه‌های کوچک: تولید و اشتغال واقعی ضربه می‌خورد
+		econ["gdp"] = float(econ.get("gdp", 1.0)) * 0.997
+		econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) + 0.005, 0.015, 0.40)
+		state["economy"] = econ
 		events.append({"type": "credit_crunch", "message": "💳 خشکی اعتبار بنگاه‌های کوچک را زمین‌گیر کرد؛ تعطیلی‌ها بالا رفت"})
 	elif ease > 0.70 and productivity > 0.60 and Deterministic.chance(0.03):
 		events.append({"type": "sme_boom", "message": "📈 بنگاه‌های کوچک شکوفا شدند؛ اشتغال و صادرات غیرنفتی رشد کرد"})
