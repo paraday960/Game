@@ -55,7 +55,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	hospitality["revenue"] = hospitality["revenue"] * 0.99 + revenue * 0.01
 
 	# اثر بر اقتصاد
-	econ["gdp"] += hospitality["revenue"] * 0.05 / 365.0
+	# واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): اجرای ماهانه ۲ بار ⇒ ضریب ۱۵/۳۶۵
+	econ["gdp"] += hospitality["revenue"] * 0.05 * 15.0 / 365.0
 	state["economy"] = econ
 
 	# رویدادها

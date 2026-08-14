@@ -79,7 +79,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["technology"] = tech
 
 	# اثر بر اقتصاد - بازده بلندمدت
-	econ["gdp"] += space["commercial"] * 1_000_000_000.0 / 365.0
+	# واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): سیستم ماهانه ۲ بار می‌دود؛ ضریب
+	# صحیح سهم سالانه ۱۵/۳۶۵ در هر اجراست (قبل: فقط ٪۶٫۷ مقدار طراحی‌شده).
+	econ["gdp"] += space["commercial"] * 1_000_000_000.0 * 15.0 / 365.0
 	state["economy"] = econ
 
 	# اثر بر قدرت و نفوذ

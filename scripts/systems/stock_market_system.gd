@@ -34,7 +34,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var confidence_effect = (stock["investor_confidence"] - 0.5) * 0.2
 	var stability_effect = (stability - 0.5) * 0.3
 
-	var daily_return = earnings_growth / 365.0 + interest_effect / 365.0 + confidence_effect * 0.001 + stability_effect * 0.001 + Deterministic.next_range(-0.015, 0.015)
+	# واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): اجرای هفتگی ۵ بار ⇒ فقط ترم‌های
+	# دریفت سالانه با ۶/۳۶۵ مقیاس می‌شوند؛ ضربه‌های تصادفی per-run طراحی‌شده‌اند.
+	var daily_return = (earnings_growth + interest_effect) * 6.0 / 365.0 + confidence_effect * 0.001 + stability_effect * 0.001 + Deterministic.next_range(-0.015, 0.015)
 	# نوسان
 	daily_return += Deterministic.next_range(-stock["volatility"], stock["volatility"]) * 0.1
 
@@ -73,7 +75,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		stock["listed_companies"] += 1
 
 	# اثر بر اقتصاد
-	econ["gdp"] += stock["foreign_investment"] * 0.01 / 365.0
+	# واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): اجرای هفتگی ۵ بار ⇒ ضریب ۶/۳۶۵
+	econ["gdp"] += stock["foreign_investment"] * 0.01 * 6.0 / 365.0
 	state["economy"] = econ
 
 	# رویدادها

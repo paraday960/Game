@@ -54,7 +54,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tourism["marketing"] = clamp(tourism["marketing"] + Deterministic.next_range(-0.0025, 0.0025), 0.1, 0.95)
 
 	# اثر بر اقتصاد
-	economy["gdp"] += tourism["revenue"] * 0.1 / 365.0
+	# واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): سیستم هفتگی ۵ بار در ماه می‌دود؛
+	# سهم سالانهٔ درآمد گردشگری در GDP باید با ضریب ۶/۳۶۵ در هر اجرا بیاید،
+	# نه ۱/۳۶۵ (قبل: فقط ٪۱۶ مقدار طراحی‌شده اعمال می‌شد).
+	economy["gdp"] += tourism["revenue"] * 0.1 * 6.0 / 365.0
 	state["economy"] = economy
 
 	# اشتغال گردشگری

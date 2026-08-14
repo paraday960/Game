@@ -47,8 +47,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var traffic = infra.get("capacity",0.60) # ظرفیت کم = ترافیک
 	pt["punctuality"] = clamp(pt["punctuality"]*0.98 + (1.0 - pt["fleet_age"]/15.0)*0.3*0.02 + infra_q*0.3*0.02 + (traffic)*0.2*0.02, 0.2, 0.98)
 
-	# سن ناوگان - فرسودگی
-	pt["fleet_age"] += 1.0/365.0
+	# سن ناوگان - فرسودگی — واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): سیستم ماهانه
+	# ۲ بار می‌دود؛ قبل با +۱/۳۶۵ در هر اجرا ناوگان عملاً پیر نمی‌شد (۰٫۵٪ سال در
+	# برابر ۱ سال طراحی) و نوسازی‌های −۲ سال همیشه جلو می‌افتادند؛ حالا نیم‌ماه در هر اجرا.
+	pt["fleet_age"] += 15.0/365.0
 	if tick % 180 == 0 and budget_share > 0.15:
 		pt["fleet_age"] = max(pt["fleet_age"] - 0.3, 2.0)
 		pt["buses"] += Deterministic.next_int_range(20, 80)
@@ -63,8 +65,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# تصادف - سن ناوگان و آموزش
 	pt["accident_rate"] = clamp((pt["fleet_age"]/20.0)*0.05 + (1.0 - pt["punctuality"])*0.03 + Deterministic.next_range(0.0,0.005), 0.005, 0.15)
 
-	# یارانه - تورم
-	pt["subsidy"] *= (1.0 + inflation*0.8/365.0)
+	# یارانه - تورم — واحد cadence (دور یازدهم): نیم‌ماه در هر اجرا
+	pt["subsidy"] *= (1.0 + inflation*0.8*15.0/365.0)
 
 	# رشد مترو - شهرهای بزرگ
 	if tick % 365 == 0 and pt["metro_lines"] < 10 and total_pop > 50_000_000 and Deterministic.chance(0.4):

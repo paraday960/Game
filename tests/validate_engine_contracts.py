@@ -226,6 +226,73 @@ def check_fuel_subsidy_wiring():
         FAIL.append("مدل موازی قاچاق (بازنویسی state توسط مدیر گذار) برگشته است")
 
 
+def check_cadence_units_365():
+    # بازرسی ۱۴۰۵ (دور یازدهم): قرارداد واحد «تقسیم‌بر ۳۶۵» در سیستم‌های غیرروزانه.
+    # سیستم هفتگی ۵ بار در ماه می‌دود (ضریب صحیح سالانه→هر اجرا: ۶/۳۶۵) و ماهانه
+    # ۲ بار (۱۵/۳۶۵). ۲۸ سایت پویش شد؛ ۷ سایت روشن‌اثر همین دور اصلاح شدند و
+    # بقیه (ضریب تورم/حقوق/فروش مسکن — دریفت کوچک ولی لمس‌شان = جابه‌جایی تعادل)
+    # در رجیستری «به‌تأخیرافتاده» پین شدند: تغییر بی‌سروصدا = شکست تست.
+    FIXED = {
+        "scripts/systems/tourism_system.gd":
+            'tourism["revenue"] * 0.1 * 6.0 / 365.0',
+        "scripts/systems/space_system.gd":
+            "* 1_000_000_000.0 * 15.0 / 365.0",
+        "scripts/systems/hospitality_system.gd":
+            'hospitality["revenue"] * 0.05 * 15.0 / 365.0',
+        "scripts/systems/stock_market_system.gd":
+            'stock["foreign_investment"] * 0.01 * 6.0 / 365.0',
+        "scripts/systems/heritage_system.gd":
+            '* 0.05 * 15.0 / 365.0',
+        "scripts/systems/public_transport_system.gd":
+            'pt["fleet_age"] += 15.0/365.0',
+    }
+    # ضربهٔ بازده بورس: دریفت با ۶/۳۶۵ مقیاس می‌شود، نه نویز per-run
+    STOCK_DRIFT = '(earnings_growth + interest_effect) * 6.0 / 365.0'
+    ok_s = STOCK_DRIFT in open("scripts/systems/stock_market_system.gd",
+                               encoding="utf-8").read()
+    if ok_s:
+        print("✅ بازده بورس: دریفت سالانه با ضریب ۶/۳۶۵ (نویز هفتگی دست‌نخورده)")
+    else:
+        FAIL.append("ضریب cadence بازده بورس خراب/حذف شد")
+    for f, needle in sorted(FIXED.items()):
+        if needle in open(f, encoding="utf-8").read():
+            print("✅ واحد cadence اصلاح‌شده در %s" % f.split("/")[-1])
+        else:
+            FAIL.append("سایت cadence اصلاح‌شده در %s پینش شکست: %s" % (f, needle))
+    DEFERRED = {
+        "scripts/systems/government_buildings_system.gd":
+            'gov["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)',
+        "scripts/systems/physical_system.gd":
+            '* 12.0 / 120000.0 / 365.0',
+        "scripts/systems/private_sector_system.gd":
+            'priv["investment"] *= (1.0 + priv["investment_growth"]/365.0)',
+        "scripts/systems/public_employees_system.gd":
+            'emp["salary_avg"] *= (1.0 + wage_growth / 365.0)',
+        "scripts/systems/settlements_system.gd":
+            '= total_pop * urbanization_rate / 365.0 * urban_attraction',
+        "scripts/systems/technology_system.gd":
+            'tech["research_points"] += tech["research_rate"] / 365.0',
+        "scripts/systems/urban_facilities_system.gd":
+            'urban["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)',
+        "scripts/systems/financial_services_system.gd":
+            'fin["saving_deposits"] *= (1.0 + (growth*0.5 + saving_rate*0.1)/365.0)',
+        "scripts/systems/foreign_affairs_system.gd":
+            'fa["public_diplomacy_budget"] *= (1.0 + econ.get("growth_rate",0.02)/365.0)',
+        "scripts/systems/international_orgs_system.gd":
+            'econ["aid_inflow_daily"] = float(intl.get("aid_received", 500_000_000.0)) / 365.0',
+        "scripts/systems/political_career_system.gd":
+            'career["salaries"] *= (1.0 + inflation * 0.5 / 365.0)',
+        "scripts/systems/veterans_system.gd":
+            '* retirement_rate / 365.0 * 2.0',
+    }
+    for f, needle in sorted(DEFERRED.items()):
+        if needle not in open(f, encoding="utf-8").read():
+            FAIL.append("سایت به‌تأخیرافتادهٔ cadence در %s بی‌سروصدا تغییر کرد "
+                        "(رجیستری را آگاهانه به‌روز کن): %s" % (f, needle))
+    print("ℹ️ %d سایت cadence به‌تأخیرافتاده در رجیستری پین شد (هر تغییر = بازبینی)"
+          % len(DEFERRED))
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
@@ -236,6 +303,7 @@ check_resource_revenue_basis()
 check_strategic_reserves_wiring()
 check_pension_fund_wiring()
 check_fuel_subsidy_wiring()
+check_cadence_units_365()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

@@ -70,7 +70,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["culture"] = culture
 
 	# اثر بر اقتصاد - گردشگری فرهنگی
-	economy["gdp"] += heritage["cultural_tourism"] * tourism.get("revenue",5_000_000_000.0) * 0.05 / 365.0
+	# واحد cadence (بازرسی ۱۴۰۵ — دور یازدهم): اجرای ماهانه ۲ بار ⇒ ضریب ۱۵/۳۶۵
+	economy["gdp"] += heritage["cultural_tourism"] * tourism.get("revenue",5_000_000_000.0) * 0.05 * 15.0 / 365.0
 	state["economy"] = economy
 
 	# حلقه: حفاظت ← گردشگری ← درآمد ← حفاظت
