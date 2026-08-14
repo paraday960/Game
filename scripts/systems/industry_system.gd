@@ -90,7 +90,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type": "industrial_park_opened", "message": "پارک صنعتی جدید افتتاح شد - افزایش ظرفیت"})
 
 	# حلقه بازخورد: صنعت ← درآمد ← سرمایه ← صنعت
-	econ["gdp"] *= (1.0 + industry["output"] / 10000.0 * 0.001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم فقط از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ سیستم روزانه ≈ ×۳۶۰)
+	var ind_boosts: Dictionary = econ.get("sector_boosts", {})
+	ind_boosts["بازخورد صنعتی"] = float(industry["output"]) / 10000.0 * 0.001 * 360.0
+	econ["sector_boosts"] = ind_boosts
 	state["economy"] = econ
 
 	# رویدادها

@@ -144,13 +144,24 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var smart_sanction = incoming_sanctions * 0.6 # ۶۰٪ هوشمند
 		var comprehensive = incoming_sanctions * 0.4
 		var gdp_loss = penalty*0.6 + comprehensive*0.04
-		econ["gdp"] *= (1.0 - gdp_loss/365.0)
 		econ["growth_rate"] = float(econ.get("growth_rate",0.02)) - gdp_loss*0.001
 		# دور زدن تحریم - قاچاق، واسطه
 		var evasion = state.get("private_sector",{}).get("informal_economy",0.25)*0.3 + intel.get("sigint",0.50)*0.1
-		econ["gdp"] *= (1.0 + evasion*0.01/365.0)
+		# ممیزی GDP (۱۴۰۵): فشار تحریم و اثر دورزدن هر دو «اثر مداوم»‌اند و از کانال
+		# مالک-یکتای sector_boosts می‌گذرند (نرخ سالانه — همان مقادیر قبلی که روزانه اعمال می‌شد)
+		var dip_boosts: Dictionary = econ.get("sector_boosts", {})
+		dip_boosts["فشار تحریم‌ها"] = -gdp_loss
+		dip_boosts["دور زدن تحریم"] = evasion * 0.01
+		econ["sector_boosts"] = dip_boosts
 		if tick % 90 == 0:
 			events.append({"type":"sanction_effect","count": incoming_sanctions, "gdp_loss": gdp_loss, "evasion": evasion, "message":"%d تحریم فعال - تلاش برای دور زدن %.0f٪" % [incoming_sanctions, evasion*100.0]})
+	else:
+		# تحریم فعالی نیست → اثر مداوم به خواب می‌رود (بازنویسی، نه انباشت)
+		var dip_boosts_idle: Dictionary = econ.get("sector_boosts", {})
+		if dip_boosts_idle.has("فشار تحریم‌ها") or dip_boosts_idle.has("دور زدن تحریم"):
+			dip_boosts_idle["فشار تحریم‌ها"] = 0.0
+			dip_boosts_idle["دور زدن تحریم"] = 0.0
+			econ["sector_boosts"] = dip_boosts_idle
 
 	# تحریم‌های ما علیه دیگران - اثر بر صادرات
 	if outgoing_sanctions > 0 and tick % 60 == 0:

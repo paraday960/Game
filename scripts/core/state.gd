@@ -77,8 +77,11 @@ func init_default_state():
 			"gdp_per_capita": 5000.0,
 				"growth_rate": float(BalanceConfig.get_value("economy.growth_base", 0.02)),
 				"inflation": float(BalanceConfig.get_value("economy.inflation_initial", 0.08)),
-				"unemployment": float(BalanceConfig.get_value("economy.unemployment_initial", 0.08)),
-				"tax_rate": float(BalanceConfig.get_value("economy.tax_base", 0.20)),
+			"unemployment": float(BalanceConfig.get_value("economy.unemployment_initial", 0.08)),
+			"tax_rate": float(BalanceConfig.get_value("economy.tax_base", 0.20)),
+			# کانال مالک-یکتای سطح GDP: نرخ سالانهٔ سهم هر بخش (بازنویسی، نه انباشت)
+			"sector_boosts": {},
+			"sector_boosts_total": 0.0,
 			"government_revenue": 100_000_000_000.0,
 			"foreign_reserves": 60_000_000_000.0,
 			"celebration_tracking": {"last_stage": "دولت نوپا", "last_achievement_count": 0, "last_high_score": 0.0, "last_pop_mark": 0, "last_gdp_mark": 0},

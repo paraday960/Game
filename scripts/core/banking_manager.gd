@@ -58,8 +58,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 			bk["crisis"] = {}
 
 	# اعتبار بانکی به اقتصاد: سلامت بانک → رشد
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲).
+	# ضربه‌های گذرا (فروکش بحران ۰٫۹۹۵ و تزریق نجات ۱٫۰۰۵ بالا) رویدادی‌اند و مستثنا.
 	econ["credit_available"] = bank_health
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + (bank_health - 0.6) * 0.001)
+	var bk_boosts: Dictionary = econ.get("sector_boosts", {})
+	bk_boosts["اعتبار بانکی"] = (bank_health - 0.6) * 0.001 * 12.0
+	econ["sector_boosts"] = bk_boosts
 	state["banking"] = bk
 	state["economy"] = econ
 	return {"state": state, "events": events}

@@ -29,6 +29,8 @@ def initial_state():
     return {
         # economy
         "gdp": 500_000_000_000.0, "growth_rate": 0.02, "real_growth": 0.02,
+        # کانال مالک-یکتای سطح GDP (ممیزی نویسندگان GDP — همگام با economy_system.gd)
+        "sector_boosts": {}, "sector_boosts_total": 0.0,
         "inflation": 0.08, "unemployment": 0.08, "tax_rate": 0.20,
         "national_debt": 200_000_000_000.0,
         "exports": 80e9, "imports": 70e9, "trade_balance": 10e9,
@@ -103,6 +105,11 @@ def step_day(s):
                         - pan * 0.05    # غیبت نیروی کار + تعطیلی در اوج موج (~-۵pp رشد در پیک)
                         + (CYCLE_EFFECT * 0.3 if mobil > 0 else CYCLE_EFFECT), -0.08, 0.10)
     s["gdp"] = max(s["gdp"] * (1.0 + real_growth / 365.0), 10e9)
+    # کانال مالک-یکتای GDP: جمع نرخ‌های سالانهٔ بخش‌ها با سقف تکی ۵٪ و کلی ۱۰٪
+    boost_total = clamp(sum(clamp(float(v), -0.05, 0.05) for v in s["sector_boosts"].values()),
+                        -0.10, 0.10)
+    s["gdp"] *= 1.0 + boost_total / 365.0
+    s["sector_boosts_total"] = boost_total
     gdp_pc = s["gdp"] / s["pop_total"]
     s["growth_rate"], s["real_growth"] = g_smoothed, real_growth
 
@@ -662,6 +669,43 @@ def _restore_shock(s, _saved=None):
               "shock_sanctions", "shock_energy_crisis"):
         s.pop(k, None)
 
+def run_gdp_boost_suite():
+    """سناریوی هفتم: کانال مالک-یکتای سطح GDP (sector_boosts) — اثر مداوم بخش‌ها فقط از
+    این کانال می‌گذرد؛ هر ناشر نرخ سالانهٔ خود را بازنویسی می‌کند و اقتصاد جمعِ سقف‌دار
+    را روزانه اعمال می‌کند (همگام با الگوی کانال‌های بودجه/تجارت در موتور)."""
+    print("═══ سناریوی کانال GDP: نرخ‌های سالانهٔ بخش‌ها، بازنویسی ناشران و سقف کلی ═══")
+    s = initial_state()
+    for _ in range(365):
+        step_day(s)
+    base_g = s["gdp"]
+    s = initial_state()
+    s["sector_boosts"] = {"آزمون مثبت": 0.03}
+    for _ in range(365):
+        step_day(s)
+    pos_g = s["gdp"]
+    s = initial_state()
+    s["sector_boosts"] = {"آزمون منفی": -0.04}
+    for _ in range(365):
+        step_day(s)
+    neg_g = s["gdp"]
+    s = initial_state()
+    s["sector_boosts"] = {"الف": 0.08, "ب": 0.09, "ج": 0.06}   # هر کدام بالاتر از سقف تکی
+    for _ in range(365):
+        step_day(s)
+    cap_g, cap_t = s["gdp"], s["sector_boosts_total"]
+    checks = [
+        ("کانال مثبت ۳٪/سال: GDP ≈ ۳٪ بالاتر از پایه", 1.020 < pos_g / base_g < 1.040),
+        ("کانال منفی ۴٪/سال: GDP ≈ ۴٪ پایین‌تر از پایه", 0.950 < neg_g / base_g < 0.970),
+        ("سقف تکی ۵٪ و سقف کل ۱۰٪ اعمال می‌شود", abs(cap_t - 0.10) < 1e-9),
+        ("با سقف کلی، اثر سالانهٔ کانال از ۱۱٪ فراتر نمی‌رود", cap_g / base_g < 1.11),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 if __name__ == "__main__":
     print("═══ شبیه‌سازی بلندمدت — ۱۰ سال از نقطهٔ شروع پیش‌فرض (بدون اقدام بازیکن) ═══")
     s, hist = run()
@@ -679,6 +723,8 @@ if __name__ == "__main__":
     ok = run_pandemic_suite() and ok
     print()
     ok = run_shock_suite() and ok
+    print()
+    ok = run_gdp_boost_suite() and ok
     print()
     if FAIL:
         print("═══ شکست — %d نقض پایداری ═══" % len(FAIL))

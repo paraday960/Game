@@ -1,6 +1,15 @@
 extends BaseSystem
 # سیستم اقتصاد و بودجه - ۳.۱۰ - نسخه عمیق واقعی - اقتصاد جنگی، بسیج صنعتی، جیره‌بندی، بازار سیاه، بدهی جنگی، تحریم
 
+# ── کانال مالک-یکتای سطح GDP (ممیزی نویسندگان چندگانهٔ GDP، ۱۴۰۵) ──
+# تا قبل از این ممیزی، ده‌ها سیستم/مدیر هر ماه «gdp *= (۱+x)» می‌کردند؛ ضرایب روی هم
+# سوار می‌شدند («سهمِ بخش» به‌اشتباه «رشدِ ماهانهٔ کل» تلقی می‌شد — دوشماره‌ای بزرگ).
+# قرارداد: هر ناشرِ اثر *مداوم* نرخ سالانهٔ خود را در economy.sector_boosts بازنویسی
+# می‌کند (هرگز += نیست؛ بیکار = ۰٫۰) و اعمالِ روزانه فقط این‌جاست. ضربه‌های گذرای
+# رویدادی (شوک جنگ، کرش بانکی، بحران مالی…) از قاعده مستثناست.
+const SECTOR_BOOST_MAX := 0.05   # سقف نرخ سالانهٔ هر بخش (±۵٪)
+const SECTOR_BOOSTS_CAP := 0.10  # سقف جمع کانال بخش‌ها (±۱۰٪ در سال)
+
 func compute(state: Dictionary, tick: int) -> Dictionary:
 	var econ = state.get("economy", {})
 	var pop = state.get("population", {})
@@ -103,6 +112,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	var old_gdp = econ.get("gdp", 500e9)
 	econ["gdp"] *= (1.0 + real_growth / 365.0)
+	# کانال مالک-یکتا: جمع نرخ‌های سالانهٔ بخش‌ها (بازنویسی‌شده توسط ناشران) با سقف تکی/کلی
+	var boost_total: float = 0.0
+	for boost_key in econ.get("sector_boosts", {}).keys():
+		boost_total += clampf(float(econ["sector_boosts"][boost_key]), -SECTOR_BOOST_MAX, SECTOR_BOOST_MAX)
+	boost_total = clampf(boost_total, -SECTOR_BOOSTS_CAP, SECTOR_BOOSTS_CAP)
+	econ["gdp"] *= (1.0 + boost_total / 365.0)
+	econ["sector_boosts_total"] = boost_total
 	econ["gdp"] = max(econ["gdp"], 10_000_000_000.0)
 	econ["gdp_per_capita"] = econ["gdp"] / max(pop.get("total",85_000_000.0), 1.0)
 	econ["growth_rate"] = growth_smoothed

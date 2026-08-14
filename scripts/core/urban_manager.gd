@@ -41,7 +41,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	env["air_quality"] = clampf(float(env.get("air_quality", 0.5)) - (pollution - 0.3) * 0.02, 0.05, 1.0)
 	state["environment"] = env
 	# بهره‌وری: حمل‌ونقل خوب و شهر هوشمند
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + transit * 0.001 + smart * 0.0015 - traffic * 0.001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var ur_boosts: Dictionary = econ.get("sector_boosts", {})
+	ur_boosts["توسعه شهری"] = (transit * 0.001 + smart * 0.0015 - traffic * 0.001) * 12.0
+	econ["sector_boosts"] = ur_boosts
 	state["urban_policy"] = up
 	state["economy"] = econ
 	return {"state": state, "events": events}

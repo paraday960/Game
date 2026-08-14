@@ -65,8 +65,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# مصرف سوخت
 	transport["fuel_consumption"] = transport["roads_km"] * 0.01 + transport["traffic_congestion"] * 20.0 + cars * 0.001
 
-	# اثر بر اقتصاد
-	econ["gdp"] *= (1.0 + transport["logistics_efficiency"] * 0.0001)
+	# اثر بر اقتصاد — ممیزی GDP (۱۴۰۵): از کانال مالک-یکتای sector_boosts
+	# (نرخ سالانه؛ سیستم هفتگی ۵ بار در ماه ≈ ×۶۰)
+	var tr_boosts: Dictionary = econ.get("sector_boosts", {})
+	tr_boosts["لجستیک حمل‌ونقل"] = float(transport["logistics_efficiency"]) * 0.0001 * 60.0
+	econ["sector_boosts"] = tr_boosts
 	state["economy"] = econ
 
 	# اثر بر محیط - آلودگی

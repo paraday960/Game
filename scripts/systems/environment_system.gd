@@ -87,9 +87,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	pop["happiness"] = clamp(pop.get("happiness",0.6) + (env["air_quality"] - 0.5) * 0.0005, 0.05, 0.95)
 	state["population"] = pop
 
-	if env["pollution"] > 0.7:
-		econ["gdp"] *= (1.0 - 0.0001)
-		state["economy"] = econ
+	# ممیزی GDP (۱۴۰۵): کشش آلودگی از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ هفتگی ≈ ×۶۰)
+	# بازنویسی هر بار (بیکار = ۰٫۰) تا با بهبود هوا کشش خودبه‌خود بخوابد
+	var env_boosts: Dictionary = econ.get("sector_boosts", {})
+	env_boosts["آلودگی زیست‌محیطی"] = -0.0001 * 60.0 if env["pollution"] > 0.7 else 0.0
+	econ["sector_boosts"] = env_boosts
+	state["economy"] = econ
 
 	# رویدادها - ۳.۲۴.۵
 	if env["air_quality"] < 0.3 and Deterministic.chance(0.015):

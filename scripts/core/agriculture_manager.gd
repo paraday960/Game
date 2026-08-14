@@ -38,7 +38,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		events.append({"type": "crop_failure", "message": "🌾 خشکسالی به کشت آسیب زد؛ تنوع پایین، خسارت را بزرگ کرد"})
 	# اثرها
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + food_shock * 0.01 - grain * 0.002, 0.0, 1.5)
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + fertilizer * 0.001 + irrigation * 0.001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم نهاده‌های کشاورزی از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var ag_boosts: Dictionary = econ.get("sector_boosts", {})
+	ag_boosts["کشاورزی"] = (fertilizer * 0.001 + irrigation * 0.001) * 12.0
+	econ["sector_boosts"] = ag_boosts
 	# آب: آبیاری هوشمند مصرف را بهینه می‌کند
 	resources["inventory"]["آب"] = clampf(water - 0.2 + irrigation * 0.5, 10.0, 100.0)
 	state["resources"] = resources

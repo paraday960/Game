@@ -27,7 +27,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# اقتصاد دیجیتال: پوشش + دولت الکترونیک + CBDC
 	var digital_gdp := coverage * 0.1 + egovernment * 0.05 + cbdc * 0.08
 	dp["digital_gdp"] = digital_gdp
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + digital_gdp * 0.01)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم دیجیتال از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var dig_boosts: Dictionary = econ.get("sector_boosts", {})
+	dig_boosts["اقتصاد دیجیتال"] = digital_gdp * 0.01 * 12.0
+	econ["sector_boosts"] = dig_boosts
 	# دولت الکترونیک فساد را می‌کاهد
 	pol["corruption"] = clampf(float(pol.get("corruption", 0.3)) - egovernment * 0.002, 0.0, 1.0)
 	# CBDC: بانکداری را شفاف می‌کند (سایه را می‌خورد) ولی حریم خصوصی را می‌آزارد

@@ -59,7 +59,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var creative_gdp := gdp * creative_share
 	cp["creative_gdp"] = creative_gdp
 	cp["jobs"] = int(250000.0 + index * 1_500_000.0 + float(cp.get("crafts", 0.0)) * 400000.0)
-	econ["gdp"] = gdp * (1.0 + creative_share * 0.25)
+	# ممیزی GDP (۱۴۰۵): «share×۰٫۲۵ ماهانه» سهمِ بخش را به‌اشتباه رشدِ ماهانهٔ کل می‌ساخت
+	# (دوشماره‌ای ≈ ۱۲٫۷٪/سال اضافی!). سهم‌دهی واقع‌بینانه از کانال مالک-یکتای sector_boosts:
+	# سهم بخش × رشد ممتاز سالانهٔ ~۱۵٪ → مشارکت ≈ share×۰٫۱۵ در سال (≈۰٫۶٪).
+	var cr_boosts: Dictionary = econ.get("sector_boosts", {})
+	cr_boosts["اقتصاد خلاق"] = creative_share * 0.15
+	econ["sector_boosts"] = cr_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - index * 0.0003, 0.02, 0.30)
 	state["economy"] = econ
 

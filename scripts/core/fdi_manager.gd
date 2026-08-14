@@ -36,7 +36,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر: FDI → سرمایه‌گذاری، اشتغال، فناوری
 	econ["foreign_investment"] = float(econ.get("foreign_investment", 1.0)) * (1.0 + inflow * 0.004)
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + inflow * 0.002)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم FDI از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var fdi_boosts: Dictionary = econ.get("sector_boosts", {})
+	fdi_boosts["سرمایه‌گذاری خارجی"] = inflow * 0.002 * 12.0
+	econ["sector_boosts"] = fdi_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - inflow * 0.0008, 0.02, 0.30)
 	# شرکت‌های خارجی → نفوذ فناوری
 	state["technology"]["spillover"] = clampf(float(state["technology"].get("spillover", 0.1)) + inflow * 0.002, 0.02, 0.5)

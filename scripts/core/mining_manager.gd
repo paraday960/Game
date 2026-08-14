@@ -51,7 +51,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	mp["raw_export_share"] = raw_share
 	var value_added := 1.0 + processing * 1.5  # ارزش افزوده فرآوری
 	var mining_gdp := gdp * 0.025 * output * value_added
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + 0.025 * output * value_added / 100.0)
+	# ممیزی GDP (۱۴۰۵): مشارکت مداوم معدن از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var min_boosts: Dictionary = econ.get("sector_boosts", {})
+	min_boosts["معدن"] = 0.025 * output * value_added / 100.0 * 12.0
+	econ["sector_boosts"] = min_boosts
 	state["economy"] = econ
 
 	# منابع معدنی: آهن/مس بیشتر، مواد صنعتی بیشتر

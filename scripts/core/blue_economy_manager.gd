@@ -51,7 +51,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# port_capacity/merchant_fleet در trade_system بخشی از «امتیاز لجستیک» هستند — ضربهٔ
 	# مستقیم سطح (نویسندهٔ سرکشِ مالکیت یکتا) حذف شد. اثر بندر کروز بر گردشگری نیز از
 	# کانال اتصال دریایی map_network → جذابیت مقصد جاری است.
-	econ["gdp"] = gdp * (1.0 + blue_share * 0.12)
+	# ممیزی GDP (۱۴۰۵): «share×۰٫۱۲ ماهانه» نیز دوشماره‌ای سهم بود (≈ ۸٫۵٪/سال اضافی)؛
+	# جایگزین: مشارکت رشد سالانه share×۰٫۱۵ از کانال مالک-یکتای sector_boosts (≈۰٫۹٪/سال).
+	var be_boosts: Dictionary = econ.get("sector_boosts", {})
+	be_boosts["اقتصاد آبی"] = blue_share * 0.15
+	econ["sector_boosts"] = be_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - port * 0.0002 - shipbuilding * 0.0002, 0.02, 0.30)
 	state["economy"] = econ
 
