@@ -69,6 +69,9 @@ for needle, label in [
     ('_commodity_growth_effect(str(country_id)', "فراخوانی در simulate_npc_month"),
     ('OIL_EXPORTERS', "لیست صادرکنندگان نفت"),
     ('wheat_price > 380.0', "اثر گرانی گندم بر کم‌درآمدها"),
+    ('func _player_crisis_weight', "تابع شاخص بحران‌زایی بازیکن"),
+    ('regional_contagion', "سرایت منطقه‌ای بحران به همسایگان"),
+    ('player_borders', "استفاده از مرزهای واقعی برای سرایت"),
 ]:
     if needle in wm:
         print("✅ world_manager: %s" % label)

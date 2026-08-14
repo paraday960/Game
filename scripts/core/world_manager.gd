@@ -3,6 +3,12 @@ extends Node
 
 const COUNTRIES_PATH = "res://data/countries.json"
 const NpcTurnManagerClass = preload("res://scripts/core/npc_turn_manager.gd")
+# صادرکنندگان خالص نفت (تقریبی، ثابت برای دترمینیسم) — عمق‌بخشی ۴
+const OIL_EXPORTERS := {
+	"SAU", "RUS", "IRN", "IRQ", "ARE", "KWT", "QAT", "VEN", "NGA", "DZA",
+	"LBY", "KAZ", "AZE", "OMN", "BHR", "GAB", "GNQ", "COG", "TCD", "TKM",
+	"BRN", "TTO", "ECU", "CAN", "NOR", "USA", "MEX", "GUY", "SSD"
+}
 const ACTIONS = [
 	"improve_relations", "trade_agreement", "end_trade_agreement",
 	"form_alliance", "leave_alliance", "sanction", "lift_sanction",
@@ -719,36 +725,29 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 		world["countries"][country_id] = runtime
 	state["world"] = world
 
-	# ── اثر قیمت کالاهای جهانی بر رشد یک کشور NPC (عمق‌بخشی ۳) ───────────
-	# صادرکنندگان خالص نفت در گرانی نفت سود می‌برند و در ریزش آن آسیب می‌بینند؛
-	# کشورهای کم‌درآمدِ وابسته به واردات غذا در گرانی گندم ضربه می‌خورند.
-	# لیست صادرکنندگان خالص نفت (تقریبی، ثابت برای دترمینیسم).
-	const OIL_EXPORTERS := {
-		"SAU", "RUS", "IRN", "IRQ", "ARE", "KWT", "QAT", "VEN", "NGA", "DZA",
-		"LBY", "KAZ", "AZE", "OMN", "BHR", "GAB", "GNQ", "COG", "TCD", "TKM",
-		"BRN", "TTO", "ECU", "CAN", "NOR", "USA", "MEX", "Guy", "SSD"
-	}
-	# این تابع فقط در simulate_npc_month صدا زده می‌شود؛ خروجی عددی به‌صورت
-	# دترمینستیک (بدون RNG) از قیمت‌های واقعی کالا محاسبه می‌شود.
-	func _commodity_growth_effect(country_id: String, runtime: Dictionary, oil_price: float, wheat_price: float) -> float:
-		var effect := 0.0
-		# نفت: صادرکننده در گرانی برنده، واردکننده در گرانی بازنده است
-		if oil_price > 105.0:
-			if OIL_EXPORTERS.has(country_id):
-				effect += 0.0045
-			else:
-				effect -= 0.0018
-		elif oil_price < 45.0:
-			if OIL_EXPORTERS.has(country_id):
-				effect -= 0.0035
-			else:
-				effect += 0.0008
-		# گندم: کشورهای کم‌درآمد (وابسته به واردات غذا) در گرانی آسیب می‌بینند
-		if wheat_price > 380.0:
-			var gdp_pc := float(runtime.get("gdp", 1.0)) / maxf(float(runtime.get("population", 1.0)), 1.0)
-			if gdp_pc < 5000.0:
-				effect -= 0.0025
-		return clampf(effect, -0.008, 0.008)
+	# ── سرایت منطقه‌ای بحران بازیکن (عمق‌بخشی ۶) ──────────────────────────
+	# در دنیای واقعی بحران یک کشور به همسایگان سرایت می‌کند (بحران ارزی آسیا
+	# ۱۹۹۷، بحران بدهی اروپا ۲۰۱۱، موج پناهندگان از کشور جنگ‌زده). همسایه‌های
+	# بازیکنِ بحران‌زده: رشد اقتصادی کمتری می‌گیرند و روابطشان با بازیکن تیره
+	# می‌شود. دترمینستیک — فقط از شاخص بحران.
+	var player_crisis_weight := _player_crisis_weight(state)
+	if player_crisis_weight >= 2.5:
+		var player_borders: Array = countries.get(player_id, {}).get("borders", [])
+		var contagion_hit := false
+		for nid in player_borders:
+			if not world["countries"].has(nid):
+				continue
+			var contagion := clampf(player_crisis_weight * 0.0006, 0.0005, 0.004)
+			var n_rt: Dictionary = world["countries"][nid]
+			n_rt["gdp"] = max(1.0, float(n_rt.get("gdp", 1.0)) * (1.0 - contagion))
+			world["countries"][nid] = n_rt
+			var p_relations: Dictionary = state.get("diplomacy", {}).get("relations", {})
+			if p_relations.has(nid):
+				p_relations[nid] = clampf(float(p_relations[nid]) - clampf(player_crisis_weight * 0.5, 0.5, 4.0), 0.0, 100.0)
+				state["diplomacy"]["relations"] = p_relations
+			contagion_hit = true
+		if contagion_hit:
+			events.append(_global_event("regional_contagion", player_id, "", "بحران‌های داخلی به اقتصاد و روابط همسایگان سرایت کرد — «اثر سرایت منطقه‌ای»"))
 
 	# روابط کشورهای غیرِبازیکن با بلوک، فاصله، قدرت و نویز کم ماهانه تغییر می‌کند.
 	for key in relations.keys():
@@ -846,6 +845,47 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 	world["recent_global_events"] = recent
 	state["world"] = world
 	return {"state":state, "events":events}
+
+# ── اثر قیمت کالاهای جهانی بر رشد یک کشور NPC (عمق‌بخشی ۴) ───────────────
+# صادرکنندگان خالص نفت در گرانی نفت سود می‌برند و در ریزش آن آسیب می‌بینند؛
+# کشورهای کم‌درآمدِ وابسته به واردات غذا در گرانی گندم ضربه می‌خورند.
+# خروجی عددی دترمینستیک (بدون RNG) از قیمت‌های واقعی کالا محاسبه می‌شود.
+func _commodity_growth_effect(country_id: String, runtime: Dictionary, oil_price: float, wheat_price: float) -> float:
+	var effect := 0.0
+	if oil_price > 105.0:
+		if OIL_EXPORTERS.has(country_id):
+			effect += 0.0045
+		else:
+			effect -= 0.0018
+	elif oil_price < 45.0:
+		if OIL_EXPORTERS.has(country_id):
+			effect -= 0.0035
+		else:
+			effect += 0.0008
+	if wheat_price > 380.0:
+		var gdp_pc := float(runtime.get("gdp", 1.0)) / maxf(float(runtime.get("population", 1.0)), 1.0)
+		if gdp_pc < 5000.0:
+			effect -= 0.0025
+	return clampf(effect, -0.008, 0.008)
+
+# ── شاخص بحران‌زایی بازیکن (عمق‌بخشی ۶) ─────────────────────────────────
+# وزن ترکیبی بحران‌های فعال + فشارهای کلان؛ برای سرایت منطقه‌ای و واکنش جهان.
+func _player_crisis_weight(state: Dictionary) -> float:
+	var weight := 0.0
+	for c in state.get("events_active", []):
+		if str(c.get("status", "active")) == "active":
+			weight += float(c.get("severity", 1))
+	var econ: Dictionary = state.get("economy", {})
+	if float(econ.get("debt_to_gdp", 0.0)) > 1.2:
+		weight += 2.0
+	if float(econ.get("inflation", 0.0)) > 0.25:
+		weight += 2.0
+	if float(econ.get("foreign_reserves", 0.0)) < 15_000_000_000.0:
+		weight += 1.0
+	var pol: Dictionary = state.get("politics", {})
+	if float(pol.get("stability", 0.6)) < 0.35:
+		weight += 1.5
+	return weight
 
 func get_strategic_country_ids(player_id: String = "", limit: int = 40) -> Array:
 	var ids = countries.keys()
