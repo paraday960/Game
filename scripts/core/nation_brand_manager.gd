@@ -62,7 +62,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اقتصاد فرهنگی
 	var gdp: float = float(econ.get("gdp", 1.0))
-	econ["gdp"] = gdp * (1.0 + exports * 0.0003 + brand * 0.0002)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var (exports * 0.0003 + brand * 0.0002) * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
+	(exports * 0.0003 + brand * 0.0002) * 12.0_boosts["برند ملی"] = (exports * 0.0003 + brand * 0.0002) * 12.0
+	econ["sector_boosts"] = (exports * 0.0003 + brand * 0.0002) * 12.0_boosts
 	state["economy"] = econ
 
 	# رویدادها

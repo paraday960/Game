@@ -63,10 +63,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر اقتصادی
 	var gdp: float = float(econ.get("gdp", 1.0))
-	econ["gdp"] = gdp * (1.0 + output * 0.0006 + exports * 0.0003)
-	# صنایع سنگین انرژی‌بر هستند
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var bi_boosts: Dictionary = econ.get("sector_boosts", {})
+	bi_boosts["صنایع بنیادی"] = (output * 0.0006 + exports * 0.0003) * 12.0
+	# صنایع سنگین انرژی‌بر هستند — ناامنی انرژی همان کلید را کم می‌کند (بازنویسی، نه انباشت)
 	if energy_security < 0.3:
-		econ["gdp"] = float(econ.get("gdp", gdp)) * (1.0 - 0.0002)
+		bi_boosts["صنایع بنیادی"] = float(bi_boosts["صنایع بنیادی"]) - 0.0002 * 12.0
+	econ["sector_boosts"] = bi_boosts
 	state["economy"] = econ
 
 	# رویدادها

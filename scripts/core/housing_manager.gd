@@ -60,7 +60,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر اقتصادی: بخش مسکن بخشی از GDP؛ حباب خطر بانکی است
 	var gdp := float(econ.get("gdp", 1.0))
-	econ["gdp"] = gdp * (1.0 + construction * 0.0003 + (price - 0.6) * 0.0001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲) (کمک قیمت می‌تواند منفی شود)
+	var hs_boosts: Dictionary = econ.get("sector_boosts", {})
+	hs_boosts["ساخت‌وساز و مسکن"] = (construction * 0.0003 + (price - 0.6) * 0.0001) * 12.0
+	econ["sector_boosts"] = hs_boosts
 	if bubble > 0.70:
 		banking["stability"] = clampf(float(banking.get("stability", 0.65)) - 0.002, 0.05, 1.0)
 		state["banking"] = banking

@@ -56,7 +56,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	sp["productivity"] = productivity
 
 	# اثر اقتصادی: SME موتور رشد و اشتغال است
-	econ["gdp"] = gdp * (1.0 + sme_share * 0.0006 + productivity * 0.0003)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var sme_boosts: Dictionary = econ.get("sector_boosts", {})
+	sme_boosts["بنگاه‌های کوچک"] = (sme_share * 0.0006 + productivity * 0.0003) * 12.0
+	econ["sector_boosts"] = sme_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - sme_share * 0.0004, 0.02, 0.30)
 	# رسمی‌سازی اقتصاد سایه را کوچک می‌کند
 	if not shadow.is_empty():

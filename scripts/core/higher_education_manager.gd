@@ -56,7 +56,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	hp["brain_gain"] = brain_gain
 
 	# اثر اقتصادی و پژوهشی
-	econ["gdp"] = gdp * (1.0 + quality * 0.0004)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var quality * 0.0004 * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
+	quality * 0.0004 * 12.0_boosts["آموزش عالی"] = quality * 0.0004 * 12.0
+	econ["sector_boosts"] = quality * 0.0004 * 12.0_boosts
 	state["economy"] = econ
 	# سرعت پژوهش
 	if not research.is_empty():

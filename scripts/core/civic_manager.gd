@@ -70,7 +70,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# بودجه‌ریزی مشارکتی هزینه دارد ولی رضایت و بهره‌وری محلی را بالا می‌برد
 	var gdp := float(econ.get("gdp", 1.0))
 	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * 0.0006 * (participatory + councils)
-	econ["gdp"] = gdp * (1.0 + social_capital * 0.0003 - pressure * 0.0002)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var civ_boosts: Dictionary = econ.get("sector_boosts", {})
+	civ_boosts["سرمایه اجتماعی"] = (social_capital * 0.0003 - pressure * 0.0002) * 12.0
+	econ["sector_boosts"] = civ_boosts
 	pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) + (participatory + councils - 0.5) * 0.001, 0.05, 1.0)
 	state["economy"] = econ
 	state["population"] = pop

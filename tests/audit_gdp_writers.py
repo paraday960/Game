@@ -19,9 +19,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from validate_gdp_channel import (  # noqa: E402
-    SCRIPTS, ROOT, read, rel as vrel, collect_write_sites, expected_nominal,
-    get_publisher_keys, get_convergent_level_files, is_convergent_level_site,
+from gdp_contract import (  # noqa: E402
+    SCRIPTS, ROOT, read, rel as vrel, collect_write_sites, BUDGET, MIGRATED,
+    get_convergent_level_files, is_convergent_level_site,
 )
 
 OWNER_FILES = {"scripts/systems/economy_system.gd"}
@@ -45,11 +45,11 @@ def classify(rel, line, ctx):
         return "NPC"
     if is_convergent_level_site(rel, line):
         return "CONVERGENT"
-    if any(m in ctx.lower() for m in TRANSIENT_MARKERS):
-        return "TRANSIENT"
-    if expected_nominal(rel) is not None:
-        return "STEADY?"
-    return "STEADY?"
+    if MIGRATED.get(rel):
+        return "REMAINDER"          # فایل مهاجرت‌یافته؛ نویسه = گذرای مجاز پین‌شده
+    if rel in BUDGET:
+        return "TRANSIENT"          # خانوادهٔ شوک/رویداد/NPC با سقف پایش‌شده
+    return "STEADY?"                # خارج از قرارداد — تست ۱۵ هم آن را رد می‌کند
 
 
 def main():
@@ -69,7 +69,7 @@ def main():
             cls = classify(rel, line, ctx)
             counts[cls] = counts.get(cls, 0) + 1
             rows.append((cls, rel, line_no, line.strip()[:96]))
-    order = ["STEADY?", "TRANSIENT", "CONVERGENT", "NPC", "OWNER"]
+    order = ["STEADY?", "REMAINDER", "TRANSIENT", "CONVERGENT", "NPC", "OWNER"]
     rows.sort(key=lambda r: (order.index(r[0]), r[1], r[2]))
     width = max((len(r[1]) for r in rows), default=10)
     print("طبقه | فایل:خط | نویسه")
@@ -81,15 +81,14 @@ def main():
         if cls in counts:
             print("%s: %d" % (cls, counts[cls]))
 
-    print("\n── برنامهٔ مهاجرت: قرارداد اسمی کلیدها برای فایل‌های STEADY? ──")
-    steady_files = sorted({r[1] for r in rows if r[0] == "STEADY?"})
-    for f in steady_files:
-        nominal = expected_nominal(f)
-        print("  %s → کلید پیشنهادی: «%s»" % (f, nominal))
-    if not steady_files:
-        print("  ✅ STEADY? خالی است — مهاجرت به کانال تکمیل شده.")
-    print("\nمجموع سایت‌ها: %d | تست ۱۵ (validate_gdp_channel.py) گیت رسمی است؛ این فایل فقط گزارش می‌سازد."
-          % len(rows))
+    steady = [r for r in rows if r[0] == "STEADY?"]
+    if steady:
+        print("\nSTEADY? (خارج از قرارداد — باید به کانال برود یا در BUDGET مستند شود):")
+        for cls, rel, no, line in steady:
+            print("  • %s:%d %s" % (rel, no, line))
+    else:
+        print("\n✅ همهٔ نویسه‌های مستقیم در چارچوب قرارداد (BUDGET/CONVERGENT/OWNER) پوشیده‌اند.")
+    print("REMAINDER = بقایای گذرای مجاز در فایل‌های مهاجرت‌یافته؛ پین‌ها در gdp_contract.BUDGET.")
     return 0
 
 

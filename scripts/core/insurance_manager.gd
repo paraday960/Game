@@ -58,7 +58,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	ip["default_risk"] = clampf(1.0 - solvency, 0.02, 0.95)
 
 	# حق بیمه بخشی از اقتصاد است
-	econ["gdp"] = gdp * (1.0 + penetration * 0.0002)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var penetration * 0.0002 * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
+	penetration * 0.0002 * 12.0_boosts["صنعت بیمه"] = penetration * 0.0002 * 12.0
+	econ["sector_boosts"] = penetration * 0.0002 * 12.0_boosts
 	state["economy"] = econ
 
 	# بیمه درمان تکمیلی: کیفیت بهداشت و رفاه

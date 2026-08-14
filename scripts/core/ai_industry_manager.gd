@@ -47,7 +47,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	ap["ai_exports"] = clampf(adoption * 0.30 + research_innov * 0.30 + digital_level * 0.20, 0.0, 0.90)
 
 	var gdp: float = float(econ.get("gdp", 1.0))
-	econ["gdp"] = gdp * (1.0 + productivity * 0.0008)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var ai_boosts: Dictionary = econ.get("sector_boosts", {})
+	ai_boosts["هوش مصنوعی و رباتیک"] = productivity * 0.0008 * 12.0
+	econ["sector_boosts"] = ai_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) + displacement * 0.002 - reskill * 0.001, 0.02, 0.40)
 	state["economy"] = econ
 

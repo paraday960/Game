@@ -73,7 +73,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["population"]["migration_net"] = int(float(state["population"].get("migration_net", 10000)) - brain_drain * 1200.0 + innovation * 400.0)
 
 	# بهره‌وری اقتصادی و سلامت ناشی از نوآوری
-	econ["gdp"] = gdp * (1.0 + innovation * 0.0008 - brain_drain * 0.0004)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var rs_boosts: Dictionary = econ.get("sector_boosts", {})
+	rs_boosts["پژوهش و توسعه"] = (innovation * 0.0008 - brain_drain * 0.0004) * 12.0
+	econ["sector_boosts"] = rs_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - innovation * 0.00025 + commercial * 0.0001, 0.02, 0.30)
 	health["quality"] = clampf(float(health.get("quality", 0.60)) + medical * 0.0005 + innovation * 0.0002, 0.1, 1.0)
 	state["economy"] = econ

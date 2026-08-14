@@ -54,7 +54,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر اقتصادی: نیروی کار بیشتر = رشد + مالیات
 	var gdp: float = float(econ.get("gdp", 1.0))
-	econ["gdp"] = gdp * (1.0 + labor_gain * 0.0008)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var care_boosts: Dictionary = econ.get("sector_boosts", {})
+	care_boosts["اقتصاد مراقبت"] = labor_gain * 0.0008 * 12.0
+	econ["sector_boosts"] = care_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - labor_gain * 0.0005, 0.02, 0.30)
 	# بار اقتصادی مراقبت غیررسمی (فرصت ازدست‌رفته)
 	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.001 + elder * 0.001 + child * 0.001)

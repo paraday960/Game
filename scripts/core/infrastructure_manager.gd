@@ -50,7 +50,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		events.append({"type": "infra_failure", "message": "⚠️ شکست زیرساخت: قطع برق/آب و تصادفات جاده‌ای! نگهداری نادیده گرفته شده بود"})
 
 	# نگهداری خوب → اقتصاد روان‌تر
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + maintenance * 0.0008 - decay * 0.001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var inf_boosts: Dictionary = econ.get("sector_boosts", {})
+	inf_boosts["نگهداری زیرساخت"] = (maintenance * 0.0008 - decay * 0.001) * 12.0
+	econ["sector_boosts"] = inf_boosts
 	state["infra_policy"] = ip
 	state["economy"] = econ
 	state["population"] = pop

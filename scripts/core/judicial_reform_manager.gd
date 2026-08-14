@@ -57,7 +57,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# دادگاه‌های تجاری → محیط کسب‌وکار و اعتماد اقتصادی
 	var business_disputes := clampf(1.0 - specialized * 0.6 - digital * 0.3, 0.05, 0.95)
 	jrp["business_disputes"] = business_disputes
-	econ["gdp"] = gdp * (1.0 + (0.6 - business_disputes) * 0.0004)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var jr_boosts: Dictionary = econ.get("sector_boosts", {})
+	jr_boosts["اصلاح قضایی"] = (0.6 - business_disputes) * 0.0004 * 12.0
+	econ["sector_boosts"] = jr_boosts
 	# اطاله دادرسی هزینه اقتصادی دارد
 	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + gdp * (0.0008 + delay_cost * 0.0008)
 	state["economy"] = econ

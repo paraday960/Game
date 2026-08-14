@@ -68,7 +68,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# اقتصاد چرخه‌ای: مواد و انرژی بازیابی می‌شود
 	var gdp := float(econ.get("gdp", 1.0))
 	var circular_gdp := gdp * (circular * 0.01 + recycling * 0.005 + wte * 0.003)
-	econ["gdp"] = gdp * (1.0 + circular * 0.0003 + recycling * 0.0001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var (circular * 0.0003 + recycling * 0.0001) * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
+	(circular * 0.0003 + recycling * 0.0001) * 12.0_boosts["اقتصاد چرخه‌ای"] = (circular * 0.0003 + recycling * 0.0001) * 12.0
+	econ["sector_boosts"] = (circular * 0.0003 + recycling * 0.0001) * 12.0_boosts
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - recycling_rate * 0.0002, 0.02, 0.30)
 	if resources.has("inventory") and resources["inventory"].has("مواد_صنعتی"):
 		resources["inventory"]["مواد_صنعتی"] = clampf(

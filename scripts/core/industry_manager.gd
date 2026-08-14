@@ -60,17 +60,25 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["trade"] = trade_d
 	# شرکت‌های دولتی: اشتغال و ثبات ولی ناکارآمدی و فساد
 	econ["soe_employment"] = soe * 0.1
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 - soe * 0.001)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var ind_boosts: Dictionary = econ.get("sector_boosts", {})
+	ind_boosts["سهم شرکت‌های دولتی"] = -soe * 0.001 * 12.0
+	econ["sector_boosts"] = ind_boosts
 	pol["corruption"] = clampf(float(pol.get("corruption", 0.3)) + soe * 0.001, 0.0, 1.0)
 	# مناطق آزاد: سرمایه‌گذاری خارجی
 	econ["foreign_investment"] = float(econ.get("foreign_investment", 1.0)) * (1.0 + free_zones * 0.004)
 	# صنعت برگزیده: اگر راهبرد با آن هم‌خوان باشد رشد می‌کند
 	var winner := str(ind.get("winner", ""))
+	var ind_boosts2: Dictionary = econ.get("sector_boosts", {})
 	if winner != "":
 		var winner_bonus := 0.0015
 		if (strategy == "high_tech" and winner in ["electronics", "pharma"]) or (strategy == "heavy" and winner in ["automotive", "petrochemicals"]):
 			winner_bonus = 0.003
-		econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + winner_bonus)
+		# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه)
+		ind_boosts2["صنعت برگزیده"] = winner_bonus * 12.0
+	else:
+		ind_boosts2["صنعت برگزیده"] = 0.0
+	econ["sector_boosts"] = ind_boosts2
 	state["economy"] = econ
 	state["politics"] = pol
 	state["industry_policy"] = ind

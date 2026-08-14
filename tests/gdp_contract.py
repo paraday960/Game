@@ -20,17 +20,17 @@ SCRIPTS = os.path.join(ROOT, "scripts")
 WRITE_RE = re.compile(r'\["gdp"\]\s*\*?=[^=]')
 SKIP_RE = re.compile(r"per_capita|gdp_")
 NOMIN = r'\["gdp"\]\s*[+\-]?\*?=\s*[^\n]*(?:\(1\.0|[+\-]?\*?\s*1\.0|\*\s*0\.9|\*\s*1\.0|[+\-]\s*(?:gdp|float\())'
-ARABIC_PERSIAN_KEY_RE = re.compile(r'^[\u0600-\u06FF0-9\s\(\)\/،\-]{4,}$')
+ARABIC_PERSIAN_KEY_RE = re.compile(r'^[\u0600-\u06FF\u200c0-9\s\(\)\/،\-]{3,}$')
 
 MIGRATED = {
     "scripts/systems/industry_system.gd": ["بازخورد صنعتی"],
     "scripts/systems/transport_roads_system.gd": ["لجستیک حمل‌ونقل"],
-    "scripts/systems/environment_system.gd": ["کشش آلودگی زیست‌محیطی"],
+    "scripts/systems/environment_system.gd": ["آلودگی زیست‌محیطی"],
     "scripts/systems/diplomacy_system.gd": ["فشار تحریم‌ها", "دور زدن تحریم"],
     "scripts/core/banking_manager.gd": ["اعتبار بانکی"],
     "scripts/core/fdi_manager.gd": ["سرمایه‌گذاری خارجی"],
     "scripts/core/digital_manager.gd": ["اقتصاد دیجیتال"],
-    "scripts/core/mining_manager.gd": ["معدن تازه"],
+    "scripts/core/mining_manager.gd": ["معدن"],
     "scripts/core/creative_manager.gd": ["اقتصاد خلاق"],
     "scripts/core/blue_economy_manager.gd": ["اقتصاد آبی"],
     "scripts/core/urban_manager.gd": ["توسعه شهری"],
@@ -39,7 +39,7 @@ MIGRATED = {
     "scripts/core/civic_manager.gd": ["سرمایه اجتماعی"],
     "scripts/core/downstream_energy_manager.gd": ["زنجیرهٔ ارزش انرژی"],
     "scripts/core/basic_industry_manager.gd": ["صنایع بنیادی"],
-    "scripts/core/industry_manager.gd": ["سیاست صنعتی"],
+    "scripts/core/industry_manager.gd": ["سهم شرکت‌های دولتی", "صنعت برگزیده"],
     "scripts/core/insurance_manager.gd": ["صنعت بیمه"],
     "scripts/core/intellectual_property_manager.gd": ["نوآوری و مالکیت فکری"],
     "scripts/core/startup_manager.gd": ["اکوسیستم استارتاپ"],
@@ -56,10 +56,11 @@ MIGRATED = {
     "scripts/core/waste_manager.gd": ["اقتصاد چرخه‌ای"],
     "scripts/core/supply_chain_manager.gd": ["زنجیرهٔ تأمین"],
     "scripts/core/judicial_reform_manager.gd": ["اصلاح قضایی"],
+    "scripts/core/infrastructure_manager.gd": ["نگهداری زیرساخت"],
     "scripts/core/waste_management_manager.gd": ["بازیافت"],
     "scripts/core/sme_manager.gd": ["بنگاه‌های کوچک"],
-    "scripts/core/ai_industry_manager.gd": ["هوش مصنوعی و صنعت AI"],
-    "scripts/core/textile_manager.gd": ["نساجی و پوشاک"],
+    "scripts/core/ai_industry_manager.gd": ["هوش مصنوعی و رباتیک"],
+    "scripts/core/textile_manager.gd": ["نساجی"],
     "scripts/core/housing_manager.gd": ["ساخت‌وساز و مسکن"],
 }
 
@@ -79,28 +80,28 @@ BUDGET = {
     "scripts/core/urban_manager.gd": 0,
     "scripts/core/agriculture_manager.gd": 1,      # خشکسالی (رویداد شانسی)
     "scripts/core/banking_manager.gd": 2,          # فروکش بحران/نجات (رویداد/اقدام)
-    "scripts/core/care_economy_manager.gd": 1,
-    "scripts/core/civic_manager.gd": 1,
-    "scripts/core/downstream_energy_manager.gd": 1,
-    "scripts/core/basic_industry_manager.gd": 2,
-    "scripts/core/industry_manager.gd": 1,
-    "scripts/core/insurance_manager.gd": 1,
-    "scripts/core/intellectual_property_manager.gd": 1,
-    "scripts/core/startup_manager.gd": 1,
-    "scripts/core/research_manager.gd": 1,
-    "scripts/core/higher_education_manager.gd": 1,
-    "scripts/core/food_value_chain_manager.gd": 1,
-    "scripts/core/livestock_manager.gd": 1,
-    "scripts/core/rural_manager.gd": 1,
-    "scripts/core/sports_manager.gd": 1,
-    "scripts/core/nation_brand_manager.gd": 1,
-    "scripts/core/pharma_manager.gd": 1,
-    "scripts/core/prison_manager.gd": 1,
-    "scripts/core/pro_sports_manager.gd": 1,
-    "scripts/core/waste_manager.gd": 1,
-    "scripts/core/supply_chain_manager.gd": 1,
-    "scripts/core/judicial_reform_manager.gd": 1,
-    "scripts/core/waste_management_manager.gd": 1,
+    "scripts/core/care_economy_manager.gd": 0,
+    "scripts/core/civic_manager.gd": 0,
+    "scripts/core/downstream_energy_manager.gd": 0,
+    "scripts/core/basic_industry_manager.gd": 1,  # رویداد کمبود مصالح (شانسی)
+    "scripts/core/industry_manager.gd": 0,
+    "scripts/core/insurance_manager.gd": 0,
+    "scripts/core/intellectual_property_manager.gd": 0,
+    "scripts/core/startup_manager.gd": 0,
+    "scripts/core/research_manager.gd": 0,
+    "scripts/core/higher_education_manager.gd": 0,
+    "scripts/core/food_value_chain_manager.gd": 0,
+    "scripts/core/livestock_manager.gd": 0,
+    "scripts/core/rural_manager.gd": 0,
+    "scripts/core/sports_manager.gd": 0,
+    "scripts/core/nation_brand_manager.gd": 0,
+    "scripts/core/pharma_manager.gd": 0,
+    "scripts/core/prison_manager.gd": 0,
+    "scripts/core/pro_sports_manager.gd": 0,
+    "scripts/core/waste_manager.gd": 0,
+    "scripts/core/supply_chain_manager.gd": 0,
+    "scripts/core/judicial_reform_manager.gd": 0,
+    "scripts/core/waste_management_manager.gd": 1,  # سایت همگرای _gdp_boost انرژی-زباله
     "scripts/core/sme_manager.gd": 1,              # موج تعطیلی بنگاه‌ها گذرا
     "scripts/core/ai_industry_manager.gd": 1,      # اعتراض به اتوماسیون گذرا
     "scripts/core/textile_manager.gd": 1,          # کمبود ماده اولیه گذرا
@@ -211,7 +212,7 @@ def get_convergent_level_files():
                    and any(tag in f for tag in
                            ("aerospace", "aviation", "defense_industry", "ev_industry",
                             "health_tourism", "knowledge_economy", "standards",
-                            "postal", "petrochemical"))])
+                            "postal", "petrochemical", "waste_management"))])
 
 
 def is_convergent_level_site(fpath, line):

@@ -46,7 +46,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	var index=clampf(lg*0.25+infra*0.25+ev*0.20+acad*0.15+exp*0.15,0,1)*clampf(stability,0.3,1)
 	industry_index=index; p["index"]=index
 	if gdp>0:
-		econ["gdp"]=gdp+gdp*index*0.005
+		# ممیزی GDP (۱۴۰۵): جمع ماهانهٔ بی‌قید (تا +۶٪/سال انباشتی) → کانال نرخ سالانه
+		var ps_boosts: Dictionary = econ.get("sector_boosts", {})
+		ps_boosts["ورزش حرفه‌ای"] = index * 0.005 * 12.0
+		econ["sector_boosts"] = ps_boosts
 		if ev>0 or exp>0: econ["foreign_reserves"]=float(econ.get("foreign_reserves",0))+gdp*(ev*0.001+exp*0.001)
 		state["economy"]=econ
 	var health=state.get("health",{})

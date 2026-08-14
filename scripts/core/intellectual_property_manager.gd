@@ -55,7 +55,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر اقتصادی: تجاری‌سازی → رشد و استارتاپ
 	var gdp: float = float(econ.get("gdp", 1.0))
-	econ["gdp"] = gdp * (1.0 + innov * 0.0005 + royalty * 0.0003)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var (innov * 0.0005 + royalty * 0.0003) * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
+	(innov * 0.0005 + royalty * 0.0003) * 12.0_boosts["نوآوری و مالکیت فکری"] = (innov * 0.0005 + royalty * 0.0003) * 12.0
+	econ["sector_boosts"] = (innov * 0.0005 + royalty * 0.0003) * 12.0_boosts
 	# درآمد رویالتی به خزانه (بازرسی کلید یتیم ۱۴۰۵): شاخص royalty_income قبلاً فقط
 	# دفترداری می‌شد و پولی جریان نمی‌یافت؛ حالا ~۰٫۰۲٪ GDP نرخ ماهانه عبر کانال استاندارد.
 	econ["royalty_revenue_monthly"] = gdp * royalty * 0.0002

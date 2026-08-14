@@ -56,7 +56,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var sanction: float = float(state.get("world", {}).get("sanctions_pressure", 0.3))
 	var raw_penalty: float = raw_share * sanction * 0.001
 	var downstream_bonus: float = va * 0.0006
-	econ["gdp"] = gdp * (1.0 + downstream_bonus - raw_penalty)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var de_boosts: Dictionary = econ.get("sector_boosts", {})
+	de_boosts["زنجیرهٔ ارزش انرژی"] = (downstream_bonus - raw_penalty) * 12.0
+	econ["sector_boosts"] = de_boosts
 	# درآمد ارزی: محصول صادر می‌شود حتی با تحریم
 	if va > 0.4:
 		econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + gdp * va * 0.0004

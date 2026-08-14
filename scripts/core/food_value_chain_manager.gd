@@ -59,8 +59,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# اثر اقتصادی: ضایعات زیاد تورم غذا و واردات می‌آورد
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + vol * 0.003, 0.0, 1.0)
 	# صنایع تبدیلی ارزش افزوده و اشتغال
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var fv_boosts: Dictionary = econ.get("sector_boosts", {})
 	if processing > 0.3:
-		econ["gdp"] = gdp * (1.0 + processing * 0.0004)
+		fv_boosts["زنجیرهٔ غذا"] = processing * 0.0004 * 12.0
+	else:
+		fv_boosts["زنجیرهٔ غذا"] = 0.0
+	econ["sector_boosts"] = fv_boosts
 	state["economy"] = econ
 
 	# سلامت: نظارت بر ایمنی غذا

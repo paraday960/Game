@@ -25,7 +25,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# ورزش همگانی → سلامت و بهره‌وری
 	state["health"]["quality"] = clampf(float(state["health"].get("quality", 0.6)) + grassroots * 0.001, 0.1, 1.0)
 	state["health"]["fitness"] = clampf(float(state["health"].get("fitness", 0.5)) + grassroots * 0.002, 0.1, 1.0)
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + grassroots * 0.0005)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var sp_boosts: Dictionary = econ.get("sector_boosts", {})
+	sp_boosts["اقتصاد ورزش"] = grassroots * 0.0005 * 12.0
+	econ["sector_boosts"] = sp_boosts
 	# لیگ حرفه‌ای → جوانان و قدرت نرم
 	state["media"]["groups"]["جوانان"]["approval"] = clampf(float(state["media"]["groups"]["جوانان"].get("approval", 45.0)) + pro_league * 0.4, 5.0, 100.0)
 	state["culture_policy"]["soft_power"] = clampf(float(state["culture_policy"].get("soft_power", 40.0)) + pro_league * 0.1, 5.0, 100.0)

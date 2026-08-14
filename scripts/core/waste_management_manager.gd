@@ -125,8 +125,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 
 	# درآمد بازیافت (مواد اولیه ثانویه)
 	if recycling_rate > 0.2 and gdp > 0.0:
-		var recycle_rev: float = gdp * recycling_rate * 0.001
-		economy["gdp"] = float(economy.get("gdp", gdp)) + recycle_rev
+		# ممیزی GDP (۱۴۰۵): جمع ماهانهٔ بی‌قید درآمد بازیافت → کانال نرخ سالانه
+		var wm_boosts: Dictionary = economy.get("sector_boosts", {})
+		wm_boosts["بازیافت"] = recycling_rate * 0.001 * 12.0
+		economy["sector_boosts"] = wm_boosts
 		state["economy"] = economy
 
 	# بهبود سلامت عمومی (کاهش زباله‌های روباز)

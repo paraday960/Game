@@ -100,8 +100,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var cost: float = gdp * 0.001 * (0.5 + float(prison["overcrowding"]) * 0.3 - labor * 0.1)
 	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
 	# کار زندانیان سهم کوچکی در اقتصاد دارد
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ×۱۲)
+	var pr_boosts: Dictionary = econ.get("sector_boosts", {})
 	if labor > 0.3:
-		econ["gdp"] = gdp * (1.0 + labor * 0.0001)
+		pr_boosts["حبس و کار اجباری"] = labor * 0.0001 * 12.0
+	else:
+		pr_boosts["حبس و کار اجباری"] = 0.0
+	econ["sector_boosts"] = pr_boosts
 	state["economy"] = econ
 
 	# اثر اجتماعی: حقوق بشر/رسانه

@@ -63,7 +63,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["health"] = health
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + drug_cost * 0.001 - local_prod * 0.001, 0.0, 1.0)
 	# صنعت دارو در GDP
-	econ["gdp"] = gdp * (1.0 + local_prod * 0.0005)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
+	var local_boosts: Dictionary = econ.get("sector_boosts", {})
+	local_boosts["صنعت دارو"] = local_prod * 0.0005 * 12.0
+	econ["sector_boosts"] = local_boosts
 	state["economy"] = econ
 
 	# رویدادها
