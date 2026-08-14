@@ -18,9 +18,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(ROOT, "scripts")
 
 WRITE_RE = re.compile(r'\["gdp"\]\s*\*?=[^=]')
-SKIP_RE = re.compile(r"per_capita|gdp_")
+# فقط gdp_per_capita نادیده گرفته می‌شود. توجه: الگوی قدیمی «gdp_» باعث ماسک شدن
+# سایت‌هایی می‌شد که در همان خط به gdp_cost/gdp_growth اشاره داشتند (demographic:72،
+# diaspora:54، military_system:498 — در بازرسی ۱۴۰۵ کشف و مهاجرت شدند)؛ WRITE_RE خود
+# فقط هدفِ دقیق ["gdp"] را می‌گیرد پس ماسک گسترده لازم نیست (و خطرناک بود).
+SKIP_RE = re.compile(r"per_capita")
 NOMIN = r'\["gdp"\]\s*[+\-]?\*?=\s*[^\n]*(?:\(1\.0|[+\-]?\*?\s*1\.0|\*\s*0\.9|\*\s*1\.0|[+\-]\s*(?:gdp|float\())'
 ARABIC_PERSIAN_KEY_RE = re.compile(r'^[\u0600-\u06FF\u200c0-9\s\(\)\/،\-]{3,}$')
+
+# مالکیت یکتای کلیدهای حساس دیگر: نویسهٔ مستقیم فقط در فایل‌های مجاز.
+SINGLE_OWNER_ALLOW = {
+    # growth_rate (economy) هر روز توسط economy_system بازنویسی می‌شود؛ نویسهٔ نمایشی
+    # دیپلماسی (کاهش ۰٫۰۰۱×gdp_loss) مرده بود و حذف شد. رشد جمعیت (pop) مالک جدا دارد.
+    "growth_rate": {"scripts/systems/economy_system.gd", "scripts/systems/population_system.gd"},
+}
 
 MIGRATED = {
     "scripts/systems/industry_system.gd": ["بازخورد صنعتی"],
@@ -62,6 +73,13 @@ MIGRATED = {
     "scripts/core/ai_industry_manager.gd": ["هوش مصنوعی و رباتیک"],
     "scripts/core/textile_manager.gd": ["نساجی"],
     "scripts/core/housing_manager.gd": ["ساخت‌وساز و مسکن"],
+    "scripts/core/demographic_manager.gd": ["پنجرهٔ جمعیت"],
+    "scripts/core/diaspora_manager.gd": ["حواله‌های دیاسپورا"],
+    "scripts/core/labor_manager.gd": ["هزینهٔ حداقل دستمزد"],
+    "scripts/systems/military_system.gd": ["هزینهٔ جنگ (فرسایش)"],
+    "scripts/systems/interdependency_system.gd": ["ریسک آبشاری شبکه"],
+    "scripts/systems/people_system.gd": ["بهره‌وری انسانی"],
+    "scripts/systems/statistics_system.gd": ["دقت آمار رسمی"],
 }
 
 BUDGET = {
@@ -140,7 +158,11 @@ BUDGET = {
     "scripts/core/migration_manager.gd": 1,        # سود مهاجرتی (رویداد شرطی)
     "scripts/core/trade_policy_manager.gd": 2,     # ضربهٔ تحریم/توافق (گذرا)
     "scripts/core/faction_manager.gd": 1,          # آشوب داخلی گذرا
-    "scripts/core/labor_manager.gd": 2,            # اعتصاب/بحران کارگری گذرا
+    "scripts/core/labor_manager.gd": 1,            # اعتصاب سراسری (رویداد شانسی)
+    "scripts/core/demographic_manager.gd": 0,
+    "scripts/core/diaspora_manager.gd": 0,
+    "scripts/systems/military_system.gd": 0,
+    "scripts/systems/interdependency_system.gd": 0,
     "scripts/core/governors_manager.gd": 1,        # شورش استانی گذرا
     "scripts/core/judiciary_manager.gd": 1,        # بحران قضایی گذرا
     "scripts/core/watershed_manager.gd": 1,        # سیل/خسارت حوضه گذرا (‌کاستن)

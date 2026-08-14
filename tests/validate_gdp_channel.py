@@ -24,8 +24,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gdp_contract import (ROOT, SCRIPTS, read, rel, esc, ARABIC_PERSIAN_KEY_RE,
-                          MIGRATED, BUDGET, collect_gd_files, collect_write_sites,
-                          get_convergent_level_files, is_convergent_level_site)
+                          MIGRATED, BUDGET, SINGLE_OWNER_ALLOW, collect_gd_files,
+                          collect_write_sites, get_convergent_level_files,
+                          is_convergent_level_site)
 
 
 def main():
@@ -71,6 +72,21 @@ def main():
     dup = [k for k in set(all_keys) if all_keys.count(k) > 1]
     check("C3) هیچ کلید کانالی توسط دو فایل نوشته نمی‌شود (مالکیت یکتا)", not dup,
           "تکراری: %s" % dup)
+
+    # ── C2b: مالکیت یکتای کلیدهای حساس (growth_rate و…) ───────────────
+    for skey, allowed in SINGLE_OWNER_ALLOW.items():
+        bad = []
+        for path in gd_files:
+            rp = rel(path)
+            if rp in allowed:
+                continue
+            for no, line in enumerate(read(path).splitlines(), 1):
+                if line.strip().startswith("#"):
+                    continue
+                if re.search(r'\["%s"\]\s*=[^=]' % skey, line):
+                    bad.append("%s:%d" % (rp, no))
+        check("C2b) نویسهٔ «%s» فقط در مالک‌های مجاز است" % skey, not bad,
+              "نویسهٔ سرکش: %s" % ", ".join(bad[:6]))
 
     # ── C4: آینهٔ پایتونی همگام است ─────────────────────────────────────
     mirror = read(os.path.join(ROOT, "tests", "sim_longrun.py"))

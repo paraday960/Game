@@ -51,7 +51,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var remittance := gdp * remittance_gdp_share
 	dp["remittance_b"] = remittance / 1_000_000_000.0
 	econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + remittance * 0.35
-	econ["gdp"] = gdp * (1.0 + remittance_gdp_share * 0.08)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲) (سایت قبلی با ماسک gdp_ پنهان بود)
+	var ds_boosts: Dictionary = econ.get("sector_boosts", {})
+	ds_boosts["حواله‌های دیاسپورا"] = remittance_gdp_share * 0.08 * 12.0
+	econ["sector_boosts"] = ds_boosts
 	pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) + trust * 0.001, 0.05, 1.0)
 	state["economy"] = econ
 	state["population"] = pop

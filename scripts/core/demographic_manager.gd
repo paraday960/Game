@@ -69,7 +69,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# پنجره جمعیت → بهره‌وری و پس‌انداز؛ سالخوردگی → فشار
 	var gdp_growth := window * 0.0008 - aging * 0.0004 + retraining * 0.0003
-	econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + gdp_growth)
+	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲) (سایت قبلی با ماسک gdp_ از پویش‌ها مخفی مانده بود)
+	var dg_boosts: Dictionary = econ.get("sector_boosts", {})
+	dg_boosts["پنجرهٔ جمعیت"] = gdp_growth * 12.0
+	econ["sector_boosts"] = dg_boosts
 	var gdp := float(econ["gdp"])
 	econ["savings_rate"] = clampf(0.25 + window * 0.10 - aging * 0.15, 0.05, 0.55)
 	state["economy"] = econ

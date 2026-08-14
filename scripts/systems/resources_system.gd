@@ -201,7 +201,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# اثر بر اقتصاد و لجستیک نظامی
 	if res["energy_crisis"]:
-		econ["growth_rate"] = float(econ.get("growth_rate",0.02)) - 0.01
+		# بازرسی ۱۴۰۵: نویسهٔ نمایشی growth_rate حذف شد — دوشماره‌ای با energy_penalty
+		# سیستم اقتصاد بود که بحران انرژی را در real_growth لحاظ می‌کند (مالکیت یکتا)
 		mil["readiness"] = clamp(float(mil.get("readiness",0.70)) - 0.005, 0.10, 1.0)
 	if res["food_crisis"]:
 		pop["happiness"] = clamp(float(pop.get("happiness",0.60)) - 0.008, 0.05, 0.95)

@@ -144,7 +144,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var smart_sanction = incoming_sanctions * 0.6 # ۶۰٪ هوشمند
 		var comprehensive = incoming_sanctions * 0.4
 		var gdp_loss = penalty*0.6 + comprehensive*0.04
-		econ["growth_rate"] = float(econ.get("growth_rate",0.02)) - gdp_loss*0.001
+		# بازرسی ۱۴۰۵: نویسهٔ مردهٔ growth_rate حذف شد — مقدار نمایشی هر روز توسط
+		# economy_system بازنویسی می‌شد (مالکیت یکتا) و اثر واقعی تحریم هم‌اکنون از کانال
+		# sector_boosts می‌گذرد؛ این تعدیل ۰٫۰۱۴ واحدی عملاً اثری نداشت.
 		# دور زدن تحریم - قاچاق، واسطه
 		var evasion = state.get("private_sector",{}).get("informal_economy",0.25)*0.3 + intel.get("sigint",0.50)*0.1
 		# ممیزی GDP (۱۴۰۵): فشار تحریم و اثر دورزدن هر دو «اثر مداوم»‌اند و از کانال

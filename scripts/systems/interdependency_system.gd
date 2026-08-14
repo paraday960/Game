@@ -93,12 +93,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	if bottleneck_count >= 2 and bottleneck_count <= 3 and Deterministic.chance(0.025):
 		events.append({"type":"systemic_bottleneck","count": bottleneck_count, "bottlenecks": inter["bottlenecks"].duplicate(), "message":"گلوگاه‌های چندگانه - %d بخش همزمان تحت فشار" % bottleneck_count})
-		# اثر اقتصادی
-		econ["growth_rate"] = econ.get("growth_rate",0.02) - 0.002
+		# بازرسی ۱۴۰۵: نویسهٔ نمایشی growth_rate حذف شد (اثر واقعی از کانال شبکه می‌گذرد)
 
 	if bottleneck_count > 3 and Deterministic.chance(0.02):
 		events.append({"type":"cascade_failure","count": bottleneck_count, "risk": inter["cascade_risk"], "message":"خطر فروپاشی آبشاری - قطعی زنجیره‌ای انرژی، غذا، آب"})
-		econ["growth_rate"] = econ.get("growth_rate",0.02) - 0.005
 		pop["happiness"] = pop.get("happiness",0.60) - 0.02
 
 	if inter["efficiency"] > 0.85 and bottleneck_count == 0 and Deterministic.chance(0.008):
@@ -124,12 +122,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# بازیافت واقعی: چرخه‌خواری شهری (تأسیسات شهری دور ۱۲) جریان پسماند را می‌کاهد
 	var recycling_i = float(state.get("urban_facilities", {}).get("waste_recycling", 0.15))
 	inter["waste_flow"] = maxf(float(inter.get("waste_flow", 40.0)) * (1.0 - recycling_i * 0.0008), 5.0)
-	# اثر آبشاری اقتصادی: ریسک بالای آبشاری به رشد ضربه می‌زند (هزینه واقعی شکست شبکه)
-	if float(inter.get("cascade_risk", 0.10)) > 0.55:
-		econ["growth_rate"] = clampf(float(econ.get("growth_rate", 0.02)) - 0.0006, -0.12, 0.15)
-		state["economy"] = econ
-		if Deterministic.chance(0.006):
-			events.append({"type": "supply_chain_failure", "message": "شکست زنجیره تأمین - کارخانه‌ها به دلیل کمبود نهاده متوقف شدند", "risk": inter["cascade_risk"]})
+	# اثر آبشاری اقتصادی: قدیم فقط عدد نمایشی رشد (بازنویسی روزانهٔ مالک) را کم می‌کرد؛
+	# بازرسی ۱۴۰۵: کشش واقعیِ ملایم (−۰٫۶٪/سال) از کانال مالک-یکتای sector_boosts (بازنویسی روزانه)
+	var inter_boosts: Dictionary = econ.get("sector_boosts", {})
+	inter_boosts["ریسک آبشاری شبکه"] = -0.006 if float(inter.get("cascade_risk", 0.10)) > 0.55 else 0.0
+	econ["sector_boosts"] = inter_boosts
+	state["economy"] = econ
+	if float(inter.get("cascade_risk", 0.10)) > 0.55 and Deterministic.chance(0.006):
+		events.append({"type": "supply_chain_failure", "message": "شکست زنجیره تأمین - کارخانه‌ها به دلیل کمبود نهاده متوقف شدند", "risk": inter["cascade_risk"]})
 	# بهبود به‌روزرسانی کارآمدی با اعتبار تقویت‌شده
 	if float(inter.get("efficiency", 0.70)) > 0.85 and len(inter.get("bottlenecks", [])) == 0 and Deterministic.chance(0.006):
 		events.append({"type": "flows_harmony", "message": "هماهنگی کامل جریان‌های پول، کالا و انرژی - شبکه اقتصادی روان"})

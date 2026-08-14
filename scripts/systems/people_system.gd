@@ -115,7 +115,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# حلقه: رضایت → بهره‌وری → اقتصاد → رفاه
 	var productivity_boost = happiness * 0.1 + emotions["امید"] * 0.05 - emotions["ترس"] * 0.05 - emotions["خشم"] * 0.05
-	economy["growth_rate"] = clamp(economy.get("growth_rate",0.02) + productivity_boost * 0.0001, -0.05, 0.10)
+	# بازرسی ۱۴۰۵: نویسهٔ نمایشی growth_rate حذف شد (مالکیت یکتا: economy_system)؛
+	# اثر واقعی بهره‌وری احساسی از کانال sector_boosts (نرخ سالانه؛ روزانه ×۳۶۰)
+	var pp_boosts: Dictionary = economy.get("sector_boosts", {})
+	pp_boosts["بهره‌وری انسانی"] = productivity_boost * 0.0001 * 360.0
+	economy["sector_boosts"] = pp_boosts
 	state["economy"] = economy
 
 	# رویدادهای انسانی

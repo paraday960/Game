@@ -493,10 +493,17 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	mil["deterrence"] = clamp(deterrence, 0.0, 150.0)
 
 	# اثر اقتصادی جنگ
+	# ممیزی GDP (۱۴۰۵): کشش فرسایش جنگ از کانال sector_boosts (نرخ سالانه، همان بزرگیِ
+	# قبلی: روزانه gdp_cost/365 می‌کمید — سایت پیشین با ماسک gdp_ از پویش‌ها مخفی بود)؛
+	# نویسهٔ نمایشی growth_rate هم حذف شد (مالکیت یکتا: economy_system). در صلح صفر است.
+	var mil_boosts: Dictionary = econ.get("sector_boosts", {})
 	if is_at_war:
 		var gdp_cost = war_exhaustion*0.01 + mobilization["level"]*0.005 + fronts["active_fronts"].size()*0.003
-		econ["gdp"] = float(econ.get("gdp",500e9)) * (1.0 - gdp_cost/365.0)
-		econ["growth_rate"] = float(econ.get("growth_rate",0.02)) - gdp_cost*0.1
+		mil_boosts["هزینهٔ جنگ (فرسایش)"] = -gdp_cost
+	else:
+		mil_boosts["هزینهٔ جنگ (فرسایش)"] = 0.0
+	econ["sector_boosts"] = mil_boosts
+	if is_at_war:
 		pop["happiness"] = clamp(float(pop.get("happiness",0.60)) - war_exhaustion*0.0006 - mobilization["level"]*0.0003, 0.05, 0.95)
 		pol["stability"] = clamp(float(pol.get("stability",0.60)) - war_exhaustion*0.0004 + (1.0 - info_war["public_support_war"])*0.0003, 0.05, 0.95)
 

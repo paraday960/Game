@@ -120,7 +120,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# رویدادها
 	if cb["bank_stability"] < 0.4 and Deterministic.chance(0.015):
 		events.append({"type": "banking_crisis", "message": "بحران بانکی - ناپایداری مالی!", "stability": cb["bank_stability"]})
-		economy["growth_rate"] = economy.get("growth_rate",0.02) - 0.01
+		# بازرسی ۱۴۰۵: نویسهٔ نمایشی growth_rate حذف شد (مالکیت یکتا: economy_system؛
+		# اثر واقعی بحران بانکی از کانال اعتبار بانکی/فروکش بحران banking_manager می‌گذرد)
 		state["economy"] = economy
 
 	if inflation > 0.20 and Deterministic.chance(0.02):

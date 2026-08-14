@@ -58,8 +58,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		stats["coverage"] += 0.02
 
 	# اثر بر سایر سیستم‌ها: دقت آمار پایین → تصمیم اشتباه → کاهش کارآمدی
+	# بازرسی ۱۴۰۵: آمار بد → تصمیم بد. نویسهٔ نمایشی growth_rate حذف شد؛ کشش واقعیِ
+	# ملایم (−۰٫۳۶٪/سال) از کانال sector_boosts (بازنویسی هفتگی؛ اشراف دو بار در ماه)
+	var st_boosts: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+	st_boosts["دقت آمار رسمی"] = -0.003 if stats["accuracy"] < 0.5 else 0.0
+	state["economy"]["sector_boosts"] = st_boosts
 	if stats["accuracy"] < 0.5:
-		state["economy"]["growth_rate"] = state.get("economy",{}).get("growth_rate",0.02) - 0.001
 		events.append({"type": "poor_statistics", "message": "آمار نادقیق - برنامه‌ریزی اشتباه و هدررفت منابع", "accuracy": stats["accuracy"]})
 
 	# حلقه: هویت ← دسترسی ← مشارکت ← ثبت

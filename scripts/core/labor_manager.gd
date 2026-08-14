@@ -47,6 +47,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		"wage_control":
 			risk += 0.10
 	risk += unions_power * 0.15
+	# ممیزی GDP (۱۴۰۵): هزینهٔ فرصت حداقل دستمزد از کانال sector_boosts (بازنویسی ماهانه؛
+	# با تعویض سیاست دستمزد خودبه‌خود صفر می‌شود)
+	var lb_boosts: Dictionary = econ.get("sector_boosts", {})
+	lb_boosts["هزینهٔ حداقل دستمزد"] = -0.0005 * 12.0 if wage_policy == "minimum_up" else 0.0
+	econ["sector_boosts"] = lb_boosts
 	# latch بازرسی ۱۴۰۵: last_strike از کلید نوشته‌بی‌خوان به مهار واقعی بدل شد —
 	# خستگی پس از اعتصاب: تا ۶ نوبت پس از اعتصاب قبلی، ریسک اعتصاب تازه سقف ۰٫۴۵ دارد
 	if turn - int(lab.get("last_strike", -99)) < 6:
@@ -58,7 +63,6 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		"minimum_up":
 			pop["happiness"] = clampf(happiness + 0.004, 0.05, 1.0)
 			econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + 0.004, 0.0, 1.5)
-			econ["gdp"] = float(econ.get("gdp", 1.0)) * 0.9995
 		"wage_control":
 			econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) - 0.003, 0.0, 1.5)
 			econ["foreign_investment"] = float(econ.get("foreign_investment", 1.0)) * 1.002

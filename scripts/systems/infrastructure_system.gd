@@ -79,7 +79,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if capacity_ratio > 1.15:
 		events.append({"type":"bottleneck","ratio": capacity_ratio, "score": infra["bottleneck_score"], "message":"گلوگاه زیرساختی - تقاضا %.0f%% بیش از ظرفیت" % (capacity_ratio*100.0)})
 		infra["capacity"] += 0.0005 # سرمایه‌گذاری خودکار اضطراری
-		econ["growth_rate"] = econ.get("growth_rate",0.02) - 0.001
+		# بازرسی ۱۴۰۵: نویسهٔ نمایشی growth_rate حذف شد — دوشماره‌ای بود: اثر واقعی
+		# زیرساخت در growth_potential (infra_effect) سیستم اقتصاد لحاظ می‌شود (مالکیت یکتا)
 	elif capacity_ratio > 1.0:
 		infra["capacity"] += 0.0003
 	else:
