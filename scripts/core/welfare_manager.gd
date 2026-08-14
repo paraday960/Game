@@ -27,8 +27,15 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var elderly := float(pop.get("elderly_ratio", pop.get("elderly", 0.12)))
 
 	# فشار صندوق بازنشستگی: سالخوردگی + سن بازنشستگی پایین
-	var pension_pressure := elderly * 0.5 + (65.0 - float(pension_age)) * 0.02
-	welfare["pension_pressure"] = clampf(pension_pressure, 0.0, 1.0)
+	# (دور یازدهم، یک‌سازی دونویسنده) دو منبع فشار: سیاستی (همین‌جا: سطح مزایا و
+	# سن) و ساختاری (demographic_manager: سلامت پایهٔ سهم‌برداری/نسبت وابستگی،
+	# کلید pension_pressure_structural). نمایش و گیت بحران = بیشینهٔ دو منبع —
+	# بحران ساختاری زیر سیاست خوش‌بینانه پنهان نمی‌شود. (ترتیب اجرا: دموگرافیک
+	# بعد از این مدیر می‌دود ⇒ ساختاریِ ماه قبل خوانده می‌شود؛ معنادار و پایدار.)
+	var pension_pressure_policy := elderly * 0.5 + (65.0 - float(pension_age)) * 0.02
+	var pension_pressure := clampf(maxf(pension_pressure_policy,
+		float(welfare.get("pension_pressure_structural", 0.0))), 0.0, 1.0)
+	welfare["pension_pressure"] = pension_pressure
 	# هزینه رفاه: بیمه بیکاری + یارانه فرزند + پوشش سلامت
 	# (بازرسی ۱۴۰۵ — دور نهم) انتقال‌های اجتماعی هزینهٔ مداوم ماهانه‌اند؛ قبلاً خاموش
 	# به بدهی شارژ می‌شدند و در بودجه/کسری دیده نمی‌شدند → کانال policy_costs.

@@ -4510,6 +4510,7 @@ func _build_welfare_card(st: Dictionary):
 	var _pen_left: int = maxi(0, 12 - (_turn_now - int(wp.get("last_pension", -99))))
 	_row(card, "سن بازنشستگی", PersianFormatter.to_persian_digits(str(int(wp.get("pension_age", 65)))) + " سال" + ("" if _pen_left <= 0 else " · ⏳ " + PersianFormatter.to_persian_digits(str(_pen_left)) + " نوبت تا اصلاح"))
 	_bar(card, "فشار صندوق بازنشستگی", float(welfare.get("pension_pressure", 0.3)))
+	_bar(card, "فشار ساختاری (پیری جمعیت)", float(welfare.get("pension_pressure_structural", 0.0)))
 	# سلامت واقعی صندوق (بازرسی ۱۴۰۵ — دور دهم): تعهدات/منابع pay-as-you-go + بافر
 	_row(card, "تعهدات ماهانهٔ مستمری", PersianFormatter.format_money(welfare.get("pension_obligations_monthly", 0.0)))
 	_row(card, "منابع ماهانهٔ صندوق", PersianFormatter.format_money(welfare.get("pension_resources_monthly", 0.0)))

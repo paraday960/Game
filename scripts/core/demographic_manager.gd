@@ -87,9 +87,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	dm_costs["فشار صندوق بازنشستگی"] = (gdp * (0.30 - fund) * 0.002) if fund < 0.30 else 0.0
 	econ["policy_costs"] = dm_costs
 	state["economy"] = econ
-	if fund < 0.30:
-		welfare["pension_pressure"] = 1.0 - fund
-		state["welfare"] = welfare
+	# فشار ساختاری (دور یازدهم، یک‌سازی دونویسنده): قبلاً فقط در رژیم بحران
+	# (fund<۰٫۳۰) روی کلید مشترک pension_pressure بازنویسی می‌شد و با مقدار سیاستی
+	# welfare_manager پینگ‌پونگ می‌کرد. حالا سیگنال ساختاری همیشه و در کلید جدا
+	# منتشر می‌شود و welfare_manager نمایش/گیت را با max تلفیق می‌کند — بحران
+	# ساختاری دیگر زیر سیاست خوش‌بینانه پنهان نمی‌شود و برعکس.
+	welfare["pension_pressure_structural"] = 1.0 - fund
+	state["welfare"] = welfare
 
 	# باروری و جمعیت: مشوق + مهدکودک
 	var fertility := 1.5 + incentive * 0.6 + childcare * 0.5 + (1.0 - median_age / 50.0) * 0.3

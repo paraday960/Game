@@ -195,6 +195,16 @@ def check_pension_fund_wiring():
         print("✅ آینهٔ بلندمدت صندوق بازنشستگی را مدل می‌کند")
     else:
         FAIL.append("آینهٔ sim_longrun مدل صندوق بازنشستگی را ندارد")
+    # (دور یازدهم) یک‌سازی دونویسندهٔ pension_pressure: ساختاری در کلید جدا و
+    # نمایش/گیت = بیشینهٔ دو منبع؛ بازنویسی شرطی روی کلید مشترک ممنوع
+    wm = open("scripts/core/welfare_manager.gd", encoding="utf-8").read()
+    dm = open("scripts/core/demographic_manager.gd", encoding="utf-8").read()
+    if ('pension_pressure_structural' in dm and 'pension_pressure_structural' in wm
+            and 'maxf(pension_pressure_policy,' in wm
+            and 'if fund < 0.30:\n\t\twelfare["pension_pressure"]' not in dm):
+        print("✅ فشار صندوق: دو منبع (سیاستی/ساختاری) با max تلفیق می‌شوند")
+    else:
+        FAIL.append("یک‌سازی دونویسندهٔ pension_pressure شکست (بازنویسی شرطی برگشت)")
 
 
 def check_fuel_subsidy_wiring():
