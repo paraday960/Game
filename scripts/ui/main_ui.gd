@@ -8060,12 +8060,42 @@ func _format_metric_value(value, key: String) -> String:
 # ============================================================
 # رویدادها
 # ============================================================
+# کلمات کلیدی رویدادهای پراهمیت برای فید خبری (بازرسی رویداد-اسپم):
+# فید قبلی صرفاً «دو رویداد آخر» را نشان می‌داد — با ~۱۰۰+ رویداد در هر نوبت، دو تای
+# دمِ صف عملاً تصادفی (و معمولاً طعم‌دهندهٔ آماری) بودند و بحران‌ها دفن می‌شدند.
+const EVENT_IMPORTANT_HINTS := ["crisis", "war", "peace", "treaty", "sanction", "election", "coup", "debt", "disaster", "epidemic", "attack", "assassin", "referendum", "riot", "collapse", "shortage", "blackout", "earthquake", "flood", "launch", "breakthrough", "olympics", "nuclear", "missile", "strike", "unrest", "protest", "bankin", "reserve", "trade_deficit", "hyperinflation", "supply_shock", "energy_crisis", "famine", "default", "resign", "impeach"]
+
+func _event_is_important(e: Dictionary) -> bool:
+	var t := str(e.get("type", ""))
+	if t == "law_event" or t == "intelligence_operation_event" or t == "incoming_offer":
+		return true
+	var d: Dictionary = e.get("data", {})
+	var et := t
+	if t == "system_event":
+		et = str(d.get("event", {}).get("type", ""))
+	for h in EVENT_IMPORTANT_HINTS:
+		if et.to_lower().contains(h):
+			return true
+	return false
+
 func _render_events():
 	for c in event_list.get_children():
 		c.queue_free()
-	var last = EventLog.get_last(2)
+	# فید اهمیت‌محور: از ۶۰ رویداد اخیر، اول مهم‌ها و بعد بقیه — بحران دیگر دفن نمی‌شود
+	var last = EventLog.get_last(60)
 	last.reverse()
+	var chosen: Array = []
 	for e in last:
+		if _event_is_important(e):
+			chosen.append(e)
+			if chosen.size() >= 2:
+				break
+	for e in last:
+		if chosen.size() >= 2:
+			break
+		if not chosen.has(e):
+			chosen.append(e)
+	for e in chosen:
 		var l = Label.new()
 		l.text = "• " + PersianFormatter.to_persian_digits(_event_text_fa(e))
 		l.add_theme_font_size_override("font_size", 22)
