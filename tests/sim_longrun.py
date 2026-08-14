@@ -129,6 +129,10 @@ def step_day(s):
         revenue *= 0.9   # اختلال جنگی در مالیه
     saving = s["alloc"]["ذخیره"]
     spending = revenue * (1.0 - saving) * (2.2 if mobil > 0 else 1.0)
+    # بازرسی واحد ۱۴۰۵: استهلاک انبارهٔ هزینه‌های یک‌بارمصرف (در سناریوهای آینه نویسنده‌ای
+    # ندارد → ۰؛ خط برای وفاداری ساختاری به economy_system نگه داشته می‌شود)
+    spending += s.get("oneoff_pool", 0.0) / DPM
+    s["oneoff_pool"] = max(s.get("oneoff_pool", 0.0) - s.get("oneoff_pool", 0.0) / DPM, 0.0)
     if mobil > 0:
         spending += s["gdp"] * (0.002 + mobil * 0.001 + war_exh * 0.001) / 12.0  # هزینه جنگ (نرخ ماهانه)
     surplus = revenue - spending

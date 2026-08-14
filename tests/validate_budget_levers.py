@@ -45,6 +45,19 @@ if writers:
 else:
     print("✅ مالکیت یکتای بودجه: فقط economy_system می‌نویسد government_revenue/spending")
 
+# ── کانال هزینهٔ یک‌بارمصرف (بازرسی واحد ۱۴۰۵) ─────────────────────────
+# مبالغ یک‌بارمصرف باید در انباره جمع و در سراسر ماه مستهلک شوند؛ بلع یک‌روزهٔ
+# آن‌ها در نرخ ماهانه یعنی بدهی فقط ۱/۳۰ مبلغ واقعی را حس می‌کند (باگ ۳۰×).
+es_src = io.open("scripts/systems/economy_system.gd", encoding="utf-8").read()
+if 'oneoff_spending_pool' in es_src and "oneoff_pool / dpm" in es_src:
+    print("✅ کانال یک‌بارمصرف: انباره + استهلاک ماهانه در economy_system فعال است")
+else:
+    fail.append("economy_system کانال استهلاک oneoff_spending_pool را ندارد")
+if 'oneoff_spending_monthly' in es_src and re.search(r'econ\["oneoff_spending_monthly"\]\s*=', es_src):
+    print("✅ سهم ماهانهٔ برنامه‌های در‌حال‌اجرا برای UI منتشر می‌شود")
+else:
+    fail.append("economy_system کلید نمایشی oneoff_spending_monthly را نمی‌نویسد")
+
 if fail:
     print("\n❌ شکست:")
     for x in fail:

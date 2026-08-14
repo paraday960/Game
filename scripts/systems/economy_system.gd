@@ -179,9 +179,18 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	else:
 		econ["war_spending"] = 0.0
 
-	# کانال هزینه اقدامات بازیکن و برنامه‌های مدیران — دقیقاً یک‌بار مصرف و صفر می‌شود
-	spending += float(econ.get("extra_spending_daily", 0.0))
+	# کانال هزینه اقدامات بازیکن و برنامه‌های مدیران (بازرسی واحد ۱۴۰۵): مبالغ یک‌بارمصرف
+	# قبلاً در یک تیک روزانه بلع می‌شدند و چون spending نرخ «ماهانه» است، بدهی فقط
+	# ~۱/۳۰ مبلغ واقعی را حس می‌کرد (برنامهٔ ۲ میلیارد دلاری عملاً ۶۶ میلیون هزینه داشت!).
+	# حالا مبالغ به انبارهٔ oneoff_spending_pool می‌ریزند و در سراسر ماه مستهلک می‌شوند —
+	# بدهی کل مبلغ برنامه را می‌بیند و نمایش ماهانه هم لرزش تیک‌وار ندارد.
+	var dpm: float = max(float(BalanceConfig.get_value("simulation.days_per_month", 30)), 1.0)
+	var oneoff_pool: float = float(econ.get("oneoff_spending_pool", 0.0)) + float(econ.get("extra_spending_daily", 0.0))
 	econ["extra_spending_daily"] = 0.0
+	var oneoff_month: float = oneoff_pool / dpm
+	econ["oneoff_spending_monthly"] = oneoff_month   # برای نمایش UI و تحلیل بودجه
+	spending += oneoff_month
+	econ["oneoff_spending_pool"] = max(oneoff_pool - oneoff_month, 0.0)
 	# کانال هزینهٔ سیاست‌های فعال (بازرسی ۱۴۰۵): نرخ ماهانه که policy_manager انتشار
 	# می‌دهد؛ صفر نمی‌شود چون نرخِ پایدار است، نه انباشتگر یک‌بارمصرف. منفی = صرفه‌جویی.
 	spending += float(econ.get("policy_spending_monthly", 0.0))
