@@ -252,12 +252,13 @@ def step_day(s):
                            + (0.15 - s["poverty"]) * 0.001, 0.05, 0.95)
     s["tension"] = clamp(s["tension"] + s["poverty"] * 0.002 + s["unemployment"] * 0.003, 0.0, 1.0)
 
-    # ── central_bank_system (قاعده تیلور) ──
+    # ── central_bank_system (قاعدهٔ تیلور یکتا — پس از اتحاد دولایه، بازرسی بانک مرکزی) ──
     growth_gap = s["growth_rate"] - 0.025
     infl_gap = s["inflation"] - s["inflation_target"]
     taylor = clamp(s["inflation_target"] + s["inflation"] + 0.5 * infl_gap + 0.5 * growth_gap, 0.01, 0.60)
     pressure = (1.0 - s["independence"]) * 0.02 + (-0.01 if s["stability"] < 0.4 else 0.0)
-    s["interest_rate"] = clamp(s["interest_rate"] * 0.98 + (taylor + pressure) * 0.02, 0.01, 0.60)
+    taylor_step = 0.010 + s["independence"] * 0.02   # سرعت وابسته به استقلال (تعادل ثابت)
+    s["interest_rate"] = clamp(s["interest_rate"] * (1.0 - taylor_step) + (taylor + pressure) * taylor_step, 0.01, 0.60)
     money_change = (0.15 - s["interest_rate"]) * 0.01 + growth_gap * 0.005
     s["money_supply"] = clamp(s["money_supply"] + money_change * 0.01, 0.5, 1.8)
 

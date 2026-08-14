@@ -43,7 +43,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.98 + float(cb["manual_rate"]) * 0.02, 0.0, 0.50)
 		cb["independence"] = clamp(float(cb["independence"]) - 0.0002, 0.1, 0.95)
 	else:
-		cb["interest_rate"] = clamp(cb["interest_rate"] * 0.98 + (taylor_rate + political_pressure) * 0.02, 0.01, 0.60)
+		# (بازرسی بانک مرکزی) قاعدهٔ تیلور یکتا — پیش‌تر دو قاعدهٔ هم‌پوشان (این‌جا و لایهٔ
+		# انتهایی فایل) با سرعت/هدف متفاوت روی یک کلید می‌نشستند: تعادل ~۱٫۶ واحد منحرف و
+		# هم‌جویی با آینه شکسته بود؛ حتی نام متغیر دوباره تعریف می‌شد. حالا یک جاذب واحد:
+		# سرعت نزدیک‌شدن با استقلال بانک مقیاس می‌شود (مستقل‌تر → واکنش سریع‌تر، τ≈۳۳–۱۰۰ روز).
+		var taylor_step: float = 0.010 + float(cb["independence"]) * 0.02
+		cb["interest_rate"] = clamp(cb["interest_rate"] * (1.0 - taylor_step) + (taylor_rate + political_pressure) * taylor_step, 0.01, 0.60)
 
 	# عرضه پول و نقدینگی
 	# نرخ بهره بالا → عرضه کم، رشد کم؛ پایین → رشد اما ریسک تورم
@@ -115,13 +120,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	state["central_bank"] = cb
 	
-	# ── لایه واقع‌گرایانه اختصاصی بانک مرکزی (جایگزین قالب خودکار تکراری) — بخش ۳.۲۵ ──
-	# قاعده تیلور: نرخ بهره متناسب با انحراف تورم از هدف و رشد تنظیم می‌شود
-	var infl_gap: float = float(economy.get("inflation", 0.08)) - float(cb.get("inflation_target", 0.05))
-	var taylor_rate: float = clampf(0.02 + float(cb.get("inflation_target", 0.05)) + infl_gap * 0.8 - float(economy.get("growth_rate", 0.02)) * 0.3, 0.01, 0.60)
-	# بانک مستقل‌تر سریع‌تر به قاعده نزدیک می‌شود؛ مماشات دولتی نرخ را ناکارآمد نگه می‌دارد
-	var w_cb: float = 0.004 * float(cb.get("independence", 0.70)) + 0.001
-	cb["interest_rate"] = clampf(float(cb.get("interest_rate", 0.15)) * (1.0 - w_cb) + taylor_rate * w_cb, 0.01, 0.60)
+	# ── رویداد لنگرگریز انتظارات (بخش ۳.۲۵) ──
+	# قاعدهٔ تیلور دوم این‌جا بودکه با قاعدهٔ اصلی هم‌پوشانی داشت و در بازرسی حذف/ادغام شد
+	# (سرعتِ استقلال‌وابسته حالا در همان جاذب واحد بالاست). فقط رویداد هشدار می‌ماند:
 	# نرخ بهره واقعی منفی = لنگرگریز انتظارات تورمی
 	if float(cb.get("interest_rate", 0.15)) < float(economy.get("inflation", 0.08)) and Deterministic.chance(0.006):
 		events.append({"type": "inflation_unanchored", "message": "لنگرگریز انتظارات تورمی - نرخ بهره واقعی منفی است", "rate": cb["interest_rate"]})
