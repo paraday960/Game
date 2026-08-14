@@ -80,6 +80,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	elif trust_data > 0.80 and Deterministic.chance(0.025):
 		events.append({"type": "trusted_data", "message": "📈 گزارش‌های شفاف مرکز آمار اعتماد عمومی به سیاست‌گذاری را بالا برد"})
 	elif accuracy < 0.30 and Deterministic.chance(0.030):
+		# اثر واقعی قطع آمار: سیاست‌گذاری کور → ریسک خطای سیاست بالا می‌رود
+		pol["trust"] = clampf(float(pol.get("trust", 0.55)) - 0.010, 0.05, 1.0)
+		state["politics"] = pol
+		if state.has("statistics"):
+			var stt: Dictionary = state["statistics"]
+			stt["policy_error_risk"] = clampf(float(stt.get("policy_error_risk", 0.36)) + 0.08, 0.0, 0.90)
 		events.append({"type": "stats_blackout", "message": "🗂️ سیستم آمار فرسوده؛ سیاست‌گذاری در تاریکی انجام می‌شود"})
 
 	state["statistics_policy"] = sp

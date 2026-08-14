@@ -79,6 +79,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if delay_cost > 0.60 and Deterministic.chance(0.04):
+		# اثر واقعی اطاله دادرسی: عدالتِ دیرهنگام اعتماد و نظم را می‌فرساید
+		pol["trust"] = clampf(float(pol.get("trust", 0.55)) - 0.020, 0.05, 1.0)
+		sec["public_security"] = clampf(float(sec.get("public_security", 0.70)) - 0.010, 0.10, 1.0)
+		state["politics"] = pol
+		state["security"] = sec
 		events.append({"type": "case_backlog", "message": "📋 اطاله دادرسی بحرانی شد؛ دادگاه‌ها از حجم پرونده‌ها عقب ماندند"})
 	elif resolution > 0.75 and Deterministic.chance(0.03):
 		events.append({"type": "justice_fast", "message": "⚖️ دیجیتالی شدن دادگاه‌ها زمان رسیدگی را چشمگیر کم کرد؛ امید به عدالت بالا رفت"})

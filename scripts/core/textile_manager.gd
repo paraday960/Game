@@ -75,6 +75,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if export_share > 0.55 and Deterministic.chance(0.03):
 		events.append({"type": "textile_export", "message": "👗 صادرات پوشاک رشد کرد؛ اشتغال و ارزآوری بالا رفت"})
 	elif import_dep > 0.70 and Deterministic.chance(0.04):
+		# اثر واقعی کمبود ماده اولیه: ظرفیت افت می‌کند و پوشاک گران می‌شود
+		econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 - 0.0003)
+		econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + 0.0005, 0.0, 0.50)
+		state["economy"] = econ
 		events.append({"type": "raw_shortage", "message": "🧵 کمبود الیاف و پارچه، کارخانه‌ها را زیر ظرفیت برد"})
 	elif output > 0.65 and Deterministic.chance(0.02):
 		events.append({"type": "textile_jobs", "message": "🧶 توسعه نساجی هزاران شغل ایجاد کرد"})

@@ -60,6 +60,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["higher_ed_policy"] = higher_ed
 
 	if displacement > 0.50 and reskill < 0.35 and Deterministic.chance(0.04):
+		# اثر واقعی اعتراض به اتوماسیون: توقف خطوط و تنش اجتماعی
+		econ["gdp"] = float(econ.get("gdp", gdp)) * (1.0 - 0.0003)
+		state["economy"] = econ
+		var pol2: Dictionary = state.get("politics", {})
+		pol2["stability"] = clampf(float(pol2.get("stability", 0.60)) - 0.015, 0.05, 1.0)
+		state["politics"] = pol2
 		events.append({"type": "automation_protest", "message": "🤖 اعتراض به اتوماسیون؛ مشاغل بدون مهارت‌آموزی حذف شدند"})
 	elif productivity > 0.60 and Deterministic.chance(0.025):
 		events.append({"type": "ai_boom", "message": "🧠 بهره‌وری صنعتی با هوش مصنوعی جهش کرد"})

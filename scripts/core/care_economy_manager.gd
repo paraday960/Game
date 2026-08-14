@@ -71,6 +71,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if care_burden > 0.70 and Deterministic.chance(0.04):
+		# اثر واقعی بحران مراقبت: مراقبت غیررسمی نیروی کار را می‌بلعد و سالمندان آسیب می‌بینند
+		econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) + 0.003, 0.02, 0.30)
+		pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.020, 0.05, 1.0)
+		health["quality"] = clampf(float(health.get("quality", 0.60)) - 0.010, 0.10, 1.0)
+		state["economy"] = econ
+		state["population"] = pop
+		state["health"] = health
 		events.append({"type": "care_crisis", "message": "👵 بحران مراقبت! بار نگهداری از سالمندان بر دوش خانواده‌ها افتاد"})
 	elif female_lfp > 0.65 and Deterministic.chance(0.025):
 		events.append({"type": "women_workforce", "message": "👩‍💼 مشارکت زنان در بازار کار رکورد شکست؛ اقتصاد جان گرفت"})

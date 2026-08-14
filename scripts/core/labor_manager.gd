@@ -68,6 +68,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		lab["strike_risk"] = 0.2
 		events.append({"type": "labor_strike", "message": "✊ اعتصاب سراسری کارگران! تولید و ثبات آسیب دید"})
 	elif float(lab["strike_risk"]) > 0.45 and Deterministic.chance(0.08):
+		# اثر هشداری ناآرامی: فشار اجتماعی پیش از اعتصاب
+		pol["stability"] = clampf(float(pol.get("stability", 0.60)) - 0.008, 0.05, 1.0)
+		pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.005, 0.05, 1.0)
 		events.append({"type": "labor_unrest", "message": "⚠️ ناآرامی کارگری در حال گسترش است؛ ریسک اعتصاب بالا"})
 
 	state["labor"] = lab
