@@ -76,7 +76,9 @@ IMPORTANT_KEYS = {
                 # کانال نرخ ماهانهٔ ورودی ذخایر ارزی (بازرسی ۱۴۰۵)
                 "reserve_inflows", "reserve_inflows_monthly",
                 # بازرسی مالی بلندمدت ۱۴۰۵: شاخص قیمت منابع (زنجیرهٔ خزانه→بودجه)
-                "resource_price_index"],
+                "resource_price_index",
+                # پاداش قیمت محقق‌شدهٔ نفت (ناشر: org_manager/اوپک → مصرف‌کننده: economy_system)
+                "oil_price_bonus"],
     "trade": ["market_access_bonus"],
     "stock_policy": ["last_crash"],
     "resources": ["energy_crisis", "food_crisis"],

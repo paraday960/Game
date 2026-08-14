@@ -134,11 +134,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# ── اثر بر کشور ──
 	var econ: Dictionary = state.get("economy", {})
-	# درآمد نفت: صادرات نفتی = سهم تولید × قیمت
-	var oil_reserve := float(reserves.get("نفت", 90.0))
-	var oil_income := oil_reserve * float(prices.get("نفت", 75.0)) * 0.004
-	econ["oil_income"] = oil_income
-	econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + oil_income
+	# (بازرسی مالی بلندمدت ۱۴۰۵) کانال موازی «oil_income» حذف شد: فرمول اسباب‌بازیِ
+	# بدون واحد (ذخیره×قیمت×۰٫۰۰۴) هم با درآمد منابعِ بودجه دوشماره‌ای می‌ساخت و هم
+	# با نویسهٔ مستقیم روی foreign_reserves مالکیت مخزن ارزی central_bank را می‌شکست.
+	# درآمد نفتی کشور حالا تک‌مسیره است: قیمت زندهٔ این بازار → نسبت قیمت در
+	# economy_system → درآمد منابع خزانه؛ فروش دستی ذخایر (اقدام بازیکن) همچنان
+	# قانونی و زیر بودجهٔ RESERVE_BUDGET است.
 	# گندم گران → تورم خوراک
 	var wheat_price := float(prices.get("گندم", 260.0))
 	var food_inflation := (wheat_price - 260.0) / 260.0 * 0.03

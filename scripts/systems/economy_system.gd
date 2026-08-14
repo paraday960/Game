@@ -156,7 +156,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var oil_inventory = resources.get("inventory",{}).get("نفت",80.0)
 	var gas_inventory = resources.get("inventory",{}).get("گاز",70.0)
 	var com_prices: Dictionary = state.get("commodities", {}).get("prices", {})
-	var oil_ratio = clampf(float(com_prices.get("نفت", 75.0)) / 75.0, 0.40, 2.40)
+	# oil_price_bonus: نرخ اوپک از org_manager (۱٫۱۰ عضو / ۱٫۰ غیرعضو) — قیمت محقق‌شده
+	var oil_ratio = clampf(float(com_prices.get("نفت", 75.0)) / 75.0 * float(econ.get("oil_price_bonus", 1.0)), 0.40, 2.40)
 	var gas_ratio = clampf(float(com_prices.get("گاز", 3.2)) / 3.2, 0.375, 2.50)
 	if float(econ.get("gdp_baseline", 0.0)) <= 0.0:
 		econ["gdp_baseline"] = float(econ.get("gdp", 500_000_000_000.0))

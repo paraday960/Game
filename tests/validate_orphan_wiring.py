@@ -14,6 +14,9 @@
 ۴) latch کرش بورس: last_crash باید در stock_market_manager خوانده شود نه فقط نوشته.
 ۵) اتصال شبکه: map_network باید در trade_system و tourism_system خوانده شود.
 ۶) پاک‌سازی init: کلیدهای کاملاً مرده (citizens_sample/front_lines) در state.gd نباشند.
+۷) کانال موازی درآمد نفتی: لفجر اسباب‌بازیِ oil_income (نویسهٔ خودکار ماهانه روی
+   ذخایر؛ دوشماره‌ای با بودجه) از commodity_manager حذف شده و پاداش اوپک به‌جای
+   ضرب روی لفجر مرده، نرخ oil_price_bonus منتشر می‌کند که economy_system مصرف می‌کند.
 
 خروج غیرصفر = بازگشت هر یک از این الگوهای مرده.
 """
@@ -109,6 +112,28 @@ for dead in ["citizens_sample", "front_lines"]:
         fail.append("کلید مردهٔ «%s» دوباره به state.gd برگشته" % dead)
     else:
         print("✅ کلید مردهٔ «%s» از init حذف شده" % dead)
+
+# ── ۷) کانال موازی درآمد نفتی (بازرسی مالی بلندمدت ۱۴۰۵) ───────────────
+# commodity_manager یک لفجر اسباب‌بازیِ بی‌واحد (oil_income) می‌نوشت و خودکار
+# ماهانه روی foreign_reserves می‌ریخت — دوشماره‌ای با بودجه + نقض مالکیت مخزن.
+com = src("scripts/core/commodity_manager.gd")
+org = src("scripts/core/org_manager.gd")
+if '["oil_income"]' in com:
+    fail.append("commodity_manager دوباره کانال موازی oil_income را می‌نویسد")
+else:
+    print("✅ کانال موازی oil_income از commodity_manager حذف شده")
+if "oil_income" in org:
+    fail.append("org_manager هنوز به لفجر مردهٔ oil_income تکیه دارد")
+else:
+    print("✅ org_manager از لفجر مردهٔ oil_income پاک شد")
+if '["oil_price_bonus"]' in org:
+    print("✅ org_manager نرخ قیمت محقق‌شدهٔ نفت (اوپک) را منتشر می‌کند")
+else:
+    fail.append("org_manager نرخ oil_price_bonus را منتشر نمی‌کند")
+if '"oil_price_bonus"' in src("scripts/systems/economy_system.gd"):
+    print("✅ economy_system پاداش اوپک را در کانال بودجه مصرف می‌کند")
+else:
+    fail.append("economy_system نرخ oil_price_bonus را مصرف نمی‌کند")
 
 if fail:
     print("\n❌ شکست قرارداد سیم‌کشی کلیدهای یتیم:")

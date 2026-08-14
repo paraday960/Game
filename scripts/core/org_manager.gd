@@ -97,9 +97,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if bool(memberships.get("اتحادیه منطقه‌ای", false)):
 		econ["trade_exports_bonus"] = 0.003
 		pol_stability_bump(state, 0.0005)
-	if bool(memberships.get("اوپک", false)):
-		var oil_income := float(econ.get("oil_income", 0.0))
-		econ["oil_income"] = oil_income * 1.10
+	# پاداش اوپک (بازرسی مالی بلندمدت ۱۴۰۵): قبلاً روی لفجر مردهٔ درآمد نفتی ضرب
+	# می‌شد و هیچ‌جا مصرف نداشت؛ حالا نرخ «قیمت محقق‌شدهٔ نفت» است که
+	# economy_system در کانال بودجه مصرف می‌کند (۱٫۰ = بدون عضویت).
+	econ["oil_price_bonus"] = 1.10 if bool(memberships.get("اوپک", false)) else 1.0
 
 	# قطعنامه
 	if int(intl.get("next_vote_turn", 0)) <= turn:

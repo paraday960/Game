@@ -113,7 +113,9 @@ RESERVE_BUDGET = {
     "scripts/systems/international_orgs_system.gd": 1,  # حقوق دوره‌ای سازمانی
     # در انتظار دور بعد (نرخ ماهانهٔ درآمد ارزی — نامزد مهاجرت به reserve_inflows):
     "scripts/core/tourism_manager.gd": 1,
-    "scripts/core/commodity_manager.gd": 2,
+    # کانال موازی oil_income (نویسهٔ خودکار ماهانه روی ذخایر) در بازرسی ۱۴۰۵ حذف شد؛
+    # فقط فروش دستی ذخایر کالا (اقدام بازیکن) باقی است.
+    "scripts/core/commodity_manager.gd": 1,
     "scripts/core/creative_manager.gd": 2,
     "scripts/core/knowledge_economy_manager.gd": 1,
     "scripts/core/petrochemical_manager.gd": 1,
