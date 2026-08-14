@@ -24,27 +24,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	# گردشگری = f(زیرساخت، امنیت، فرهنگ، طبیعت، قیمت، روادید)
-	var infra_factor = tourism["infrastructure"] * 0.25 + infra.get("quality",0.55) * 0.15
-	var safety_factor = tourism["safety"] * 0.25 + security.get("feeling_security",0.70) * 0.1
-	var attraction = (tourism["cultural_attraction"] + tourism["natural_attraction"] + heritage.get("sites",20)/50.0) / 3.0 * 0.25
-	var price_factor = 1.0 / state.get("central_bank",{}).get("exchange_rate",1.0) * 0.1  # ارز ارزان‌تر برای گردشگر
-	var visa_factor = tourism["visa_openness"] * 0.15
-
-	var tourism_potential = 0.3 + infra_factor + safety_factor + attraction + price_factor + visa_factor
-	tourism_potential = clamp(tourism_potential, 0.1, 1.5)
-
-	var base_visitors = 5_000_000.0
-	var visitors = base_visitors * tourism_potential * (1.0 + pop_total(state)/85_000_000.0 * 0.1) * (1.0 + economy.get("gdp",0)/500_000_000_000.0 * 0.1)
-	# فصلی بودن
+	# (بازرسی سایه‌نویسی) مدل تقاضای غنیِ این بلوک (میراث/روادید/بازاریابی/نرخ ارز)
+	# هر روز محاسبه و بی‌درنگ توسط لایهٔ انتهایی بازنویسی می‌شد و کاملاً مرده بود؛
+	# کانال‌هایش به هدفِ لایهٔ انتهایی منتقل شد — مالکیت یکتای visitors/revenue.
+	# فصلی بودن تقاضا — در هدف لایهٔ انتهایی ضرب می‌شود
 	var seasonal_factor = 1.0 + sin(float(tick) / 365.0 * 6.28 * 2.0) * tourism["seasonality"]
-	visitors *= seasonal_factor
-
-	tourism["visitors"] = tourism["visitors"] * 0.98 + visitors * 0.02
-
-	# درآمد = بازدیدکنندگان × هزینه متوسط
-	var avg_spending = 800.0 + tourism["service_quality"] * 400.0  # دلار per visitor
-	var revenue = tourism["visitors"] * avg_spending
-	tourism["revenue"] = tourism["revenue"] * 0.98 + revenue * 0.02
 
 	# کیفیت خدمات
 	tourism["service_quality"] = clamp(tourism["service_quality"] + (tourism["infrastructure"] - 0.5) * 0.001, 0.1, 0.95)
@@ -100,9 +84,18 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ── لایه واقع‌گرایانه اختصاصی گردشگری (جایگزین قالب خودکار تکراری) — بخش ۳.۳۰ ──
 	# جذابیت مقصد: امنیت عمومی + طبیعت پاک + زیرساخت؛ تقاضا به‌آرامی به سمت جذابیت می‌گراید
 	var appeal_t: float = float(security.get("public_security", 0.60)) * 0.40 + (1.0 - float(environment.get("pollution", 0.45))) * 0.25 + float(infra.get("quality", 0.55)) * 0.35
-	var visitors_target: float = 2_000_000.0 + appeal_t * 18_000_000.0
+	# کانال‌های بیدارشدهٔ مدل مردهٔ قدیمی: میراث فرهنگی، گشودگی روادید، بازاریابی، جاذبه‌ها، نرخ ارز
+	appeal_t += float(heritage.get("sites", 20)) / 50.0 * 0.06 + float(tourism["visa_openness"]) * 0.06 + float(tourism["marketing"]) * 0.05
+	appeal_t += (float(tourism["cultural_attraction"]) + float(tourism["natural_attraction"]) - 1.0) * 0.05
+	appeal_t += (1.0 / maxf(float(state.get("central_bank", {}).get("exchange_rate", 1.0)), 0.2) - 1.0) * 0.04  # ارز ارزان‌تر برای گردشگر
+	appeal_t = clampf(appeal_t, 0.05, 1.30)
+	var visitors_target: float = (2_000_000.0 + appeal_t * 18_000_000.0) * seasonal_factor
 	tourism["visitors"] = clampf(float(tourism.get("visitors", 5_000_000.0)) * 0.9995 + visitors_target * 0.0005, 0.0, 25_000_000.0)
-	tourism["revenue"] = float(tourism["visitors"]) * 900.0
+
+	# درآمد: بازدیدکننده × هزینهٔ متوسطِ وابسته به کیفیت خدمات، با بازگشت آرام
+	# (بازرسی: بازنویسی قبلی با نرخ ثابت ۹۰۰ هم AR درآمد و هم کانال کیفیت خدمات را می‌کشت)
+	var avg_spending_t: float = 800.0 + float(tourism["service_quality"]) * 400.0
+	tourism["revenue"] = float(tourism.get("revenue", 5_000_000_000.0)) * 0.9995 + float(tourism["visitors"]) * avg_spending_t * 0.0005
 	if float(security.get("public_security", 0.60)) < 0.30 and Deterministic.chance(0.005):
 		events.append({"type": "tourism_collapse", "message": "فروریزش گردشگری - ناامنی مقاصد را خالی کرد", "visitors": tourism["visitors"]})
 	state["tourism"] = tourism

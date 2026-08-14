@@ -48,8 +48,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		space["launch_sites"] += 1
 		events.append({"type": "launch_site_built", "message": "ساخت پایگاه پرتاب فضایی جدید"})
 
-	# موشک‌ها
-	space["rockets"] = int(space["level"] * 30.0 + space_budget_share * 200.0)
+	# موشک‌ها — موجودی واقعی تا سقف برنامهٔ فضایی (بازرسی: بازنشانیِ روزانهٔ قبلی،
+	# نتیجهٔ پرتاب موفق/ناموفق (+۱/−۱) را بی‌درنگ پاک می‌کرد و رویدادها بی‌اثر بودند)
+	var rocket_cap: int = maxi(int(float(space["level"]) * 30.0 + space_budget_share * 200.0), 1)
+	space["rockets"] = clampi(int(space.get("rockets", 3)), 1, rocket_cap)
 
 	# فضانوردان
 	if space["level"] > 0.7 and Deterministic.chance(0.002):

@@ -88,8 +88,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["public_transport"] = pt
 	
 	# ── لایه واقع‌گرایانه اختصاصی حمل‌ونقل عمومی (جایگزین قالب خودکار) — بخش ۳.۷۰ ──
-	# پیری ناوگان: هر روز کهنه‌تر؛ نوسازی فقط با بودجه زیرساخت بالاتر از متوسط و ناوگان برقی‌سازی می‌شود
-	pt["fleet_age"] = float(pt.get("fleet_age", 7.0)) + 1.0 / 365.0
+	# پیری ناوگان: کهنگی روزانه در بلوک نخست اعمال شد (بازرسی: این‌جای مضاعف بود)؛
+	# این بلوک فقط نوسازی با بودجهٔ زیرساخت بالا و برقی‌سازی ناوگان را می‌کند
 	if float(budget_share) > 0.20:
 		pt["fleet_age"] = maxf(float(pt["fleet_age"]) - 0.004, 3.0)
 		pt["electrification"] = clampf(float(pt.get("electrification", 0.15)) + 0.0006, 0.02, 0.95)
