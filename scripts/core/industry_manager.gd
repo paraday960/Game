@@ -51,9 +51,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر راهبرد
 	econ["industrial_growth_bonus"] = float(info.get("growth", 0.0))
-	# بازرسی تراز پرداخت‌ها: اهرم صادراتی به مخزن واقعی trade وصل شد (econ.exports خواننده نداشت)
+	# راهبرد صادرات‌محور → دسترسی پایدار به بازار (بازرسی کلید یتیم ۱۴۰۵: ضربهٔ مستقیم ماهانه
+	# به سطح صادرات — نویسندهٔ سرکش — حذف شد؛ مالکیت سطح با trade_system است). با تعویض
+	# راهبرد، دسترسی به‌تدریج بین می‌رود — بازگشتی واقع‌گرایانه‌تر از سوئیچ دائمی.
+	var access_target: float = float(info.get("export", 0.0)) * 5.0
 	var trade_d: Dictionary = state.get("trade", {})
-	trade_d["exports"] = float(trade_d.get("exports", 80.0e9)) * (1.0 + float(info.get("export", 0.0)))
+	trade_d["market_access_bonus"] = clampf(float(trade_d.get("market_access_bonus", 0.0)) * 0.98 + access_target * 0.02, 0.0, 0.02)
 	state["trade"] = trade_d
 	# شرکت‌های دولتی: اشتغال و ثبات ولی ناکارآمدی و فساد
 	econ["soe_employment"] = soe * 0.1

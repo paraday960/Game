@@ -151,12 +151,18 @@ def step_day(s):
     exp_block_pen = 0.07 if s.get("shock_blockaded", False) else 0.0  # محاصره صادرات را هم می‌بندد
     comps = s["industry_adv"] * 0.5 + s["customs_eff"] * 0.3 - s["inflation"] * 0.5
     fx_bonus = (s["exchange_rate"] - 1.0) * 0.5
+    # بازرسی کلید یتیم ۱۴۰۵: لجستیک (ترانزیت/اتصال شبکه/بنادر) + دسترسی پایدار به بازار.
+    # آینه این بخش‌های state را ندارد → مقادیر آغازینِ پایدارشدهٔ بازی این‌جا ثابت می‌آیند
+    # (freight پس از نخستین ماه از	init ۰٫۳۰ به هدف ترکیبی ~۰٫۳۸ می‌رسد — همان را می‌گذاریم).
+    logistics = 0.38 * 0.45 + 0.5 * 0.35 + 0.35 * 0.20  # freight/conn/port میانگین آغازین
     exp_share_t = clamp(0.13 + comps * 0.03 + fx_bonus * 0.02 + s["export_div"] * 0.02
+                        + logistics * 0.015  # market_access/disrupted در سناریوهای آینه صفرند
                         - n_sanc * 0.008 - exp_block_pen, 0.06, 0.25)
     s["exports"] = max(s["exports"] * 0.997 + s["gdp"] * exp_share_t * 0.003, 1e9)
     cover = s["foreign_reserves"] / max(s["imports"] / 12.0, 1.0)
     cover_pen = clamp((3.0 - cover) * 0.008, 0.0, 0.03)
-    imp_share_t = clamp(0.16 - s["tariff_rate"] * 0.25 - block_pen + war_eco * 0.02 - cover_pen, 0.05, 0.30)
+    fx_imp = (1.0 - s["exchange_rate"]) * 0.015  # ارز ضعیف → واردات فشرده (کانال هدف)
+    imp_share_t = clamp(0.16 - s["tariff_rate"] * 0.25 - block_pen + war_eco * 0.02 - cover_pen + fx_imp, 0.05, 0.30)
     s["imports"] = max(s["imports"] * 0.997 + s["gdp"] * imp_share_t * 0.003, 1e9)
     s["trade_balance"] = s["exports"] - s["imports"]
 

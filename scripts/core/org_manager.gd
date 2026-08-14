@@ -143,8 +143,10 @@ func resolve_vote(state: Dictionary, decision: String, turn: int) -> Dictionary:
 				econ["foreign_reserves"] = maxf(0.0, float(econ.get("foreign_reserves", 0.0)) - 1.0e9)
 				leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 4.0, 0.0, 100.0)
 			"trade_corridor":
+				# دسترسی پایدار به بازار (بازرسی کلید یتیم ۱۴۰۵): ضربهٔ یک‌بارهٔ سطح ×۱٫۰۳ در
+				# مدل بازگشت‌به‌هدف محو می‌شد؛ حالا سهم هدف صادرات پایدار جابه‌جا می‌شود.
 				var trade_d: Dictionary = state.get("trade", {})
-				trade_d["exports"] = float(trade_d.get("exports", 80.0e9)) * 1.03
+				trade_d["market_access_bonus"] = clampf(float(trade_d.get("market_access_bonus", 0.0)) + 0.008, 0.0, 0.02)
 				state["trade"] = trade_d
 				diplomacy["influence"] = clampf(float(diplomacy.get("influence", 40.0)) + 2.0, 0.0, 100.0)
 		events.append({"type": "org_vote_yes", "message": "🗳️ کشور به «%s» رأی مثبت داد" % pending.get("title", "")})

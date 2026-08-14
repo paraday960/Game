@@ -359,8 +359,9 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int, 
 				"trade_agreement":
 					if not world["trade_agreements"].has(target):
 						world["trade_agreements"].append(target)
-						state["trade"]["trade_agreements"] = int(state["trade"].get("trade_agreements", 0)) + 1
-						state["trade"]["exports"] = float(state["trade"].get("exports", 0.0)) * 1.01
+					state["trade"]["trade_agreements"] = int(state["trade"].get("trade_agreements", 0)) + 1
+					# ضربهٔ یک‌بارهٔ سطح حذف شد (بازرسی کلید یتیم ۱۴۰۵): کانال پایدار همان
+					# trade_agreements است که از مسیر تنوع صادراتی به سهم هدف می‌رسد.
 					diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 3.0, 0.0, 100.0)
 					events.append(_event("trade_agreement_signed", target, "پیشنهاد تجاری %s پذیرفته شد؛ توافق امضا شد" % get_country_name(target)))
 				"alliance":

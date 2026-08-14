@@ -88,6 +88,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	appeal_t += float(heritage.get("sites", 20)) / 50.0 * 0.06 + float(tourism["visa_openness"]) * 0.06 + float(tourism["marketing"]) * 0.05
 	appeal_t += (float(tourism["cultural_attraction"]) + float(tourism["natural_attraction"]) - 1.0) * 0.05
 	appeal_t += (1.0 / maxf(float(state.get("central_bank", {}).get("exchange_rate", 1.0)), 0.2) - 1.0) * 0.04  # ارز ارزان‌تر برای گردشگر
+	# اتصال هوایی/دریایی/زمینی کشور (بازرسی کلید یتیم ۱۴۰۵): امتیازهای map_network قبلاً
+	# بدون هیچ مصرفی نوشته می‌شدند؛ گردشگر به مقصدِ ناaccessible نمی‌رسد.
+	var net_t: Dictionary = state.get("map_network", {})
+	var conn_t: float = (float(net_t.get("air_connectivity", 0.5)) + float(net_t.get("sea_connectivity", 0.5)) + float(net_t.get("land_connectivity", 0.5))) / 3.0
+	appeal_t += (conn_t - 0.5) * 0.05
 	appeal_t = clampf(appeal_t, 0.05, 1.30)
 	var visitors_target: float = (2_000_000.0 + appeal_t * 18_000_000.0) * seasonal_factor
 	tourism["visitors"] = clampf(float(tourism.get("visitors", 5_000_000.0)) * 0.9995 + visitors_target * 0.0005, 0.0, 25_000_000.0)

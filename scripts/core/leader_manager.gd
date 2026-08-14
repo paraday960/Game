@@ -613,7 +613,19 @@ func _apply_trait_effects(state: Dictionary):
 				leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 0.4, 0.0, 100.0)
 			"صلح‌جو":
 				pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.003, 0.05, 1.0)
-				state["trade"]["exports"] = float(state.get("trade", {}).get("exports", 1.0)) * 1.001
+				# ضربهٔ مستقیم سطح صادرات حذف شد (بازرسی کلید یتیم ۱۴۰۵ — مالکیت یکتای
+				# trade). اثر واقع‌گرایانهٔ رهبر صلح‌جو: بهبود روابط با سردترین شریک.
+				var leader_rels: Dictionary = state.get("diplomacy", {}).get("relations", {})
+				if not leader_rels.is_empty():
+					var weakest: String = ""
+					var weakest_val: float = 101.0
+					for cid in leader_rels.keys():
+						var rv: float = float(leader_rels[cid])
+						if rv < weakest_val:
+							weakest_val = rv
+							weakest = str(cid)
+					if weakest != "":
+						leader_rels[weakest] = clampf(weakest_val + 0.5, 0.0, 100.0)
 			"پیشرو":
 				tech["research_rate"] = float(tech.get("research_rate", 20.0)) * 1.02
 			"ژنرال-رهبر":

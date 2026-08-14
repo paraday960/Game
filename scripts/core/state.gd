@@ -262,8 +262,7 @@ func init_default_state():
 			"depots": {},
 			"airfields": {},
 			"radar_stations": {},
-			"supply_depots": {},
-			"front_lines": []
+			"supply_depots": {}
 		},
 		"map_network": {"air_connectivity":0.5,"sea_connectivity":0.5,"land_connectivity":0.5,"disrupted_routes":0,"updated_turn":0},
 		# لایه‌ی اماکن فیزیکی و مردم و ...
@@ -273,7 +272,6 @@ func init_default_state():
 			"facilities": 3000
 		},
 		"people": {
-			"citizens_sample": 1000,
 			"households": 25_000_000,
 			"leaders": 100
 		},

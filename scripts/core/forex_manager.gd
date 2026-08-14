@@ -66,13 +66,10 @@ func devalue(state: Dictionary, percent: float) -> Dictionary:
 	cb["exchange_rate"] = clampf(float(cb.get("exchange_rate", 1.0)) * (1.0 + percent / 100.0), 0.2, 5.0)
 	state["central_bank"] = cb
 	var econ: Dictionary = state.get("economy", {})
-	# صادرات ارزان‌تر → جهش صادرات؛ هزینهٔ واردات بالاتر (بازرسی تراز پرداخت‌ها:
-	# پیش‌تر روی econ.exports/imports می‌نوشت که هیچ خواننده‌ای نداشت — این اهرم مرده بود.
-	# حالا مستقیم به تراز واقعی state.trade ضربه می‌زند و trade_system به تدریج به هدف برمی‌گرداند)
-	var trade: Dictionary = state.get("trade", {})
-	trade["exports"] = float(trade.get("exports", 80.0e9)) * (1.0 + percent / 100.0 * 0.6)
-	trade["imports"] = float(trade.get("imports", 70.0e9)) * (1.0 + percent / 100.0 * 0.4)
-	state["trade"] = trade
+	# ضربهٔ مستقیم سطح صادرات/واردات حذف شد (بازرسی کلید یتیم ۱۴۰۵ — مالکیت یکتای سطح با
+	# trade_system). اثر واقعی devalue از همان exchange_rate بالا می‌گذرد: trade_system از
+	# کانال هدف، صادرات را بالا و واردات را پایین می‌برد (fx_bonus / fx_import_t) و این اثر
+	# تا وقتی ارز ضعیف است پایدار می‌ماند — برخلاف تک‌ضربهٔ سطحی که در ~۱۱ ماه محو می‌شد.
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + percent / 100.0 * 0.3, 0.0, 1.5)
 	var forex: Dictionary = state["forex"]
 	forex["black_premium"] = clampf(float(forex.get("black_premium", 0.05)) + percent / 100.0 * 0.4, 0.0, 0.6)

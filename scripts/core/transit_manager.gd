@@ -25,7 +25,6 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var events: Array = []
 	var tp: Dictionary = state["transit_policy"]
 	var econ: Dictionary = state.get("economy", {})
-	var trade: Dictionary = state.get("trade", {})
 	var infra: Dictionary = state.get("infrastructure", {})
 	var dip: Dictionary = state.get("diplomacy", {})
 
@@ -51,16 +50,17 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		0.02, 0.90)
 	tp["transit_share"] = transit_share
 
-	# درآمد ترانزیت ارزی
+	# درآمد ترانزیت — بازرسی کلید یتیم ۱۴۰۵: سابقاً ۳۰٪ مستقیم و بی‌بازخوان به ذخایر
+	# ارزی می‌رفت و ۷۰٪ باقی‌مانده رها می‌شد (چرخهٔ بودجه شکسته). ضریب هم به مقیاس
+	# واقع‌گرایانه اصلاح شد: عوارض ترانزیت کشورهای هاب ~۰٫۲٪ GDP است نه ~۱٫۸٪.
+	# کانال استاندارد: نرخ ماهانه که economy_system در درآمد دولت مصرف می‌کند.
 	var gdp: float = float(econ.get("gdp", 1.0))
-	var revenue: float = gdp * transit_share * 0.012
+	var revenue: float = gdp * transit_share * 0.0015
 	tp["revenue"] = revenue
-	econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + revenue * 0.3
-	# بهره‌وری لجستیک تجارت را بالا می‌برد
-	trade["exports"] = float(trade.get("exports", 0.0)) * (1.0 + freight * 0.0005)
-	trade["balance"] = float(trade.get("exports", 0.0)) - float(trade.get("imports", 0.0))
+	econ["transit_revenue_monthly"] = revenue
 	state["economy"] = econ
-	state["trade"] = trade
+	# اثر لجستیک بر صادرات دیگر این‌جا اعمال نمی‌شود: مالکیت یکتای سطح
+	# exports/imports/balance با trade_system است و freight از کانال سهم هدف اثر می‌گذارد.
 
 	# زیرساخت کلی
 	if infra.has("capacity"):

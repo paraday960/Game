@@ -175,7 +175,8 @@ func update_network_metrics(state:Dictionary)->Dictionary:
 		if route.from_country==player or route.to_country==player:sea+=float(route.volume)
 	var borders=WorldManager.get_country(player).get("borders",[]).size();var disruptions=state.get("world",{}).get("wars",{}).size()
 	state["map_network"]={"air_connectivity":clamp(air/5.0,0,1),"sea_connectivity":clamp(sea/5.0,0,1),"land_connectivity":clamp(float(borders)/8.0,0,1),"disrupted_routes":disruptions,"updated_turn":state.get("tick",0)}
-	if disruptions>0:state["trade"]["exports"]*=max(0.92,1.0-disruptions*0.01)
+	# بازرسی کلید یتیم ۱۴۰۵: ضربهٔ مستقیم جنگ به trade.exports حذف شد (نویسندهٔ سرکش)؛
+	# اثر اختلال مسیرها حالا از طریق map_network.disrupted_routes در سهم هدفِ trade_system می‌نشیند.
 	return state
 
 func _append_country_route(result:Array,type:String,a:String,b:String,label:String,volume:float,allowed:Array):

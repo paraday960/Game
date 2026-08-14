@@ -66,7 +66,12 @@ WHITELIST_RE = re.compile(
 IMPORTANT_KEYS = {
     "economy": ["growth_rate", "real_growth", "inflation", "unemployment",
                 "national_debt", "government_revenue", "government_spending",
-                "private_investment", "informal_tax_loss_daily", "aid_inflow_daily"],
+                "private_investment", "informal_tax_loss_daily", "aid_inflow_daily",
+                # بازرسی کلید یتیم ۱۴۰۵: کانال‌های ماهانهٔ ترانزیت/رویالتی (زنجیرهٔ بودجه)
+                "remittance_tax_monthly", "fuel_smuggling_loss_monthly",
+                "transit_revenue_monthly", "royalty_revenue_monthly"],
+    "trade": ["market_access_bonus"],
+    "stock_policy": ["last_crash"],
     "resources": ["energy_crisis", "food_crisis"],
     "military": ["morale"],
     "technology": ["research_rate"],

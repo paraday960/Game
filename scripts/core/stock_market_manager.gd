@@ -46,6 +46,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var shock := Deterministic.next_range(-0.02, 0.02)
 	index = maxf(50.0, index * (1.0 + momentum + shock))
 
+	# رژیم بهبود پس از سقوط (بازرسی کلید یتیم ۱۴۰۵): latch «last_crash» قبلاً فقط نوشته
+	# می‌شد و هیچ خواننده‌ای نداشت. واقع‌گرایی: اعتماد سرمایه‌گذار تا ~۱۲ دور پس از کرش
+	# شکننده می‌ماند و رالی‌های بیرحمانه مکندهٔ اعتماد به تأخیر می‌افتد.
+	var months_since_crash: int = turn - int(sp.get("last_crash", -99))
+	var post_crash: bool = months_since_crash >= 0 and months_since_crash < 12
+
 	# ترکیدن حباب
 	if bubble > 0.55 and Deterministic.chance(0.30):
 		var drop := Deterministic.next_range(0.15, 0.30)
@@ -58,8 +64,8 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	elif corruption > 0.5 and float(sp.get("watchdog", 0.0)) < 0.5 and Deterministic.chance(0.05):
 		index *= 0.93
 		events.append({"type": "market_scandal", "message": "🚨 رسوایی دستکاری بازار! شاخص ۷٪ سقوط کرد؛ افکار عمومی خواستار ناظر قوی‌ترند"})
-	# رالی مثبت
-	elif Deterministic.chance(0.04):
+	# رالی مثبت — در رژیم بهبود پس از کرش کندتر (اعتماد شکننده)
+	elif Deterministic.chance(0.04 * (0.4 if post_crash else 1.0)):
 		index *= 1.05
 		confidence = clampf(confidence + 0.03, 0.05, 1.0)
 		events.append({"type": "market_rally", "message": "📈 رالی بورس! شاخص ۵٪ صعود کرد و سرمایه خارجی به بازار بازگشت"})

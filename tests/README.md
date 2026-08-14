@@ -26,6 +26,7 @@ for t in tests/*.py; do python3 "$t" || break; done
 | `validate_state_keys.py` | **قرارداد کلیدهای متقاطع**: هر کلید نوشته‌شده در `state` باید مصرف‌کننده داشته باشد (خوانندهٔ متقاطع، دفترداری درون‌فایلی، نمایش پویای UI یا فهرست سفید موجّه) + قرارداد سخت برای کلیدهای حیاتی زنجیرهٔ اثر |
 | `validate_budget_chain.py` | زنجیرهٔ بودجه ۱۰مرحله‌ای: هر ریال از تخصیص تا اثر و نمایش |
 | `validate_budget_levers.py` | **ممیزی اهرم‌های بودجه**: هر ۱۰ ردیف budget_allocations باید خوانندهٔ بودجه‌محور واقعی داشته باشد + مالکیت یکتا: فقط economy_system حق نویسندگی government_revenue/spending را دارد (سایر سیستم‌ها از کانال نرخ ماهانه استفاده می‌کنند) |
+| `validate_orphan_wiring.py` | **قرارداد سیم‌کشی کلیدهای یتیم** (بازرسی ۱۴۰۵): کانال بودجهٔ ترانزیت/رویالتی (نویسنده ↔ مصرف‌کنندهٔ economy)، مالکیت یکتای سطح exports/imports/balance با trade_system (تشخیص receiver + استثنای شوک گذرا)، latch کرش بورس (`last_crash` خوانده شود)، مصرف map_network در trade/tourism، و پاک‌سازی کلیدهای مردهٔ init |
 
 ## قواعد
 

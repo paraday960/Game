@@ -49,7 +49,19 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# محاصرهٔ دریایی صادرات را سخت‌تر از واردات می‌زند (نفت/کالا راهی برای خروج ندارد)
 	var comps: float = float(industry.get("advanced", 0.15)) * 0.5 + float(trade["customs_efficiency"]) * 0.3 - float(econ.get("inflation", 0.08)) * 0.5
 	var fx_bonus: float = (float(central_bank_rate) - 1.0) * 0.5  # ارز ضعیف‌تر → کالای صادراتی ارزان‌تر و رقابتی‌تر
-	var export_share_t: float = clamp(0.13 + comps * 0.03 + fx_bonus * 0.02 + float(trade["export_diversity"]) * 0.02 - incoming_sanctions * 0.008 - (0.07 if blockaded else 0.0), 0.06, 0.25)
+	# لجستیک و اتصال شبکه (بازرسی کلید یتیم ۱۴۰۵): قبلاً transit_manager و map_layer_manager
+	# و blue_economy_manager مستقیم و بی‌بازخوان روی سطح exports می‌نوشتند (نویسندهٔ سرکش)؛
+	# حالا مالکیت یکتای سطح با همین سیستم است و اثر لجستیک/بنادر/اختلال مسیرها از «کانال هدف» عبور می‌کند.
+	var freight_t: float = float(state.get("transit_policy", {}).get("freight", 0.30))
+	var net_t: Dictionary = state.get("map_network", {})
+	var conn_t: float = (float(net_t.get("air_connectivity", 0.5)) + float(net_t.get("sea_connectivity", 0.5)) + float(net_t.get("land_connectivity", 0.5))) / 3.0
+	var disrupted_t: float = minf(float(net_t.get("disrupted_routes", 0)), 3.0)
+	var blue_t: Dictionary = state.get("blue_economy_policy", {})
+	var port_t: float = (float(blue_t.get("port_capacity", 0.40)) + float(blue_t.get("merchant_fleet", 0.30))) / 2.0
+	var logistics_t: float = freight_t * 0.45 + conn_t * 0.35 + port_t * 0.20
+	# دسترسی پایدار به بازار (مأموریت تجاری / رأی کریدور سازمان‌ها) — به‌جای ضربهٔ یک‌بارهٔ سطح
+	var market_access_t: float = minf(float(trade.get("market_access_bonus", 0.0)), 0.02)
+	var export_share_t: float = clamp(0.13 + comps * 0.03 + fx_bonus * 0.02 + float(trade["export_diversity"]) * 0.02 + logistics_t * 0.015 + market_access_t - disrupted_t * 0.004 - incoming_sanctions * 0.008 - (0.07 if blockaded else 0.0), 0.06, 0.25)
 	trade["export_share_target"] = export_share_t
 	trade["exports"] = maxf(float(trade["exports"]) * 0.997 + gdp * export_share_t * 0.003, 1_000_000_000.0)
 
@@ -62,7 +74,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	trade["import_cover_months"] = import_cover
 	var cover_pen: float = clampf((3.0 - import_cover) * 0.008, 0.0, 0.03)
 	var domestic_coverage: float = (float(industry.get("output", 100.0)) + float(agriculture.get("production", 100.0))) / 200.0
-	var import_share_t: float = clamp(0.16 - float(trade["tariff_rate"]) * 0.25 - (0.05 if blockaded else 0.0) - cover_pen + war_economy_t * 0.02 + (1.0 - domestic_coverage) * 0.04, 0.05, 0.30)
+	# حساسیت واردات به نرخ ارز (بازرسی کلید یتیم ۱۴۰۵): ارز ضعیف (rate>۱) واردات را گران
+	# و فشرده می‌کند؛ تا پیش از این devalue فقط سطح را یک‌باره می‌شکست و اثر پایدار نداشت.
+	var fx_import_t: float = (1.0 - float(central_bank_rate)) * 0.015
+	var import_share_t: float = clamp(0.16 - float(trade["tariff_rate"]) * 0.25 - (0.05 if blockaded else 0.0) - cover_pen + war_economy_t * 0.02 + (1.0 - domestic_coverage) * 0.04 + fx_import_t, 0.05, 0.30)
 	trade["import_share_target"] = import_share_t
 	trade["imports"] = maxf(float(trade["imports"]) * 0.997 + gdp * import_share_t * 0.003, 1_000_000_000.0)
 

@@ -27,7 +27,6 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var be: Dictionary = state["blue_economy_policy"]
 	var econ: Dictionary = state.get("economy", {})
 	var trade: Dictionary = state.get("trade", {})
-	var tourism: Dictionary = state.get("tourism", {})
 	var fisheries: Dictionary = state.get("fisheries", {})
 	var fuel: Dictionary = state.get("fuel_stations", {})
 	var mil: Dictionary = state.get("military", {})
@@ -48,12 +47,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	be["blue_gdp"] = blue_gdp
 	be["container_throughput"] = clampf(port * 0.7 + fleet * 0.3, 0.0, 1.0)
 
-	# اثر بر تجارت و بهره‌وری
-	trade["exports"] = float(trade.get("exports", 0.0)) * (1.0 + port * 0.0008 + fleet * 0.0006)
-	trade["balance"] = float(trade.get("exports", 0.0)) - float(trade.get("imports", 0.0))
-	state["trade"] = trade
-	tourism["revenue"] = float(tourism.get("revenue", 0.0)) * (1.0 + port * 0.0005)
-	state["tourism"] = tourism
+	# اثر بنادر/ناوگان بر صادرات از کانال پایدار می‌گذرد (بازرسی کلید یتیم ۱۴۰۵):
+	# port_capacity/merchant_fleet در trade_system بخشی از «امتیاز لجستیک» هستند — ضربهٔ
+	# مستقیم سطح (نویسندهٔ سرکشِ مالکیت یکتا) حذف شد. اثر بندر کروز بر گردشگری نیز از
+	# کانال اتصال دریایی map_network → جذابیت مقصد جاری است.
 	econ["gdp"] = gdp * (1.0 + blue_share * 0.12)
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - port * 0.0002 - shipbuilding * 0.0002, 0.02, 0.30)
 	state["economy"] = econ
