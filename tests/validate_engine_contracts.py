@@ -292,8 +292,6 @@ def check_cadence_units_365():
             'econ["aid_inflow_daily"] = float(intl.get("aid_received", 500_000_000.0)) / 365.0',
         "scripts/systems/political_career_system.gd":
             'career["salaries"] *= (1.0 + inflation * 0.5 / 365.0)',
-        "scripts/systems/veterans_system.gd":
-            '* retirement_rate / 365.0 * 2.0',
     }
     for f, needle in sorted(DEFERRED.items()):
         if needle not in open(f, encoding="utf-8").read():
@@ -301,6 +299,31 @@ def check_cadence_units_365():
                         "(رجیستری را آگاهانه به‌روز کن): %s" % (f, needle))
     print("ℹ️ %d سایت cadence به‌تأخیرافتاده در رجیستری پین شد (هر تغییر = بازبینی)"
           % len(DEFERRED))
+
+
+def check_veterans_fund_wiring():
+    # بازرسی ۱۴۰۵ (دور دوازدهم): صندوق کهنه‌سربازان تک‌مالک و واقع‌مقیاس است —
+    # منابع = جریان قانونی policy_costs؛ تعهدات = شمار × مستمری سرانه؛ شمار با
+    # جریان‌های ماهانهٔ سیستم (نمی‌توان در دو جا نوشت)؛ بحران قطعی لبه‌ای با
+    # کول‌داون (نه شانسی ۱٪). بازگشت دریفت count در مدیر یا count×۲۰۰۰ = باگ.
+    vs = open("scripts/systems/veterans_system.gd", encoding="utf-8").read()
+    if ("obligations_monthly" in vs and "fund_solvency" in vs
+            and "last_fund_crisis" in vs and "count\"] * 2000" not in vs
+            and "/ 365.0" not in vs):
+        print("✅ صندوق کهنه‌سربازان: منابع/تعهدات/بافر واقع‌مقیاس (بدون /۳۶۵ ماهانه)")
+    else:
+        FAIL.append("مدل صندوق کهنه‌سربازان (واحد/کلیدها) ناقص یا به /۳۶۵ برگشت")
+    vm = open("scripts/core/veterans_manager.gd", encoding="utf-8").read()
+    if ('vt["count"] =' not in vm and 'count * 1.01' not in vm
+            and 'vt["health_care"] =' not in vm):
+        print("✅ مالکیت یکتای count/health_care در سیستم (دریفت موازی مدیر حذف)")
+    else:
+        FAIL.append("دریفت موازی count/health_care در veterans_manager برگشته است")
+    # بحران شانسی قدیمی صندوق (۱٪ نامشروط) نباید برگردد — جایش رویداد لبه‌ای است
+    if 'veterans["fund_balance"] < 100_000_000.0 and Deterministic.chance' not in vs:
+        print("✅ بحران صندوق کهنه‌سربازان قطعی-لبه‌ای است (شانسی ۱٪ حذف)")
+    else:
+        FAIL.append("بحران شانسی ۱٪ صندوق کهنه‌سربازان برگشته است")
 
 
 check_simulate_month_contract()
@@ -314,6 +337,7 @@ check_strategic_reserves_wiring()
 check_pension_fund_wiring()
 check_fuel_subsidy_wiring()
 check_cadence_units_365()
+check_veterans_fund_wiring()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

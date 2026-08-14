@@ -4661,6 +4661,10 @@ func _build_veterans_card(st: Dictionary):
 		return
 	var card = _card("🎖️ بنیاد ایثارگران و کهنه‌سربازان")
 	_row(card, "شمار کهنه‌سربازان", PersianFormatter.to_persian_digits(_compact_number(float(vt.get("count", 0)))))
+	# صندوق واقعی بنیاد (دور دوازدهم): تعهدات در برابر جریان قانونی خزانه
+	_row(card, "تعهدات ماهانهٔ مستمری", PersianFormatter.format_money(vt.get("obligations_monthly", 0.0)))
+	_row(card, "منابع ماهانهٔ صندوق", PersianFormatter.format_money(vt.get("resources_monthly", 0.0)))
+	_bar(card, "توان پرداخت صندوق", float(vt.get("fund_solvency", 1.0)) / 2.0)
 	_bar(card, "رضایت ایثارگران", float(vp.get("satisfaction", 0.6)))
 	_bar(card, "سطح مستمری", float(vp.get("pension_level", 0.5)))
 	_bar(card, "طرح اشتغال", float(vp.get("employment_program", 0.4)))

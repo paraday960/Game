@@ -22,15 +22,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var pol: Dictionary = state.get("politics", {})
 	var world: Dictionary = state.get("world", {})
 
-	var count := float(vt.get("count", 500000.0))
+	# (دور دوازدهم) پویایی شمار کهنه‌سربازان تک‌مالک شد: جریان‌های ورودی/خروجی در
+	# veterans_system (بازنشستگی ۵٪/سال پرسنل + جانبازان جنگ − مرگ‌ومیر)؛ دریفت
+	# موازیِ این مدیر (صلح ×۰٫۹۹۵/ماه ⇒ فروپاشی ۱۵ساله به کف) حذف شد.
 	var at_war: bool = not world.get("wars", {}).is_empty()
-
-	# پویایی شمار: جنگ → جانبازان تازه؛ صلح → بازنشستگی طبیعی
-	if at_war:
-		count = count * 1.01 + 12000.0
-	else:
-		count = maxf(20000.0, count * 0.995)
-
 	var pension_level := float(vp.get("pension_level", 0.5))
 	var employment_program := float(vp.get("employment_program", 0.4))
 	var recognition := float(vt.get("recognition", 0.7))
@@ -54,7 +49,8 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var satisfaction := clampf(0.30 + pension_level * 0.25 + employment_program * 0.20 + recognition * 0.10 + health_care * 0.15, 0.05, 1.0)
 	vp["satisfaction"] = satisfaction
 	vt["recognition"] = recognition
-	vt["health_care"] = health_care
+	# (دور دوازدهم) health_care دیگر این‌جا نوشته نمی‌شود: مالک آن veterans_system
+	# است (کیفیت خدمات EM)؛ مدیر فقط برای رضایت می‌خواندش.
 	vt["employment"] = clampf(float(vt.get("employment", 0.6)) * 0.6 + employment_program * 0.4, 0.05, 1.0)
 	vt["pension"] = pension_level
 
@@ -67,7 +63,6 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["media"]["groups"]["جوانان"]["approval"] = clampf(float(state["media"]["groups"]["جوانان"].get("approval", 45.0)) + 1.5, 5.0, 100.0)
 		events.append({"type": "veterans_pride", "message": "🎖️ موج حمایت از کهنه‌سربازان در جامعه؛ جوانان به خدمت سربازی افتخار می‌کنند"})
 
-	vt["count"] = count
 	state["veterans"] = vt
 	state["veterans_policy"] = vp
 	state["economy"] = econ

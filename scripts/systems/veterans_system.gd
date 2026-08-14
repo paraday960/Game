@@ -6,7 +6,6 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var military = state.get("military", {})
 	var econ = state.get("economy", {})
 	var health = state.get("health", {})
-	var welfare = state.get("welfare", {})
 
 	veterans["count"] = veterans.get("count", 500000)
 	veterans["pension"] = veterans.get("pension", 0.70)
@@ -22,22 +21,27 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var veterans_budget_share = econ.get("budget_allocations",{}).get("رفاه",0.15) * 0.15 + econ.get("budget_allocations",{}).get("ارتش",0.08) * 0.1
 	var veterans_budget = econ.get("government_spending",0.0) * veterans_budget_share
 
-	# تعداد کهنه‌سربازان - با بازنشستگی نظامی افزایش
-	var retirement_rate = 0.05  # 5٪ نظامی‌ها در سال بازنشسته
-	veterans["count"] += military.get("personnel",500000) * retirement_rate / 365.0 * 2.0  # ساده‌سازی
-	veterans["count"] = max(veterans["count"] - veterans["count"] * 0.02 / 365.0, 10000.0)  # مرگ و میر
+	# شمار کهنه‌سربازان (بازرسی ۱۴۰۵ — دور دوازدهم): تک‌مالک شد. قبلاً دو مدل
+	# دونویسنده بودند: این سیستم با واحد شکسته (+۲٫۷k/ماه) و مدیر ماهانه با
+	# دریفت موازی (در صلح ×۰٫۹۹۵/ماه ⇒ ظرف ~۱۵ سال به کف ۲۰k فرو می‌رفت!). حالا
+	# جریان واقعی: ورودی = بازنشستگی ۵٪/سال پرسنل نظامی (+ جانبازان تازه در جنگ)؛
+	# خروجی = مرگ‌ومیر ۲٫۵٪/سال (گروه سنی بالا). سیستم ماهانه ۲ بار ⇒ نیم‌ماه در هر اجرا.
+	var personnel_v: float = float(military.get("personnel", 500000.0))
+	var at_war_v: bool = not state.get("world", {}).get("wars", {}).is_empty()
+	var v_inflow: float = personnel_v * 0.05 / 12.0 * 0.5
+	if at_war_v:
+		v_inflow += (personnel_v * 0.004 + 3000.0) / 12.0 * 0.5
+	var v_death: float = float(veterans["count"]) * 0.025 / 12.0 * 0.5
+	veterans["count"] = maxf(float(veterans["count"]) + v_inflow - v_death, 20000.0)
 
-	# مستمری = f(بودجه، تعداد، اقتصاد)
-	var pension_target = 0.6 + veterans_budget_share * 5.0 + (econ.get("gdp_per_capita",5000.0) / 10000.0) * 0.2
-	veterans["pension"] = clamp(veterans["pension"] * 0.99 + pension_target * 0.01, 0.2, 0.95)
-
+	# مستمری کهنه‌سربازان: مالک = veterans_manager (سیاست بازیکن، pension_level)؛
+	# مدل EM موازیِ این فایل (که هر ماه بازنویسی می‌شد) حذف شد — دور دوازدهم.
 	# مراقبت سلامت
 	var health_target = 0.6 + health.get("quality",0.6) * 0.2 + veterans_budget_share * 3.0
 	veterans["health_care"] = clamp(veterans["health_care"] * 0.99 + health_target * 0.01, 0.2, 0.95)
 
-	# اشتغال پس از خدمت
-	var employment_target = 0.5 + (1.0 - econ.get("unemployment",0.08)) * 0.3 + welfare.get("social_safety",0.6) * 0.1
-	veterans["employment"] = clamp(veterans["employment"] * 0.99 + employment_target * 0.01, 0.1, 0.90)
+	# اشتغال پس از خدمت: مالک = veterans_manager (ترکیب با employment_program)؛
+	# مدل EM موازیِ این فایل حذف شد — دور دوازدهم.
 
 	# مسکن
 	veterans["housing"] = clamp(veterans["housing"] + (veterans_budget_share - 0.03) * 0.002, 0.2, 0.90)
@@ -49,11 +53,29 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# قدردانی و تکریم
 	veterans["recognition"] = clamp(veterans["recognition"] + (state.get("culture",{}).get("cohesion",0.65) - 0.5) * 0.001, 0.3, 0.95)
 
-	# صندوق
-	var fund_income = veterans_budget * 0.5
-	var fund_cost = veterans["count"] * 2000.0  # مستمری هر نفر
-	veterans["fund_balance"] += (fund_income - fund_cost) / 365.0
-	veterans["fund_balance"] = max(veterans["fund_balance"], 0.0)
+	# صندوق کهنه‌سربازان واقعی (بازرسی ۱۴۰۵ — دور دوازدهم): قبلاً واحدسازی مخلوط
+	# بود — ورودی نرخ «ماهانهٔ» بودجه، خروجی count × ۲۰۰۰ با مقیاس نامعلوم و تسویهٔ
+	# /۳۶۵ در اجرای ماهانه ⇒ موجودی یا انفجار می‌کرد یا می‌مرد. حالا مثل صندوق
+	# بازنشستگی (دور دهم): تعهدات = شمار × مستمری سرانه (تابع سطح سیاست و GDP
+	# سرانه)؛ منابع = جریان قانونی واقعی که خزانه پرداخت می‌کند (کانال policy_costs
+	# مدیر ~ یگانه مسیر پول)؛ موجودی = بافر. ناتوانی ⇒ فرسایش تکریم/روحیه + رویداد
+	# قطعی با کول‌داون (شارژ خاموش بدهی نیست؛ بحرانِ قدیمیِ شانسی ۱٪ حذف شد).
+	var pension_level_v: float = float(state.get("veterans_policy", {}).get("pension_level", 0.5))
+	var pc_month_v: float = float(econ.get("gdp_per_capita", 5000.0)) / 12.0
+	var obligations_mv: float = float(veterans["count"]) * pc_month_v * (0.20 + 0.30 * pension_level_v)
+	var resources_mv: float = float(econ.get("policy_costs", {}).get("مستمری و خدمات کهنه‌سربازان", veterans_budget * 0.5))
+	veterans["obligations_monthly"] = obligations_mv
+	veterans["resources_monthly"] = resources_mv
+	veterans["fund_solvency"] = clampf(resources_mv / maxf(obligations_mv, 1.0), 0.0, 2.0)
+	var bal_before_v: float = float(veterans["fund_balance"])
+	var bal_new_v: float = bal_before_v + (resources_mv - obligations_mv) * 0.5
+	veterans["fund_balance"] = maxf(bal_new_v, 0.0)
+	if bal_new_v < 0.0:
+		veterans["recognition"] = maxf(float(veterans["recognition"]) - 0.01, 0.3)
+		military["readiness"] = float(military.get("readiness", 0.70)) - 0.001
+		if bal_before_v > 0.0 or (tick - int(veterans.get("last_fund_crisis", -9999))) >= 56:
+			veterans["last_fund_crisis"] = tick
+			events.append({"type": "veteran_fund_crisis", "message": "⚠️ صندوق کهنه‌سربازان ناتوان شد: مستمری ایثارگران با تأخیر پرداخت می‌شود — مستمری/اشتغال یا بودجهٔ بنیاد را بازبینی کنید", "shortfall": -bal_new_v})
 
 	# حلقه بازخورد: حمایت از کهنه‌سربازان → روحیه ارتش → قدرت
 	military["readiness"] = military.get("readiness",0.70) + (veterans["recognition"] - 0.5) * 0.0005
@@ -65,9 +87,6 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	if veterans["mental_health"] < 0.4 and Deterministic.chance(0.01):
 		events.append({"type": "veteran_mental_health_crisis", "message": "بحران سلامت روان کهنه‌سربازان - نیاز به مراقبت ویژه"})
-
-	if veterans["fund_balance"] < 100_000_000.0 and Deterministic.chance(0.01):
-		events.append({"type": "veteran_fund_crisis", "message": "بحران صندوق کهنه‌سربازان - ناترازی مالی"})
 
 	if veterans["recognition"] > 0.8 and Deterministic.chance(0.008):
 		events.append({"type": "veteran_recognition", "message": "تکریم کهنه‌سربازان - مراسم قدردانی و افزایش روحیه ملی"})
