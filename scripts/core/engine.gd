@@ -1305,7 +1305,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		var welfare_act := str(cmd.payload.get("action", ""))
 		var welfare_result: Dictionary
 		match welfare_act:
-			"pension": welfare_result = WelfareManager.set_pension_age(snapshot, int(cmd.payload.get("value", 65)))
+			"pension": welfare_result = WelfareManager.set_pension_age(snapshot, int(cmd.payload.get("value", 65)), cmd.tick)
 			"benefit": welfare_result = WelfareManager.set_benefit(snapshot, float(cmd.payload.get("value", 0.4)))
 			"child": welfare_result = WelfareManager.child_allowance(snapshot)
 			_: welfare_result = WelfareManager.expand_health_coverage(snapshot)

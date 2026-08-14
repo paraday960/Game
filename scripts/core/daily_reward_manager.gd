@@ -63,7 +63,7 @@ func get_status() -> Dictionary:
 		"day_index": day_index,
 		"reward": REWARDS[day_index],
 		"today": today,
-		"last_day": last_day
+		"current_day": last_day
 	}
 
 # دریافت پاداش — state بازی را تغییر می‌دهد (UI صدا می‌زند؛ دترمینیسم موتور امن است)

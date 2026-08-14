@@ -11,7 +11,7 @@ extends Node
 
 func ensure(state: Dictionary) -> Dictionary:
 	if not state.has("cyber"):
-		state["cyber"] = {"firewall": 0.4, "attribution_risk": 0.1, "ops": 0, "last_attack": 0, "defended": 0, "attacks_launched": 0}
+		state["cyber"] = {"firewall": 0.4, "attribution_risk": 0.1, "ops": 0, "last_attack": -99, "defended": 0, "attacks_launched": 0}
 	return state
 
 func offense_level(state: Dictionary) -> float:
@@ -88,11 +88,17 @@ func cyber_attack(state: Dictionary, target: String, kind: String) -> Dictionary
 		return {"success": false, "reason": "حمله سایبری فقط علیه دشمنان (جنگ یا روابط خصمانه)", "state": state, "events": []}
 	if not ["economy", "infrastructure", "information"].has(kind):
 		return {"success": false, "reason": "نوع حمله نامعتبر", "state": state, "events": []}
+	# کول‌داون لچ واقعی (بازرسی latch): last_attack از آغاز init بود ولی هیچ‌وقت نوشته نمی‌شد —
+	# حملهٔ تهاجمی هر نوبت قابل اسپم بود (به شرط min_offense). مثل مانورها/سدهای خواهران: ۳ نوبت.
+	var turn := int(state.get("time", {}).get("turn", 0))
+	var cy: Dictionary = state["cyber"]
+	if turn - int(cy.get("last_attack", -99)) < 3:
+		return {"success": false, "reason": "حمله سایبری هر ۳ نوبت یک‌بار ممکن است (آماده‌سازی عملیات)", "state": state, "events": []}
+	cy["last_attack"] = turn
 	# دفاع هدف از سطح فناوری NPC
 	var target_tech := float(world.get("countries", {}).get(target, {}).get("tech_level", 0.35))
 	var target_defense := target_tech * 30.0
 	var success := Deterministic.chance(clampf(0.35 + (offense - target_defense) * 0.02, 0.1, 0.85))
-	var cy: Dictionary = state["cyber"]
 	cy["attacks_launched"] = int(cy.get("attacks_launched", 0)) + 1
 	var events: Array = []
 	var target_country: Dictionary = world.get("countries", {}).get(target, {})

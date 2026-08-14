@@ -10,7 +10,7 @@ extends Node
 # ────────────────────────────────────────────────────────────────────────────
 func ensure(state: Dictionary) -> Dictionary:
 	if not state.has("welfare_policy"):
-		state["welfare_policy"] = {"pension_age": 65, "unemployment_benefit": 0.4, "child_allowance": 0.2, "health_coverage": 0.6}
+		state["welfare_policy"] = {"pension_age": 65, "unemployment_benefit": 0.4, "child_allowance": 0.2, "health_coverage": 0.6, "last_pension": -99}
 	return state
 
 func simulate_month(state: Dictionary, turn: int) -> Dictionary:
@@ -49,11 +49,20 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["welfare"] = welfare
 	return {"state": state, "events": events}
 
-func set_pension_age(state: Dictionary, age: int) -> Dictionary:
+func set_pension_age(state: Dictionary, age: int, turn: int = -1) -> Dictionary:
 	state = ensure(state)
 	if age < 60 or age > 70:
 		return {"success": false, "reason": "سن بازنشستگی باید ۶۰ تا ۷۰ باشد", "state": state, "events": []}
+	if turn < 0:
+		turn = int(state.get("time", {}).get("turn", 0))
 	var wp: Dictionary = state["welfare_policy"]
+	# کول‌داون لچ واقعی (بازرسی latch): کلید last_pension در demographic_policy سال‌ها یتیم بود —
+	# بازیکن می‌توانست هر ماه سن بازنشستگی را جابه‌جا کند (نوسان رأی رایگان). مهاجرت به
+	# welfare_policy + گارد یک‌ساله: اصلاحات بازنشستگی در دنیای واقعی به هر چرخهٔ انتخاباتی محدود است
+	# (هم‌خانواده با last_pension_crisis در همین مدیر و last_drill خواهران).
+	if turn - int(wp.get("last_pension", -99)) < 12:
+		return {"success": false, "reason": "اصلاح سن بازنشستگی هر ۱۲ ماه یک‌بار ممکن است", "state": state, "events": []}
+	wp["last_pension"] = turn
 	wp["pension_age"] = age
 	state["welfare_policy"] = wp
 	# واکنش‌ها: بازنشستگان و کارگران
