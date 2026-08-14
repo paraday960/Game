@@ -73,6 +73,16 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var interest_diff = cb["interest_rate"] - 0.05
 	var exchange_change = -trade_effect * 0.01 - inflation_diff * 0.02 + interest_diff * 0.03
 	cb["exchange_rate"] = clamp(cb["exchange_rate"] + exchange_change * 0.01, 0.2, 5.0)
+	# (بازرسی ارزی) زوال صرف مداخله: مداخلهٔ بانک مرکزی برخلاف تغییر ارزش‌گذاری (devalue)
+	# دائمی نیست — صرف آن به‌صورت موجودی محوشونده (τ≈۸ ماه) به نرخ برمی‌گردد تا حمایت
+	# مصنوعی فقط زمان بخرد، نه سطح بنیادی را برای همیشه جابه‌جا کند.
+	var forex_fx: Dictionary = state.get("forex", {})
+	var prem: float = float(forex_fx.get("intervention_premium", 0.0))
+	if prem != 0.0:
+		var prem_fade: float = prem * 0.004
+		cb["exchange_rate"] = clamp(float(cb["exchange_rate"]) * (1.0 - prem_fade), 0.2, 5.0)
+		forex_fx["intervention_premium"] = prem - prem_fade
+		state["forex"] = forex_fx
 
 	# ذخایر ارزی — مخزن مرجع state.economy.foreign_reserves است (بازرسی تراز پرداخت‌ها).
 	# پیش‌تر تراز تجاری به cb.foreign_reserves می‌ریخت که نه در UI دیده می‌شد و نه هزینه‌کردهای

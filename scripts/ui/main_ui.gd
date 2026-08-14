@@ -3041,6 +3041,10 @@ func _build_forex_card(st: Dictionary):
 	_row(card, "کنترل سرمایه", "فعال" if bool(forex.get("capital_control", false)) else "غیرفعال")
 	var inter := clampf(float(forex.get("intervention", 0.0)), 0.0, 1.0)
 	_bar(card, "سطح مداخله بانک مرکزی", inter)
+	# بازرسی ارزی: صرف باقی‌ماندهٔ مداخله (محوشونده) — حمایت مصنوعی موقت است
+	var prem_v := float(forex.get("intervention_premium", 0.0))
+	if prem_v < -0.001:
+		_row(card, "حمایت باقی‌مانده از نرخ", PersianFormatter.to_persian_digits("٪%.1f" % (-prem_v * 100.0)) + " (در حال محو)", _color_for(0.5))
 	var btn_row = HBoxContainer.new(); btn_row.add_theme_constant_override("separation", 6); card.add_child(btn_row)
 	var int_btn = Button.new(); int_btn.text = "💪 مداخله (۲ میلیارد)"
 	int_btn.custom_minimum_size = Vector2(0, 44); int_btn.add_theme_font_size_override("font_size", 15)

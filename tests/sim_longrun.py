@@ -35,7 +35,7 @@ def initial_state():
         "avg_wage": 4000.0,
         # تجارت و ارز (بازرسی تراز پرداخت‌ها — مدل سهم هدف از GDP + مخزن واحد ذخایر)
         "tariff_rate": 0.15, "customs_eff": 0.60, "export_div": 0.55,
-        "industry_adv": 0.15, "exchange_rate": 1.0,
+        "industry_adv": 0.15, "exchange_rate": 1.0, "fx_premium": 0.0,
         "foreign_reserves": 60e9,
         # central bank (policy_mode=independent)
         "interest_rate": 0.15, "money_supply": 1.0, "inflation_target": 0.05,
@@ -271,6 +271,11 @@ def step_day(s):
     exch_change = (-s["trade_balance"] / trade_anchor * 0.02 * 0.01
                    - (s["inflation"] - 0.03) * 0.02 + (s["interest_rate"] - 0.05) * 0.03)
     s["exchange_rate"] = clamp(s["exchange_rate"] + exch_change * 0.01, 0.2, 5.0)
+    # زوال صرف مداخله (τ≈۸ ماه): حمایت مصنوعی از نرخ موقت است
+    if s["fx_premium"] != 0.0:
+        fade = s["fx_premium"] * 0.004
+        s["exchange_rate"] = clamp(s["exchange_rate"] * (1.0 - fade), 0.2, 5.0)
+        s["fx_premium"] -= fade
 
 def run(years=10, verbose=True, policy_hook=None):
     s = initial_state()
@@ -522,7 +527,8 @@ def run_reserve_crisis_suite():
         # مداخلهٔ ماهانهٔ ۲ میلیارد دلاری به مدت ۳ سال (مانند forex_manager.intervene)
         if 240 <= day < 240 + 365 * 3 and day % 30 == 0 and s["foreign_reserves"] > 2.0e9:
             s["foreign_reserves"] = s["foreign_reserves"] - 2.0e9
-            s["exchange_rate"] = max(s["exchange_rate"] * 0.99, 0.2)   # تقویت موقت
+            s["exchange_rate"] = max(s["exchange_rate"] * 0.986, 0.2)          # ضربهٔ لحظه‌ای مداخله
+            s["fx_premium"] = max(s["fx_premium"] - 0.014, -0.15)              # صرف محوشونده (وفادار به بازی)
         if day == 240 + 365 * 3:
             snap1.update(dict(s))
     x, _ = run(verbose=False, policy_hook=drain)

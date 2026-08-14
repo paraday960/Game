@@ -50,6 +50,9 @@ func intervene(state: Dictionary, amount_billion: float) -> Dictionary:
 	state["central_bank"] = cb
 	var forex: Dictionary = state["forex"]
 	forex["intervention"] = clampf(float(forex.get("intervention", 0.0)) + 0.3, 0.0, 1.0)
+	# صرف مداخله در موجودی محوشونده ثبت می‌شود؛ بانک مرکزی روزانه آن را به نرخ برمی‌گرداند
+	# (سقف تجمعی −۱۵٪: مداخلهٔ پی‌در‌پی عملاً قدرت خویش را از دست می‌دهد — محدودیت استریلیزاسیون)
+	forex["intervention_premium"] = clampf(float(forex.get("intervention_premium", 0.0)) - (0.01 + strength * 0.04), -0.15, 0.0)
 	state["forex"] = forex
 	return {"success": true, "state": state,
 		"events": [{"type": "forex_intervention", "message": "💱 بانک مرکزی با %s میلیارد از ذخایر، نرخ ارز را تقویت کرد" % PersianFormatter.to_persian_digits(str(int(amount_billion)))}]}
