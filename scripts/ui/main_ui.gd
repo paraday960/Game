@@ -2347,7 +2347,14 @@ func _active_crises(st: Dictionary) -> Array:
 		if str(crisis.get("status", "active")) != "active":
 			continue
 		var level = "بحرانی" if int(crisis.get("severity", 1)) >= 3 else "هشدار"
-		out.append("%s «%s» — تصمیم فوری لازم است" % [level, str(crisis.get("title", "بحران"))])
+		if int(crisis.get("stage_count", 0)) > 0:
+			# نخ بحران: نمایش مرحله‌ی جاری برای رویدادهای زنجیره‌ای (دور سیزدهم)
+			out.append("%s «%s» — مرحلهٔ %d/%d: %s" % [
+				level, str(crisis.get("title", "بحران")),
+				int(crisis.get("stage", 0)) + 1, int(crisis.get("stage_count", 1)),
+				str(crisis.get("stage_name_fa", ""))])
+		else:
+			out.append("%s «%s» — تصمیم فوری لازم است" % [level, str(crisis.get("title", "بحران"))])
 	if res.get("food_crisis", false):
 		out.append("بحران غذایی — ذخیره غذا رو به اتمام است")
 	if res.get("energy_crisis", false):

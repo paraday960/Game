@@ -1,0 +1,384 @@
+{
+  "version": "1.0.0",
+  "chains": [
+    {
+      "id": "drought_chain",
+      "title_fa": "نخ خشکسالی",
+      "severity": 2,
+      "cooldown_days": 360,
+      "max_instances": 1,
+      "world_scope": false,
+      "trigger": {"mode": "any", "conditions": [
+        {"path": "resources.inventory.غذا", "op": "<", "value": 45.0},
+        {"path": "agriculture.food_security", "op": "<", "value": 0.60}
+      ]},
+      "chance": 0.22,
+      "entry_decision": "drought",
+      "stages": [
+        {"name_fa": "خشکسالی و افت تولید", "duration_days": 90,
+         "on_enter_effects": [
+           {"path": "agriculture.food_security", "op": "add", "value": -0.03, "min": 0.0, "max": 1.0},
+           {"path": "resources.inventory.غذا", "op": "add", "value": -6.0, "min": 0.0}
+         ],
+         "persist_effects": [
+           {"path": "agriculture.food_security", "op": "add", "value": -0.004, "min": 0.0, "max": 1.0},
+           {"path": "welfare.poverty", "op": "add", "value": 0.002, "min": 0.0, "max": 1.0}
+         ]},
+        {"name_fa": "تورم خوراک و فشار معیشت", "duration_days": 90,
+         "decision": "food_inflation",
+         "on_enter_effects": [
+           {"path": "economy.inflation", "op": "add", "value": 0.012, "min": 0.0, "max": 0.5},
+           {"path": "commodities.prices.گندم", "op": "mul", "value": 1.25, "min": 120.0, "max": 600.0},
+           {"path": "population.happiness", "op": "add", "value": -0.02, "min": 0.05, "max": 0.95}
+         ],
+         "persist_effects": [
+           {"path": "economy.inflation", "op": "add", "value": 0.004, "min": 0.0, "max": 0.5},
+           {"path": "politics.tension", "op": "add", "value": 0.004, "min": 0.0, "max": 1.0}
+         ]},
+        {"name_fa": "فشار ارزی و بازار سیاه", "duration_days": 60,
+         "decision": "currency_crisis",
+         "on_enter_effects": [
+           {"path": "central_bank.exchange_rate", "op": "mul", "value": 1.08, "min": 0.01},
+           {"path": "economy.foreign_reserves", "op": "mul", "value": 0.97, "min": 0.0},
+           {"path": "shadow.size", "op": "add", "value": 0.02, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.0015, "min": -0.05, "max": 0.08},
+           {"path": "stock_market.investor_confidence", "op": "add", "value": -0.01, "min": 0.0, "max": 1.0}
+         ],
+         "resolve_effects": [
+           {"path": "agriculture.food_security", "op": "add", "value": 0.04, "min": 0.0, "max": 1.0},
+           {"path": "commodities.prices.گندم", "op": "mul", "value": 0.85, "min": 120.0, "max": 600.0},
+           {"path": "economy.inflation", "op": "add", "value": -0.008, "min": 0.0, "max": 0.5}
+         ]}
+      ]
+    },
+    {
+      "id": "sanctions_chain",
+      "title_fa": "نخ تحریم‌های فزاینده",
+      "severity": 3,
+      "cooldown_days": 480,
+      "max_instances": 1,
+      "world_scope": false,
+      "trigger": {"mode": "any", "conditions": [
+        {"path": "diplomacy.influence", "op": "<", "value": 30.0},
+        {"path": "politics.stability", "op": "<", "value": 0.55}
+      ]},
+      "chance": 0.16,
+      "entry_decision": "sanctions_escalation",
+      "stages": [
+        {"name_fa": "تحریم‌های هدفمند", "duration_days": 90,
+         "on_enter_effects": [
+           {"path": "trade.balance", "op": "mul", "value": 0.97, "min": 0.0},
+           {"path": "economy.foreign_reserves", "op": "mul", "value": 0.98, "min": 0.0}
+         ],
+         "persist_effects": [
+           {"path": "trade.balance", "op": "mul", "value": 0.998, "min": 0.0},
+           {"path": "stock_market.investor_confidence", "op": "add", "value": -0.008, "min": 0.0, "max": 1.0}
+         ]},
+        {"name_fa": "فشار ارزی و کمبود کالا", "duration_days": 90,
+         "decision": "currency_crisis",
+         "on_enter_effects": [
+           {"path": "central_bank.exchange_rate", "op": "mul", "value": 1.12, "min": 0.01},
+           {"path": "commodities.prices.نفت", "op": "mul", "value": 0.9, "min": 30.0, "max": 180.0},
+           {"path": "resources.inventory.غذا", "op": "add", "value": -4.0, "min": 0.0}
+         ],
+         "persist_effects": [
+           {"path": "economy.inflation", "op": "add", "value": 0.005, "min": 0.0, "max": 0.5},
+           {"path": "population.happiness", "op": "add", "value": -0.006, "min": 0.05, "max": 0.95}
+         ]},
+        {"name_fa": "اقتصاد مقاومتی یا وابستگی", "duration_days": 90,
+         "decision": "sanctions_escalation",
+         "on_enter_effects": [
+           {"path": "shadow.size", "op": "add", "value": 0.03, "min": 0.0, "max": 1.0},
+           {"path": "politics.tension", "op": "add", "value": 0.01, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.002, "min": -0.05, "max": 0.08},
+           {"path": "welfare.poverty", "op": "add", "value": 0.003, "min": 0.0, "max": 1.0}
+         ],
+         "resolve_effects": [
+           {"path": "central_bank.exchange_rate", "op": "mul", "value": 0.92, "min": 0.01},
+           {"path": "shadow.size", "op": "add", "value": -0.02, "min": 0.0, "max": 1.0}
+         ]}
+      ]
+    },
+    {
+      "id": "epidemic_wave2",
+      "title_fa": "نخ همه‌گیری",
+      "severity": 3,
+      "cooldown_days": 480,
+      "max_instances": 1,
+      "world_scope": false,
+      "trigger": {"mode": "all", "conditions": [
+        {"path": "health.quality", "op": "<", "value": 0.50}
+      ]},
+      "chance": 0.18,
+      "entry_decision": "epidemic_outbreak",
+      "stages": [
+        {"name_fa": "موج نخست و قرنطینه", "duration_days": 90,
+         "on_enter_effects": [
+           {"path": "health.quality", "op": "add", "value": -0.02, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": -0.004, "min": -0.05, "max": 0.08}
+         ],
+         "persist_effects": [
+           {"path": "health.quality", "op": "add", "value": -0.003, "min": 0.0, "max": 1.0},
+           {"path": "population.happiness", "op": "add", "value": -0.005, "min": 0.05, "max": 0.95}
+         ]},
+        {"name_fa": "موج دوم — فشار بیمارستان‌ها", "duration_days": 90,
+         "decision": "epidemic_wave2",
+         "on_enter_effects": [
+           {"path": "health.coverage", "op": "add", "value": -0.03, "min": 0.0, "max": 1.0},
+           {"path": "politics.trust", "op": "add", "value": -0.02, "min": 0.0, "max": 1.0},
+           {"path": "economy.national_debt", "op": "add", "value": 2500000000.0, "min": 0.0}
+         ],
+         "persist_effects": [
+           {"path": "health.quality", "op": "add", "value": -0.004, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": -0.002, "min": -0.05, "max": 0.08}
+         ]},
+        {"name_fa": "بازگشایی و بازسازی", "duration_days": 90,
+         "decision": "epidemic_wave2",
+         "on_enter_effects": [
+           {"path": "health.vaccination", "op": "add", "value": 0.06, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": 0.003, "min": -0.05, "max": 0.08}
+         ],
+         "persist_effects": [
+           {"path": "population.happiness", "op": "add", "value": 0.003, "min": 0.05, "max": 0.95}
+         ],
+         "resolve_effects": [
+           {"path": "health.coverage", "op": "add", "value": 0.02, "min": 0.0, "max": 1.0}
+         ]}
+      ]
+    },
+    {
+      "id": "oil_shock_world",
+      "title_fa": "شوک جهانی نفت",
+      "severity": 3,
+      "cooldown_days": 720,
+      "max_instances": 1,
+      "world_scope": true,
+      "trigger": {"mode": "all", "conditions": [
+        {"path": "economy.gdp_per_capita", "op": ">", "value": 0.0}
+      ]},
+      "chance": 0.10,
+      "entry_decision": "oil_shock",
+      "stages": [
+        {"name_fa": "جهش قیمت نفت", "duration_days": 60,
+         "on_enter_effects": [
+           {"path": "commodities.prices.نفت", "op": "mul", "value": 1.6, "min": 30.0, "max": 180.0},
+           {"path": "commodities.prices.گاز", "op": "mul", "value": 1.4, "min": 1.2, "max": 8.0},
+           {"path": "economy.inflation", "op": "add", "value": 0.015, "min": 0.0, "max": 0.5}
+         ],
+         "persist_effects": [
+           {"path": "economy.inflation", "op": "add", "value": 0.005, "min": 0.0, "max": 0.5},
+           {"path": "population.happiness", "op": "add", "value": -0.005, "min": 0.05, "max": 0.95}
+         ]},
+        {"name_fa": "تورم وارداتی و رکود", "duration_days": 90,
+         "decision": "oil_shock",
+         "on_enter_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.005, "min": -0.05, "max": 0.08},
+           {"path": "economy.foreign_reserves", "op": "mul", "value": 0.97, "min": 0.0},
+           {"path": "central_bank.interest_rate", "op": "add", "value": 0.01, "min": 0.01, "max": 0.6}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.002, "min": -0.05, "max": 0.08},
+           {"path": "welfare.poverty", "op": "add", "value": 0.002, "min": 0.0, "max": 1.0}
+         ]},
+        {"name_fa": "بازگشت تعادل", "duration_days": 60,
+         "on_enter_effects": [
+           {"path": "commodities.prices.نفت", "op": "mul", "value": 0.75, "min": 30.0, "max": 180.0},
+           {"path": "commodities.prices.گاز", "op": "mul", "value": 0.8, "min": 1.2, "max": 8.0},
+           {"path": "economy.inflation", "op": "add", "value": -0.01, "min": 0.0, "max": 0.5}
+         ],
+         "persist_effects": [],
+         "resolve_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": 0.002, "min": -0.05, "max": 0.08}
+         ]}
+      ]
+    },
+    {
+      "id": "banking_chain",
+      "title_fa": "نخ بحران بانکی",
+      "severity": 3,
+      "cooldown_days": 600,
+      "max_instances": 1,
+      "world_scope": false,
+      "trigger": {"mode": "all", "conditions": [
+        {"path": "banking.bank_health", "op": "<", "value": 0.45}
+      ]},
+      "chance": 0.18,
+      "entry_decision": "banking_crisis",
+      "stages": [
+        {"name_fa": "هجوم سپرده‌ها", "duration_days": 60,
+         "on_enter_effects": [
+           {"path": "banking.bank_health", "op": "add", "value": -0.06, "min": 0.0, "max": 1.0},
+           {"path": "stock_market.investor_confidence", "op": "add", "value": -0.06, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "banking.bank_health", "op": "add", "value": -0.005, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": -0.002, "min": -0.05, "max": 0.08}
+         ]},
+        {"name_fa": "نجات بانک‌ها یا فروپاشی", "duration_days": 90,
+         "decision": "banking_bailout",
+         "on_enter_effects": [
+           {"path": "economy.national_debt", "op": "add", "value": 6000000000.0, "min": 0.0},
+           {"path": "politics.trust", "op": "add", "value": -0.02, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "banking.bank_health", "op": "add", "value": 0.004, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": -0.003, "min": -0.05, "max": 0.08}
+         ]},
+        {"name_fa": "رکود اعتباری و بازسازی", "duration_days": 90,
+         "on_enter_effects": [
+           {"path": "economy.inflation", "op": "add", "value": -0.008, "min": 0.0, "max": 0.5},
+           {"path": "financial_services.trust_banks", "op": "add", "value": -0.03, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "stock_market.investor_confidence", "op": "add", "value": 0.004, "min": 0.0, "max": 1.0}
+         ],
+         "resolve_effects": [
+           {"path": "banking.bank_health", "op": "add", "value": 0.05, "min": 0.0, "max": 1.0},
+           {"path": "financial_services.trust_banks", "op": "add", "value": 0.03, "min": 0.0, "max": 1.0}
+         ]}
+      ]
+    },
+    {
+      "id": "chokepoint_chain",
+      "title_fa": "نخ اختلال تنگه",
+      "severity": 2,
+      "cooldown_days": 720,
+      "max_instances": 1,
+      "world_scope": true,
+      "trigger": {"mode": "all", "conditions": [
+        {"path": "economy.gdp_per_capita", "op": ">", "value": 0.0}
+      ]},
+      "chance": 0.08,
+      "entry_decision": "chokepoint",
+      "stages": [
+        {"name_fa": "بسته‌شدن تنگه", "duration_days": 60,
+         "on_enter_effects": [
+           {"path": "commodities.prices.نفت", "op": "mul", "value": 1.35, "min": 30.0, "max": 180.0},
+           {"path": "commodities.prices.گندم", "op": "mul", "value": 1.2, "min": 120.0, "max": 600.0},
+           {"path": "trade.balance", "op": "mul", "value": 0.98, "min": 0.0}
+         ],
+         "persist_effects": [
+           {"path": "economy.inflation", "op": "add", "value": 0.004, "min": 0.0, "max": 0.5}
+         ]},
+        {"name_fa": "هزینه حمل و کمبود سوخت", "duration_days": 90,
+         "decision": "chokepoint",
+         "on_enter_effects": [
+           {"path": "resources.inventory.نفت", "op": "mul", "value": 0.94, "min": 0.0},
+           {"path": "transport_detail.logistics_efficiency", "op": "add", "value": -0.04, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": -0.003, "min": -0.05, "max": 0.08}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.0015, "min": -0.05, "max": 0.08},
+           {"path": "population.happiness", "op": "add", "value": -0.004, "min": 0.05, "max": 0.95}
+         ]},
+        {"name_fa": "بازگشایی و جبران", "duration_days": 60,
+         "on_enter_effects": [
+           {"path": "commodities.prices.نفت", "op": "mul", "value": 0.8, "min": 30.0, "max": 180.0},
+           {"path": "commodities.prices.گندم", "op": "mul", "value": 0.85, "min": 120.0, "max": 600.0},
+           {"path": "transport_detail.logistics_efficiency", "op": "add", "value": 0.03, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [],
+         "resolve_effects": [
+           {"path": "resources.inventory.نفت", "op": "mul", "value": 1.05, "min": 0.0}
+         ]}
+      ]
+    },
+    {
+      "id": "ai_revolution_chain",
+      "title_fa": "نخ انقلاب هوش مصنوعی",
+      "severity": 1,
+      "cooldown_days": 900,
+      "max_instances": 1,
+      "world_scope": true,
+      "trigger": {"mode": "all", "conditions": [
+        {"path": "technology.branches.دیجیتال", "op": ">", "value": 0.35}
+      ]},
+      "chance": 0.10,
+      "entry_decision": "ai_revolution",
+      "stages": [
+        {"name_fa": "جهش بهره‌وری", "duration_days": 120,
+         "on_enter_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": 0.006, "min": -0.05, "max": 0.08},
+           {"path": "ai_policy.productivity", "op": "add", "value": 0.08, "min": 0.0, "max": 1.0},
+           {"path": "commodities.prices.فلزات", "op": "mul", "value": 1.15, "min": 800.0, "max": 4200.0},
+           {"path": "stock_market.investor_confidence", "op": "add", "value": 0.04, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": 0.002, "min": -0.05, "max": 0.08}
+         ]},
+        {"name_fa": "نابرابری و نگرانی شغلی", "duration_days": 120,
+         "decision": "ai_revolution",
+         "on_enter_effects": [
+           {"path": "welfare.gini", "op": "add", "value": 0.015, "min": 0.0, "max": 1.0},
+           {"path": "economy.unemployment", "op": "add", "value": 0.004, "min": 0.0, "max": 0.5},
+           {"path": "politics.tension", "op": "add", "value": 0.008, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "welfare.gini", "op": "add", "value": 0.003, "min": 0.0, "max": 1.0},
+           {"path": "population.happiness", "op": "add", "value": -0.003, "min": 0.05, "max": 0.95}
+         ]},
+        {"name_fa": "سیاست فناوری", "duration_days": 120,
+         "decision": "ai_revolution",
+         "on_enter_effects": [
+           {"path": "education.human_capital", "op": "add", "value": 0.03, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": 0.003, "min": -0.05, "max": 0.08}
+         ],
+         "persist_effects": [
+           {"path": "technology.research_rate", "op": "add", "value": 1.5, "min": 0.0}
+         ],
+         "resolve_effects": [
+           {"path": "welfare.gini", "op": "add", "value": -0.02, "min": 0.0, "max": 1.0},
+           {"path": "economy.growth_rate", "op": "add", "value": 0.004, "min": -0.05, "max": 0.08}
+         ]}
+      ]
+    },
+    {
+      "id": "demographic_winter_chain",
+      "title_fa": "نخ زمستان جمعیتی",
+      "severity": 2,
+      "cooldown_days": 900,
+      "max_instances": 1,
+      "world_scope": false,
+      "trigger": {"mode": "all", "conditions": [
+        {"path": "population.age_structure.سالمند", "op": ">", "value": 0.12}
+      ]},
+      "chance": 0.14,
+      "entry_decision": "pension_reform",
+      "stages": [
+        {"name_fa": "فشار صندوق بازنشستگی", "duration_days": 120,
+         "on_enter_effects": [
+           {"path": "economy.policy_costs.فشار صندوق بازنشستگی", "op": "mul", "value": 1.1, "min": 0.0},
+           {"path": "welfare.pension_pressure_structural", "op": "add", "value": 0.05, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.001, "min": -0.05, "max": 0.08},
+           {"path": "economy.national_debt", "op": "add", "value": 2000000000.0, "min": 0.0}
+         ]},
+        {"name_fa": "کمبود نیروی کار", "duration_days": 120,
+         "decision": "pension_reform",
+         "on_enter_effects": [
+           {"path": "population.workforce", "op": "mul", "value": 0.985, "min": 0.0},
+           {"path": "economy.unemployment", "op": "add", "value": -0.004, "min": 0.0, "max": 0.5}
+         ],
+         "persist_effects": [
+           {"path": "economy.growth_rate", "op": "add", "value": -0.002, "min": -0.05, "max": 0.08}
+         ]},
+        {"name_fa": "اصلاحات ساختاری", "duration_days": 120,
+         "decision": "pension_reform",
+         "on_enter_effects": [
+           {"path": "welfare.pension_pressure_structural", "op": "add", "value": -0.06, "min": 0.0, "max": 1.0},
+           {"path": "demographic_policy.fertility_incentive", "op": "add", "value": 0.05, "min": 0.0, "max": 1.0}
+         ],
+         "persist_effects": [],
+         "resolve_effects": [
+           {"path": "economy.policy_costs.فشار صندوق بازنشستگی", "op": "mul", "value": 0.92, "min": 0.0},
+           {"path": "politics.trust", "op": "add", "value": -0.01, "min": 0.0, "max": 1.0}
+         ]}
+      ]
+    }
+  ]
+}

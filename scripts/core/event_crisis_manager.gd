@@ -9,6 +9,43 @@ extends Node
 const MAX_ACTIVE_CRISES = 4
 const COOLDOWN_DAYS = 120
 
+# ── نخ‌های بحران (Crisis Threads) — بازرسی ۱۴۰۵ دور سیزدهم ────────────────
+# رویدادهای واقعی زنجیره‌ای‌اند نه تک‌ضربه: خشکسالی ← تورم خوراک ← فشار ارزی.
+# هر زنجیره چند مرحله دارد؛ هر مرحله اثر ماهانه‌ی واقعی روی state، شرط/زمان
+# پیشروی، نقطه‌ی تصمیم فارسی (قالب DecisionManager) و گاهی اثر جهانی (کالاها)
+# دارد. تعریف‌ها داده‌محور در data/crisis_chains.json نگهداری می‌شوند.
+const CHAINS_PATH = "res://data/crisis_chains.json"
+var chains: Array = []
+var load_errors: Array = []
+
+func _ready():
+	reload()
+
+func reload() -> bool:
+	chains.clear()
+	load_errors.clear()
+	var file = FileAccess.open(CHAINS_PATH, FileAccess.READ)
+	if file == null:
+		load_errors.append("فایل زنجیره‌های بحران خوانده نشد")
+		return false
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if not parsed is Dictionary or not parsed.get("chains", null) is Array:
+		load_errors.append("ساختار crisis_chains.json نامعتبر است")
+		return false
+	for raw in parsed["chains"]:
+		if not raw is Dictionary or str(raw.get("id", "")).is_empty():
+			load_errors.append("زنجیرهٔ بحران با شناسهٔ نامعتبر")
+			continue
+		chains.append(raw.duplicate(true))
+	return load_errors.is_empty()
+
+func _chain_by_id(id: String) -> Dictionary:
+	for chain in chains:
+		if str(chain.get("id", "")) == id:
+			return chain
+	return {}
+
 # تعریف داده‌محور بحران‌ها؛ ترتیب ثابت آرایه برای قطعی‌بودن ترتیب ارزیابی (و در نتیجه
 # مصرف یکسان اعداد دترمینستیک در همه دستگاه‌ها) حیاتی است.
 # trigger_mode: «all» همه شرط‌ها باید برقرار باشند، «any» برقراری هرکدام کافی است.
@@ -157,6 +194,12 @@ func is_valid() -> bool:
 	for definition in CRISES:
 		if not DecisionManagerClass.TEMPLATES.has(str(definition.get("type", ""))):
 			return false
+	for chain in chains:
+		if not DecisionManagerClass.TEMPLATES.has(str(chain.get("entry_decision", ""))):
+			return false
+		for stage in chain.get("stages", []):
+			if stage.has("decision") and not DecisionManagerClass.TEMPLATES.has(str(stage["decision"])):
+				return false
 	return true
 
 func simulate_month(state: Dictionary, turn: int) -> Dictionary:
@@ -165,25 +208,64 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var events: Array = []
 	var current_day = TimeManager.get_total_days(state)
 
-	# ۱) چرخه‌ی حیات بحران‌های فعال: اثر ماهانه، سپس پایان و ثبت دوره تامین مجدد
+	# ۱) چرخه‌ی حیات بحران‌های فعال: اثر ماهانه، سپس پایان/پیشروی مرحله و ثبت دوره تامین مجدد
 	var kept: Array = []
 	for crisis in state["events_active"]:
 		if str(crisis.get("status", "active")) != "active":
 			continue
+		var is_chain := int(crisis.get("stage_count", 0)) > 0
+		var chain_def := _chain_by_id(str(crisis.get("type", ""))) if is_chain else {}
 		if current_day >= int(crisis.get("expires_day", current_day + 1)):
-			state["crisis_cooldowns"][str(crisis.get("type", ""))] = current_day + COOLDOWN_DAYS
+			if is_chain and not chain_def.is_empty() \
+					and int(crisis.get("stage", 0)) < int(crisis.get("stage_count", 0)) - 1:
+				# ── پیشروی به مرحلهٔ بعدی نخ ──
+				crisis["stage"] = int(crisis.get("stage", 0)) + 1
+				var stage_next: Dictionary = chain_def["stages"][int(crisis["stage"])]
+				crisis["stage_name_fa"] = str(stage_next.get("name_fa", ""))
+				crisis["started_day"] = current_day
+				crisis["expires_day"] = current_day + int(stage_next.get("duration_days", 90))
+				for effect in stage_next.get("on_enter_effects", []):
+					_apply_path_effect(state, effect)
+				var stage_msg := "نخ بحران «%s» وارد مرحلهٔ %d/%d «%s» شد" % [
+					str(crisis.get("title", "")), int(crisis["stage"]) + 1,
+					int(crisis["stage_count"]), str(stage_next.get("name_fa", ""))]
+				events.append({"type": "crisis_stage", "title": str(crisis.get("title", "")),
+					"stage": int(crisis["stage"]) + 1, "stage_count": int(crisis["stage_count"]),
+					"message": stage_msg})
+				if stage_next.has("decision"):
+					events.append({"type": str(stage_next["decision"]), "title": str(crisis.get("title", "")),
+						"severity": int(crisis.get("severity", 1)), "crisis": true,
+						"message": "%s — تصمیم فوری لازم است" % stage_msg})
+				kept.append(crisis)
+				continue
+			# ── پایان کامل نخ / بحران تک‌مرحله‌ای ──
+			var cooldown := COOLDOWN_DAYS
+			if not chain_def.is_empty():
+				for effect in chain_def["stages"][chain_def["stages"].size() - 1].get("resolve_effects", []):
+					_apply_path_effect(state, effect)
+				cooldown = int(chain_def.get("cooldown_days", COOLDOWN_DAYS))
+			state["crisis_cooldowns"][str(crisis.get("type", ""))] = current_day + cooldown
+			var resolved_msg := "بحران «%s» پایان یافت" % str(crisis.get("title", ""))
+			if is_chain:
+				resolved_msg = "نخ بحران «%s» به پایان رسید و کشور رو به بهبود رفت" % str(crisis.get("title", ""))
 			events.append({
 				"type": "crisis_resolved",
 				"title": str(crisis.get("title", "")),
 				"severity": int(crisis.get("severity", 1)),
-				"message": "بحران «%s» پایان یافت" % str(crisis.get("title", ""))
+				"message": resolved_msg
 			})
 			continue
-		for effect in crisis.get("persist_effects", []):
-			_apply_path_effect(state, effect)
+		# اثر ماهانهٔ مرحلهٔ جاری (برای نخ‌ها: اثر مرحله؛ برای تک‌مرحله‌ای: persist_effects)
+		if is_chain and not chain_def.is_empty():
+			var stage_now: Dictionary = chain_def["stages"][clampi(int(crisis.get("stage", 0)), 0, chain_def["stages"].size() - 1)]
+			for effect in stage_now.get("persist_effects", []):
+				_apply_path_effect(state, effect)
+		else:
+			for effect in crisis.get("persist_effects", []):
+				_apply_path_effect(state, effect)
 		kept.append(crisis)
 
-	# ۲) ارزیابی دترمینستیک ریسک‌های تازه به ترتیب ثابت تعریف
+	# ۲) ارزیابی دترمینستیک ریسک‌های تازه به ترتیب ثابت تعریف (بحران‌ها سپس نخ‌ها)
 	var active_types: Dictionary = {}
 	for crisis in kept:
 		active_types[str(crisis.get("type", ""))] = true
@@ -226,12 +308,68 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 			"message": "بحران «%s» آغاز شد؛ تصمیم فوری لازم است" % entry["title"]
 		})
 
+	# ۲ب) آغاز نخ‌های بحران (با سقف هم‌زمانِ per-chain و cooldown اختصاصی)
+	for chain in chains:
+		if active_count >= MAX_ACTIVE_CRISES:
+			break
+		var chain_type = str(chain.get("id", ""))
+		if active_types.has(chain_type):
+			continue
+		if float(state["crisis_cooldowns"].get(chain_type, -1.0)) > current_day:
+			continue
+		var instances_now := 0
+		for c in kept:
+			if str(c.get("type", "")) == chain_type:
+				instances_now += 1
+		if instances_now >= int(chain.get("max_instances", 1)):
+			continue
+		if not _triggered(state, chain):
+			continue
+		if not Deterministic.chance(float(chain.get("chance", 0.1))):
+			continue
+
+		var stage_first: Dictionary = chain["stages"][0]
+		for effect in stage_first.get("on_enter_effects", []):
+			_apply_path_effect(state, effect)
+		var chain_entry = {
+			"instance_id": "%s_%d" % [chain_type, turn],
+			"type": chain_type,
+			"title": str(chain.get("title_fa", chain_type)),
+			"severity": int(chain.get("severity", 2)),
+			"status": "active",
+			"started_tick": turn,
+			"started_day": current_day,
+			"expires_day": current_day + int(stage_first.get("duration_days", 90)),
+			"stage": 0,
+			"stage_count": chain["stages"].size(),
+			"stage_name_fa": str(stage_first.get("name_fa", "")),
+			"persist_effects": []
+		}
+		kept.append(chain_entry)
+		active_types[chain_type] = true
+		active_count += 1
+		events.append({
+			"type": str(chain.get("entry_decision", chain_type)),
+			"title": chain_entry["title"],
+			"severity": chain_entry["severity"],
+			"crisis": true,
+			"message": "نخ بحران «%s» آغاز شد؛ تصمیم فوری لازم است" % chain_entry["title"]
+		})
+
 	state["events_active"] = kept
 	return {"state": state, "events": events}
 
 func _triggered(state: Dictionary, definition: Dictionary) -> bool:
-	var mode = str(definition.get("trigger_mode", "all"))
-	var conditions: Array = definition.get("trigger", [])
+	# پشتیبانی از دو شکل: آرایه‌ی قدیمی {trigger_mode در بالا} و ساختار زنجیره {mode/conditions}
+	var raw_trigger = definition.get("trigger", [])
+	var mode := "all"
+	var conditions: Array = []
+	if raw_trigger is Dictionary:
+		mode = str(raw_trigger.get("mode", "all"))
+		conditions = raw_trigger.get("conditions", [])
+	else:
+		mode = str(definition.get("trigger_mode", "all"))
+		conditions = raw_trigger
 	if conditions.is_empty():
 		return false
 	for condition in conditions:

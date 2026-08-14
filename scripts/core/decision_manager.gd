@@ -214,7 +214,187 @@ const TEMPLATES = {
 				{"path":"education.human_capital","op":"add","value":-0.035,"min":0.0,"max":1.0},
 				{"path":"technology.research_rate","op":"add","value":-0.8,"min":0.0}]}
 		]
-	}
+	},
+	"food_inflation": {
+		"title": "تورم خوراک و فشار معیشت",
+		"description": "قیمت مواد غذایی شتاب گرفته و سفره‌ی خانوار تحت فشار است. هر گزینه، تورم را در برابر بدهی یا بازار سیاه مبادله می‌کند.",
+		"choices": [
+			{"id":"subsidy","text":"یارانه‌ی کالاهای اساسی","consequence":"فشار معیشت کم می‌شود اما بدهی و کسری بالا می‌رود.","effects":[
+				{"path":"population.happiness","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"welfare.poverty","op":"add","value":-0.02,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":5000000000.0}]},
+			{"id":"price_control","text":"کنترل قیمت و سهمیه‌بندی","consequence":"تورم ظاهری مهار می‌شود ولی کمبود و بازار سیاه رشد می‌کند.","effects":[
+				{"path":"economy.inflation","op":"add","value":-0.01,"min":0.0,"max":0.5},
+				{"path":"shadow.size","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"population.happiness","op":"add","value":-0.015,"min":0.0,"max":1.0}]},
+			{"id":"import","text":"واردات فوری مواد غذایی","consequence":"قیمت‌ها آرام می‌شود اما ذخایر ارزی می‌سوزد.","effects":[
+				{"path":"commodities.prices.گندم","op":"mul","value":0.92,"min":120.0,"max":600.0},
+				{"path":"economy.inflation","op":"add","value":-0.008,"min":0.0,"max":0.5},
+				{"path":"economy.foreign_reserves","op":"mul","value":0.96,"min":0.0}]}
+		]
+	},
+	"currency_crisis": {
+		"title": "فشار ارزی و بازار سیاه",
+		"description": "ارز ملی در برابر فشار خارجی می‌لرزد و بازار موازی شکل گرفته است. واکنش بانک مرکزی آینده‌ی صادرات و تورم را تعیین می‌کند.",
+		"choices": [
+			{"id":"intervene","text":"مداخله با ذخایر ارزی","consequence":"ارز موقتاً تقویت می‌شود ولی ذخایر تحلیل می‌رود.","effects":[
+				{"path":"central_bank.exchange_rate","op":"mul","value":0.93,"min":0.01},
+				{"path":"economy.foreign_reserves","op":"mul","value":0.92,"min":0.0},
+				{"path":"economy.inflation","op":"add","value":-0.006,"min":0.0,"max":0.5}]},
+			{"id":"hike","text":"افزایش نرخ بهره","consequence":"فرار سرمایه مهار می‌شود ولی رشد و اشتغال آسیب می‌بیند.","effects":[
+				{"path":"central_bank.interest_rate","op":"add","value":0.03,"min":0.01,"max":0.6},
+				{"path":"economy.growth_rate","op":"add","value":-0.004,"min":-0.05,"max":0.08},
+				{"path":"central_bank.exchange_rate","op":"mul","value":0.96,"min":0.01}]},
+			{"id":"capital_control","text":"کنترل سرمایه","consequence":"خروج ارز بند می‌آید اما سرمایه‌گذار خارجی می‌ترسد.","effects":[
+				{"path":"shadow.size","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"stock_market.investor_confidence","op":"add","value":-0.04,"min":0.0,"max":1.0},
+				{"path":"economy.foreign_reserves","op":"mul","value":0.99,"min":0.0}]}
+		]
+	},
+	"sanctions_escalation": {
+		"title": "دور تازه تحریم‌ها",
+		"description": "فشار بین‌المللی تشدید شده است. مسیر پیش رو میان مذاکره، مقاومت و تلافی انتخاب می‌خواهد.",
+		"choices": [
+			{"id":"negotiate","text":"مذاکره و تنش‌زدایی","consequence":"فشار کم می‌شود ولی امتیاز و هزینه‌ی سیاسی دارد.","effects":[
+				{"path":"diplomacy.influence","op":"add","value":3.0,"min":0.0,"max":100.0},
+				{"path":"politics.trust","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":0.002,"min":-0.05,"max":0.08}]},
+			{"id":"resist","text":"اقتصاد مقاومتی","consequence":"وابستگی کم می‌شود اما هزینه و سایه بزرگ‌تر می‌شود.","effects":[
+				{"path":"shadow.size","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":-0.002,"min":-0.05,"max":0.08},
+				{"path":"politics.stability","op":"add","value":0.015,"min":0.0,"max":1.0}]},
+			{"id":"retaliate","text":"اقدام متقابل","consequence":"نماد ملی تقویت می‌شود ولی تنش و هزینه‌ی تجارت بالا می‌رود.","effects":[
+				{"path":"politics.tension","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"trade.balance","op":"mul","value":0.97,"min":0.0},
+				{"path":"population.happiness","op":"add","value":0.01,"min":0.0,"max":1.0}]}
+		]
+	},
+	"epidemic_wave2": {
+		"title": "موج دوم همه‌گیری",
+		"description": "پس از آرامش نسبی، موج تازه‌ای از بیماری برخاسته است. تعادل میان سلامت و اقتصاد دوباره آزموده می‌شود.",
+		"choices": [
+			{"id":"lockdown","text":"قرنطینه‌ی سراسری","consequence":"سلامت محافظت می‌شود ولی اقتصاد متوقف می‌شود.","effects":[
+				{"path":"health.quality","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":-0.006,"min":-0.05,"max":0.08},
+				{"path":"population.happiness","op":"add","value":-0.02,"min":0.0,"max":1.0}]},
+			{"id":"targeted","text":"قرنطینه‌ی هوشمند","consequence":"تعادلی میان سلامت و اقتصاد برقرار می‌شود.","effects":[
+				{"path":"health.coverage","op":"add","value":0.01,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":-0.002,"min":-0.05,"max":0.08},
+				{"path":"health.vaccination","op":"add","value":0.04,"min":0.0,"max":1.0}]},
+			{"id":"open","text":"ادامه‌ی فعالیت عادی","consequence":"اقتصاد می‌چرخد ولی موج شدیدتر و طولانی‌تر می‌شود.","effects":[
+				{"path":"economy.growth_rate","op":"add","value":0.002,"min":-0.05,"max":0.08},
+				{"path":"health.quality","op":"add","value":-0.03,"min":0.0,"max":1.0},
+				{"path":"politics.trust","op":"add","value":-0.025,"min":0.0,"max":1.0}]}
+		]
+	},
+	"oil_shock": {
+		"title": "شوک جهانی نفت",
+		"description": "قیمت جهانی نفت جهش کرده و هزینه‌ی انرژی و تورم وارداتی را بالا برده است.",
+		"choices": [
+			{"id":"subsidize","text":"یارانه‌ی سوخت و حامل‌های انرژی","consequence":"فشار معیشت کم می‌شود ولی بودجه و بدهی سنگین می‌شود.","effects":[
+				{"path":"population.happiness","op":"add","value":0.025,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":4000000000.0},
+				{"path":"economy.inflation","op":"add","value":-0.006,"min":0.0,"max":0.5}]},
+			{"id":"liberalize","text":"آزادسازی قیمت انرژی","consequence":"بودجه سبک می‌شود ولی تورم و نارضایتی می‌آید.","effects":[
+				{"path":"economy.foreign_reserves","op":"add","value":1500000000.0,"min":0.0},
+				{"path":"economy.inflation","op":"add","value":0.012,"min":0.0,"max":0.5},
+				{"path":"population.happiness","op":"add","value":-0.025,"min":0.0,"max":1.0}]},
+			{"id":"green","text":"تسریع گذار به انرژی پاک","consequence":"هزینه‌ی کوتاه‌مدت اما استقلال بلندمدت.","effects":[
+				{"path":"environment.green_energy_share","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":5000000000.0},
+				{"path":"commodities.prices.نفت","op":"mul","value":0.95,"min":30.0,"max":180.0}]}
+		]
+	},
+	"banking_crisis": {
+		"title": "هجوم به بانک‌ها",
+		"description": "اعتماد سپرده‌گذاران سست شده و صف برداشت شکل گرفته است. واکنش دولت سرنوشت نظام بانکی را تعیین می‌کند.",
+		"choices": [
+			{"id":"guarantee","text":"ضمانت کامل سپرده‌ها","consequence":"هجوم متوقف می‌شود ولی بدهی سنگین می‌شود.","effects":[
+				{"path":"financial_services.trust_banks","op":"add","value":0.05,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":7000000000.0},
+				{"path":"banking.bank_health","op":"add","value":0.02,"min":0.0,"max":1.0}]},
+			{"id":"liquidity","text":"تزریق نقدینگی اضطراری","consequence":"بانک‌ها سرپا می‌مانند ولی تورم شعله می‌کشد.","effects":[
+				{"path":"economy.inflation","op":"add","value":0.008,"min":0.0,"max":0.5},
+				{"path":"banking.bank_health","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":-0.001,"min":-0.05,"max":0.08}]},
+			{"id":"let_fail","text":"انضباط و بازسازی بانک‌ها","consequence":"بدهی نمی‌آید ولی اعتماد و رشد می‌شکند.","effects":[
+				{"path":"banking.bank_health","op":"add","value":-0.04,"min":0.0,"max":1.0},
+				{"path":"financial_services.trust_banks","op":"add","value":-0.06,"min":0.0,"max":1.0},
+				{"path":"stock_market.investor_confidence","op":"add","value":-0.05,"min":0.0,"max":1.0}]}
+		]
+	},
+	"banking_bailout": {
+		"title": "نجات بانک‌ها",
+		"description": "بحران بانکی به مرحله‌ی تصمیم رسیده است: نجات کامل، جزئی یا واگذاری.",
+		"choices": [
+			{"id":"full","text":"نجات کامل با بودجه‌ی دولتی","consequence":"ثبات بازمی‌گردد ولی بدهی و خشم عمومی می‌آید.","effects":[
+				{"path":"banking.bank_health","op":"add","value":0.06,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":9000000000.0},
+				{"path":"population.happiness","op":"add","value":-0.02,"min":0.0,"max":1.0}]},
+			{"id":"partial","text":"نجات جزئی و ادغام","consequence":"هزینه کمتر، اما اعتماد کامل بازنمی‌گردد.","effects":[
+				{"path":"banking.bank_health","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":4000000000.0},
+				{"path":"financial_services.trust_banks","op":"add","value":-0.02,"min":0.0,"max":1.0}]},
+			{"id":"private","text":"واگذاری به بخش خصوصی","consequence":"بازار درست می‌شود ولی ریسک فروپاشی تک‌تک بانک‌ها می‌ماند.","effects":[
+				{"path":"banking.bank_health","op":"add","value":-0.02,"min":0.0,"max":1.0},
+				{"path":"administration.efficiency","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"stock_market.investor_confidence","op":"add","value":-0.02,"min":0.0,"max":1.0}]}
+		]
+	},
+	"chokepoint": {
+		"title": "اختلال تنگه و مسیرهای تجاری",
+		"description": "یک گلوگاه راهبردی حمل‌ونقل دریایی بسته شده و زنجیره‌ی تأمین و سوخت را تهدید می‌کند.",
+		"choices": [
+			{"id":"alt_route","text":"فعال‌سازی مسیر جایگزین","consequence":"تجارت می‌چرخد ولی هزینه‌ی حمل و بدهی بالا می‌رود.","effects":[
+				{"path":"transport_detail.logistics_efficiency","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":3000000000.0},
+				{"path":"trade.balance","op":"mul","value":0.995,"min":0.0}]},
+			{"id":"stockpile","text":"تکمیل ذخیره‌ی راهبردی سوخت","consequence":"امنیت انرژی حفظ می‌شود ولی ذخایر ارزی می‌سوزد.","effects":[
+				{"path":"resources.inventory.نفت","op":"add","value":8.0,"min":0.0},
+				{"path":"economy.foreign_reserves","op":"mul","value":0.97,"min":0.0},
+				{"path":"economy.growth_rate","op":"add","value":-0.001,"min":-0.05,"max":0.08}]},
+			{"id":"diplomacy","text":"دیپلماسی دریایی و ائتلاف","consequence":"تنگه باز می‌شود ولی هزینه‌ی نفوذ و تعهد دارد.","effects":[
+				{"path":"diplomacy.influence","op":"add","value":2.0,"min":0.0,"max":100.0},
+				{"path":"politics.tension","op":"add","value":0.01,"min":0.0,"max":1.0},
+				{"path":"commodities.prices.نفت","op":"mul","value":0.93,"min":30.0,"max":180.0}]}
+		]
+	},
+	"ai_revolution": {
+		"title": "انقلاب هوش مصنوعی",
+		"description": "هوش مصنوعی بهره‌وری را جهش داده اما بازار کار و نابرابری را به هم ریخته است. سیاست فناوری آینده‌ی کشور را رقم می‌زند.",
+		"choices": [
+			{"id":"invest","text":"سرمایه‌گذاری کامل در هوش مصنوعی","consequence":"رشد جهشی ولی بیکاری فنی و بدهی بالا.","effects":[
+				{"path":"ai_policy.productivity","op":"add","value":0.08,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":0.006,"min":-0.05,"max":0.08},
+				{"path":"economy.unemployment","op":"add","value":0.006,"min":0.0,"max":0.5}]},
+			{"id":"regulate","text":"چارچوب تنظیمی و بازآموزی","consequence":"انتقال مهار می‌شود ولی سرعت رشد کم می‌شود.","effects":[
+				{"path":"economy.unemployment","op":"add","value":-0.005,"min":0.0,"max":0.5},
+				{"path":"education.human_capital","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":0.002,"min":-0.05,"max":0.08}]},
+			{"id":"laissez","text":"عدم مداخله","consequence":"رشد سریع ولی شکاف عمیق‌تر.","effects":[
+				{"path":"welfare.gini","op":"add","value":0.02,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":0.004,"min":-0.05,"max":0.08},
+				{"path":"politics.tension","op":"add","value":0.01,"min":0.0,"max":1.0}]}
+		]
+	},
+	"pension_reform": {
+		"title": "اصلاح صندوق بازنشستگی",
+		"description": "سالخوردگی جمعیت، صندوق بازنشستگی را تحت فشار گذاشته است. اصلاح ساختاری اجتناب‌ناپذیر است.",
+		"choices": [
+			{"id":"age_up","text":"افزایش سن بازنشستگی","consequence":"فشار صندوق کم می‌شود ولی نسل شاغل می‌رنجد.","effects":[
+				{"path":"demographic_policy.pension_fund","op":"add","value":0.08,"min":0.0,"max":1.0},
+				{"path":"population.happiness","op":"add","value":-0.025,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":0.001,"min":-0.05,"max":0.08}]},
+			{"id":"contribute","text":"افزایش سهم بیمه‌ای","consequence":"صندوق پر می‌شود ولی دستمزد خالص کم می‌شود.","effects":[
+				{"path":"demographic_policy.pension_fund","op":"add","value":0.06,"min":0.0,"max":1.0},
+				{"path":"welfare.pension_pressure_structural","op":"add","value":-0.03,"min":0.0,"max":1.0},
+				{"path":"economy.unemployment","op":"add","value":0.003,"min":0.0,"max":0.5}]},
+			{"id":"private","text":"خصوصی‌سازی بخشی از صندوق","consequence":"بازار سرمایه رونق می‌گیرد ولی ریسک و بی‌اعتمادی دارد.","effects":[
+				{"path":"stock_market.investor_confidence","op":"add","value":0.03,"min":0.0,"max":1.0},
+				{"path":"politics.trust","op":"add","value":-0.02,"min":0.0,"max":1.0},
+				{"path":"demographic_policy.pension_fund","op":"add","value":0.04,"min":0.0,"max":1.0}]}
+		]
+	},
 }
 
 const ALIASES = {
