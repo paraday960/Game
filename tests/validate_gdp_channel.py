@@ -26,7 +26,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gdp_contract import (ROOT, SCRIPTS, read, rel, esc, ARABIC_PERSIAN_KEY_RE,
                           MIGRATED, BUDGET, SINGLE_OWNER_ALLOW, RESERVE_PUBLISHERS,
                           RESERVE_BUDGET, collect_gd_files, collect_write_sites,
-                          get_convergent_level_files, is_convergent_level_site)
+                          get_convergent_level_files, is_convergent_level_site,
+                          remainder_sites, is_transient_gated)
 
 
 def main():
@@ -161,6 +162,15 @@ def main():
                  % (len(clean), len(MIGRATED)))
     NOTES.append("ℹ️ مجموع نویسه‌های مستقیم باقی‌مانده: %d (سقف پین‌شده: %d)"
                  % (sum(actual.values()), sum(BUDGET.values())))
+
+    # ── C5b: نویسههای باقیمانده (طبقهٔ REMAINDER) باید گیت رویداد داشته باشند ──
+    # بازبینی کلاس‌بندی ۱۴۰۵: ۱۱ سایت باقیمانده همگی شرطی/شانسی تأیید شدند؛ این چک
+    # تضمین می‌کند نویسهٔ بدون‌گیت (دریفت مداوم) ناخواسته برنگردد — چنین نویسه‌ای
+    # باید به کانال sector_boosts مهاجرت کند، نه این‌جا بماند.
+    ungated = ["%s:%d" % (f, n) for f, n, _ln in remainder_sites()
+               if not is_transient_gated(f, n)]
+    check("C5b) همهٔ نویسه‌های باقی‌ماندهٔ GDP گیت شرطی/شانسی دارند (بدون دریفت مداوم)",
+          not ungated, "بدون گیت: %s" % ", ".join(ungated))
 
     # ── C8: نمایش کانال‌ها در UI (بازرسی ۱۴۰۵ج) ─────────────────────────
     # کانال‌های GDP و ورودی ذخایر برای بازیکن دیده می‌شوند — در غیر این صورت

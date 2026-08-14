@@ -283,3 +283,29 @@ def is_convergent_level_site(fpath, line):
     return ("_gdp_boost" in line) or (os.path.basename(fpath) in
                                       {os.path.basename(x) for x in get_convergent_level_files()}
                                       and "boost_delta" in line)
+
+
+# ── بازبینی کلاس‌بندی REMAINDER (۱۴۰۵) ────────────────────────────────────
+# هر نویسهٔ مستقیم باقی‌مانده در فایل مهاجرت‌یافته باید «گیت شرطی/شانسی» داشته
+# باشد (رویداد گذرا: chance/شرط/نگهبان اقدام)؛ نویسهٔ بدون گیت = دریفت مداوم
+# و نامزد اجباری مهاجرت به کانال است. این بازبینی دستی ۱۱ سایت REMAINDER را
+# همگی گیت‌دار تأیید کرد (خشکسالی، اعتصاب، بحران بانکی، حباب مسکن، سود صلح…)؛
+# این تابع آن یافته را به گِیت خودکار تبدیل می‌کند.
+TRANSIENT_GATE_RE = re.compile(
+    r"(Deterministic\.chance\(|^\s*(?:if|elif)\s)", re.M)
+
+
+def remainder_sites():
+    """نویسه‌های مستقیم باقی‌مانده در فایل‌های مهاجرت‌یافته (طبقهٔ REMAINDER پویشگر)."""
+    out = []
+    for f in sorted(MIGRATED):
+        for line_no, line in collect_write_sites(os.path.join(ROOT, f)):
+            out.append((f, line_no, line))
+    return out
+
+
+def is_transient_gated(f, line_no, window=6):
+    """آیا نویسه در بافت `window` خطهٔ خود گیت رویداد/شرط دارد؟"""
+    lines = read(os.path.join(ROOT, f)).splitlines()
+    ctx = "\n".join(lines[max(0, line_no - 1 - window):line_no])
+    return TRANSIENT_GATE_RE.search(ctx) is not None
