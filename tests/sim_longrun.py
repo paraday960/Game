@@ -190,10 +190,12 @@ def step_day(s):
     money_change = (0.15 - s["interest_rate"]) * 0.01 + growth_gap * 0.005
     s["money_supply"] = clamp(s["money_supply"] + money_change * 0.01, 0.5, 1.8)
 
-def run(years=10, verbose=True):
+def run(years=10, verbose=True, policy_hook=None):
     s = initial_state()
     hist = []
     for day in range(1, DAYS + 1):
+        if policy_hook is not None:
+            policy_hook(day, s)
         step_day(s)
         for k, v in s.items():
             if isinstance(v, float) and (v != v or v in (float("inf"), float("-inf"))):
@@ -296,6 +298,49 @@ def run_shock_suite():
             FAIL.append(name); ok = False
     return ok
 
+def run_policy_suites(base_final):
+    """سناریوهای «دولت فعال» — اثبات پاسخ‌گویی مدل به سیاست مالی/اجتماعی در برابر خط پایه."""
+    print("═══ سناریوی ۱: انبساطی (مالیات ۲۸٪ + ذخیره ۵٪ + سلامت/آموزش سنگین) ═══")
+    def expansion(day, s):
+        if day == 120:  # از ماه چهارم
+            s["tax_rate"] = 0.28
+            s["alloc"].update({"ذخیره": 0.05, "بهداشت": 0.14, "آموزش": 0.12, "رفاه": 0.18})
+    xe, _ = run(verbose=False, policy_hook=expansion)
+    exp_rev = xe["tax_rate"] * (xe["gdp"] / 12.0)
+    print("پایان: رشد %+.1f%% | تورم %.1f%% | بدهی/GDP %.0f%% | سلامت %.2f | آموزش %.2f | شادی %.2f" % (
+        xe["growth_rate"] * 100, xe["inflation"] * 100,
+        xe["national_debt"] / xe["gdp"] * 100, xe["health_q"], xe["edu_q"], xe["happiness"]))
+    checks1 = [
+        ("انبساطی: بدون فروپاشی مالی (بدهی/GDP < ۱۰۰٪)", xe["national_debt"] / xe["gdp"] < 1.0),
+        ("انبساطی: تورم مهارشده (<۱۵٪)", xe["inflation"] < 0.15),
+        ("انبساطی: سلامت بهتر از خط پایه (سیاست اثر دارد)", xe["health_q"] > base_final["health_q"] + 0.03),
+        ("انبساطی: آموزش بهتر از خط پایه", xe["edu_q"] > base_final["edu_q"] + 0.02),
+        ("انبساطی: رشد منفی نیست", xe["growth_rate"] > 0.0),
+    ]
+    print("═══ سناریوی ۲: انقباضی (مالیات ۱۵٪ + ذخیره ۴۰٪ — ریاضت) ═══")
+    def austerity(day, s):
+        if day == 120:
+            s["tax_rate"] = 0.15
+            s["alloc"]["ذخیره"] = 0.40
+            s["alloc"]["رفاه"] = 0.10
+    xa, _ = run(verbose=False, policy_hook=austerity)
+    print("پایان: رشد %+.1f%% | تورم %.1f%% | بدهی/GDP %.0f%% | سلامت %.2f | شادی %.2f | ثبات %.2f" % (
+        xa["growth_rate"] * 100, xa["inflation"] * 100,
+        xa["national_debt"] / xa["gdp"] * 100, xa["health_q"], xa["happiness"], xa["stability"]))
+    checks2 = [
+        ("انقباضی: بدهی/GDP نهایی کمتر از خط پایه (ریاضت کار می‌کند)",
+         xa["national_debt"] / xa["gdp"] < base_final["national_debt"] / base_final["gdp"] - 0.03),
+        ("انقباضی: بدون سقوط آزاد (رشد > −۲٪)", xa["growth_rate"] > -0.02),
+        ("انقباضی: بدون بحران شادی (شادی > ۰٫۴)", xa["happiness"] > 0.40),
+        ("انقباضی: بدون فروپاشی ثبات (≥۰٫۳۵)", xa["stability"] >= 0.35),
+    ]
+    ok = True
+    for name, passed in checks1 + checks2:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 def _apply_shock(s):
     """فعال‌سازی رژیم جنگ تمام‌عیار روی آینه (ایدمپوتنت)."""
     s["shock_mobil"] = 4.0
@@ -315,6 +360,8 @@ if __name__ == "__main__":
     s, hist = run()
     print()
     ok = check_bounds(s, hist) and check_determinism()
+    print()
+    ok = run_policy_suites(s) and ok
     print()
     ok = run_shock_suite() and ok
     print()
