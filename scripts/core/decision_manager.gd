@@ -395,6 +395,42 @@ const TEMPLATES = {
 				{"path":"demographic_policy.pension_fund","op":"add","value":0.04,"min":0.0,"max":1.0}]}
 		]
 	},
+	"election_shock": {
+		"title": "شوک انتخاباتی و ابهام سیاستی",
+		"description": "نتیجه‌ی انتخابات بازارها و سرمایه‌گذاران را غافلگیر کرده است. واکنش دولت به ابهام، سرنوشت رشد را تعیین می‌کند.",
+		"choices": [
+			{"id":"reassure","text":"پیام ثبات و تداوم سیاست","consequence":"بازار آرام می‌شود ولی فشار منتقدان می‌ماند.","effects":[
+				{"path":"stock_market.investor_confidence","op":"add","value":0.05,"min":0.0,"max":1.0},
+				{"path":"central_bank.exchange_rate","op":"mul","value":0.97,"min":0.01},
+				{"path":"politics.tension","op":"add","value":0.005,"min":0.0,"max":1.0}]},
+			{"id":"reform","text":"بسته‌ی اصلاحات جسورانه","consequence":"بلندمدت سازنده، کوتاه‌مدت پرهزینه.","effects":[
+				{"path":"economy.growth_rate","op":"add","value":0.004,"min":-0.05,"max":0.08},
+				{"path":"economy.inflation","op":"add","value":0.008,"min":0.0,"max":0.5},
+				{"path":"politics.trust","op":"add","value":0.02,"min":0.0,"max":1.0}]},
+			{"id":"status_quo","text":"تداوم وضع موجود","consequence":"ابهام طولانی می‌شود و سرمایه فرار می‌کند.","effects":[
+				{"path":"stock_market.investor_confidence","op":"add","value":-0.04,"min":0.0,"max":1.0},
+				{"path":"economy.foreign_reserves","op":"mul","value":0.97,"min":0.0},
+				{"path":"politics.tension","op":"add","value":0.01,"min":0.0,"max":1.0}]}
+		]
+	},
+	"refugee_wave": {
+		"title": "موج پناهندگان",
+		"description": "جنگ و بی‌ثباتی منطقه‌ای جمعیت‌هایی را به مرزهای کشور رسانده است. نحوه‌ی مواجهه، رفاه و تنش داخلی را شکل می‌دهد.",
+		"choices": [
+			{"id":"shelter","text":"پذیرش و اسکان بشردوستانه","consequence":"هزینه‌ی رفاه بالا می‌رود ولی اعتبار انسانی می‌آید.","effects":[
+				{"path":"welfare.poverty","op":"add","value":-0.01,"min":0.0,"max":1.0},
+				{"path":"economy.national_debt","op":"add","value":3000000000.0},
+				{"path":"diplomacy.influence","op":"add","value":2.0,"min":0.0,"max":100.0}]},
+			{"id":"restrict","text":"محدودیت و دیوار مرزی","consequence":"هزینه‌ی فوری کم می‌شود ولی تنش مرزی و فشار می‌ماند.","effects":[
+				{"path":"population.migration_net","op":"add","value":-80000.0},
+				{"path":"politics.tension","op":"add","value":0.015,"min":0.0,"max":1.0},
+				{"path":"welfare.poverty","op":"add","value":0.003,"min":0.0,"max":1.0}]},
+			{"id":"integrate","text":"برنامه‌ی ادغام و نیروی کار","consequence":"سرمایه‌گذاری اولیه ولی نیروی کار آینده.","effects":[
+				{"path":"migration.integration","op":"add","value":0.08,"min":0.0,"max":1.0},
+				{"path":"economy.growth_rate","op":"add","value":0.003,"min":-0.05,"max":0.08},
+				{"path":"economy.unemployment","op":"add","value":0.004,"min":0.0,"max":0.5}]}
+		]
+	}
 }
 
 const ALIASES = {
