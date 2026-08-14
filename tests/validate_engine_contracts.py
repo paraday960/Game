@@ -141,12 +141,26 @@ def check_noise_symmetry():
         print("✅ قرارداد نویز متقارن: %d سایت راه‌پیمای مرکز-صفر پین شد" % len(NOISE_WALKS))
 
 
+def check_resource_revenue_basis():
+    # بازرسی ۱۴۰۵ (دور هفتم): مبنای درآمد منابع باید «ظرفیت استخراج پایدار» باشد،
+    # نه انبارهٔ نوسانی — در غیر این صورت واردات اضطراری گاز (+۱۵) یا اشباع تدریجی
+    # انبار به سقف ظرفیت (۱۵۰) رانت صادراتی جعلی می‌سازد و موتور از آینه دور می‌شود.
+    src = open("scripts/systems/economy_system.gd", encoding="utf-8").read()
+    ok = ('minf(float(resources.get("inventory",{}).get("نفت",80.0)), 80.0)' in src
+          and 'minf(float(resources.get("inventory",{}).get("گاز",70.0)), 70.0)' in src)
+    if ok:
+        print("✅ مبنای درآمد منابع: ظرفیت استخراج پایدار (انباره فقط سمت کمبود اثر دارد)")
+    else:
+        FAIL.append("مبنای درآمد منابع دوباره به انبارهٔ بی‌سقف گره خورد (واردات→رانت جعلی)")
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
 check_duplicate_deep_blocks()
 check_queue_key_coverage()
 check_noise_symmetry()
+check_resource_revenue_basis()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")
