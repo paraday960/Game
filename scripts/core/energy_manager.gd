@@ -61,7 +61,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# هزینه یارانه: بودجه را می‌سوزاند؛ در قیمت بالای نفت سنگین‌تر
 	var subsidy_cost := subsidies * (0.6 + (oil_price - 75.0) / 200.0) * 0.02
 	econ["subsidy_cost"] = subsidy_cost
-	econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 1.0)) * subsidy_cost / 12.0
+	# (بازرسی ۱۴۰۵ — دور هشتم) یارانه انرژی هزینهٔ مداوم ماهانه است و باید از مجاری
+	# بودجه برود، نه شارژ مستقیم بدهی: انتشار نرخ ماهانه در کانال policy_costs
+	# (مالک مصرف: economy_system → هزینهٔ دولت → کسری/بدهی با سود — مجاری صحیح).
+	var en_costs: Dictionary = econ.get("policy_costs", {})
+	en_costs["یارانه انرژی"] = float(econ.get("gdp", 1.0)) * subsidy_cost / 12.0
+	econ["policy_costs"] = en_costs
 
 	# انتشار کربن: از فسیلی و تلاش اقلیمی
 	en["emissions"] = clampf(fossil * 0.9 - climate_effort * 0.5, 0.05, 1.0)

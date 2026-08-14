@@ -78,7 +78,9 @@ IMPORTANT_KEYS = {
                 # بازرسی مالی بلندمدت ۱۴۰۵: شاخص قیمت منابع (زنجیرهٔ خزانه→بودجه)
                 "resource_price_index",
                 # پاداش قیمت محقق‌شدهٔ نفت (ناشر: org_manager/اوپک → مصرف‌کننده: economy_system)
-                "oil_price_bonus"],
+                "oil_price_bonus",
+                # بازرسی ۱۴۰۵ (دور هشتم): کانال چندناشری هزینه‌های بخشی مداوم
+                "policy_costs", "policy_costs_total"],
     "trade": ["market_access_bonus"],
     "stock_policy": ["last_crash"],
     "resources": ["energy_crisis", "food_crisis"],

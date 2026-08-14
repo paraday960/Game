@@ -2908,6 +2908,19 @@ func _build_economy():
 	var oneoff_month: float = float(econ.get("oneoff_spending_monthly", 0.0))
 	if oneoff_month > 0.0:
 		_row(c3, "برنامه‌های در‌حال‌اجرا (سهم ماه)", PersianFormatter.format_money(oneoff_month))
+	# کانال چندناشری هزینه‌های بخشی مداوم (بازرسی ۱۴۰۵ — دور هشتم)
+	var pc_total_ui: float = float(econ.get("policy_costs_total", 0.0))
+	if pc_total_ui != 0.0:
+		_row(c3, "هزینه‌های بخشی مداوم (یارانه/برنامه‌ها)", PersianFormatter.format_money(pc_total_ui))
+		var pc_top := 0.0
+		var pc_top_key := ""
+		for pk_ui in econ.get("policy_costs", {}).keys():
+			var pv_ui := float(econ["policy_costs"][pk_ui])
+			if absf(pv_ui) > absf(pc_top):
+				pc_top = pv_ui
+				pc_top_key = str(pk_ui)
+		if pc_top_key != "":
+			_row(c3, "↳ بزرگ‌ترین ردیف بخشی", "%s (%s)" % [pc_top_key, PersianFormatter.format_money(pc_top)])
 	# کانال مالک-یکتای GDP (ممیزی نویسندگان ۱۴۰۵): اثر مداوم بخش‌ها فقط از این کانال
 	# با سقف تکی/کلی می‌گذرد؛ این‌جا جمع نرخ سالانه و برترین سهم‌دهنده نشان داده می‌شود
 	var boost_total_ui: float = float(econ.get("sector_boosts_total", 0.0))
