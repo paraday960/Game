@@ -38,9 +38,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	tourism["revenue"] = visitors * 1200.0 * (0.8 + hospitality * 0.4)
 	tourism["infrastructure"] = clampf(float(tourism.get("infrastructure", 0.55)) + hospitality * 0.1, 0.1, 1.0)
 	state["tourism"] = tourism
-	# درآمد گردشگری به ذخایر ارزی
+	# درآمد ارزی گردشگری → کانال reserve_inflows (بازرسی ۱۴۰۵؛ مالک مخزن: بانک مرکزی)
 	var income := float(tourism.get("revenue", 0.0)) / 12.0
-	econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + income * 0.01
+	var tm_infl: Dictionary = econ.get("reserve_inflows", {})
+	tm_infl["گردشگری و جهانگردی"] = income * 0.01
+	econ["reserve_inflows"] = tm_infl
 	state["economy"] = econ
 	# رویداد: رونق/رکود گردشگری
 	if visitors > 12_000_000.0 and Deterministic.chance(0.08):

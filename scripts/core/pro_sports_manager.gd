@@ -50,7 +50,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		var ps_boosts: Dictionary = econ.get("sector_boosts", {})
 		ps_boosts["ورزش حرفه‌ای"] = index * 0.005 * 12.0
 		econ["sector_boosts"] = ps_boosts
-		if ev>0 or exp>0: econ["foreign_reserves"]=float(econ.get("foreign_reserves",0))+gdp*(ev*0.001+exp*0.001)
+		# درآمد ارزی رویدادها/صادرات ورزشی → کانال reserve_inflows (بازرسی ۱۴۰۵)
+		var ps_infl: Dictionary = econ.get("reserve_inflows", {})
+		ps_infl["رویدادها و صادرات ورزشی"] = (gdp*(ev*0.001+exp*0.001)) if (ev>0.0 or exp>0.0) else 0.0
+		econ["reserve_inflows"] = ps_infl
 		state["economy"]=econ
 	var health=state.get("health",{})
 	if not health.is_empty(): health["quality"]=clampf(float(health.get("quality",0.5))+acad*0.0008,0,1); state["health"]=health

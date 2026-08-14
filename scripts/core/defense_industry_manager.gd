@@ -113,10 +113,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		var boost_delta: float = (boost_target - boost_prev) * 0.20
 		economy["gdp"] = gdp + boost_delta
 		p["_gdp_boost"] = boost_prev + boost_delta
-		# درآمد صادرات دفاعی
-		if export_lvl > 0.0 and new_self > 0.50:
-			var export_rev: float = gdp * export_lvl * 0.003
-			economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + export_rev
+		# درآمد صادرات دفاعی → کانال reserve_inflows (بازرسی ۱۴۰۵؛ مالک مخزن: بانک مرکزی)
+		var di_infl: Dictionary = economy.get("reserve_inflows", {})
+		di_infl["صادرات دفاعی"] = (gdp * export_lvl * 0.003) if (export_lvl > 0.0 and new_self > 0.50) else 0.0
+		economy["reserve_inflows"] = di_infl
 		state["economy"] = economy
 
 	# اثر نظامی: آمادگی و قدرت

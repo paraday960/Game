@@ -124,9 +124,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		var boost_delta: float = (boost_target - boost_prev) * 0.20
 		economy["gdp"] = gdp + boost_delta
 		p["_gdp_boost"] = boost_prev + boost_delta
-		# صادرات دانش‌بنیان
-		if patent_comm > 0.3:
-			economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + gdp * patent_comm * 0.001
+		# صادرات دانش‌بنیان → کانال reserve_inflows (بازرسی ۱۴۰۵؛ مالک مخزن: بانک مرکزی)
+		var ke_infl: Dictionary = economy.get("reserve_inflows", {})
+		ke_infl["صادرات دانش‌بنیان"] = (gdp * patent_comm * 0.001) if patent_comm > 0.3 else 0.0
+		economy["reserve_inflows"] = ke_infl
 		state["economy"] = economy
 
 	# تقویت تحقیق و نوآوری

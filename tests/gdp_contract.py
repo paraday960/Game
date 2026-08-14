@@ -95,6 +95,12 @@ RESERVE_PUBLISHERS = {
     "scripts/core/downstream_energy_manager.gd": ["محصولات پالایشی"],
     "scripts/core/diaspora_manager.gd": ["حواله‌های دیاسپورا"],
     "scripts/core/fdi_manager.gd": ["خروج سرمایه خارجی"],
+    # مهاجرت دور هفتم بازرسی ۱۴۰۵: جریان‌های ماهانهٔ مداومِ مستقیم → کانال
+    "scripts/core/tourism_manager.gd": ["گردشگری و جهانگردی"],
+    "scripts/core/knowledge_economy_manager.gd": ["صادرات دانش‌بنیان"],
+    "scripts/core/petrochemical_manager.gd": ["صادرات پتروشیمی"],
+    "scripts/core/defense_industry_manager.gd": ["صادرات دفاعی"],
+    "scripts/core/pro_sports_manager.gd": ["رویدادها و صادرات ورزشی"],
 }
 # بودجهٔ pestleٔ نویسههای مستقیم foreign_reserves (غیر از کانال) — فقط کم می‌شود.
 RESERVE_BUDGET = {
@@ -111,19 +117,20 @@ RESERVE_BUDGET = {
     "scripts/core/org_manager.gd": 2,                 # هزینهٔ عضویت/اقدام سازمانی
     "scripts/core/world_manager.gd": 2,               # جهان/NPC/جنگ
     "scripts/systems/international_orgs_system.gd": 1,  # حقوق دوره‌ای سازمانی
-    # در انتظار دور بعد (نرخ ماهانهٔ درآمد ارزی — نامزد مهاجرت به reserve_inflows):
-    "scripts/core/tourism_manager.gd": 1,
+    # مهاجرت دور ششم/هفتم بازرسی ۱۴۰۵: جریان‌های ماهانهٔ مداوم ارزی به کانال
+    # reserve_inflows رفتند؛ این فایل‌ها فقط ناشر کلید فارسی اند (نویسهٔ مستقیم = ۰).
+    "scripts/core/tourism_manager.gd": 0,
+    "scripts/core/knowledge_economy_manager.gd": 0,
+    "scripts/core/petrochemical_manager.gd": 0,
+    "scripts/core/defense_industry_manager.gd": 0,
+    "scripts/core/pro_sports_manager.gd": 0,
     # کانال موازی oil_income (نویسهٔ خودکار ماهانه روی ذخایر) در بازرسی ۱۴۰۵ حذف شد؛
     # فقط فروش دستی ذخایر کالا (اقدام بازیکن) باقی است.
     "scripts/core/commodity_manager.gd": 1,
-    "scripts/core/creative_manager.gd": 2,
-    "scripts/core/knowledge_economy_manager.gd": 1,
-    "scripts/core/petrochemical_manager.gd": 1,
-    "scripts/core/defense_industry_manager.gd": 1,
-    "scripts/core/arms_manager.gd": 1,
-    "scripts/core/pro_sports_manager.gd": 1,
-    "scripts/core/stock_market_manager.gd": 1,
-    "scripts/core/shadow_manager.gd": 2,
+    "scripts/core/creative_manager.gd": 2,      # رویداد windfall + اقدام جشنواره (می‌مانند)
+    "scripts/core/arms_manager.gd": 1,          # فروش تسلیحات (اقدام)
+    "scripts/core/stock_market_manager.gd": 1,  # صندوق تثبیت (اقدام، خروج ارز)
+    "scripts/core/shadow_manager.gd": 2,        # سرکوب/کانال سفید (اقدامات)
 }
 
 BUDGET = {
