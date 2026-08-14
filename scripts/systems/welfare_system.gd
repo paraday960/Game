@@ -78,7 +78,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# حلقه بازخورد: اشتغال ← رضایت ← ثبات؛ فقر ← تنش
 	pop["happiness"] = clamp(pop.get("happiness",0.6) + (0.08 - unemployment) * 0.001 + (0.15 - welfare["poverty"]) * 0.001, 0.05, 0.95)
-	politics["tension"] = clamp(politics.get("tension",0.35) + welfare["poverty"] * 0.002 + unemployment * 0.003, 0.0, 1.0)
+	# فشار اجتماعی فقر/بیکاری بر تنش — کشف آینهٔ ۳۰ساله: قبلاً جمع‌گرایی فقط‌مثبت بود
+	# (ratchet) و تنش آرام‌آرام فقط بالا می‌رفت تا به سقف ۱٫۰ بچسبد؛ نوسانِ پایین‌رفتن
+	# فقر هرگز تنش را پایین نمی‌آورد. حالا کشش به سمت «هدف فشار» (دوطرفه).
+	var tension_pressure: float = clampf(welfare["poverty"] * 0.5 + unemployment * 1.2, 0.0, 0.6)
+	politics["tension"] = clampf(float(politics.get("tension", 0.35)) * 0.995 + tension_pressure * 0.005, 0.0, 1.0)
 	state["population"] = pop
 	state["politics"] = politics
 

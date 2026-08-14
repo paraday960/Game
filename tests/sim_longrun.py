@@ -192,6 +192,9 @@ def step_day(s):
     s["migration_net"] = clamp(s["migration_net"] * 0.999, -mig_cap, mig_cap)
     s["growth_rate_pop"] = (natural + s["migration_net"] / s["pop_total"]) / 365.0
     s["pop_total"] = max(s["pop_total"] * (1.0 + s["growth_rate_pop"]), 1000.0)
+    # نیروی کار با جمعیت حرکت می‌کند (همگام با population_system.gd:۶۱ — کشف آینهٔ
+    # ۳۰ساله: آینه workforce را ثابت نگه می‌داشت درحالی‌که موتور واقعی به‌روز می‌کند)
+    s["workforce"] = s["pop_total"] * s["participation"]
 
     h_target = (0.05 + (1.0 - s["unemployment"]) * 0.2 + (1.0 - s["inflation"]) * 0.15
                 + s["health_q"] * 0.15 + s["edu_q"] * 0.1 + (1.0 - s["poverty"]) * 0.2
@@ -275,7 +278,11 @@ def step_day(s):
     s["happiness"] = clamp(s["happiness"] + (0.08 - s["unemployment"]) * 0.001
                            + (0.15 - s["poverty"]) * 0.001
                            - pan * 0.0022 + vax * 0.0008, 0.05, 0.95)  # ترس/عزا در موج، امید با واکسن
-    s["tension"] = clamp(s["tension"] + s["poverty"] * 0.002 + s["unemployment"] * 0.003, 0.0, 1.0)
+    # کشف آینهٔ ۳۰ساله: جمع فقط‌مثبتِ فقر/بیکاری، تنش را در بلندمدت به سقف می‌چسباند
+    # (ratchet). حالا کشش به سمت هدف فشار — همگام با welfare_system.gd (۵ بار در ماه
+    # با وزن ۰٫۰۰۵ ≈ روزانهٔ معادل ۰٫۰۰۰۸۳).
+    tension_pressure = min(s["poverty"] * 0.5 + s["unemployment"] * 1.2, 0.6)
+    s["tension"] = clamp(s["tension"] * (1.0 - 0.00083) + tension_pressure * 0.00083, 0.0, 1.0)
 
     # ── central_bank_system (قاعدهٔ تیلور یکتا — پس از اتحاد دولایه، بازرسی بانک مرکزی) ──
     # بازرسی نرخ واقعی ۱۴۰۵: r* صریح ۲٪ به‌جای π*؛ لنگر عرضهٔ پول = نرخ نامی خنثی (π*+r*)
@@ -811,6 +818,48 @@ def run_reserve_inflow_suite():
             FAIL.append(name); ok = False
     return ok
 
+
+def run_horizon30_suite():
+    """سناریوی نهم: افق ۳۰ ساله (۱۰٬۹۵۰ روز) — شکار باگهای خیلی‌بلندمدت که آینهٔ
+    ۱۰ساله نمی‌بیند. کشف‌های نخستین اجرا: ratchet تنش (جمع فقط‌مثبت → به سقف
+    می‌چسبید؛ درمان در welfare_system) و پرش آینه در نیروی کار (موتور به‌روز می‌کند
+    ولی آینه ثابت نگه می‌داشت). نکتهٔ طراحی: چسبیدن urban_ratio به ۰٫۹۵ هدف‌گذاری
+    شده است (اشباع شهری سطح هلند) و زیر آستانهٔ ۴۰٪ پذیرفته است."""
+    print("═══ سناریوی افق ۳۰ ساله: تعادل خیلی‌بلندمدت (بدون اقدام بازیکن) ═══")
+    global DAYS
+    base_days = DAYS
+    DAYS = 10950
+    try:
+        s, _hist = run(verbose=False)
+        pin = LAST_PIN
+    finally:
+        DAYS = base_days
+    wf_ratio = s["workforce"] / s["pop_total"]
+    checks = [
+        ("GDP ۳۰ساله مثبت و محدود (۱ تا ۲٫۶ همت)", 1.0e12 < s["gdp"] < 2.6e12),
+        ("جمعیت ۳۰ساله در دالان واقع‌بینانه (۹۰ تا ۱۳۰ میلیون)", 90e6 < s["pop_total"] < 130e6),
+        ("نیروی کار با جمعیت حرکت می‌کند (نسبت ≈ مشارکت، نه ثابتِ ۵۵M)",
+         abs(wf_ratio - s["participation"]) < 0.03),
+        ("بدهی ملی منفی نشده و بدهی/GDP زیر ۵۰٪",
+         s["national_debt"] >= 0.0 and s["national_debt"] / s["gdp"] < 0.5),
+        ("تنش در ۳۰ سال به سقف نمی‌چسبد (ratchet درمان شده — نهایی < ۰٫۷۵)",
+         s["tension"] < 0.75),
+        ("تنش: سهم روزهای چسبیده به مرز زیر ۱۰٪ (نگهبان ۳۰ساله)",
+         pin.get("tension", 0) / 10950.0 < 0.10),
+        ("کیفیت سلامت پس از ۳۰ سال بالای کف بحران می‌ماند (≥ ۰٫۴۵ — دریفت آرام تحت پایش)",
+         s["health_q"] >= 0.45),
+        ("اشباع شهری طراحی‌شده زیر آستانه (سهم چسبیدن urban < ۴۰٪)",
+         pin.get("urban_ratio", 0) / 10950.0 < 0.40),
+        ("شادی/ثبات ۳۰ساله در دالان انسانی", 0.30 <= s["happiness"] <= 0.95
+         and 0.30 <= s["stability"] <= 0.95),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 if __name__ == "__main__":
     print("═══ شبیه‌سازی بلندمدت — ۱۰ سال از نقطهٔ شروع پیش‌فرض (بدون اقدام بازیکن) ═══")
     s, hist = run()
@@ -832,6 +881,8 @@ if __name__ == "__main__":
     ok = run_gdp_boost_suite() and ok
     print()
     ok = run_reserve_inflow_suite() and ok
+    print()
+    ok = run_horizon30_suite() and ok
     print()
     if FAIL:
         print("═══ شکست — %d نقض پایداری ═══" % len(FAIL))
