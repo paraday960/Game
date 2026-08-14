@@ -39,7 +39,7 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/agriculture_manager.gd": 3,
     "scripts/core/arms_manager.gd": 1,  # سایت ماهانه به کانال رفت؛ فروش تسلیحات (اقدام) باقی
     "scripts/core/banking_manager.gd": 3,
-    "scripts/core/climate_manager.gd": 4,
+    "scripts/core/climate_manager.gd": 3,  # درآمد کربن به کانال خزانه رفت (بدهیِ خاموش حذف)
     "scripts/core/culture_manager.gd": 3,
     "scripts/core/cyber_manager.gd": 1,
     "scripts/core/demographic_manager.gd": 0,  # فشار صندوق به کانال policy_costs رفت
@@ -51,7 +51,7 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/engine.gd": 3,
     "scripts/core/epidemic_manager.gd": 2,
     "scripts/core/fdi_manager.gd": 2,
-    "scripts/core/fuel_transition_manager.gd": 2,
+    "scripts/core/fuel_transition_manager.gd": 1,  # سهم خزانهٔ اصلاح قیمت به کانال رفت
     "scripts/core/industry_manager.gd": 1,
     "scripts/core/infrastructure_manager.gd": 1,
     "scripts/core/insurance_manager.gd": 1,
@@ -65,7 +65,7 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/security_manager.gd": 2,
     "scripts/core/space_manager.gd": 5,  # آژانس به کانال رفت؛ ۴ اقدام + ۱ رویداد شکست باقی
     "scripts/core/sports_manager.gd": 4,
-    "scripts/core/stock_market_manager.gd": 2,
+    "scripts/core/stock_market_manager.gd": 1,  # مالیات عایدی به کانال رفت (جمع فانتوم هم حذف)؛ صندوق تثبیت باقی
     "scripts/core/tourism_manager.gd": 3,
     "scripts/core/trade_policy_manager.gd": 4,
     "scripts/core/transport_manager.gd": 1,
@@ -124,6 +124,23 @@ if ("pc_total" in econ and "policy_costs_total" in econ
     print("✅ economy_system مالک مصرف کانال policy_costs است (جمع→هزینه→کسری/بدهی)")
 else:
     fail.append("economy_system دیگر مالک مصرف کانال policy_costs نیست")
+
+# ── ۴) کانال‌های درآمدی ماهانه (مهاجرت از «کسر خاموش بدهی») ─────────────
+REVENUE_PUBLISHERS = {
+    "scripts/core/climate_manager.gd": "carbon_tax_monthly",
+    "scripts/core/fuel_transition_manager.gd": "fuel_transition_monthly",
+    "scripts/core/stock_market_manager.gd": "stock_gains_monthly",
+}
+for f, key in sorted(REVENUE_PUBLISHERS.items()):
+    if ('econ["%s"]' % key) in src(f):
+        print("✅ ناشر درآمد ماهانهٔ «%s» در %s" % (key, f))
+    else:
+        fail.append("ناشر درآمد ماهانهٔ «%s» در %s یافت نشد" % (key, f))
+for key in REVENUE_PUBLISHERS.values():
+    if 'econ.get("%s", 0.0)' % key in econ:
+        print("✅ economy_system درآمد «%s» را در خزانه مصرف می‌کند" % key)
+    else:
+        fail.append("economy_system درآمد «%s» را مصرف نمی‌کند" % key)
 
 if fail:
     print("\n❌ شکست قرارداد کانال بدهی:")

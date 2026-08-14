@@ -57,7 +57,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# درآمد اصلاح قیمت (هرچه یارانه کمتر، درآمد بیشتر)
 	var revenue := gdp * (1.0 - subsidy) * 0.012
 	fp["fuel_revenue"] = revenue
-	econ["national_debt"] = maxf(0.0, float(econ.get("national_debt", 0.0)) - revenue * 0.5)
+	# (بازرسی ۱۴۰۵ — دور هشتم) سهم خزانهٔ اصلاح قیمت به‌جای کسر خاموش از بدهی،
+	# نرخ ماهانهٔ درآمد می‌شود (مصرف‌کننده: economy_system → government_revenue).
+	econ["fuel_transition_monthly"] = revenue * 0.5
 	# اما حذف یارانه تورم‌زا است
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + (1.0 - subsidy) * 0.003 - ev_share * 0.002, 0.0, 1.0)
 	state["economy"] = econ

@@ -36,7 +36,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# مالیات کربن: درآمد + فشار صنعت (نخبگان ناراضی، فناوری سبز تشویق)
 	econ["carbon_revenue"] = carbon * 0.001
-	econ["national_debt"] = maxf(0.0, float(econ.get("national_debt", 0.0)) - float(econ.get("gdp", 1.0)) * carbon * 0.0005)
+	# (بازرسی ۱۴۰۵ — دور هشتم) درآمد مالیات کربن به‌جای کسر خاموش از بدهی، نرخ
+	# ماهانهٔ خزانه می‌شود: economy_system آن را در government_revenue می‌نشاند
+	# و اثر بر بدهی از راه مازاد بودجه (با سود صحیح) اعمال می‌شود.
+	econ["carbon_tax_monthly"] = float(econ.get("gdp", 1.0)) * carbon * 0.0005
 	var factions: Dictionary = state.get("factions", {})
 	if factions.has("نخبگان اقتصادی"):
 		var f: Dictionary = factions["نخبگان اقتصادی"]

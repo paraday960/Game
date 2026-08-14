@@ -70,11 +70,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		confidence = clampf(confidence + 0.03, 0.05, 1.0)
 		events.append({"type": "market_rally", "message": "📈 رالی بورس! شاخص ۵٪ صعود کرد و سرمایه خارجی به بازار بازگشت"})
 
-	# درآمد مالیات بر عایدی سرمایه
-	if str(sp.get("policy", "none")) == "capgains":
-		var gain := float(econ.get("gdp", 1.0)) * 0.004
-		econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + gain
-		econ["national_debt"] = maxf(0.0, float(econ.get("national_debt", 0.0)) - gain * 0.5)
+	# درآمد مالیات بر عایدی سرمایه (بازرسی ۱۴۰۵ — دور هشتم): قبلاً هم به
+	# government_revenue می‌نوشت (فانتوم — روز بعد بازنویسی می‌شد) و هم بدهی
+	# را خاموش کم می‌کرد. حالا نرخ ماهانهٔ پاک: مالک خزانه مصرف می‌کند.
+	econ["stock_gains_monthly"] = (float(econ.get("gdp", 1.0)) * 0.004 * 0.5) if str(sp.get("policy", "none")) == "capgains" else 0.0
 
 	sm["index"] = index
 	sm["investor_confidence"] = confidence
