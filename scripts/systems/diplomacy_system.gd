@@ -29,12 +29,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		if wars.has(country):
 			change += (0.0 - rel) * 0.02 - 0.10
 		else:
-			change += (50.0 - rel) * 0.0005
-
-		# اثر قدرت نرم و اقتصادی — کرانه‌دار تا جهش ماهانه روابط واقع‌گرایانه بماند
-		var gdp_factor = (econ["gdp"]/500e9) * 0.01
-		var soft_factor = dip.get("soft_power",35.0)/100.0 * 0.02
-		change += clamp(gdp_factor + soft_factor, 0.0, 0.03)
+			# (بازرسی NPC بلندمدت) قدرت اقتصادی/نرم نباید دریفت مثبتِ بی‌شرط باشد؛ پیش‌تر
+			# جمله‌ای همیشه‌مثبت (≈+۶ واحد/سال برای همه — حتی دشمنان) روابطِ همه را به ~۸۴
+			# می‌کشاند و خصومت/تحریم در بلندمدت بی‌معنی می‌شد. حالا فقط «هدف» جاذب خنثی جابه‌جا
+			# می‌شود: ۵۰ + امتیاز قدرت (≈۵۰ تا ۶۲) — جنگ/اتحاد/تجارت جاذب‌های قوی‌ترند.
+			var gdp_factor = (econ["gdp"]/500e9) * 0.01
+			var soft_factor = dip.get("soft_power",35.0)/100.0 * 0.02
+			var gdp_soft: float = clamp(gdp_factor + soft_factor, 0.0, 0.03)
+			change += (50.0 + gdp_soft * 400.0 - rel) * 0.001  # τ≈۲٫۷ سال — بازگشت ملایمِ خنثی
 
 		# اثر جنگ جاری بر روابط دیگران - کشورها موضع می‌گیرند
 		if not wars.is_empty():
