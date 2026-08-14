@@ -33,13 +33,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var roads := clampf(float(infra.get("roads_quality", 0.6)) + (base - 0.6) * 0.1 + (0.04 if focus == "roads" else 0.0) - decay * 0.05, 0.1, 1.0)
 	var power := clampf(float(infra.get("power_grid", infra.get("electricity", 0.65))) + (base - 0.65) * 0.1 + (0.04 if focus == "power" else 0.0) - decay * 0.05, 0.1, 1.0)
 	var water := clampf(float(infra.get("water", 0.7)) + (base - 0.7) * 0.1 + (0.04 if focus == "water" else 0.0) - decay * 0.05, 0.1, 1.0)
-	var telecom := clampf(float(infra.get("telecom", 0.7)) + (base - 0.7) * 0.1 + (0.04 if focus == "telecom" else 0.0) - decay * 0.05, 0.1, 1.0)
 	infra["roads_quality"] = roads
 	infra["power_grid"] = power
 	infra["electricity"] = power
 	infra["water"] = water
-	infra["telecom"] = telecom
-	infra["quality"] = (roads + power + water + telecom) / 4.0
+	# quality و telecom مالک یکتایشان infrastructure_system روزانه است؛ این مدیر فقط سیاست
+	# maintenance/focus را ذخیره می‌کند و سیستم روزانه اثرش را اعمال می‌کند (رفع shadow-write:
+	# قبلاً هر ماه quality از میانگین مؤلفه‌ها بازنویسی می‌شد و دینامیک فرسودگی سیستم پاک می‌گشت)
 	state["infrastructure"] = infra
 
 	# رویداد پوسیدگی: اگر نگهداری ضعیف و پوسیدگی بالا

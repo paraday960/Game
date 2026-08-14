@@ -34,6 +34,19 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var maintenance_need = infra["quality"] * 0.02 * gdp * 0.015
 	infra["maintenance_cost"] = maintenance_need / max(gdp,1.0)
 
+	# سیاست نگهداری/تمرکز بازیکن (infrastructure_policy از مدیر ماهانه) اثر واقعی دارد:
+	# نگهداری بالاتر = نیاز مؤثر کمتر؛ تمرکز = رشد روزانهٔ افزوده بر همان زیرشاخه.
+	var infra_policy: Dictionary = state.get("infrastructure_policy", {})
+	var maint_policy: float = clampf(float(infra_policy.get("maintenance", 0.4)), 0.0, 1.0)
+	var focus_policy: String = str(infra_policy.get("focus", ""))
+	maintenance_need *= (1.30 - maint_policy)
+	if focus_policy == "roads":
+		infra["road_quality"] = clamp(float(infra.get("road_quality", 0.55)) + 0.0004, 0.1, 0.95)
+	elif focus_policy == "power":
+		infra["electricity_grid"] = clamp(float(infra.get("electricity_grid", 0.60)) + 0.0004, 0.2, 0.98)
+	elif focus_policy == "telecom":
+		infra["telecom"] = clamp(float(infra.get("telecom", 0.70)) + 0.0004, 0.3, 0.98)
+
 	# کیفیت زیرساخت - بودجه کافی vs فرسودگی
 	if budget < maintenance_need:
 		infra["decay_rate"] = 0.05 # ۵٪ سالانه اگر نگهداری کم

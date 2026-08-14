@@ -38,12 +38,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var nomad := float(rp.get("nomadic_services", 0.30))
 	var credit := float(rp.get("micro_credit", 0.25))
 
-	# جمعیت روستایی: با مهاجرت به شهر کاهش می‌یابد، با توسعه نگه داشته می‌شود
+	# جمعیت روستایی: مالک یکتای urban_ratio سیستم روزانهٔ settlements است؛ این مدیر فقط
+	# سهم روستایی را از همان می‌خواند (رفع shadow-write) — اهرم‌های توسعهٔ روستایی این مدیر
+	# از مسیر settlements_system (ضریب rural_stay) بر مهاجرت اثر می‌گذارند.
 	var urban := float(pop.get("urban_ratio", 0.75))
-	var rural_share := 1.0 - urban
-	var pull_to_city := 0.0005 - (roads + internet + credit + processing) * 0.00008
-	rural_share = clampf(rural_share - pull_to_city, 0.08, 0.60)
-	pop["urban_ratio"] = clampf(1.0 - rural_share, 0.40, 0.92)
+	var rural_share := clampf(1.0 - urban, 0.08, 0.60)
 	rp["rural_pop_share"] = rural_share
 
 	# depopulation: هرچه سهم جوان کمتر و خدمات کم، مهاجرت بیشتر

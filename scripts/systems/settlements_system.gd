@@ -38,15 +38,21 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var total_pop = pop.get("total",85_000_000.0)
 
 	# مهاجرت روستا به شهر - جذابیت شهری
-	var urban_attraction = (gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2
+	# توسعهٔ روستایی (rural_policy: جاده/اینترنت/اعتبار/فرآوری) کشش مهاجرت را کم می‌کند —
+	# قبلاً rural_manager ماهانه urban_ratio را بازنویسی می‌کرد و مهاجرت روزانهٔ این سیستم را
+	# پاک می‌گشت (shadow-write)؛ حالا اهرم‌ها داخل همین مدل اثر می‌گذارند.
+	var rural_policy: Dictionary = state.get("rural_policy", {})
+	var rural_stay: float = clampf((float(rural_policy.get("rural_roads", 0.40)) + float(rural_policy.get("rural_internet", 0.25)) + float(rural_policy.get("micro_credit", 0.25)) + float(rural_policy.get("agro_processing", 0.20))) * 0.10, 0.0, 0.45)
+	var urban_attraction = ((gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2) * (1.0 - rural_stay)
 	settlements["migration_urban"] = total_pop * urbanization_rate / 365.0 * urban_attraction
 	urban_pop += settlements["migration_urban"]
+	urban_pop = clampf(urban_pop, total_pop*0.05, total_pop*0.90)
 	rural_pop = max(total_pop - urban_pop, total_pop*0.10)
 
 	settlements["urban_pop"] = urban_pop
 	settlements["rural_pop"] = rural_pop
 	pop["total"] = total_pop
-	pop["urban_ratio"] = urban_pop / max(total_pop,1.0)
+	pop["urban_ratio"] = clampf(urban_pop / max(total_pop,1.0), 0.0, 0.90)
 
 	# تراکم - جمعیت شهری / مساحت مصنوعی شهری
 	var est_urban_area = settlements["cities_large"]*250.0 + settlements["cities_medium"]*80.0 + settlements["cities_small"]*25.0 # km2
