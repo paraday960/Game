@@ -1,111 +1,1561 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "policies": [
     {
-      "id":"antitrust_enforcement","name_fa":"اجرای قانون ضدانحصار","category_fa":"اقتصاد","political_cost":1.0,
-      "description":"نظارت بر ادغام‌ها و شکستن تبانی برای افزایش رقابت بازار خرد.",
-      "effects":[
-        {"path":"retail.competition","op":"add","value":0.0010,"min":0,"max":1},
-        {"path":"politics.corruption","op":"add","value":-0.00005,"min":0,"max":1}
+      "id": "antitrust_enforcement",
+      "name_fa": "اجرای قانون ضدانحصار",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.0,
+      "description": "نظارت بر ادغام‌ها و شکستن تبانی برای افزایش رقابت بازار خرد.",
+      "effects": [
+        {
+          "path": "retail.competition",
+          "op": "add",
+          "value": 0.001,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "politics.corruption",
+          "op": "add",
+          "value": -5e-05,
+          "min": 0,
+          "max": 1
+        }
       ]
     },
     {
-      "id":"universal_health","name_fa":"پوشش همگانی سلامت","category_fa":"اجتماعی","political_cost":2.0,
-      "description":"گسترش بیمه و دسترسی درمان با هزینه مالی روزانه.",
-      "effects":[
-        {"path":"health.coverage","op":"add","value":0.00025,"min":0,"max":1},
-        {"path":"health.quality","op":"add","value":0.00010,"min":0,"max":1},
-        {"path":"economy.national_debt","op":"add","value":8000000,"min":0}
+      "id": "universal_health",
+      "name_fa": "پوشش همگانی سلامت",
+      "category_fa": "اجتماعی",
+      "political_cost": 2.0,
+      "description": "گسترش بیمه و دسترسی درمان با هزینه مالی روزانه.",
+      "effects": [
+        {
+          "path": "health.coverage",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "health.quality",
+          "op": "add",
+          "value": 0.0001,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 8000000,
+          "min": 0
+        }
       ]
     },
     {
-      "id":"education_reform","name_fa":"اصلاح جامع آموزش","category_fa":"اجتماعی","political_cost":1.5,
-      "description":"بهبود کیفیت معلم، مهارت و پوشش آموزشی با سرمایه‌گذاری پایدار.",
-      "effects":[
-        {"path":"education.quality","op":"add","value":0.00022,"min":0,"max":1},
-        {"path":"education.skill_match","op":"add","value":0.00018,"min":0,"max":1},
-        {"path":"economy.national_debt","op":"add","value":6000000,"min":0}
+      "id": "education_reform",
+      "name_fa": "اصلاح جامع آموزش",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.5,
+      "description": "بهبود کیفیت معلم، مهارت و پوشش آموزشی با سرمایه‌گذاری پایدار.",
+      "effects": [
+        {
+          "path": "education.quality",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "education.skill_match",
+          "op": "add",
+          "value": 0.00018,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 6000000,
+          "min": 0
+        }
       ]
     },
     {
-      "id":"green_subsidies","name_fa":"یارانه گذار سبز","category_fa":"محیط‌زیست","political_cost":1.5,
-      "description":"حمایت از انرژی پاک و کاهش انتشار با هزینه بودجه‌ای.",
-      "effects":[
-        {"path":"environment.green_energy_share","op":"add","value":0.00030,"min":0,"max":1},
-        {"path":"environment.carbon_emission","op":"add","value":-0.00020,"min":0,"max":1},
-        {"path":"economy.national_debt","op":"add","value":7000000,"min":0}
+      "id": "green_subsidies",
+      "name_fa": "یارانه گذار سبز",
+      "category_fa": "محیط‌زیست",
+      "political_cost": 1.5,
+      "description": "حمایت از انرژی پاک و کاهش انتشار با هزینه بودجه‌ای.",
+      "effects": [
+        {
+          "path": "environment.green_energy_share",
+          "op": "add",
+          "value": 0.0003,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "environment.carbon_emission",
+          "op": "add",
+          "value": -0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 7000000,
+          "min": 0
+        }
       ]
     },
     {
-      "id":"digital_state","name_fa":"دولت دیجیتال","category_fa":"حکمرانی","political_cost":1.2,
-      "description":"خدمات بدون کاغذ، شفافیت و کاهش فساد اداری.",
-      "effects":[
-        {"path":"administration.efficiency","op":"add","value":0.00022,"min":0,"max":1},
-        {"path":"statistics.digital","op":"add","value":0.00020,"min":0,"max":1},
-        {"path":"politics.corruption","op":"add","value":-0.00008,"min":0,"max":1}
+      "id": "digital_state",
+      "name_fa": "دولت دیجیتال",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.2,
+      "description": "خدمات بدون کاغذ، شفافیت و کاهش فساد اداری.",
+      "effects": [
+        {
+          "path": "administration.efficiency",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "statistics.digital",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "politics.corruption",
+          "op": "add",
+          "value": -8e-05,
+          "min": 0,
+          "max": 1
+        }
       ]
     },
     {
-      "id":"startup_relief","name_fa":"تسهیل کسب‌وکار نوپا","category_fa":"اقتصاد","political_cost":1.0,
-      "description":"کاهش بوروکراسی و بهبود فضای کسب‌وکار برای شرکت‌های کوچک.",
-      "effects":[
-        {"path":"private_sector.business_climate","op":"add","value":0.00025,"min":0,"max":1},
-        {"path":"private_sector.ease_of_doing","op":"add","value":0.00020,"min":0,"max":1},
-        {"path":"economy.growth_rate","op":"add","value":0.000002,"min":-0.05,"max":0.08}
+      "id": "startup_relief",
+      "name_fa": "تسهیل کسب‌وکار نوپا",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.0,
+      "description": "کاهش بوروکراسی و بهبود فضای کسب‌وکار برای شرکت‌های کوچک.",
+      "effects": [
+        {
+          "path": "private_sector.business_climate",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "private_sector.ease_of_doing",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.growth_rate",
+          "op": "add",
+          "value": 2e-06,
+          "min": -0.05,
+          "max": 0.08
+        }
       ]
     },
     {
-      "id":"food_resilience","name_fa":"تاب‌آوری غذایی","category_fa":"کشاورزی","political_cost":1.2,
-      "description":"ذخیره راهبردی، کاهش ضایعات و پایداری تولید غذا.",
-      "effects":[
-        {"path":"agriculture.food_security","op":"add","value":0.00025,"min":0,"max":1},
-        {"path":"agriculture.waste","op":"add","value":-0.00012,"min":0,"max":1},
-        {"path":"economy.national_debt","op":"add","value":4000000,"min":0}
+      "id": "food_resilience",
+      "name_fa": "تاب‌آوری غذایی",
+      "category_fa": "کشاورزی",
+      "political_cost": 1.2,
+      "description": "ذخیره راهبردی، کاهش ضایعات و پایداری تولید غذا.",
+      "effects": [
+        {
+          "path": "agriculture.food_security",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "agriculture.waste",
+          "op": "add",
+          "value": -0.00012,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 4000000,
+          "min": 0
+        }
       ]
     },
     {
-      "id":"cyber_shield","name_fa":"سپر سایبری ملی","category_fa":"امنیت","political_cost":1.5,
-      "description":"تقویت دفاع سایبری، ضدنفوذ و حفاظت از زیرساخت حیاتی.",
-      "effects":[
-        {"path":"intelligence.cyber_readiness","op":"add","value":0.00028,"min":0,"max":1},
-        {"path":"security.cyber","op":"add","value":0.00022,"min":0,"max":1},
-        {"path":"economy.national_debt","op":"add","value":5000000,"min":0}
+      "id": "cyber_shield",
+      "name_fa": "سپر سایبری ملی",
+      "category_fa": "امنیت",
+      "political_cost": 1.5,
+      "description": "تقویت دفاع سایبری، ضدنفوذ و حفاظت از زیرساخت حیاتی.",
+      "effects": [
+        {
+          "path": "intelligence.cyber_readiness",
+          "op": "add",
+          "value": 0.00028,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "security.cyber",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
       ]
     },
     {
-      "id":"press_freedom","name_fa":"آزادی و مسئولیت رسانه","category_fa":"فرهنگ","political_cost":1.0,
-      "description":"افزایش آزادی رسانه همراه با سواد اطلاعاتی و پاسخ‌گویی عمومی.",
-      "effects":[
-        {"path":"culture.media_freedom","op":"add","value":0.00022,"min":0,"max":1},
-        {"path":"culture.media_trust","op":"add","value":0.00012,"min":0,"max":1},
-        {"path":"politics.trust","op":"add","value":0.00006,"min":0,"max":1}
+      "id": "press_freedom",
+      "name_fa": "آزادی و مسئولیت رسانه",
+      "category_fa": "فرهنگ",
+      "political_cost": 1.0,
+      "description": "افزایش آزادی رسانه همراه با سواد اطلاعاتی و پاسخ‌گویی عمومی.",
+      "effects": [
+        {
+          "path": "culture.media_freedom",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "culture.media_trust",
+          "op": "add",
+          "value": 0.00012,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "politics.trust",
+          "op": "add",
+          "value": 6e-05,
+          "min": 0,
+          "max": 1
+        }
       ]
     },
     {
-      "id":"veterans_support","name_fa":"بسته حمایت ایثارگران","category_fa":"اجتماعی","political_cost":0.8,
-      "description":"بهبود سلامت، مسکن و اشتغال ایثارگران با هزینه مالی محدود.",
-      "effects":[
-        {"path":"veterans.health_care","op":"add","value":0.00020,"min":0,"max":1},
-        {"path":"veterans.employment","op":"add","value":0.00016,"min":0,"max":1},
-        {"path":"economy.national_debt","op":"add","value":3000000,"min":0}
+      "id": "veterans_support",
+      "name_fa": "بسته حمایت ایثارگران",
+      "category_fa": "اجتماعی",
+      "political_cost": 0.8,
+      "description": "بهبود سلامت، مسکن و اشتغال ایثارگران با هزینه مالی محدود.",
+      "effects": [
+        {
+          "path": "veterans.health_care",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "veterans.employment",
+          "op": "add",
+          "value": 0.00016,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 3000000,
+          "min": 0
+        }
       ]
     },
     {
-      "id":"fiscal_austerity","name_fa":"انضباط مالی سخت","category_fa":"راهبرد اقتصادی","political_cost":1.5,"exclusive_group":"fiscal_strategy",
-      "description":"کاهش بدهی با محدودیت مخارج؛ فشار کوتاه‌مدت بر رضایت و رشد.",
-      "effects":[
-        {"path":"economy.national_debt","op":"add","value":-12000000,"min":0},
-        {"path":"population.happiness","op":"add","value":-0.00010,"min":0.05,"max":0.95},
-        {"path":"economy.growth_rate","op":"add","value":-0.000003,"min":-0.05,"max":0.08}
+      "id": "fiscal_austerity",
+      "name_fa": "انضباط مالی سخت",
+      "category_fa": "راهبرد اقتصادی",
+      "political_cost": 1.5,
+      "exclusive_group": "fiscal_strategy",
+      "description": "کاهش بدهی با محدودیت مخارج؛ فشار کوتاه‌مدت بر رضایت و رشد.",
+      "effects": [
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": -12000000,
+          "min": 0
+        },
+        {
+          "path": "population.happiness",
+          "op": "add",
+          "value": -0.0001,
+          "min": 0.05,
+          "max": 0.95
+        },
+        {
+          "path": "economy.growth_rate",
+          "op": "add",
+          "value": -3e-06,
+          "min": -0.05,
+          "max": 0.08
+        }
       ]
     },
     {
-      "id":"public_investment","name_fa":"سرمایه‌گذاری عمومی شتاب‌دار","category_fa":"راهبرد اقتصادی","political_cost":1.5,"exclusive_group":"fiscal_strategy",
-      "description":"رشد زیرساخت و اشتغال با پذیرش بدهی بیشتر.",
-      "effects":[
-        {"path":"infrastructure.quality","op":"add","value":0.00022,"min":0,"max":1},
-        {"path":"economy.unemployment","op":"add","value":-0.00003,"min":0.02,"max":0.35},
-        {"path":"economy.national_debt","op":"add","value":15000000,"min":0}
+      "id": "public_investment",
+      "name_fa": "سرمایه‌گذاری عمومی شتاب‌دار",
+      "category_fa": "راهبرد اقتصادی",
+      "political_cost": 1.5,
+      "exclusive_group": "fiscal_strategy",
+      "description": "رشد زیرساخت و اشتغال با پذیرش بدهی بیشتر.",
+      "effects": [
+        {
+          "path": "infrastructure.quality",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.unemployment",
+          "op": "add",
+          "value": -3e-05,
+          "min": 0.02,
+          "max": 0.35
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 15000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "export_promotion",
+      "name_fa": "ترویج تنوع صادراتی",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.2,
+      "description": "حمایت هدفمند از صادرکنندگان کالاهای غیرنفتی و ورود به بازارهای تازه؛ تنوع صادرات به‌تدریج بالا می‌رود.",
+      "effects": [
+        {
+          "path": "trade.export_diversity",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0.1,
+          "max": 0.95
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "industrial_subsidy",
+      "name_fa": "یارانه هدفمند صنعتی",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.2,
+      "description": "اعتبار مالیاتی برای نوسازی خطوط تولید و آموزش فنی؛ بهره‌وری صنعت رشد تدریجی می‌یابد.",
+      "effects": [
+        {
+          "path": "industry.productivity",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "formalization_incentive",
+      "name_fa": "مشوق رسمی‌شدن کسب‌وکار",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.0,
+      "description": "معافیت مالیاتی دوره‌ای و ثبت سادهٔ شرکت‌ها برای خروج کسب‌وکارها از اقتصاد سایه‌ای.",
+      "effects": [
+        {
+          "path": "private_sector.business_climate",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "banking_reform",
+      "name_fa": "اصلاح نظام بانکی",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.5,
+      "description": "الزام بانک‌ها به شفافیت ترازنامه و گسترش خدمات بانکی دیجیتال به اقشار کم‌درآمد.",
+      "effects": [
+        {
+          "path": "financial_services.financial_inclusion",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "market_stabilization",
+      "name_fa": "تثبیت بازار سرمایه",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.2,
+      "description": "تقویت نهاد ناظر، شفافیت اطلاعاتی شرکت‌ها و صندوق تثبیت برای آرام‌سازی نوسان‌های بورس.",
+      "effects": [
+        {
+          "path": "stock_market.investor_confidence",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "bottleneck_relief",
+      "name_fa": "رفع گلوگاه‌های زنجیره",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.2,
+      "description": "شناسایی و رفع گلوگاه‌های تأمین کالاهای اساسی؛ تاب‌آوری جریان‌های کشور بیشتر می‌شود.",
+      "effects": [
+        {
+          "path": "indicators.stability",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "progressive_tax",
+      "name_fa": "مالیات پلکانی عادلانه",
+      "category_fa": "اقتصاد",
+      "political_cost": 2.0,
+      "description": "بازتوزیع از طریق مالیات بر درآمدهای کلان و ثروت؛ فشار بر دهک‌های پایین کم می‌شود ولی سرمایه‌گذاران ناراضی‌اند.",
+      "effects": [
+        {
+          "path": "welfare.poverty",
+          "op": "add",
+          "value": -0.00018,
+          "min": 0,
+          "max": 0.8
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "housing_program",
+      "name_fa": "برنامه ملی مسکن",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.8,
+      "description": "ساخت انبوه مسکن اجتماعی و تسهیل زمین برای دهک‌های میانی؛ کمبود مسکن به‌تدریج فروکش می‌کند.",
+      "effects": [
+        {
+          "path": "physical.housing_shortage",
+          "op": "add",
+          "value": -0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "debt_relief",
+      "name_fa": "بخشودگی بدهی خانوار",
+      "category_fa": "اجتماعی",
+      "political_cost": 2.0,
+      "description": "استمهال و بخشش بخشی از بدهی‌های خرد خانوار؛ تاب‌آوری مالی خانوارها بهبود می‌یابد.",
+      "effects": [
+        {
+          "path": "households_detail_full.savings_rate",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "irrigation_investment",
+      "name_fa": "سرمایه‌گذاری آبیاری نوین",
+      "category_fa": "کشاورزی",
+      "political_cost": 1.0,
+      "description": "آبیاری تحت فشار و بهینه‌سازی شبکه توزیع؛ امنیت غذایی با مصرف آب کمتر محکم‌تر می‌شود.",
+      "effects": [
+        {
+          "path": "agriculture.food_security",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "energy_investment",
+      "name_fa": "سرمایه‌گذاری انرژی",
+      "category_fa": "زیرساخت",
+      "political_cost": 1.5,
+      "description": "نیروگاه تازه، بازسازی شبکه و کاهش تلفات؛ خودکفایی منابع انرژی تقویت می‌شود.",
+      "effects": [
+        {
+          "path": "resources.self_sufficiency",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "road_maintenance",
+      "name_fa": "نگهداشت راه‌ها",
+      "category_fa": "زیرساخت",
+      "political_cost": 1.0,
+      "description": "روکش، ایمن‌سازی و مدیریت ترافیک محورهای پرتردد؛ تراکم حمل‌ونقل کم می‌شود.",
+      "effects": [
+        {
+          "path": "transport_detail.traffic_congestion",
+          "op": "add",
+          "value": -0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "fleet_renewal",
+      "name_fa": "نوسازی ناوگان حمل‌ونقل عمومی",
+      "category_fa": "زیرساخت",
+      "political_cost": 1.5,
+      "description": "خرید اتوبوس و واگن جدید و حذف ناوگان فرسوده؛ پوشش حمل‌ونقل عمومی گسترش می‌یابد.",
+      "effects": [
+        {
+          "path": "public_transport.coverage",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "urban_planning",
+      "name_fa": "برنامه‌ریزی شهری منسجم",
+      "category_fa": "زیرساخت",
+      "political_cost": 1.2,
+      "description": "آمایش سرزمین، تفکیک کاربری و توسعه متوازن؛ کیفیت سکونتگاه‌ها بالا می‌رود.",
+      "effects": [
+        {
+          "path": "settlements_detail.housing_quality",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "recycling_program",
+      "name_fa": "برنامه ملی بازیافت",
+      "category_fa": "محیط‌زیست",
+      "political_cost": 1.0,
+      "description": "تفکیک از مبدأ، زیرساخت بازیافت و احیای شبکه فرسوده آب؛ تأسیسات شهری نفس تازه می‌کند.",
+      "effects": [
+        {
+          "path": "urban_facilities.water_network",
+          "op": "add",
+          "value": 0.00015,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "carbon_tax",
+      "name_fa": "مالیات کربن",
+      "category_fa": "محیط‌زیست",
+      "political_cost": 1.8,
+      "description": "قیمت‌گذاری انتشار کربن برای صنایع آلاینده؛ هوای شهرها پاکتر می‌شود و درآمد سبز ایجاد می‌گردد.",
+      "effects": [
+        {
+          "path": "environment.air_quality",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "pollution_control",
+      "name_fa": "کنترل آلودگی صنایع",
+      "category_fa": "محیط‌زیست",
+      "political_cost": 1.0,
+      "description": "استانداردهای آلایندگی و فناوری تصفیه در سایت‌های صنعتی؛ بهره‌برداری پایدارتر می‌شود.",
+      "effects": [
+        {
+          "path": "industry_sites_detail.utilization",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "fishing_quota",
+      "name_fa": "سهمیه‌بندی صید",
+      "category_fa": "محیط‌زیست",
+      "political_cost": 1.0,
+      "description": "محدودیت فصلی و سهمیه‌ای صید برای احیای ذخایر آبزیان؛ سلامت دریا بازمی‌گردد.",
+      "effects": [
+        {
+          "path": "fisheries.stock_health",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "child_support",
+      "name_fa": "حمایت از کودک و خانواده",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.2,
+      "description": "یارانه کودک، مراکز نگهداری روزانه و بیمه مادری؛ رفاه خانواده بهبود می‌یابد.",
+      "effects": [
+        {
+          "path": "family.child_welfare",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "mental_health_program",
+      "name_fa": "برنامه سلامت روان",
+      "category_fa": "بهداشت",
+      "political_cost": 1.0,
+      "description": "خطوط مشاوره، غربالگری افسردگی و آموزش مدیریت استرس در مدارس و اداره‌ها.",
+      "effects": [
+        {
+          "path": "human_states.stress",
+          "op": "add",
+          "value": -0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "literacy_campaign",
+      "name_fa": "نهضت سوادآموزی",
+      "category_fa": "آموزش",
+      "political_cost": 1.0,
+      "description": "کلاس‌های بزرگسال، آموزش مجازی روستایی و به‌روزرسانی محتوا؛ کیفیت آموزش صعود می‌کند.",
+      "effects": [
+        {
+          "path": "education.quality",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "vocational_training",
+      "name_fa": "مهارت‌آموزی نیروی کار",
+      "category_fa": "آموزش",
+      "political_cost": 1.2,
+      "description": "دوره‌های فنی‌وحرفه‌ای هم‌راستا با نیاز بازار؛ انطباق مهارت کارگران و شغل بیشتر و بیکاری ساختاری کمتر می‌شود.",
+      "effects": [
+        {
+          "path": "education.skill_match",
+          "op": "add",
+          "value": 0.00018,
+          "min": 0,
+          "max": 0.98
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "education_equity",
+      "name_fa": "عدالت آموزشی",
+      "category_fa": "آموزش",
+      "political_cost": 1.2,
+      "description": "بورسیه محرومان، مدارس مناطق کم‌برخوردار و اینترنت آموزشی رایگان؛ رضایت عمومی بالا می‌رود.",
+      "effects": [
+        {
+          "path": "citizens_detail.avg_happiness",
+          "op": "add",
+          "value": 0.00018,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "research_funding_boost",
+      "name_fa": "جهش بودجه پژوهش",
+      "category_fa": "فناوری",
+      "political_cost": 1.2,
+      "description": "گرنت پژوهشی و حقوق رقابتی برای نخبگان؛ مهاجرت مغزها کند می‌شود.",
+      "effects": [
+        {
+          "path": "elites_detail.brain_drain",
+          "op": "add",
+          "value": -0.00018,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "social_cohesion_program",
+      "name_fa": "برنامه انسجام اجتماعی",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.0,
+      "description": "جشنواره‌های ملی، ورزش همگانی و پروژه‌های مشارکتی محله‌ای؛ کیفیت زندگی مردم بهتر می‌شود.",
+      "effects": [
+        {
+          "path": "human_states.happiness_avg",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "ethnic_reconciliation",
+      "name_fa": "آشتی ملی قومی",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.5,
+      "description": "گفت‌وگوی رسمی با رهبران قومی، نمایش عادلانه در رسانه ملی و بودجه متوازن منطقه‌ای.",
+      "effects": [
+        {
+          "path": "ethnicity.tension",
+          "op": "add",
+          "value": -0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "anti_xenophobia_campaign",
+      "name_fa": "کارزار پذیرش مهاجران",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.0,
+      "description": "آموزش زبان و فرهنگ، تسهیل مدارک و مبارزه با تبعیض؛ ادغام مهاجران سرعت می‌گیرد.",
+      "effects": [
+        {
+          "path": "migration_detail.integration",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "religious_dialogue",
+      "name_fa": "گفت‌وگوی مذهبی",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.0,
+      "description": "میزگردهای بین مذاهب و حمایت از روایات معتدل؛ اعتدال اجتماعی تقویت می‌شود.",
+      "effects": [
+        {
+          "path": "religious_leaders.moderation",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "youth_sports_investment",
+      "name_fa": "سرمایه‌گذاری ورزش جوانان",
+      "category_fa": "اجتماعی",
+      "political_cost": 0.8,
+      "description": "سالن‌های محله‌ای، لیگ‌های دانش‌آموزی و اسپانسر تیم‌های پایه؛ نشاط جوانان بیشتر می‌شود.",
+      "effects": [
+        {
+          "path": "sports_youth.youth_happiness",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "rehabilitation_program",
+      "name_fa": "آموزش و توان‌بخشی زندانیان",
+      "category_fa": "عدالت",
+      "political_cost": 1.0,
+      "description": "آموزش حرفه‌ای در زندان و آزادی مشروط اصلاح‌شدگان؛ تکرار جرم و تراکم زندان پایین می‌آید.",
+      "effects": [
+        {
+          "path": "prison.overcrowding",
+          "op": "add",
+          "value": -0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "veteran_fund_topup",
+      "name_fa": "شارژ صندوق ایثارگران",
+      "category_fa": "اجتماعی",
+      "political_cost": 1.0,
+      "description": "تزریق اعتبار به صندوق بازنشستگی و درمان ایثارگران؛ خدمات بهتر و پایدارتر می‌شود.",
+      "effects": [
+        {
+          "path": "veterans.health_care",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "decentralization",
+      "name_fa": "تمرکززدایی اداری",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.5,
+      "description": "واگذاری اختیار بودجه و خدمات به استان‌ها و شهرداری‌ها؛ تصمیم‌گیری نزدیک‌تر به مردم و چابک‌تر می‌شود.",
+      "effects": [
+        {
+          "path": "administration.efficiency",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "egovernment",
+      "name_fa": "دولت الکترونیک",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.0,
+      "description": "پنجره واحد خدمات، اسناد دیجیتال و حذف مراجعه حضوری؛ کارآمدی نهادها بالا می‌رود.",
+      "effects": [
+        {
+          "path": "government_buildings.efficiency",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "civil_service_reform",
+      "name_fa": "اصلاح نظام خدمات کشوری",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.5,
+      "description": "ارزیابی عملکرد، حقوق مبتنی بر شایستگی و بازخورد شهروندی؛ کارآمدی کارکنان دولت صعود می‌کند.",
+      "effects": [
+        {
+          "path": "public_employees.efficiency",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "meritocracy_law",
+      "name_fa": "قانون شایسته‌سالاری",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.5,
+      "description": "الزام آزمون و سابقه برای مناصب مدیریتی و منع انتصابات سیاسی صرف.",
+      "effects": [
+        {
+          "path": "political_career.meritocracy",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "anticorruption_drive",
+      "name_fa": "نهضت مبارزه با فساد",
+      "category_fa": "حکمرانی",
+      "political_cost": 2.0,
+      "description": "تشریح اموال مسئولان، دادگاه‌های ویژه و حمایت از افشاگران؛ شایستگی مدیران بالا و فساد پایین می‌آید.",
+      "effects": [
+        {
+          "path": "officials.competence",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "judicial_reform",
+      "name_fa": "اصلاح دستگاه قضا",
+      "category_fa": "عدالت",
+      "political_cost": 1.5,
+      "description": "دیجیتالی‌کردن پرونده‌ها، دادگاه‌های تخصصی و داوری تجاری؛ سرعت و کیفیت رسیدگی بیشتر می‌شود.",
+      "effects": [
+        {
+          "path": "judicial.efficiency",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "media_reform",
+      "name_fa": "اصلاح نظام رسانه",
+      "category_fa": "فرهنگ",
+      "political_cost": 1.5,
+      "description": "شفافیت مالکیت رسانه‌ها و حمایت از مطبوعات مستقل؛ انسجام فرهنگی تقویت می‌شود.",
+      "effects": [
+        {
+          "path": "culture.cohesion",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "dialogue_forum",
+      "name_fa": "مجمع گفت‌وگوی سیاسی",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.2,
+      "description": "نشست‌های علنی احزاب و پاسخ‌گویی دوره‌ای مسئولان؛ اعتماد به سیاست‌مداران ترمیم می‌شود.",
+      "effects": [
+        {
+          "path": "politicians_detail.trust_politicians",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "voter_outreach",
+      "name_fa": "ترویج مشارکت انتخاباتی",
+      "category_fa": "حکمرانی",
+      "political_cost": 0.8,
+      "description": "آموزش رأی‌دهندگان، شفافیت مالی کمپین‌ها و نظارت مدنی بر صندوق‌ها.",
+      "effects": [
+        {
+          "path": "elections.transparency",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "digital_census",
+      "name_fa": "سرشماری دیجیتال",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.0,
+      "description": "ثبت‌نام آنلاین و ادغام پایگاه‌های اداری؛ دقت آمار ملی و کیفیت سیاست‌گذاری بالا می‌رود.",
+      "effects": [
+        {
+          "path": "statistics.accuracy",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "public_places_renovation",
+      "name_fa": "نوسازی اماکن عمومی",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.0,
+      "description": "بازسازی پارک‌ها، مساجد، کتابخانه‌ها و مراکز فرهنگی محلات؛ دسترسی عمومی بهتر می‌شود.",
+      "effects": [
+        {
+          "path": "public_religious.access",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "hire_public_staff",
+      "name_fa": "جذب نیروی خدمات عمومی",
+      "category_fa": "بهداشت",
+      "political_cost": 1.2,
+      "description": "استخدام پزشک، پرستار و معلم برای مناطق محروم؛ پوشش خدمات عمومی کامل‌تر می‌شود.",
+      "effects": [
+        {
+          "path": "public_services_detail.coverage_health",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "resilience_program",
+      "name_fa": "برنامه تاب‌آوری ملی",
+      "category_fa": "حکمرانی",
+      "political_cost": 1.5,
+      "description": "ذخایر راهبردی، برنامه‌ریزی تداوم فعالیت و تمرین سناریوهای بحران در دستگاه‌ها.",
+      "effects": [
+        {
+          "path": "quantitative.shock_absorption",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "heritage_protection",
+      "name_fa": "حفاظت از میراث فرهنگی",
+      "category_fa": "فرهنگ",
+      "political_cost": 1.0,
+      "description": "مرمت بناهای تاریخی، ثبت آثار و مبارزه با قاچاق عتیقه؛ حافظه تاریخی کشور زنده می‌ماند.",
+      "effects": [
+        {
+          "path": "heritage.preservation",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "military_drill",
+      "name_fa": "رزمایش آمادگی ارتش",
+      "category_fa": "دفاع",
+      "political_cost": 1.2,
+      "description": "تمرین‌های دوره‌ای یگان‌ها، مهمات و تدارکات؛ آمادگی دفاعی به‌تدریج بالا می‌رود.",
+      "effects": [
+        {
+          "path": "military.readiness",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 0.95
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "deterrence_boost",
+      "name_fa": "تقویت بازدارندگی",
+      "category_fa": "دفاع",
+      "political_cost": 1.5,
+      "description": "نمایش توان، به‌روزرسانی تجهیزات راهبردی و دکترین متحد؛ بازدارندگی بیشتر می‌شود.",
+      "effects": [
+        {
+          "path": "military.readiness",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 0.95
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "morale_boost",
+      "name_fa": "ارتقای روحیه نیروها",
+      "category_fa": "دفاع",
+      "political_cost": 0.8,
+      "description": "بهبود امتیازات، تجهیزات فردی و آموزش نیروهای امنیتی؛ آمادگی عملیاتی صعود می‌کند.",
+      "effects": [
+        {
+          "path": "security_forces_detail.equipment",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "police_hiring",
+      "name_fa": "گسترش نیروی پلیس",
+      "category_fa": "امنیت",
+      "political_cost": 1.0,
+      "description": "استخدام و آموزش مأموران تازه برای گشت‌های محله‌محور؛ امنیت عمومی بیشتر می‌شود.",
+      "effects": [
+        {
+          "path": "security.public_security",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "emergency_drill",
+      "name_fa": "مانور آمادگی بحران",
+      "category_fa": "امنیت",
+      "political_cost": 0.8,
+      "description": "تمرین تخلیه، انبار امداد و هماهنگی ارگان‌ها؛ پاسخ به بلایا سریع‌تر می‌شود.",
+      "effects": [
+        {
+          "path": "emergency.preparedness",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "naval_patrol",
+      "name_fa": "گشت دریایی",
+      "category_fa": "دفاع",
+      "political_cost": 1.2,
+      "description": "اسکورت کاروان‌ها و حضور مستمر ناوگان در گلوگاه‌ها؛ اثربخشی محاصره و دزدی دریایی کم می‌شود.",
+      "effects": [
+        {
+          "path": "trade_route_warfare.blockade_effectiveness",
+          "op": "add",
+          "value": -0.00015,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "cyber_investment",
+      "name_fa": "سرمایه‌گذاری سایبری",
+      "category_fa": "امنیت",
+      "political_cost": 1.2,
+      "description": "مراکز دفاع سایبری، رمزنگاری بومی و شکار تهدید؛ آمادگی اطلاعاتی-سایبری بالا می‌رود.",
+      "effects": [
+        {
+          "path": "intelligence.cyber_readiness",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "tourism_support",
+      "name_fa": "حمایت از صنعت گردشگری",
+      "category_fa": "اقتصاد",
+      "political_cost": 0.8,
+      "description": "آموزش مهمان‌نوازی، وام به هتل‌ها و استاندارد خدمات؛ کیفیت مهمان‌پذیری بالا می‌رود.",
+      "effects": [
+        {
+          "path": "hospitality.service_quality",
+          "op": "add",
+          "value": 0.00022,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "visa_liberalization_tourism",
+      "name_fa": "آزادسازی روادید گردشگری",
+      "category_fa": "اقتصاد",
+      "political_cost": 1.0,
+      "description": "روادید فرودگاهی، گردشگری الکترونیک و تبلیغات مقصد؛ اقبال به سفر به کشور بیشتر می‌شود.",
+      "effects": [
+        {
+          "path": "tourism.service_quality",
+          "op": "add",
+          "value": 0.0002,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 2500000,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "satellite_program",
+      "name_fa": "برنامه ماهواره‌ای",
+      "category_fa": "فناوری",
+      "political_cost": 1.5,
+      "description": "پرتاب ماهواره‌های مخابراتی و سنجشی و توسعه سکوی پرتاب؛ توان فضایی کشور رشد می‌کند.",
+      "effects": [
+        {
+          "path": "space.level",
+          "op": "add",
+          "value": 0.00025,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "add",
+          "value": 5000000,
+          "min": 0
+        }
       ]
     }
   ]

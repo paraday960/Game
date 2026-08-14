@@ -27,6 +27,7 @@ for t in tests/*.py; do python3 "$t" || break; done
 | `validate_budget_chain.py` | زنجیرهٔ بودجه ۱۰مرحله‌ای: هر ریال از تخصیص تا اثر و نمایش |
 | `validate_budget_levers.py` | **ممیزی اهرم‌های بودجه**: هر ۱۰ ردیف budget_allocations باید خوانندهٔ بودجه‌محور واقعی داشته باشد + مالکیت یکتا: فقط economy_system حق نویسندگی government_revenue/spending را دارد (سایر سیستم‌ها از کانال نرخ ماهانه استفاده می‌کنند) |
 | `validate_orphan_wiring.py` | **قرارداد سیم‌کشی کلیدهای یتیم** (بازرسی ۱۴۰۵): کانال بودجهٔ ترانزیت/رویالتی (نویسنده ↔ مصرف‌کنندهٔ economy)، مالکیت یکتای سطح exports/imports/balance با trade_system (تشخیص receiver + استثنای شوک گذرا)، latch کرش بورس (`last_crash` خوانده شود)، مصرف map_network در trade/tourism، و پاک‌سازی کلیدهای مردهٔ init |
+| `validate_ai_policies.py` | **قرارداد زنجیرهٔ AI→سیاست**: هر شناسهٔ سیاستی که مشاوران AI با `create_policy_change` توصیه می‌کنند باید در `data/policies.json` موجود باشد، و هر مسیر اثر رجیستری باید به کلید عددی واقعی state اشاره کند (ممیزی ۱۴۰۵: ۵۵ توصیهٔ مرده احیا شد) |
 
 ## قواعد
 
