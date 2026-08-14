@@ -311,8 +311,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ── لایه واقع‌گرایانه اختصاصی اقتصاد (جایگزین قالب خودکار) ──
 	# اقتصاد غیررسمی، مالیات دولت را می‌نوردد — برآورد آماری (دور ۱۰) به درآمد واقعی وصل شد
 	var informal_e = float(state.get("statistics", {}).get("informal_economy_estimate", 0.25))
-	econ["informal_tax_loss_daily"] = float(econ.get("government_revenue", 0.0)) * informal_e * 0.30 / 365.0
-	econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) - float(econ["informal_tax_loss_daily"])
+	# کلید روزانه از نرخ سالانه فرار (سهم غیررسمی × ۳۰٪ شکاف وصولی) روی قاعده درآمد سالانه: ماهانه = سالانه/۱۲، روزانه = /۳۶۰
+	econ["informal_tax_loss_daily"] = float(econ.get("government_revenue", 0.0)) * informal_e * 0.30 / 30.0  # کسر ماهانه = درآمد ماهانه × غیررسمی × ۳۰٪؛ کلید = کسر ماهانه ÷ ۳۰
+	# کسر ماهانه از درآمد ماهانه (پیشتر فقط ۱/۳۰ مقدار طراحی‌شده کم می‌شد)
+	econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) - float(econ["informal_tax_loss_daily"]) * 30.0
 	# برق نامطمئن (تأسیسات شهری دور ۱۲) تولید را گران و سرمایه‌گذاری را فراری می‌کند
 	var power_rel_e = float(econ.get("power_reliability", 1.0))
 	if power_rel_e < 0.75:
@@ -320,7 +322,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# کمک‌های بین‌المللی (سازمان‌ها دور ۱۴) واقعاً به خزانه واریز می‌شود
 	var aid_in_e = float(econ.get("aid_inflow_daily", 0.0))
 	if aid_in_e > 0.0:
-		econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + aid_in_e
+		econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + aid_in_e * days_in_month  # نرخ روزانه → واریز ماهانه
 	# سرمایه‌گذاری بخش خصوصی از فضای کسب‌وکار (دور ۹) و اعتماد بانکی (دور ۱۵)
 	var biz_climate = float(private_sector.get("business_ease", private_sector.get("ease_of_business", 0.55)))
 	var bank_trust_e = float(state.get("financial_services", {}).get("trust_banks", 0.60))
