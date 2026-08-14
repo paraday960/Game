@@ -1801,7 +1801,8 @@ func _build_dashboard():
 func _build_command_kpis(st: Dictionary):
 	var econ = st.get("economy", {})
 	var ind = st.get("indicators", {})
-	var growth = float(econ.get("growth_rate", 0.0))
+	# رشد واقعی (پس از شوک‌های انرژی/غذا/جنگ/تحریم)؛ بازگشت به رشد هموارشده اگر هنوز محاسبه نشده
+	var growth = float(econ.get("real_growth", econ.get("growth_rate", 0.0)))
 	var growth_icon = "▲" if growth >= 0.0 else "▼"
 	var growth_color = ACCENT_GREEN if growth >= 0.0 else ACCENT_RED
 	var grid = GridContainer.new()
@@ -1809,7 +1810,7 @@ func _build_command_kpis(st: Dictionary):
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	content.add_child(grid)
-	_kpi_card(grid, "◈", "تولید ناخالص", PersianFormatter.format_money(float(econ.get("gdp", 0.0))), "%s %s رشد" % [growth_icon, _fmt_pct(absf(growth))], ACCENT_GREEN if growth >= 0.0 else ACCENT_RED, "economy")
+	_kpi_card(grid, "◈", "تولید ناخالص", PersianFormatter.format_money(float(econ.get("gdp", 0.0))), "%s %s رشد واقعی" % [growth_icon, _fmt_pct(absf(growth))], ACCENT_GREEN if growth >= 0.0 else ACCENT_RED, "economy")
 	var happy = float(ind.get("happiness", st.get("population", {}).get("happiness", 0.6)))
 	_kpi_card(grid, "♥", "شادی مردم", _fmt_pct(happy), _health_word(happy), _color_for(happy), "population")
 	var stab = float(ind.get("stability", st.get("politics", {}).get("stability", 0.6)))
@@ -1937,6 +1938,7 @@ func _build_weather_and_municipal_card(state: Dictionary):
 		_row(card, "بارش", "%s میلی‌متر" % PersianFormatter.to_persian_digits("%.0f" % current.get("precipitation_mm", 0.0)))
 		_bar(card, "راه‌های قابل عبور", 1.0 - float(current.get("roads_blocked", 0.0)))
 	var target_plows = max(1.0, float(municipal.get("target_snowplows", 1)))
+	_row(card, "ضخامت برف", "%s سانتی‌متر" % PersianFormatter.to_persian_digits("%.0f" % float(municipal.get("snow_depth_cm", 0.0))))
 	_bar(card, "پوشش ناوگان برف‌روبی", float(municipal.get("snowplows", 0)) / target_plows)
 	_bar(card, "آمادگی عملیات زمستانی", float(municipal.get("snowplow_readiness", 0.5)))
 	_bar(card, "ذخیره نمک جاده", float(municipal.get("road_salt_days", 0.0)) / 30.0)
@@ -4348,6 +4350,7 @@ func _build_urban_card(st: Dictionary):
 	_bar(card, "شهر هوشمند", float(up.get("smart_city", 0.15)))
 	_bar(card, "کنترل تراکم", float(up.get("density_control", 0.3)))
 	_row(card, "ترافیک", PersianFormatter.to_persian_digits("%.0f٪" % (float(up.get("traffic", 0.45)) * 100.0)), _color_for(1.0 - float(up.get("traffic", 0.45))))
+	_row(card, "شاخص هزینه مسکن", PersianFormatter.to_persian_digits("%.0f٪" % (float(up.get("housing_cost", 0.6)) * 100.0)), _color_for(1.0 - float(up.get("housing_cost", 0.6))))
 	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 4); card.add_child(act_row)
 	for act in [["housing", "🏘️ مسکن اجتماعی"], ["transit", "🚇 حمل‌ونقل"], ["smart", "💡 شهر هوشمند"], ["density", "🏗️ کنترل تراکم"]]:
 		var btn = Button.new(); btn.text = act[1]
@@ -4420,6 +4423,7 @@ func _on_welfare(action: String, value: float):
 # ── برنامه فضایی: آژانس، ماهواره، پرتاب‌گر ──
 func _build_space_card(st: Dictionary):
 	var sp: Dictionary = st.get("space_policy", {})
+	var spc: Dictionary = st.get("space", {})
 	if sp.is_empty():
 		return
 	var card = _card("🚀 برنامه فضایی")
@@ -4428,6 +4432,7 @@ func _build_space_card(st: Dictionary):
 	_bar(card, "ماهواره سنجش", float(sp.get("satellites_obs", 0.0)))
 	_row(card, "پرتاب‌گر بومی", "✔ در مدار" if bool(sp.get("launcher", 0.0)) else "—")
 	_row(card, "پرتاب‌ها / شکست‌ها", "%s / %s" % [PersianFormatter.to_persian_digits(str(sp.get("launches", 0))), PersianFormatter.to_persian_digits(str(sp.get("failures", 0)))])
+	_row(card, "درآمد پرتاب‌های تجاری", PersianFormatter.format_money(float(spc.get("launch_revenue", 0.0))))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["agency", "🛰️ توسعه آژانس"], ["comm", "📡 ماهواره ارتباطی"], ["obs", "🛰️ ماهواره سنجش"], ["launcher", "🚀 پرتاب‌گر بومی"]]:
 		var btn = Button.new(); btn.text = a[1]
@@ -4549,6 +4554,7 @@ func _build_heritage_card(st: Dictionary):
 	_bar(card, "حفاظت از میراث", float(hr.get("preservation", 0.6)))
 	_row(card, "ثبت جهانی (یونسکو)", PersianFormatter.to_persian_digits(str(hr.get("unesco_sites", 0))))
 	_bar(card, "گردشگری فرهنگی", float(hr.get("cultural_tourism", 0.5)))
+	_row(card, "درآمد سالانه میراث", PersianFormatter.format_money(float(hr.get("annual_income", 0.0))))
 	_row(card, "مرمت‌های انجام‌شده", PersianFormatter.to_persian_digits(str(hp.get("restored", 0))))
 	_row(card, "جشنواره‌های برگزارشده", PersianFormatter.to_persian_digits(str(hp.get("festivals", 0))))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
@@ -4830,6 +4836,7 @@ func _build_civil_defense_card(st: Dictionary):
 	_bar(card, "افزونگی زیرساخت", float(cd.get("redundancy", 0.20)))
 	_bar(card, "پوشش پناهگاه", float(cd.get("shelters", 0.20)))
 	_bar(card, "ذخیره راهبردی", float(cd.get("strategic_stock", 0.30)))
+	_row(card, "مهار خسارت حمله/بحران", PersianFormatter.to_persian_digits("%.0f٪" % (float(cd.get("damage_mitigation", 0.30)) * 100.0)), _color_for(float(cd.get("damage_mitigation", 0.30))))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["hardening", "🏗️ سخت‌سازی"], ["redundancy", "🔀 افزونگی"], ["shelters", "🏚️ پناهگاه"], ["stockpile", "📦 ذخیره راهبردی"]]:
 		var btn = Button.new(); btn.text = a[1]
@@ -5844,6 +5851,7 @@ func _build_tax_card(st: Dictionary):
 	var tp: Dictionary = TaxManager.get_policy(st)
 	var card = _card("💰 نظام مالیاتی")
 	_bar(card, "پایبندی مالیاتی", float(tp.get("compliance", 0.65)))
+	_row(card, "درآمد مالیاتی ماهانه", PersianFormatter.format_money(float(st.get("budget", {}).get("tax_revenue", 0.0))))
 	_bar(card, "صورتحساب دیجیتال", float(tp.get("digital", 0.20)))
 	for row in [["income","مالیات بر درآمد"],["corporate","مالیات شرکت"],["vat","مالیات بر ارزش افزوده"],["wealth","مالیات بر ثروت"]]:
 		var r = HBoxContainer.new(); r.add_theme_constant_override("separation", 4); card.add_child(r)
