@@ -37,12 +37,12 @@ WRITE_RE = re.compile(r'"national_debt"\]\s*[+\-*/]?=[^=]')
 # سرشماری دور هشتم: تعداد نویسه‌های مستقیم بدهی به‌ازای هر فایل — سقف، نه هدف.
 DEBT_WRITER_CENSUS = {
     "scripts/core/agriculture_manager.gd": 3,
-    "scripts/core/arms_manager.gd": 2,
+    "scripts/core/arms_manager.gd": 1,  # سایت ماهانه به کانال رفت؛ فروش تسلیحات (اقدام) باقی
     "scripts/core/banking_manager.gd": 3,
     "scripts/core/climate_manager.gd": 4,
     "scripts/core/culture_manager.gd": 3,
     "scripts/core/cyber_manager.gd": 1,
-    "scripts/core/demographic_manager.gd": 1,
+    "scripts/core/demographic_manager.gd": 0,  # فشار صندوق به کانال policy_costs رفت
     "scripts/core/digital_manager.gd": 3,
     "scripts/core/dilemma_manager.gd": 1,
     "scripts/core/education_manager.gd": 3,
@@ -59,11 +59,11 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/judiciary_manager.gd": 1,
     "scripts/core/migration_manager.gd": 2,
     "scripts/core/military_manager.gd": 1,
-    "scripts/core/national_project_manager.gd": 2,
+    "scripts/core/national_project_manager.gd": 1,  # هزینهٔ ماهانه به کانال رفت؛ اقدام شروع پروژه باقی
     "scripts/core/parliament_manager.gd": 1,
     "scripts/core/seasonal_manager.gd": 1,
     "scripts/core/security_manager.gd": 2,
-    "scripts/core/space_manager.gd": 6,
+    "scripts/core/space_manager.gd": 5,  # آژانس به کانال رفت؛ ۴ اقدام + ۱ رویداد شکست باقی
     "scripts/core/sports_manager.gd": 4,
     "scripts/core/stock_market_manager.gd": 2,
     "scripts/core/tourism_manager.gd": 3,
@@ -82,6 +82,10 @@ DEBT_WRITER_CENSUS = {
 # سایت‌های سیاستی مهاجرت‌یافته به کانال policy_costs: فایل → کلید فارسی ناشر
 POLICY_COST_PUBLISHERS = {
     "scripts/core/energy_manager.gd": ["یارانه انرژی"],
+    "scripts/core/demographic_manager.gd": ["فشار صندوق بازنشستگی"],
+    "scripts/core/arms_manager.gd": ["نگهداری صنایع دفاعی"],
+    "scripts/core/space_manager.gd": ["برنامه فضایی (آژانس)"],
+    "scripts/core/national_project_manager.gd": ["پروژه‌های ملی"],
 }
 
 # ── ۱) سرشماری «فقط کم است» ────────────────────────────────────────────

@@ -34,9 +34,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	stock += production
 	arms["stock"] = stock
 
-	# هزینه نگهداری ظرفیت
+	# هزینه نگهداری ظرفیت (بازرسی ۱۴۰۵ — دور هشتم): هزینهٔ مداوم ماهانه به کانال
+	# policy_costs می‌رود تا در بودجه/کسری دیده شود، نه شارژ خاموش بدهی.
 	econ["defense_industry_cost"] = capacity * 0.0001
-	econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 1.0)) * capacity * 0.00002
+	var ar_costs: Dictionary = econ.get("policy_costs", {})
+	ar_costs["نگهداری صنایع دفاعی"] = float(econ.get("gdp", 1.0)) * capacity * 0.00002
+	econ["policy_costs"] = ar_costs
 
 	# تحریم تسلیحاتی: تنش بالا یا روابط بد با غرب
 	if not embargo and Deterministic.chance(0.012):

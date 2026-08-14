@@ -154,6 +154,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var corruption = float(state.get("politics", {}).get("corruption", 0.30))
 	var weather_severity = float(state.get("weather", {}).get("current", {}).get("severity", 0.0)) if state.get("weather", {}).get("current", {}).get("hazard", "none") != "none" else 0.0
 	var war_penalty = 0.12 if not state.get("world", {}).get("wars", {}).is_empty() else 0.0
+	var np_month_cost := 0.0  # تجمیع هزینهٔ ماهانهٔ پروژه‌های فعال (کانال policy_costs)
 	for id in project_state["active"].keys():
 		var record: Dictionary = project_state["active"][id]
 		var duration = max(1, int(record.get("duration_months", 12)))
@@ -170,7 +171,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		record["overrun"] = float(record.get("overrun", 0.0)) + overrun
 		project_state["total_spent"] += actual_cost
 		project_state["total_overrun"] += overrun
-		state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + actual_cost
+		np_month_cost += actual_cost  # (بازرسی ۱۴۰۵ — دور هشتم) به‌جای شارژ مستقیم بدهی
 		if efficiency < 0.55 or Deterministic.chance(corruption * 0.025 + weather_severity * 0.04):
 			record["delay_months"] = int(record.get("delay_months", 0)) + 1
 			events.append({
@@ -192,6 +193,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		})
 	while project_state["history"].size() > 150:
 		project_state["history"].pop_front()
+	# (بازرسی ۱۴۰۵ — دور هشتم) هزینهٔ مداوم ماهانهٔ پروژه‌ها به کانال policy_costs
+	# می‌رود تا در بودجه/کسری دیده شود؛ بدون پروژهٔ فعال صفر منتشر می‌شود.
+	var np_costs: Dictionary = state.get("economy", {}).get("policy_costs", {})
+	np_costs["پروژه‌های ملی"] = np_month_cost
+	state["economy"]["policy_costs"] = np_costs
 	state["national_projects"] = project_state
 	_sync_infrastructure(state)
 	return {"state":state,"events":events}

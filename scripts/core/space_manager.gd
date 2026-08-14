@@ -21,9 +21,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var space_level := float(tech.get("branch_levels", {}).get("فضا", 0))
 	var agency := float(sp.get("agency", 0.2))
 
-	# آژانس: هزینه نگهداری + پیشرفت دانش فضایی
+	# آژانس: هزینه نگهداری + پیشرفت دانش فضایی (بازرسی ۱۴۰۵ — دور هشتم):
+	# هزینهٔ مداوم ماهانه به کانال policy_costs می‌رود (مجاری بودجه)، نه شارژ خاموش بدهی.
 	econ["space_cost"] = agency * 0.002
-	econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 1.0)) * agency * 0.001
+	var sp_costs: Dictionary = econ.get("policy_costs", {})
+	sp_costs["برنامه فضایی (آژانس)"] = float(econ.get("gdp", 1.0)) * agency * 0.001
+	econ["policy_costs"] = sp_costs
 	# اثر فناوری فضا
 	tech["research_rate"] = float(tech.get("research_rate", 20.0)) * (1.0 + agency * 0.005)
 	state["technology"] = tech

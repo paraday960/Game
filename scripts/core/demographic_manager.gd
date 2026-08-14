@@ -81,10 +81,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var fund := 0.5 + (working_age - elderly * 1.5) * 0.6 - (1.0 - elderly_care) * 0.2
 	fund = clampf(fund, 0.0, 1.0)
 	dp["pension_fund"] = fund
-	# فشار صندوق → کسری بودجه
+	# فشار صندوق → هزینهٔ بودجه (بازرسی ۱۴۰۵ — دور هشتم: کانال policy_costs؛
+	# قبلاً مستقیم روی بدهی شارژ می‌شد و در کسری دیده نمی‌شد)
+	var dm_costs: Dictionary = econ.get("policy_costs", {})
+	dm_costs["فشار صندوق بازنشستگی"] = (gdp * (0.30 - fund) * 0.002) if fund < 0.30 else 0.0
+	econ["policy_costs"] = dm_costs
+	state["economy"] = econ
 	if fund < 0.30:
-		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + gdp * (0.30 - fund) * 0.002
-		state["economy"] = econ
 		welfare["pension_pressure"] = 1.0 - fund
 		state["welfare"] = welfare
 
