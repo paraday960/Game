@@ -155,12 +155,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var saving_share: float = float(budget_alloc.get("ذخیره", 0.15))
 	var spending = econ["government_revenue"] * (1.0 - saving_share) * (2.2 if is_at_war else 1.0) # فشار جنگ: دو برابر
 
-	# هزینه جنگی اضافی - ۰.۲ تا ۱٪ GDP روزانه
+	# هزینه جنگی اضافی - ۰.۲ تا ۰.۵٪ GDP ماهانه (واحد اصلاح شد: قبلاً جریان روزانه ÷365 بود
+	# و وارد نرخ ماهانه می‌شد، یعنی ۳۰ برابر ضعیف‌تر از طراحی — جنگ تقریباً رایگان بود!)
 	var war_spending_extra = 0.0
 	if is_at_war:
-		war_spending_extra = econ["gdp"] * (0.002 + mobilization*0.001 + float(mil.get("war_exhaustion",0.0))*0.001) / 365.0
+		war_spending_extra = econ["gdp"] * (0.002 + mobilization*0.001 + float(mil.get("war_exhaustion",0.0))*0.001) / 12.0
 		spending += war_spending_extra
-		econ["war_spending"] = war_spending_extra * 30.0
+		econ["war_spending"] = war_spending_extra  # نرخ ماهانه — هماهنگ با قرارداد کانال‌های بودجه
 	else:
 		econ["war_spending"] = 0.0
 
