@@ -177,6 +177,10 @@ def main():
     check("C8) کارت ارز: نمایش علامت‌دار — خروج/فرار سرمایه (شرط != ۰ و لیبل منفی)",
           "inflow_m != 0.0" in ui_src
           and "خروج بخشی ذخایر (ماهانه)" in ui_src)
+    check("C8) مرورگر سامانه‌ها: کارت تفصیلی ریز کانال GDP (عنوان + مرتب‌سازی اندازه‌ای)",
+          "ریز اثر بخش‌ها بر رشد (کانال GDP)" in ui_src
+          and "boost_rows.sort_custom" in ui_src
+          and "absf(bv) > 0.000001" in ui_src)
 
     # ── C9: فید رویدادهای کانال GDP (بازرسی ۱۴۰۵د) ───────────────────────
     check("C9) رویداد محرک کانال در economy_system (نوع sector_boost_drive)",

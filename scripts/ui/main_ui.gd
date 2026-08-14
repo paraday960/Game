@@ -7950,6 +7950,29 @@ func _build_systems():
 	_row(c1, "هشدارهای بحرانی", PersianFormatter.to_persian_digits(str(ai_summary.get("critical", 0))),
 		_color_for(1.0 - min(float(ai_summary.get("critical", 0)) / 10.0, 1.0)))
 
+	# ریز کانال مالک-یکتای GDP (ممیزی نویسندگان ۱۴۰۵): همهٔ اثرهای مداومِ غیرصفر
+	# بخش‌ها، مرتب‌شده بر حسب اندازهٔ اثر — بازیکن دقیقاً می‌بیند رشد از کجا می‌آید
+	var boost_src: Dictionary = GameState.state.get("economy", {}).get("sector_boosts", {})
+	var boost_rows: Array = []
+	for bk in boost_src.keys():
+		var bv: float = float(boost_src[bk])
+		if absf(bv) > 0.000001:
+			boost_rows.append([str(bk), bv])
+	if not boost_rows.is_empty():
+		boost_rows.sort_custom(func(a, b): return absf(a[1]) > absf(b[1]))
+		var boost_card = _card("🧩 ریز اثر بخش‌ها بر رشد (کانال GDP)")
+		_row(boost_card, "جمع کانال", PersianFormatter.to_persian_digits("%+.1f٪ در سال" % (float(GameState.state.get("economy", {}).get("sector_boosts_total", 0.0)) * 100.0)),
+			_color_for(clampf(0.5 + float(GameState.state.get("economy", {}).get("sector_boosts_total", 0.0)) * 5.0, 0.0, 1.0)))
+		var shown_count: int = 0
+		for br in boost_rows:
+			if shown_count >= 12:
+				break
+			_row(boost_card, str(br[0]), PersianFormatter.to_persian_digits("%+.2f٪ در سال" % (float(br[1]) * 100.0)),
+				_color_for(clampf(0.5 + float(br[1]) * 5.0, 0.0, 1.0)))
+			shown_count += 1
+		if boost_rows.size() > shown_count:
+			_row(boost_card, "…", PersianFormatter.to_persian_digits("و %d بخش دیگر" % (boost_rows.size() - shown_count)))
+
 	_build_system_detail(selected_system)
 
 	var directory = _card("📚 انتخاب سامانه برای مشاهده جزئیات")
