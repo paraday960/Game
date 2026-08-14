@@ -152,6 +152,12 @@ def check_resource_revenue_basis():
         print("✅ مبنای درآمد منابع: ظرفیت استخراج پایدار (انباره فقط سمت کمبود اثر دارد)")
     else:
         FAIL.append("مبنای درآمد منابع دوباره به انبارهٔ بی‌سقف گره خورد (واردات→رانت جعلی)")
+    # قیمت سوخت داخلی باید به قیمت زندهٔ بازار کالا وصل باشد (نبودن ثابت ۸۲ دلاری)
+    fuel = open("scripts/systems/fuel_stations_system.gd", encoding="utf-8").read()
+    if 'com_prices_f.get("نفت", 82.0)' in fuel and "var gas_inv" not in fuel:
+        print("✅ قیمت پمپ‌بنز به بازار جهانی کالا وصل است و متغیر مردهٔ gas_inv نیست")
+    else:
+        FAIL.append("قیمت سوخت دوباره ثابت شد یا متغیر مردهٔ gas_inv برگشته است")
 
 
 check_simulate_month_contract()

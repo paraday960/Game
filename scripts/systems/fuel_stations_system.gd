@@ -24,8 +24,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	var oil_inv = resources.get("inventory",{}).get("نفت",80.0)
-	var gas_inv = resources.get("inventory",{}).get("گاز",70.0)
-	var oil_price = 82.0
+	# (بازرسی ۱۴۰۵) gas_inv حذف شد — متغیر محلی مرده بود (هرگز مصرف نمی‌شد).
+	# قیمت جهانی نفت زنده از بازار کالا: قبلاً ثابتِ ۸۲ دلار بود و شوک‌های نفتی
+	# بازار جهانی هرگز به قیمت پمپ‌بنز داخلی نمی‌رسید؛ حالا قیمت سوخت با بازار تنفس می‌کند.
+	var com_prices_f: Dictionary = state.get("commodities", {}).get("prices", {})
+	var oil_price = maxf(float(com_prices_f.get("نفت", 82.0)), 30.0)
 	var exchange = state.get("central_bank",{}).get("exchange_rate",1.0)
 	var inflation = econ.get("inflation",0.08)
 
