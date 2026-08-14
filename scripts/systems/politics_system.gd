@@ -96,6 +96,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var corr_now: float = float(pol.get("corruption", 0.30))
 	pol["corruption"] = clampf(corr_now + (0.5 - ind_p) * 0.0003 * (1.0 if corr_now > 0.4 else -0.5), 0.02, 0.95)
 	if float(pol.get("legitimacy", 0.55)) < 0.30 and Deterministic.chance(0.005):
+		# اثر واقعی بحران مشروعیت: شکاف دولت-ملت ثبات را می‌فرساید و تنش را بالا می‌برد
+		pol["stability"] = clampf(float(pol.get("stability", 0.60)) - 0.020, 0.05, 1.0)
+		pol["tension"] = clampf(float(pol.get("tension", 0.35)) + 0.030, 0.0, 1.0)
+		pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.010, 0.05, 1.0)
 		events.append({"type": "legitimacy_crisis", "message": "بحران مشروعیت - فاصله دولت و ملت عمیق شده است", "legitimacy": pol["legitimacy"]})
 	state["politics"] = pol
 

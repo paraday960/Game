@@ -77,6 +77,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type":"populist_wave","populism": pols["populism"], "message":"موج پوپولیستی - شعارهای تند و وعده یارانه سه برابری"})
 
 	if pols["trust_politicians"] < 0.25 and Deterministic.chance(0.011):
+		# اثر واقعی بی‌اعتمادی: مشارکت انتخاباتی و ثبات افت می‌کند (پیام قبلاً فقط ادعا می‌کرد)
+		var el: Dictionary = state.get("elections", {})
+		el["participation"] = clamp(float(el.get("participation", 0.60)) - 0.010, 0.10, 0.95)
+		state["elections"] = el
+		var pol2: Dictionary = state.get("politics", {})
+		pol2["stability"] = clampf(float(pol2.get("stability", 0.60)) - 0.008, 0.05, 1.0)
+		state["politics"] = pol2
 		events.append({"type":"trust_politicians_crisis","trust": pols["trust_politicians"], "message":"بی‌اعتمادی به سیاست‌مداران - مشارکت افت کرد"})
 
 	if pols["corruption_perceived"] > 0.65 and Deterministic.chance(0.010):

@@ -394,6 +394,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		info_war["cyber_attacks_daily"] = 5.0 + float(equipment["cyber_units"])*1.5 + command["ew_capability"]*5.0
 		info_war["electronic_warfare_success"] = clamp(command["ew_capability"]*0.6 + float(equipment["ew_systems"])/40.0*0.3 + 0.1, 0.10, 0.95)
 		if info_war["public_support_war"] < 0.35 and Deterministic.chance(0.012):
+			# اثر واقعی اعتراض ضدجنگ: ثبات و شادی افت می‌کند و حمایت در مارپیچ سقوط می‌افتد
+			pol["stability"] = clampf(float(pol.get("stability", 0.60)) - 0.015, 0.05, 1.0)
+			pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.010, 0.05, 1.0)
+			info_war["public_support_war"] = clamp(float(info_war["public_support_war"]) - 0.020, 0.10, 0.90)
 			events.append({"type":"anti_war_protest","support": info_war["public_support_war"], "message":"تظاهرات ضدجنگ - حمایت عمومی %.0f٪ سقوط کرد" % (info_war["public_support_war"]*100.0)})
 	else:
 		info_war["propaganda_level"] = clamp(info_war["propaganda_level"] - 0.002, 0.10, 0.90)
