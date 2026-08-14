@@ -29,6 +29,8 @@ def initial_state():
     return {
         # economy
         "gdp": 500_000_000_000.0, "growth_rate": 0.02, "real_growth": 0.02,
+        # کالیبراسیون مالی بلندمدت: شاخص قیمت منابع + مبنای GDP (همتای economy_system)
+        "resource_price_index": 1.0, "gdp_baseline": 500_000_000_000.0,
         # کانال مالک-یکتای سطح GDP (ممیزی نویسندگان GDP — همگام با economy_system.gd)
         "sector_boosts": {}, "sector_boosts_total": 0.0,
         "inflation": 0.08, "unemployment": 0.08, "tax_rate": 0.20,
@@ -111,6 +113,11 @@ def step_day(s):
                         -0.10, 0.10)
     s["gdp"] *= 1.0 + boost_total / 365.0
     s["sector_boosts_total"] = boost_total
+    # شاخص بلندمدت قیمت منابع: هم‌پای رشد اسمی GDP (ثابت زمانی ~۴ سال، کف ۰٫۵/سقف ۳) —
+    # همتای resource_price_index در economy_system؛ نسبت زندهٔ بازار کالا در آینه ۱ فرض می‌شود.
+    rpi_t = clamp(s["gdp"] / max(s["gdp_baseline"], 1e9), 0.50, 3.00)
+    s["resource_price_index"] = clamp(
+        s["resource_price_index"] + (rpi_t - s["resource_price_index"]) * 0.02 / 30.0, 0.50, 3.00)
     gdp_pc = s["gdp"] / s["pop_total"]
     s["growth_rate"], s["real_growth"] = g_smoothed, real_growth
 
@@ -127,7 +134,8 @@ def step_day(s):
     monthly_gdp = s["gdp"] / 12.0
     tax_eff = 0.75 + (1.0 - s["corruption"]) * 0.2 + s["infra_q"] * 0.05
     tax_rev = s["tax_rate"] * monthly_gdp * tax_eff
-    resource_rev = (80.0 * 120e6 + 70.0 * 60e6) / 12.0
+    # درآمد منابع × شاخص بلندمدت قیمت (قبل از کالیبراسیون ثابت بود → فرسایش سهم خزانه)
+    resource_rev = (80.0 * 120e6 + 70.0 * 60e6) / 12.0 * s["resource_price_index"]
     # گمرک ماهانه = واردات سالانه/۱۲ × تعرفه × کارآمدی (بازرسی: ternary باگ‌دار قبلی حذف)
     customs = s["imports"] / 12.0 * s["tariff_rate"] * s["customs_eff"]
     seign = s["money_supply"] * 0.005 * monthly_gdp * 0.1
@@ -135,6 +143,7 @@ def step_day(s):
     revenue = max(revenue * (1.0 - (s["corruption"] * 0.06 + s["informal"] * 0.08)), 1e9)
     if mobil > 0:
         revenue *= 0.9   # اختلال جنگی در مالیه
+    s["last_revenue_monthly"] = revenue   # دفتر تشخیص: برای تریپ‌وایر سهم خزانه در run()
     saving = s["alloc"]["ذخیره"]
     spending = revenue * (1.0 - saving) * (2.2 if mobil > 0 else 1.0)
     # بازرسی واحد ۱۴۰۵: استهلاک انبارهٔ هزینه‌های یک‌بارمصرف (در سناریوهای آینه نویسنده‌ای
@@ -332,6 +341,9 @@ def run(years=10, verbose=True, policy_hook=None):
         if policy_hook is not None:
             policy_hook(day, s)
         step_day(s)
+        if day == 1:
+            # مبنای سهم خزانه از GDP برای تریپ‌وایر فرسایش مالی (کالیبراسیون منابع)
+            s["_revshare_t0"] = s["last_revenue_monthly"] / max(s["gdp"], 1.0)
         for k, v in s.items():
             if isinstance(v, float) and (v != v or v in (float("inf"), float("-inf"))):
                 FAIL.append(f"NaN/Inf در «{k}» در روز {day}")
@@ -848,6 +860,8 @@ def run_horizon30_suite():
          pin.get("tension", 0) / 10950.0 < 0.10),
         ("کیفیت سلامت پس از ۳۰ سال بالای کف بحران می‌ماند (≥ ۰٫۴۵ — دریفت آرام تحت پایش)",
          s["health_q"] >= 0.45),
+        ("سهم خزانه از GDP در ۳۰ سال فرسایش نمی‌شود (≥ ۹۵٪ مقدار شروع — کالیبراسیون منابع)",
+         s["last_revenue_monthly"] / s["gdp"] >= 0.95 * s["_revshare_t0"]),
         ("اشباع شهری طراحی‌شده زیر آستانه (سهم چسبیدن urban < ۴۰٪)",
          pin.get("urban_ratio", 0) / 10950.0 < 0.40),
         ("شادی/ثبات ۳۰ساله در دالان انسانی", 0.30 <= s["happiness"] <= 0.95

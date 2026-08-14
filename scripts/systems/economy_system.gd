@@ -142,11 +142,28 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var tax_efficiency = 0.75 + (1.0 - corruption)*0.2 + infra_q*0.05 # فساد و زیرساخت دیجیتال اثر
 	var tax_revenue = tax_rate * monthly_gdp * tax_efficiency
 
-	# درآمد منابع - نفت و گاز و معدن
+	# درآمد منابع — نفت و گاز و معدن (بازرسی مالی بلندمدت ۱۴۰۵)
+	# دو اصلاح واقع‌گرایانه روی فرمول ثابتِ قبلی:
+	#  الف) اتصال به بازار جهانی کالا: تا قبل از این قیمت ثابتِ فرضی جا مانده بود
+	#     (متغیر مردهٔ oil_price = 82 که هرگز خوانده نمی‌شد) و چرخه/شوک قیمتِ
+	#     commodity_manager هرگز به خزانه نمی‌رسید؛ حالا سهم نفت/گاز با نسبت قیمت
+	#     زنده به پایه (۷۵ دلار / ۳٫۲) تنفس می‌کند — بودجهٔ نفتی واقعاً رانتی است.
+	#  ب) شاخص بلندمدت قیمت منابع (resource_price_index): فرمول قبلی ثابت بود و با
+	#     سه‌برابر شدن GDP در افق ۳۰ ساله سهم درآمد منابع از خزانه آب می‌رفت — ریشهٔ
+	#     فرسایش آرام بودجهٔ بهداشت (health_q: ۰٫۶۱→۰٫۴۹ در آینه). در بلندمدت قیمت
+	#     اسمی کالاها با رشد اسمی اقتصاد هم‌پاست؛ شاخص به نسبت GDP/مبنا با ثابت
+	#     زمانی ~۴ سال تطبیق می‌یابد (کف ۰٫۵ / سقف ۳٫۰ — محدودهٔ واقع‌بینانهٔ رانت).
 	var oil_inventory = resources.get("inventory",{}).get("نفت",80.0)
 	var gas_inventory = resources.get("inventory",{}).get("گاز",70.0)
-	var oil_price = 82.0 # دلار
-	var resource_revenue = oil_inventory * 120_000_000.0 + gas_inventory * 60_000_000.0 # ساده‌سازی
+	var com_prices: Dictionary = state.get("commodities", {}).get("prices", {})
+	var oil_ratio = clampf(float(com_prices.get("نفت", 75.0)) / 75.0, 0.40, 2.40)
+	var gas_ratio = clampf(float(com_prices.get("گاز", 3.2)) / 3.2, 0.375, 2.50)
+	if float(econ.get("gdp_baseline", 0.0)) <= 0.0:
+		econ["gdp_baseline"] = float(econ.get("gdp", 500_000_000_000.0))
+	var rpi_target = clampf(float(econ.get("gdp", 500_000_000_000.0)) / max(float(econ["gdp_baseline"]), 1e9), 0.50, 3.00)
+	var rpi_prev = float(econ.get("resource_price_index", 1.0))
+	econ["resource_price_index"] = clampf(rpi_prev + (rpi_target - rpi_prev) * 0.02 / 30.0, 0.50, 3.00)
+	var resource_revenue = (oil_inventory * 120_000_000.0 * oil_ratio + gas_inventory * 60_000_000.0 * gas_ratio) * float(econ["resource_price_index"])
 
 	# درآمد گمرک و تجارت — واردات سالانه × تعرفه × کارآمدی گمرک → نرخ ماهانه
 	# (بازرسی تراز پرداخت‌ها: ternary قبلی باگ‌دار بود و عملاً ۰٫۶۴٪ واردات می‌داد —

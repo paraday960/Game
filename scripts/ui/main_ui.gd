@@ -3057,8 +3057,15 @@ func _build_commodities_card(st: Dictionary):
 		sell_btn.pressed.connect(_on_commodity_sell.bind(cid))
 		_mark_decision_button(sell_btn, "com_sell:" + cid)
 		row.add_child(sell_btn)
+	# شاخص بلندمدت درآمد منابع (بازرسی مالی بلندمدت ۱۴۰۵) — خوانندهٔ بیرونی کلید
+	var rpi_label = Label.new()
+	var rpi_val := float(st.get("economy", {}).get("resource_price_index", 1.0))
+	rpi_label.text = "📈 شاخص بلندمدت درآمد منابع: ×" + PersianFormatter.to_persian_digits("%.2f" % rpi_val) + " — با رشد اقتصاد، قیمت اسمی نفت/گاز به‌روز می‌شود و رانت خزانه از GDP عقب نمی‌افتد."
+	rpi_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rpi_label.add_theme_font_size_override("font_size", 15); rpi_label.modulate = TEXT_FAINT
+	card.add_child(rpi_label)
 	var hint = Label.new()
-	hint.text = "قیمت کالاها هر نوبت با عرضه/تقاضا، جنگ‌ها و شوک‌ها نوسان می‌کند. فروش در قیمت بالا ذخایر ارزی می‌سازد؛ درآمد نفتی نیز هر ماه خودکار به ذخایر اضافه می‌شود."
+	hint.text = "قیمت کالاها هر نوبت با عرضه/تقاضا، جنگ‌ها و شوک‌ها نوسان می‌کند. فروش در قیمت بالا ذخایر ارزی می‌سازد؛ قیمت جهانی نفت و گاز نیز مستقیماً درآمد خزانه (بودجه) را بالا/پایین می‌برد."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 15); hint.modulate = TEXT_FAINT
 	card.add_child(hint)
