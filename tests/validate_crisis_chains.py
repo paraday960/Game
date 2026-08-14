@@ -109,6 +109,17 @@ for chain in chains:
     stages = chain.get("stages", [])
     if len(stages) < 2:
         fail.append("%s: حداقل ۲ مرحله لازم است" % where)
+    # اسکار (اثر ماندگار پس از نخ) — عمق‌بخشی ۵
+    scar = chain.get("scar", {})
+    if scar:
+        if not scar.get("title_fa"):
+            fail.append("%s: scar.title_fa الزامی است" % where)
+        if int(scar.get("duration_months", 0)) < 6:
+            fail.append("%s: scar.duration_months باید ≥ ۶ باشد" % where)
+        if not scar.get("effects"):
+            fail.append("%s: scar باید دست‌کم یک اثر داشته باشد" % where)
+        for eff in scar.get("effects", []):
+            check_effect(eff, "%s / اسکار" % where)
     if chain.get("world_scope") is True:
         has_commodity = any(
             str(e.get("path", "")).startswith("commodities.prices.")

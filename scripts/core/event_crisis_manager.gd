@@ -202,11 +202,31 @@ func is_valid() -> bool:
 				return false
 	return true
 
+const MAX_SCARS := 3
+
 func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["events_active"] = state.get("events_active", [])
 	state["crisis_cooldowns"] = state.get("crisis_cooldowns", {})
+	state["crisis_scars"] = state.get("crisis_scars", [])
 	var events: Array = []
 	var current_day = TimeManager.get_total_days(state)
+
+	# ۰) اسکارهای بحران (عمق‌بخشی ۵): اثر ماندگار پس از پایان نخ‌ها؛ هر ماه
+	#     اثر دارند و پس از مدت محو می‌شوند (مثل بی‌اعتمادی اعتباریِ سال‌ها پس از
+	#     بحران بانکی یا جهش بهره‌وریِ ماندگار پس از انقلاب AI).
+	var kept_scars: Array = []
+	for scar in state["crisis_scars"]:
+		if current_day >= int(scar.get("expires_day", current_day + 1)):
+			events.append({
+				"type": "crisis_scar_healed",
+				"title": str(scar.get("title_fa", "اسکار بحران")),
+				"message": "اثر ماندگار «%s» پس از گذر زمان رو به بهبود رفت" % str(scar.get("title_fa", ""))
+			})
+			continue
+		for effect in scar.get("effects", []):
+			_apply_path_effect(state, effect)
+		kept_scars.append(scar)
+	state["crisis_scars"] = kept_scars
 
 	# ۱) چرخه‌ی حیات بحران‌های فعال: اثر ماهانه، سپس پایان/پیشروی مرحله و ثبت دوره تامین مجدد
 	var kept: Array = []
@@ -244,6 +264,24 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 				for effect in chain_def["stages"][chain_def["stages"].size() - 1].get("resolve_effects", []):
 					_apply_path_effect(state, effect)
 				cooldown = int(chain_def.get("cooldown_days", COOLDOWN_DAYS))
+				# اسکار ماندگار پس از نخ (عمق‌بخشی ۵)
+				var scar_def: Dictionary = chain_def.get("scar", {})
+				if not scar_def.is_empty():
+					var scars_now: Array = state["crisis_scars"]
+					if scars_now.size() >= MAX_SCARS:
+						scars_now.pop_front()
+					scars_now.append({
+						"id": "%s_scar_%d" % [str(chain_def.get("id", "")), turn],
+						"title_fa": str(scar_def.get("title_fa", "اسکار بحران")),
+						"effects": scar_def.get("effects", []).duplicate(true),
+						"started_day": current_day,
+						"expires_day": current_day + int(scar_def.get("duration_months", 12)) * 30
+					})
+					state["crisis_scars"] = scars_now
+					events.append({
+						"type": "crisis_scar", "title": str(scar_def.get("title_fa", "")),
+						"message": "اثر ماندگار «%s» بر جای ماند — بهبود تدریجی نیازمند زمان است" % str(scar_def.get("title_fa", ""))
+					})
 			state["crisis_cooldowns"][str(crisis.get("type", ""))] = current_day + cooldown
 			var resolved_msg := "بحران «%s» پایان یافت" % str(crisis.get("title", ""))
 			if is_chain:

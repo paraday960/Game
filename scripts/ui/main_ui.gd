@@ -2355,6 +2355,9 @@ func _active_crises(st: Dictionary) -> Array:
 				str(crisis.get("stage_name_fa", ""))])
 		else:
 			out.append("%s «%s» — تصمیم فوری لازم است" % [level, str(crisis.get("title", "بحران"))])
+	# اسکارهای ماندگار بحران (عمق‌بخشی ۵): اثرهای بلندمدتِ پس از نخ‌ها
+	for scar in st.get("crisis_scars", []):
+		out.append("🩹 اثر ماندگار «%s» — بهبود تدریجی" % str(scar.get("title_fa", "اسکار بحران")))
 	if res.get("food_crisis", false):
 		out.append("بحران غذایی — ذخیره غذا رو به اتمام است")
 	if res.get("energy_crisis", false):

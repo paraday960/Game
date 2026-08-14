@@ -170,7 +170,27 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "تضعیف زیرساخت آبی",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "agriculture.food_security",
+            "op": "add",
+            "value": -0.004,
+            "min": 0.0,
+            "max": 1.0
+          },
+          {
+            "path": "welfare.poverty",
+            "op": "add",
+            "value": 0.001,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "sanctions_chain",
@@ -324,7 +344,26 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "زخم تحریم",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "shadow.size",
+            "op": "add",
+            "value": 0.004,
+            "min": 0.0,
+            "max": 1.0
+          },
+          {
+            "path": "trade.balance",
+            "op": "mul",
+            "value": 0.9992,
+            "min": 0.0
+          }
+        ]
+      }
     },
     {
       "id": "epidemic_wave2",
@@ -464,7 +503,27 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "فرسودگی نظام سلامت",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "health.quality",
+            "op": "add",
+            "value": -0.002,
+            "min": 0.0,
+            "max": 1.0
+          },
+          {
+            "path": "health.coverage",
+            "op": "add",
+            "value": -0.001,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "oil_shock_world",
@@ -609,7 +668,27 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "تغییر ساختار انرژی",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "environment.green_energy_share",
+            "op": "add",
+            "value": 0.002,
+            "min": 0.0,
+            "max": 1.0
+          },
+          {
+            "path": "economy.inflation",
+            "op": "add",
+            "value": -0.001,
+            "min": 0.0,
+            "max": 0.5
+          }
+        ]
+      }
     },
     {
       "id": "banking_chain",
@@ -748,7 +827,27 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "بی‌اعتمادی اعتباری",
+        "duration_months": 18,
+        "effects": [
+          {
+            "path": "central_bank.credit_growth",
+            "op": "add",
+            "value": -0.002,
+            "min": -0.1,
+            "max": 0.4
+          },
+          {
+            "path": "financial_services.trust_banks",
+            "op": "add",
+            "value": -0.003,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "chokepoint_chain",
@@ -884,7 +983,20 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "آسیب‌پذیری لجستیک",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "transport_detail.logistics_efficiency",
+            "op": "add",
+            "value": -0.002,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "ai_revolution_chain",
@@ -1038,7 +1150,27 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "جهش بهره‌وری ماندگار",
+        "duration_months": 24,
+        "effects": [
+          {
+            "path": "economy.growth_rate",
+            "op": "add",
+            "value": 0.0015,
+            "min": -0.05,
+            "max": 0.08
+          },
+          {
+            "path": "ai_policy.productivity",
+            "op": "add",
+            "value": 0.002,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "demographic_winter_chain",
@@ -1160,7 +1292,27 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "پیری ساختاری جمعیت",
+        "duration_months": 24,
+        "effects": [
+          {
+            "path": "economy.growth_rate",
+            "op": "add",
+            "value": -0.001,
+            "min": -0.05,
+            "max": 0.08
+          },
+          {
+            "path": "welfare.pension_pressure_structural",
+            "op": "add",
+            "value": 0.002,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "election_shock_chain",
@@ -1295,7 +1447,20 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "بی‌اعتمادی سیاسی",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "politics.trust",
+            "op": "add",
+            "value": -0.002,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     },
     {
       "id": "refugee_wave_chain",
@@ -1441,7 +1606,20 @@
             }
           ]
         }
-      ]
+      ],
+      "scar": {
+        "title_fa": "تنش اجتماعی میزبان",
+        "duration_months": 12,
+        "effects": [
+          {
+            "path": "politics.tension",
+            "op": "add",
+            "value": 0.002,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ]
+      }
     }
   ]
 }
