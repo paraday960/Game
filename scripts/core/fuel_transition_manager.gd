@@ -16,7 +16,7 @@ func ensure(state: Dictionary) -> Dictionary:
 		state["fuel_policy"] = {
 			"subsidy": 0.65, "ev_charging": 0.10, "emission_standard": 0.25,
 			"public_fleet": 0.20, "last_reform": -99, "smuggling": 0.30,
-			"fuel_demand": 0.70, "ev_share": 0.02, "fuel_revenue": 0.0
+			"fuel_demand": 0.70, "ev_share": 0.02
 		}
 	return state
 
@@ -52,12 +52,15 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# حالا فقط مقدار زنده را برای نمایش در fuel_policy منعکس می‌کند.
 	fp["smuggling"] = float(fuel_stations.get("smuggling", 0.15))
 
-	# درآمد اصلاح قیمت (هرچه یارانه کمتر، درآمد بیشتر)
-	var revenue := gdp * (1.0 - subsidy) * 0.012
-	fp["fuel_revenue"] = revenue
-	# (بازرسی ۱۴۰۵ — دور هشتم) سهم خزانهٔ اصلاح قیمت به‌جای کسر خاموش از بدهی،
-	# نرخ ماهانهٔ درآمد می‌شود (مصرف‌کننده: economy_system → government_revenue).
-	econ["fuel_transition_monthly"] = revenue * 0.5
+	# هزینهٔ واقعی یارانهٔ باقی‌مانده (بازرسی ۱۴۰۵ — دور یازدهم، ادغام مفهومی یارانه):
+	# قبلاً این مدیر «درآمد اصلاح» هر ماه به خزانه می‌ریخت در حالی که خود یارانه
+	# هیچ هزینه‌ای نداشت ⇒ یارانهٔ رایگان + پاداش سه‌گانهٔ اصلاح (کسر یک‌بارهٔ
+	# بدهی + درآمد ماهانه + قاچاق کمتر). حالا یک مدل: هزینهٔ یارانه از مدل زندهٔ
+	# شکاف قیمت پمپ‌بنز (fuel_stations_system) به کانال policy_costs می‌رود و
+	# پاداش اصلاح = کاهش همین هزینه است — مجاری بودجه: کسری/بدهی، نمایان در کارت مالی.
+	var ft_costs: Dictionary = econ.get("policy_costs", {})
+	ft_costs["یارانه سوخت"] = float(fuel_stations.get("subsidy_cost", 0.0)) / 12.0
+	econ["policy_costs"] = ft_costs
 	# اما حذف یارانه تورم‌زا است
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + (1.0 - subsidy) * 0.003 - ev_share * 0.002, 0.0, 1.0)
 	state["economy"] = econ
@@ -92,13 +95,11 @@ func reform_subsidy(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "اصلاح قیمت سوخت هر ۱۰ نوبت یک بار", "state": state, "events": []}
 	fp["last_reform"] = turn
 	fp["subsidy"] = clampf(float(fp.get("subsidy", 0.65)) - 0.15, 0.10, 1.0)
-	# درآمد هدفمندی به رفاه
-	var econ: Dictionary = state.get("economy", {})
-	econ["national_debt"] = maxf(0.0, float(econ.get("national_debt", 0.0)) - float(econ.get("gdp", 1.0)) * 0.003)
-	state["economy"] = econ
+	# (بازرسی ۱۴۰۵ — دور یازدهم) کسر یک‌بارهٔ بدهی (۰٫۳٪ GDP به‌ازای هر اصلاح) حذف
+	# شد: پاداش واقعی اصلاح = کاهش ماهانهٔ هزینهٔ یارانه در کانال policy_costs.
 	state["fuel_policy"] = fp
 	return {"success": true, "state": state,
-		"events": [{"type": "fuel_reform", "message": "💰 اصلاح یارانه سوخت اجرا شد؛ درآمد هدفمند شد ولی تورم و نارضایتی در پی دارد"}]}
+		"events": [{"type": "fuel_reform", "message": "💰 اصلاح یارانه سوخت اجرا شد؛ قیمت پمپ بالا می‌رود و هزینهٔ یارانهٔ خزانه کم می‌شود، ولی تورم و نارضایتی در پی دارد"}]}
 
 # ── توسعه ایستگاه شارژ برقی ──
 func build_charging(state: Dictionary) -> Dictionary:

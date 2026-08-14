@@ -3238,7 +3238,7 @@ func _build_energy_card(st: Dictionary):
 	_bar(card, "سهم فسیلی", float(mix.get("fossil", 0.7)))
 	_bar(card, "سهم تجدیدپذیر", float(mix.get("renewable", 0.1)))
 	_bar(card, "سهم هسته‌ای", float(mix.get("nuclear", 0.05)))
-	_row(card, "یارانه انرژی", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("subsidies", 0.45)) * 100.0)))
+	_row(card, "یارانه انرژی (برق و گاز)", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("subsidies", 0.45)) * 100.0)))
 	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 5); card.add_child(act_row)
 	for act in [["renewable", "🌱 سرمایه سبز"], ["nuclear", "☢️ هسته‌ای"], ["subsidy", "⚡ اصلاح یارانه"], ["climate", "🌍 تعهد اقلیمی"]]:
 		var btn = Button.new(); btn.text = act[1]
@@ -5411,6 +5411,8 @@ func _build_fuel_card(st: Dictionary):
 	_bar(card, "قاچاق سوخت", float(fp.get("smuggling", 0.30)))
 	_bar(card, "سهم خودروی برقی", float(fp.get("ev_share", 0.02)))
 	_row(card, "تقاضای سوخت", PersianFormatter.format_percent(float(fp.get("fuel_demand", 0.70))))
+	# هزینهٔ زندهٔ یارانه از کانال policy_costs (ادغام مفهومی یارانه — دور یازدهم)
+	_row(card, "هزینهٔ ماهانهٔ یارانه", PersianFormatter.format_money(st.get("economy", {}).get("policy_costs", {}).get("یارانه سوخت", 0.0)))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["reform", "💰 اصلاح یارانه"], ["charging", "⚡ شارژ برقی"], ["emission", "🚗 استاندارد"], ["fleet", "🚍 ناوگان برقی"]]:
 		var btn = Button.new(); btn.text = a[1]
@@ -5419,7 +5421,7 @@ func _build_fuel_card(st: Dictionary):
 		_mark_decision_button(btn, "fuel:" + a[0])
 		row.add_child(btn)
 	var hint = Label.new()
-	hint.text = "یارانه سوخت قیمت پمپ را پایین نگه می‌دارد: اصلاح آن بنزین را گران می‌کند (تورم و اعتراض کوتاه‌مدت) ولی قاچاق را از ریشه می‌خشکاند و خزانهٔ اصلاح قیمت را پر می‌کند. اصلاح یارانه هر ۱۰ نوبت؛ ایستگاه شارژ به انرژی پاک ۴+ نیاز دارد."
+	hint.text = "یارانه سوخت قیمت پمپ را پایین نگه می‌دارد و ماهانه از بودجه هزینه می‌برد (کارت مالی). اصلاح آن بنزین را گران می‌کند (تورم و اعتراض کوتاه‌مدت) ولی قاچاق را از ریشه می‌خشکاند و هزینهٔ یارانه را کم می‌کند. هر ۱۰ نوبت؛ ایستگاه شارژ به انرژی پاک ۴+ نیاز دارد."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
 	card.add_child(hint)

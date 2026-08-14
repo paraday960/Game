@@ -51,7 +51,7 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/engine.gd": 3,
     "scripts/core/epidemic_manager.gd": 2,
     "scripts/core/fdi_manager.gd": 2,
-    "scripts/core/fuel_transition_manager.gd": 1,  # سهم خزانهٔ اصلاح قیمت به کانال رفت
+    "scripts/core/fuel_transition_manager.gd": 0,  # دور یازدهم: کسر یک‌بارهٔ بدهی هم حذف شد (پاداش = هزینهٔ کمتر یارانه)
     "scripts/core/heritage_manager.gd": 1,  # عایدی ضدقاچاق (اقدام؛ قبلاً جمع فانتوم روی revenue بود)
     "scripts/core/industry_manager.gd": 1,
     "scripts/core/infrastructure_manager.gd": 1,
@@ -92,6 +92,9 @@ POLICY_COST_PUBLISHERS = {
     "scripts/core/transport_manager.gd": ["یارانه کرایه حمل‌ونقل عمومی"],
     "scripts/core/veterans_manager.gd": ["مستمری و خدمات کهنه‌سربازان"],
     "scripts/core/welfare_manager.gd": ["انتقال‌های اجتماعی"],
+    # دور یازدهم: ادغام مفهومی یارانه — هزینهٔ واقعی یارانهٔ سوخت از مدل زندهٔ
+    # شکاف قیمت پمپ‌بنز؛ «درآمد اصلاح قیمت» و کسر یک‌بارهٔ بدهی حذف شدند
+    "scripts/core/fuel_transition_manager.gd": ["یارانه سوخت"],
 }
 
 # ── ۱) سرشماری «فقط کم است» ────────────────────────────────────────────
@@ -134,7 +137,8 @@ else:
 # ── ۴) کانال‌های درآمدی ماهانه (مهاجرت از «کسر خاموش بدهی») ─────────────
 REVENUE_PUBLISHERS = {
     "scripts/core/climate_manager.gd": "carbon_tax_monthly",
-    "scripts/core/fuel_transition_manager.gd": "fuel_transition_monthly",
+    # دور یازدهم: fuel_transition_monthly حذف شد — با هزینهٔ واقعی یارانهٔ سوخت
+    # در کانال policy_costs ادغام شد (یارانهٔ رایگان/پاداش سه‌گانهٔ اصلاح مرد)
     "scripts/core/stock_market_manager.gd": "stock_gains_monthly",
 }
 for f, key in sorted(REVENUE_PUBLISHERS.items()):

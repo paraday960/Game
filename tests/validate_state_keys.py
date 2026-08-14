@@ -81,8 +81,9 @@ IMPORTANT_KEYS = {
                 "oil_price_bonus",
                 # بازرسی ۱۴۰۵ (دور هشتم): کانال چندناشری هزینه‌های بخشی مداوم
                 "policy_costs", "policy_costs_total",
-                # کانال‌های درآمدی ماهانهٔ بخش‌ها (ناشر: climate/fuel_transition/stock → خزانه)
-                "carbon_tax_monthly", "fuel_transition_monthly", "stock_gains_monthly"],
+                # کانال‌های درآمدی ماهانهٔ بخش‌ها (ناشر: climate/stock → خزانه؛
+                # fuel_transition دور یازدهم به هزینهٔ واقعی در policy_costs ادغام شد)
+                "carbon_tax_monthly", "stock_gains_monthly"],
     "trade": ["market_access_bonus"],
     "stock_policy": ["last_crash"],
     "resources": ["energy_crisis", "food_crisis"],
