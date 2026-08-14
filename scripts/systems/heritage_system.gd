@@ -30,12 +30,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	heritage["preservation"] = clamp(heritage["preservation"] * 0.99 + preservation_target * 0.01, 0.2, 0.95)
 
 	# سایت‌های میراث
-	if heritage["preservation"] > 0.7 and Deterministic.chance(0.003):
+	# پویش احتمال ۱۴۰۵ — p=0.003 → ۰٫۰۰۸: پیش‌تر کشف محوطه هر ~۱۴ سال یک‌بار می‌افتاد (محتوای مرده)؛ حالا هر ~۵ سال
+	if heritage["preservation"] > 0.7 and Deterministic.chance(0.008):
 		heritage["sites"] += 1
 		events.append({"type": "heritage_site_discovered", "message": "کشف محوطه تاریخی جدید - افزایش سایت‌های میراث", "sites": heritage["sites"]})
 
 	# یونسکو
-	if heritage["preservation"] > 0.75 and heritage["sites"] > 15 and Deterministic.chance(0.002):
+	if heritage["preservation"] > 0.75 and heritage["sites"] > 15 and Deterministic.chance(0.012):
 		heritage["unesco_sites"] += 1
 		events.append({"type": "unesco_inscription", "message": "ثبت جهانی یونسکو - افتخار ملی و جذب گردشگر!", "unesco": heritage["unesco_sites"]})
 

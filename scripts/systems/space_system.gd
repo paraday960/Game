@@ -54,7 +54,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	space["rockets"] = clampi(int(space.get("rockets", 3)), 1, rocket_cap)
 
 	# فضانوردان
-	if space["level"] > 0.7 and Deterministic.chance(0.002):
+	# پویش احتمال ۱۴۰۵ — p=0.002 → ۰٫۰۱۵: اعزام فضانورد از هر ~۲۱ سال به هر ~۳ سال در برنامهٔ فضایی بالغ
+	if space["level"] > 0.7 and Deterministic.chance(0.015):
 		space["astronauts"] += 1
 		events.append({"type": "astronaut_program", "message": "برنامه فضانوردی - اعزام فضانورد به مدار!", "astronauts": space["astronauts"]})
 		state["culture"]["cohesion"] = clamp(state.get("culture",{}).get("cohesion",0.65) + 0.02, 0.1, 0.95)
