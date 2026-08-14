@@ -29,7 +29,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# فرمول‌ها - ۳.۲۰.۳
 	# نرخ سواد = f(پوشش مدرسه، کیفیت، بودجه)
-	var literacy_target = 0.6 + education["primary_coverage"] * 0.3 + education["quality"] * 0.2 + (edu_budget / 10_000_000_000.0) * 0.1
+	# نُرم مرجع واقع‌گرایانه: ۳٪ تولید ناخالص سالانه برای آموزش (بودجه ماهانه ÷۱۲)
+	var edu_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.03 / 12.0
+	var literacy_target = 0.6 + education["primary_coverage"] * 0.3 + education["quality"] * 0.2 + clampf(edu_budget / edu_norm, 0.0, 2.0) * 0.05
 	education["literacy"] = clamp(education["literacy"] * 0.999 + literacy_target * 0.001, 0.1, 0.99)
 
 	# پوشش‌ها با بودجه

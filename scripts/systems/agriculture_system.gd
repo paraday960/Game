@@ -37,7 +37,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	yield_factor = clamp(yield_factor, 0.2, 1.5)
 	agri["yield"] = yield_factor
 
-	var production = 100.0 * yield_factor * (1.0 + agri_budget / 10_000_000_000.0 * 0.1)
+	# نُرم مرجع: ۱.۵٪ تولید ناخالص سالانه برای کشاورزی — اثر بودجه نسبت به نُرم، نه دلار مطلق
+	var agri_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.015 / 12.0
+	var production = 100.0 * yield_factor * (1.0 + clampf(agri_budget / agri_norm, 0.0, 2.5) * 0.08)
 	agri["production"] = agri["production"] * 0.99 + production * 0.01
 
 	# امنیت غذایی = f(تولید، ذخیره، واردات، توزیع، ضایعات)

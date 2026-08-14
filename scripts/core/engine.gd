@@ -61,6 +61,38 @@ const ACTION_COST_SHARES = {
 	"tax_action": {"compliance": 0.0010, "digital": 0.0015, "bracket": 0.0002},
 }
 
+# ── سطح‌بندی هزینه اقدام‌های بدون نرخ صریح (بازرسی مقیاس اثرات) ──
+# خانواده‌ای که در ACTION_COST_SHARES سطر ندارد (یا مدیرش چیزی شارژ نکرده است)، بر
+# اساس ماهیت برنامه در یکی از چهار سطح می‌افتد؛ مقادیر = سهم از تولید ناخالص سالانه:
+const ACTION_FALLBACK_FAMILY = {
+	"ambassador_action": "symbolic", "succession_action": "symbolic",
+	"rivalry_action": "symbolic", "court_action": "symbolic",
+	"digital_action": "admin", "statistics_action": "admin", "judicial_reform_action": "admin",
+	"election_action": "admin", "civic_action": "admin", "stock_action": "admin",
+	"banking_action": "admin", "insurance_action": "admin", "trade_policy_action": "admin",
+	"fdi_action": "admin", "shadow_action": "admin", "ip_action": "admin",
+	"agriculture_action": "capital", "arms_action": "capital", "basic_industry_action": "capital",
+	"blue_economy_action": "capital", "civil_defense_action": "capital", "climate_action": "capital",
+	"disaster_action": "capital", "education_action": "capital", "energy_action": "capital",
+	"fuel_action": "capital", "higher_ed_action": "capital", "housing_action": "capital",
+	"industry_action": "capital", "infra_action": "capital", "mining_action": "capital",
+	"prison_action": "capital", "space_action": "capital", "transit_action": "capital",
+	"transport_action": "capital", "urban_action": "capital", "waste_action": "capital",
+	"water_action": "capital", "watershed_action": "capital",
+}
+const ACTION_FALLBACK_TIERS = {
+	"symbolic": 0.0002,
+	"admin": 0.0005,
+	"standard": 0.0012,
+	"capital": 0.0030,
+}
+const ACTION_TIER_FA = {
+	"symbolic": ["اقدام نمادین", "۰.۰۲٪"],
+	"admin": ["برنامه اداری", "۰.۰۵٪"],
+	"standard": ["برنامه ملی", "۰.۱۲٪"],
+	"capital": ["طرح سرمایه‌ای", "۰.۳۰٪"],
+}
+
 signal tick_completed(new_state, events)
 signal tick_failed(reason)
 signal tick_progress(day, total_days, phase)
@@ -2206,7 +2238,7 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 				for ev in result.events:
 					EventLog.log_event("map_building_event", ev, cmd.tick, cmd.version)
 	# بازرسی اقدامات ۲ — هر اقدام «_action» که از مسیر مدیرش هم هیچ شارژی نگذرانده،
-	# هزینه پایه برنامه ملی (۰.۱۲٪ تولید ناخالص) به بدهی دولت می‌گیرد؛ رایگان نیست!
+	# هزینه سطح‌بندی‌شده‌اش (نمادین/اداری/استاندارد/سرمایه‌ای) به بدهی دولت می‌گیرد؛ رایگان نیست!
 	var _final_type: String = str(cmd.type)
 	if _final_type.ends_with("_action"):
 		var _econ_after: Dictionary = snapshot.get("economy", {})
@@ -2214,9 +2246,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		var _debt_after: float = float(_econ_after.get("national_debt", 0.0))
 		var _gdp_final: float = float(_econ_after.get("gdp", 0.0))
 		if absf(_extra_after - _extra_before) < 1.0 and absf(_debt_after - _debt_before) < 1.0 and _gdp_final > 0.0:
-			_econ_after["national_debt"] = _debt_after + _gdp_final * 0.0012
+			var _tier: String = str(ACTION_FALLBACK_FAMILY.get(_final_type, "standard"))
+			var _share: float = float(ACTION_FALLBACK_TIERS[_tier])
+			_econ_after["national_debt"] = _debt_after + _gdp_final * _share
 			snapshot["economy"] = _econ_after
-			EventLog.log_event("action_cost", {"message": "اعتبار اجرای برنامه از محل بدهی دولت تأمین شد (۰.۱۲٪ تولید ناخالص)", "command": _final_type}, cmd.tick, cmd.version)
+			var _tier_fa: Array = ACTION_TIER_FA[_tier]
+			EventLog.log_event("action_cost", {"message": "اعتبار اجرای %s از محل بدهی دولت تأمین شد (%s تولید ناخالص سالانه)" % [str(_tier_fa[0]), str(_tier_fa[1])], "command": _final_type}, cmd.tick, cmd.version)
 	# تمام انواع فرمان در همان تراکنش و با فراداده نسخه مقصد ثبت می‌شوند.
 	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 

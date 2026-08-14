@@ -49,7 +49,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# درآمد
 	var revenue = hospitality["restaurants"] * 200000.0 + hospitality["hotels"] * 5000000.0 + hospitality["cafes"] * 100000.0
-	revenue *= (1.0 + tourism_revenue / 10_000_000_000.0 * 0.2)
+	# نُرم مرجع: ۱٪ تولید ناخالص سالانه درآمد گردشگری (سطح سالانه) — بدون دلار مطلق
+	var tourism_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.01
+	revenue *= (1.0 + clampf(tourism_revenue / tourism_norm, 0.0, 2.0) * 0.12)
 	hospitality["revenue"] = hospitality["revenue"] * 0.99 + revenue * 0.01
 
 	# اثر بر اقتصاد

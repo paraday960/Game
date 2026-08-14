@@ -45,7 +45,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	health["population_health"] = clamp(population_health, 0.1, 0.95)
 
 	# کیفیت با بودجه
-	var quality_change = (health_budget_share - 0.08) * 0.01 + (health_budget / 10_000_000_000.0 - 0.5) * 0.001
+	# نُرم مرجع: ۵٪ تولید ناخالص سالانه برای سلامت؛ انحراف از نُرم کیفیت را جابه‌جا می‌کند
+	var health_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.05 / 12.0
+	var quality_change = (health_budget_share - 0.08) * 0.01 + clampf(health_budget / health_norm - 1.0, -1.0, 1.0) * 0.001
 	health["quality"] = clamp(health["quality"] + quality_change, 0.1, 0.95)
 
 	# پوشش بیمه = f(بودجه، نظام بیمه، سیاست)
