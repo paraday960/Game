@@ -4291,6 +4291,9 @@ func _build_cyber_card(st: Dictionary):
 		return
 	var offense := CyberManager.offense_level(st)
 	var defense := CyberManager.defense_level(st)
+	# latch: حملهٔ سایبری هر ۳ نوبت یک‌بار (cyber_manager.cyber_attack)
+	var _turn_now: int = int(st.get("time", {}).get("turn", 0))
+	var _atk_left: int = maxi(0, 3 - (_turn_now - int(cy.get("last_attack", -99))))
 	var card = _card("💻 جنگ سایبری")
 	_row(card, "توان تهاجمی", PersianFormatter.to_persian_digits("%.0f" % offense))
 	_row(card, "توان دفاعی", PersianFormatter.to_persian_digits("%.0f" % defense))
@@ -4303,6 +4306,8 @@ func _build_cyber_card(st: Dictionary):
 	fw_btn.pressed.connect(FeedbackManager.play_click); fw_btn.pressed.connect(_on_cyber.bind("firewall", "", ""))
 	_mark_decision_button(fw_btn, "cyber:firewall")
 	act_row.add_child(fw_btn)
+	if _atk_left > 0:
+		_row(card, "⏳ آماده‌سازی حملهٔ بعدی", PersianFormatter.to_persian_digits(str(_atk_left)) + " نوبت دیگر")
 	# اهداف حمله
 	var world: Dictionary = st.get("world", {})
 	var relations: Dictionary = st.get("diplomacy", {}).get("relations", {})
@@ -4323,7 +4328,7 @@ func _build_cyber_card(st: Dictionary):
 			for kind in [["economy", "اقتصاد"], ["infrastructure", "زیرساخت"], ["information", "اطلاعات"]]:
 				var btn = Button.new(); btn.text = kind[1]
 				btn.custom_minimum_size = Vector2(0, 32); btn.add_theme_font_size_override("font_size", 11)
-				btn.disabled = offense < 25.0
+				btn.disabled = offense < 25.0 or _atk_left > 0
 				btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_cyber.bind("attack", str(cid), kind[0]))
 				_mark_decision_button(btn, "cyber:atk:" + str(cid) + ":" + kind[0])
 				row.add_child(btn)
@@ -4379,7 +4384,10 @@ func _build_welfare_card(st: Dictionary):
 		return
 	var welfare: Dictionary = st.get("welfare", {})
 	var card = _card("👵 رفاه و تأمین اجتماعی")
-	_row(card, "سن بازنشستگی", PersianFormatter.to_persian_digits(str(int(wp.get("pension_age", 65)))) + " سال")
+	# latch: اصلاح سن بازنشستگی هر ۱۲ نوبت یک‌بار (welfare_manager.set_pension_age)
+	var _turn_now: int = int(st.get("time", {}).get("turn", 0))
+	var _pen_left: int = maxi(0, 12 - (_turn_now - int(wp.get("last_pension", -99))))
+	_row(card, "سن بازنشستگی", PersianFormatter.to_persian_digits(str(int(wp.get("pension_age", 65)))) + " سال" + ("" if _pen_left <= 0 else " · ⏳ " + PersianFormatter.to_persian_digits(str(_pen_left)) + " نوبت تا اصلاح"))
 	_bar(card, "فشار صندوق بازنشستگی", float(welfare.get("pension_pressure", 0.3)))
 	_bar(card, "بیمه بیکاری", float(wp.get("unemployment_benefit", 0.4)))
 	_bar(card, "یارانه فرزند", float(wp.get("child_allowance", 0.2)))
@@ -4390,6 +4398,7 @@ func _build_welfare_card(st: Dictionary):
 		var btn = Button.new(); btn.text = p[1]
 		btn.custom_minimum_size = Vector2(0, 34); btn.add_theme_font_size_override("font_size", 11)
 		btn.toggle_mode = true; btn.button_pressed = int(wp.get("pension_age", 65)) == p[0]
+		btn.disabled = _pen_left > 0
 		btn.pressed.connect(FeedbackManager.play_click); btn.pressed.connect(_on_welfare.bind("pension", p[0]))
 		_mark_decision_button(btn, "welfare:pension:" + str(p[0]))
 		row.add_child(btn)
