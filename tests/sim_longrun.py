@@ -39,6 +39,7 @@ def initial_state():
         "tariff_rate": 0.15, "customs_eff": 0.60, "export_div": 0.55,
         "industry_adv": 0.15, "exchange_rate": 1.0, "fx_premium": 0.0,
         "foreign_reserves": 60e9,
+        "reserve_inflows": {}, "reserve_inflows_monthly": 0.0,
         # central bank (policy_mode=independent)
         "interest_rate": 0.15, "money_supply": 1.0, "inflation_target": 0.05,
         "independence": 0.70,
@@ -291,6 +292,10 @@ def step_day(s):
     # ذخایر ارزیِ واحد (بازرسی: cb/econ ادغام شدند) + نرخ ارز شناور
     # (در بازی بانک مرکزی تراز تیکِ قبل را می‌خواند؛ این‌جا همان تیک — تفاوت یک‌روزه ناچیز)
     s["foreign_reserves"] = max(s["foreign_reserves"] + s["trade_balance"] / 365.0 * 0.3, 0.0)
+    # کانال نرخ ماهانهٔ ورودی ذخایر (همگام با central_bank_system.gd)
+    infl = sum(float(v) for v in s["reserve_inflows"].values())
+    s["foreign_reserves"] = max(s["foreign_reserves"] + infl / 30.0, 0.0)
+    s["reserve_inflows_monthly"] = infl
     trade_anchor = max(s["gdp"] * 0.2, 1e9)
     exch_change = (-s["trade_balance"] / trade_anchor * 0.02 * 0.01
                    - (s["inflation"] - 0.03) * 0.02 + (s["interest_rate"] - 0.05) * 0.03)
@@ -706,6 +711,45 @@ def run_gdp_boost_suite():
             FAIL.append(name); ok = False
     return ok
 
+def run_reserve_inflow_suite():
+    """سناریوی هشتم: کانال نرخ ماهانهٔ ورودی ذخایر (reserve_inflows) — ناشر بازنویسی
+    می‌کند (نه انباشت) و مالک روزانه تسویه می‌کند. پین معنای کانال در آینه."""
+    print("═══ سناریوی کانال ذخایر: نرخ ماهانه، بازنویسی ناشر و تسویهٔ روزانه ═══")
+    s = initial_state()
+    for _ in range(365):
+        step_day(s)
+    base_r = s["foreign_reserves"]
+    s = initial_state()
+    s["reserve_inflows"] = {"آزمون الف": 3.0e9}
+    for _ in range(365):
+        step_day(s)
+    one_pub = s["foreign_reserves"]
+    s = initial_state()
+    s["reserve_inflows"] = {"آزمون الف": 4.0e9, "آزمون ب": 2.0e9}
+    for _ in range(365):
+        step_day(s)
+    two_pub = s["foreign_reserves"]
+    s = initial_state()
+    s["reserve_inflows"] = {"آزمون الف": 4.0e9}
+    for _ in range(182):
+        step_day(s)
+    s["reserve_inflows"] = {"آزمون الف": 0.0, "آزمون ب": 2.0e9}   # الف خاموش، ب روشن
+    for _ in range(183):
+        step_day(s)
+    rew = s["foreign_reserves"]
+    checks = [
+        ("یک ناشر ۳م/ماه: +~۳۶م در سال نسبت به پایه", 34e9 < one_pub - base_r < 38e9),
+        ("دو ناشر ۴+۲م/ماه: +~۷۲م در سال نسبت به پایه", 70e9 < two_pub - base_r < 74e9),
+        ("بازنویسی ناشر (انباشت نشدن): پس از تعویض فقط ب فعال است",
+         rew > base_r and rew < two_pub - 20e9),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 if __name__ == "__main__":
     print("═══ شبیه‌سازی بلندمدت — ۱۰ سال از نقطهٔ شروع پیش‌فرض (بدون اقدام بازیکن) ═══")
     s, hist = run()
@@ -725,6 +769,8 @@ if __name__ == "__main__":
     ok = run_shock_suite() and ok
     print()
     ok = run_gdp_boost_suite() and ok
+    print()
+    ok = run_reserve_inflow_suite() and ok
     print()
     if FAIL:
         print("═══ شکست — %d نقض پایداری ═══" % len(FAIL))

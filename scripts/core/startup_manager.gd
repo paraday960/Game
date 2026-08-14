@@ -61,7 +61,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# صادرات فناوری
 	var tech_export: float = clampf(innovation * 0.4 + vc * 0.2 + float(sp.get("unicorns", 0)) * 0.05, 0.0, 0.95)
 	sp["tech_exports"] = tech_export
-	econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + gdp * tech_export * 0.0005
+	# ممیزی ذخایر (۱۴۰۵): ورودی ماهانه به کانال reserve_inflows (مالک: بانک مرکزی)
+	var su_infl: Dictionary = econ.get("reserve_inflows", {})
+	su_infl["صادرات فناوری استارتاپی"] = gdp * tech_export * 0.0005
+	econ["reserve_inflows"] = su_infl
 
 	# اثر اقتصادی: بهره‌وری و اشتغال
 	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)

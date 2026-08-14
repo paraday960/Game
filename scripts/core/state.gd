@@ -82,6 +82,9 @@ func init_default_state():
 			# کانال مالک-یکتای سطح GDP: نرخ سالانهٔ سهم هر بخش (بازنویسی، نه انباشت)
 			"sector_boosts": {},
 			"sector_boosts_total": 0.0,
+			# کانال نرخ ماهانهٔ ورودی ذخایر ارزی: ناشر→مبلغ دلاری ماهانه (بازنویسی، نه انباشت)
+			"reserve_inflows": {},
+			"reserve_inflows_monthly": 0.0,
 			"government_revenue": 100_000_000_000.0,
 			"foreign_reserves": 60_000_000_000.0,
 			"celebration_tracking": {"last_stage": "دولت نوپا", "last_achievement_count": 0, "last_high_score": 0.0, "last_pop_mark": 0, "last_gdp_mark": 0},

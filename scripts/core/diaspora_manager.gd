@@ -50,7 +50,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var remittance_gdp_share := 0.005 + trust * 0.018 + networks * 0.010
 	var remittance := gdp * remittance_gdp_share
 	dp["remittance_b"] = remittance / 1_000_000_000.0
-	econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + remittance * 0.35
+	# ممیزی ذخایر (۱۴۰۵): حواله‌های ارزی به کانال reserve_inflows (مالک: بانک مرکزی)
+	var ds_infl: Dictionary = econ.get("reserve_inflows", {})
+	ds_infl["حواله‌های دیاسپورا"] = remittance * 0.35
+	econ["reserve_inflows"] = ds_infl
 	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲) (سایت قبلی با ماسک gdp_ پنهان بود)
 	var ds_boosts: Dictionary = econ.get("sector_boosts", {})
 	ds_boosts["حواله‌های دیاسپورا"] = remittance_gdp_share * 0.08 * 12.0

@@ -105,7 +105,10 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		var boost_delta: float = (boost_target - boost_prev) * 0.20
 		economy["gdp"] = gdp + boost_delta
 		p["_gdp_boost"] = boost_prev + boost_delta
-		economy["foreign_reserves"] = float(economy.get("foreign_reserves", 0.0)) + gdp * eg * 0.0006
+		# ممیزی ذخایر (۱۴۰۵): ورودی ماهانه به کانال reserve_inflows (مالک: بانک مرکزی)
+		var st_infl: Dictionary = economy.get("reserve_inflows", {})
+		st_infl["صادرات استاندارد"] = gdp * eg * 0.0006
+		economy["reserve_inflows"] = st_infl
 		state["economy"] = economy
 
 	# بازرسی بازار → اعتماد مصرف‌کننده و شادی اندک

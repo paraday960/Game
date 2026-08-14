@@ -82,6 +82,47 @@ MIGRATED = {
     "scripts/systems/statistics_system.gd": ["دقت آمار رسمی"],
 }
 
+# ── کانال نرخ ماهانهٔ ورودی ذخایر ارزی (reserve_inflows) ─────────────────
+# الگوی مشابه sector_boosts: ناشر بخشی کلید فارسی خودش را با «مبلغ دلاری ماهانه»
+# بازنویسی می‌کند (نه انباشت) و central_bank_system به‌عنوان مالک روزانه تسویه می‌کند.
+RESERVE_PUBLISHERS = {
+    "scripts/core/aerospace_manager.gd": ["خدمات ماهواره‌ای"],
+    "scripts/core/aviation_manager.gd": ["هاب هوایی و بار"],
+    "scripts/core/health_tourism_manager.gd": ["گردشگری سلامت"],
+    "scripts/core/startup_manager.gd": ["صادرات فناوری استارتاپی"],
+    "scripts/core/standards_manager.gd": ["صادرات استاندارد"],
+    "scripts/core/downstream_energy_manager.gd": ["محصولات پالایشی"],
+    "scripts/core/diaspora_manager.gd": ["حواله‌های دیاسپورا"],
+}
+# بودجهٔ pestleٔ نویسههای مستقیم foreign_reserves (غیر از کانال) — فقط کم می‌شود.
+RESERVE_BUDGET = {
+    "scripts/systems/central_bank_system.gd": 3,      # مالک مخزن (init + تسویه)
+    # گذرا/اقدام/هزینه‌کرد مستقیم کیف ارزی (مجاز و پایش‌شده)
+    "scripts/core/diaspora_manager.gd": 1,            # اقدام اعتماد‌سازی دیاسپورا
+    "scripts/core/dilemma_manager.gd": 1,             # پیامد رویداد انتخابی
+    "scripts/core/faction_manager.gd": 1,             # برش بحرانی (آشوب)
+    "scripts/core/fdi_manager.gd": 1,                 # خروج سرمایه (رویداد)
+    "scripts/core/forex_manager.gd": 1,               # هزینهٔ مداخله ارزی (اقدام)
+    "scripts/core/industry_manager.gd": 1,            # درآمد خصوصی‌سازی (اقدام)
+    "scripts/core/market_manager.gd": 2,              # خرید/فروش بازار (اقدام)
+    "scripts/core/daily_reward_manager.gd": 1,        # پاداش روزانه
+    "scripts/core/offline_progress_manager.gd": 1,    # پاداش آفلاین
+    "scripts/core/org_manager.gd": 2,                 # هزینهٔ عضویت/اقدام سازمانی
+    "scripts/core/world_manager.gd": 2,               # جهان/NPC/جنگ
+    "scripts/systems/international_orgs_system.gd": 1,  # حقوق دوره‌ای سازمانی
+    # در انتظار دور بعد (نرخ ماهانهٔ درآمد ارزی — نامزد مهاجرت به reserve_inflows):
+    "scripts/core/tourism_manager.gd": 1,
+    "scripts/core/commodity_manager.gd": 2,
+    "scripts/core/creative_manager.gd": 2,
+    "scripts/core/knowledge_economy_manager.gd": 1,
+    "scripts/core/petrochemical_manager.gd": 1,
+    "scripts/core/defense_industry_manager.gd": 1,
+    "scripts/core/arms_manager.gd": 1,
+    "scripts/core/pro_sports_manager.gd": 1,
+    "scripts/core/stock_market_manager.gd": 1,
+    "scripts/core/shadow_manager.gd": 2,
+}
+
 BUDGET = {
     # مالک کانال (روند/کشش‌ها/شوک‌های درون‌سیستمی)
     "scripts/systems/economy_system.gd": 7,

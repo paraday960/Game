@@ -62,7 +62,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	econ["sector_boosts"] = de_boosts
 	# درآمد ارزی: محصول صادر می‌شود حتی با تحریم
 	if va > 0.4:
-		econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + gdp * va * 0.0004
+		# ممیزی ذخایر (۱۴۰۵): ورودی ماهانه به کانال reserve_inflows (مالک: بانک مرکزی)
+		var de_infl: Dictionary = econ.get("reserve_inflows", {})
+		de_infl["محصولات پالایشی"] = gdp * va * 0.0004
+		econ["reserve_inflows"] = de_infl
 	state["economy"] = econ
 
 	# خوراک پتروشیمی از منابع گاز/نفت می‌آید

@@ -98,6 +98,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var reserves_now: float = float(economy.get("foreign_reserves", 60_000_000_000.0))
 	reserves_now += trade_balance / 365.0 * 0.3  # 30٪ تراز سالانه به ذخایر
 	reserves_now = max(reserves_now, 0.0)
+	# کانال نرخ ماهانهٔ ورودی ذخایر (بازرسی ۱۴۰۵): ناشران بخشی (ماهواره، حواله، گردشگری
+	# سلامت…) جمعِ ماهانهٔ دلاری را این‌جا می‌ریزند و مالک روزانه تسویه می‌کند — دیگر
+	# جمع‌های ماهانهٔ غیرهماهنگ روی مخزن واحد وجود ندارد (ماندگاری قدیمی: تراز تجاری پایین)
+	var inflow_month: float = 0.0
+	for _rk in economy.get("reserve_inflows", {}).keys():
+		inflow_month += float(economy["reserve_inflows"][_rk])
+	reserves_now += inflow_month / 30.0
+	economy["reserve_inflows_monthly"] = inflow_month
 	economy["foreign_reserves"] = reserves_now
 	cb["foreign_reserves"] = reserves_now  # آینهٔ سازگاری برای سیوهای قدیمی
 	state["economy"] = economy

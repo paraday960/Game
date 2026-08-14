@@ -24,9 +24,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gdp_contract import (ROOT, SCRIPTS, read, rel, esc, ARABIC_PERSIAN_KEY_RE,
-                          MIGRATED, BUDGET, SINGLE_OWNER_ALLOW, collect_gd_files,
-                          collect_write_sites, get_convergent_level_files,
-                          is_convergent_level_site)
+                          MIGRATED, BUDGET, SINGLE_OWNER_ALLOW, RESERVE_PUBLISHERS,
+                          RESERVE_BUDGET, collect_gd_files, collect_write_sites,
+                          get_convergent_level_files, is_convergent_level_site)
 
 
 def main():
@@ -95,6 +95,50 @@ def main():
           "clamp(sum(clamp(float(v), -0.05, 0.05)" in mirror and "boost_total / 365.0" in mirror)
     check("C4) آینه: سناریوی کانال GDP ثبت و اجرا می‌شود",
           "def run_gdp_boost_suite()" in mirror and "run_gdp_boost_suite() and ok" in mirror)
+
+    # ── C7: کانال نرخ ماهانهٔ ورودی ذخایر ارزی (reserve_inflows) ─────────
+    RES_WRITE_RE = re.compile(r'\["foreign_reserves"\]\s*[+\-]?\*?=[^=]')
+    check("C7) مقداردهی اولیهٔ reserve_inflows در state.gd",
+          re.search(r'"reserve_inflows":\s*\{\}', state_src) is not None)
+    cb_src = read(os.path.join(SCRIPTS, "systems", "central_bank_system.gd"))
+    check("C7) مالک تسویهٔ کانال: حلقهٔ جمع + تقسیم روزانه + انتشار در central_bank",
+          'for _rk in economy.get("reserve_inflows", {}).keys():' in cb_src
+          and "reserves_now += inflow_month / 30.0" in cb_src
+          and 'economy["reserve_inflows_monthly"] = inflow_month' in cb_src)
+    for f, keys in sorted(RESERVE_PUBLISHERS.items()):
+        src = read(os.path.join(ROOT, f))
+        for key in keys:
+            check("C7) ناشر ذخایر «%s» در %s" % (key, f),
+                  ('_infl["%s"]' % key) in src)
+    all_rkeys = [k for ks in RESERVE_PUBLISHERS.values() for k in ks]
+    rdup = [k for k in set(all_rkeys) if all_rkeys.count(k) > 1]
+    check("C7) یکتایی کلیدهای کانال ذخایر (یک کلید = یک مالک)", not rdup, str(rdup))
+    actual_r = {}
+    for path in gd_files:
+        cnt = 0
+        for line in read(path).splitlines():
+            if line.strip().startswith("#"):
+                continue
+            if RES_WRITE_RE.search(line):
+                cnt += 1
+        if cnt:
+            actual_r[rel(path)] = cnt
+    new_rf = sorted(set(actual_r) - set(RESERVE_BUDGET))
+    check("C7) نویسندهٔ مستقیم جدیدی برای ذخایر اضافه نشده", not new_rf,
+          "فایل‌های جدید: %s" % ", ".join(new_rf))
+    over_r = {f: (a, RESERVE_BUDGET[f]) for f, a in actual_r.items()
+              if f in RESERVE_BUDGET and a > RESERVE_BUDGET[f]}
+    check("C7) بودجهٔ نویسهٔ مستقیم ذخایر در هیچ فایلی رشد نکرده",
+          not over_r, "بیشتر از سقف: %s" % over_r)
+    NOTES.append("ℹ️ ذخایر: %d ناشر کانال، %d نویسهٔ مستقیم باقی‌مانده (سقف %d)"
+                 % (len(RESERVE_PUBLISHERS), sum(actual_r.values()),
+                    sum(RESERVE_BUDGET.values())))
+    mirror2 = read(os.path.join(ROOT, "tests", "sim_longrun.py"))
+    check("C7) آینه: reserve_inflows در initial_state و تسویهٔ روزانه",
+          '"reserve_inflows": {}' in mirror2 and "infl / 30.0" in mirror2)
+    check("C7) آینه: سناریوی کانال ذخایر اجرا می‌شود",
+          "def run_reserve_inflow_suite()" in mirror2
+          and "run_reserve_inflow_suite() and ok" in mirror2)
 
     # ── C5: بودجهٔ نویسه‌های مستقیم (pestle — فقط کم می‌شود) ───────────
     actual = {}

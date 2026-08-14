@@ -72,7 +72,9 @@ IMPORTANT_KEYS = {
                 "transit_revenue_monthly", "royalty_revenue_monthly",
                 "policy_spending_monthly", "oneoff_spending_monthly",
                 # ممیزی نویسندگان GDP ۱۴۰۵: کانال مالک-یکتای سطح GDP (نرخ سالانهٔ بخش‌ها)
-                "sector_boosts", "sector_boosts_total"],
+                "sector_boosts", "sector_boosts_total",
+                # کانال نرخ ماهانهٔ ورودی ذخایر ارزی (بازرسی ۱۴۰۵)
+                "reserve_inflows", "reserve_inflows_monthly"],
     "trade": ["market_access_bonus"],
     "stock_policy": ["last_crash"],
     "resources": ["energy_crisis", "food_crisis"],
