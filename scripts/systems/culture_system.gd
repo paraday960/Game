@@ -83,7 +83,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	culture["media_diversity"] = clamp(culture["media_diversity"] + Deterministic.next_range(-0.002, 0.003), 0.1, 0.95)
 
 	# تولید فرهنگی
-	culture["cultural_output"] = clamp(culture["cultural_output"] + (culture_budget / 1_000_000_000.0 - 0.5) * 0.001 + education.get("quality",0.55) * 0.0005, 0.1, 0.95)
+	# نُرم مرجع: ~۰.۶٪ تولید ناخالص سالانه برای فرهنگ — جریمه پنهان −۰.۵ قدیمی حذف شد
+	var culture_norm: float = max(float(economy.get("gdp", 1.0)), 1.0) * 0.006 / 12.0
+	culture["cultural_output"] = clamp(culture["cultural_output"] + clampf(culture_budget / culture_norm - 1.0, -1.0, 1.0) * 0.0005 + education.get("quality",0.55) * 0.0005, 0.1, 0.95)
 
 	# هویت ملی
 	culture["identity"] = clamp(culture["identity"] + (culture["cohesion"] - 0.5) * 0.001, 0.1, 0.95)

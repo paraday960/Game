@@ -40,7 +40,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type": "unesco_inscription", "message": "ثبت جهانی یونسکو - افتخار ملی و جذب گردشگر!", "unesco": heritage["unesco_sites"]})
 
 	# موزه‌ها
-	heritage["museums"] = int(heritage["museums"] * 0.999 + (heritage_budget / 1_000_000_000.0 * 5.0 + tourism.get("visitors",5_000_000)/5_000_000.0 * 10.0) * 0.001)
+	# نُرم مرجع: ~۰.۴٪ تولید ناخالص سالانه برای میراث فرهنگی
+	var heritage_norm: float = max(float(economy.get("gdp", 1.0)), 1.0) * 0.004 / 12.0
+	heritage["museums"] = int(heritage["museums"] * 0.999 + (clampf(heritage_budget / heritage_norm, 0.0, 2.0) * 4.0 + tourism.get("visitors",5_000_000)/5_000_000.0 * 10.0) * 0.001)
 
 	# آرشیو و دیجیتال‌سازی
 	var archive_target = 0.5 + heritage_budget_share * 2.0 + tech_digital * 0.3

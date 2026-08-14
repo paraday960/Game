@@ -63,7 +63,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		judicial["case_backlog"] += 20
 
 	# کارآمدی با بودجه و فساد
-	var eff_change = (courts_budget / 1_000_000_000.0 - 0.5) * 0.001 - judicial["corruption_judicial"] * 0.001
+	# نُرم مرجع: ~۰.۲٪ تولید ناخالص سالانه برای دستگاه قضا — بایاس ثابت قدیمی حذف شد
+	var courts_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.002 / 12.0
+	var eff_change = clampf(courts_budget / courts_norm - 1.0, -1.0, 1.0) * 0.001 - judicial["corruption_judicial"] * 0.001
 	judicial["efficiency"] = clamp(judicial["efficiency"] + eff_change, 0.1, 0.95)
 
 	# فساد قضایی پویا

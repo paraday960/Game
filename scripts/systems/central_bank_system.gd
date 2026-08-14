@@ -61,7 +61,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# نرخ ارز = f(تراز تجاری، تورم نسبی، نرخ بهره، ذخایر)
 	var trade_balance = trade.get("balance", 10_000_000_000.0) if trade else 10_000_000_000.0
-	var trade_effect = trade_balance / 100_000_000_000.0 * 0.02
+	# لنگر مقیاس: ۲۰٪ تولید ناخالص (در نقطه شروع = همان ۱۰۰ میلیارد دلار قدیم)
+	var trade_anchor: float = max(float(economy.get("gdp", 500e9)) * 0.2, 1.0e9)
+	var trade_effect = trade_balance / trade_anchor * 0.02
 	var inflation_diff = inflation - 0.03  # تورم جهانی فرض ۳٪
 	var interest_diff = cb["interest_rate"] - 0.05
 	var exchange_change = -trade_effect * 0.01 - inflation_diff * 0.02 + interest_diff * 0.03

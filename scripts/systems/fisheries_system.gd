@@ -31,7 +31,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var sustainability_penalty = 1.0 if fish["sustainability"] > 0.5 else 0.7  # صید بی‌رویه
 
 	var catch_amount = 500000.0 * fleet_factor * stock_factor * (1.0 + tech_fish) * sustainability_penalty
-	catch_amount *= (1.0 + fisheries_budget / 5_000_000_000.0 * 0.1)
+	# نُرم مرجع: ~۰.۳٪ تولید ناخالص سالانه برای شیلات
+	var fish_norm: float = max(float(economy.get("gdp", 1.0)), 1.0) * 0.003 / 12.0
+	catch_amount *= (1.0 + clampf(fisheries_budget / fish_norm - 1.0, -1.0, 1.5) * 0.10)
 	fish["catch"] = fish["catch"] * 0.99 + catch_amount * 0.01
 
 	# سلامت ذخایر - کاهش با صید زیاد، افزایش با حفاظت

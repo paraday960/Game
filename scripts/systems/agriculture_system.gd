@@ -45,7 +45,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# امنیت غذایی = f(تولید، ذخیره، واردات، توزیع، ضایعات)
 	var storage = agri["storage_capacity"]
 	var waste = agri["waste"]
-	var trade = state.get("trade",{}).get("imports",70_000_000_000.0) / 70_000_000_000.0
+	# مرجع واردات: ۱۴٪ تولید ناخالص (در شروع = همان ۷۰ میلیارد دلار قدیم)
+	var import_ref: float = max(float(econ.get("gdp", 500e9)) * 0.14, 1.0e9)
+	var trade = state.get("trade",{}).get("imports", import_ref) / import_ref
 	var self_suff = agri["production"] / 100.0
 	var food_security = 0.5 + self_suff * 0.3 + storage * 0.1 + (1.0 - waste) * 0.1 + trade * 0.05
 	agri["food_security"] = clamp(agri["food_security"] * 0.99 + food_security * 0.01, 0.1, 0.95)

@@ -69,9 +69,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var infra_q = state.get("infrastructure",{}).get("quality",0.55)
 	physical["transport"] += infra_q * 0.5
 
-	# تأسیسات شهری با بودجه
-	var facilities_budget = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * econ.get("government_spending",0.0) * 0.2
-	physical["facilities"] += facilities_budget / 1_000_000_000.0 * 0.1
+	# ساخت مسکن واقعی: ۲۰٪ بودجه زیرساخت به واحد مسکونی تبدیل می‌شود (~۱۲۰هزار دلار/واحد).
+	# (جمله قدیمی روی شمارنده facilities می‌نوشت که world_manager هر بار از نو محاسبه می‌کند — مرده بود)
+	var housing_build_daily: float = econ.get("budget_allocations",{}).get("زیرساخت",0.18) * econ.get("government_spending",0.0) * 0.2 * 12.0 / 120000.0 / 365.0
+	physical["housing_units"] += int(housing_build_daily)
 
 	# خدمات عمومی
 	if tick % 30 == 0:  # ماهانه

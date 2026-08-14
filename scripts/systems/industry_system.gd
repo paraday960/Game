@@ -35,7 +35,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var output_factor = 0.5 + energy * 0.2 + raw_materials * 0.15 + workforce * 0.2 + tech_industry * 0.25 + infra_q * 0.1
 	output_factor = clamp(output_factor, 0.3, 1.5)
 
-	var new_output = 100.0 * output_factor * (1.0 + industry_budget / 20_000_000_000.0 * 0.1)
+	# نُرم مرجع: ~۲٪ تولید ناخالص سالانه برای سیاست صنعتی
+	var ind_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.02 / 12.0
+	var new_output = 100.0 * output_factor * (1.0 + clampf(industry_budget / ind_norm - 1.0, -1.0, 1.5) * 0.08)
 	industry["output"] = industry["output"] * 0.98 + new_output * 0.02
 
 	# بهره‌وری

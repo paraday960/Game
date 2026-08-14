@@ -70,7 +70,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	prison["staff_ratio"] = clamp(prison["staff_ratio"] + (0.4 - prison["staff_ratio"])*0.001 - prison["overcrowding"]*0.0002, 0.1, 0.80)
 
 	# بودجه - تورم
-	prison["budget"] *= (1.0 + econ.get("inflation",0.08)/365.0)
+	# بودجه زندان از ۱۰٪ تخصیص امنیتی (سالیانه) تغذیه می‌شود — قابل سیاست‌گذاری توسط بازیکن
+	var prison_budget_annual: float = econ.get("government_spending", 0.0) * 12.0 * float(econ.get("budget_allocations", {}).get("امنیت", 0.05)) * 0.10
+	prison["budget"] = prison["budget"] * 0.995 + prison_budget_annual * 0.005
 
 	# رویدادها
 	if prison["overcrowding"] > 1.15 and Deterministic.chance(0.016):
