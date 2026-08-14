@@ -936,6 +936,10 @@ func _is_finite_number(value) -> bool:
 func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 	if not cmd is GameCommandClass:
 		return snapshot
+	# بازرسی اقدامات ۲ — وضعیت مالی پیش از اجرا برای تشخیص اقدامات بدون شارژ
+	var _econ_before: Dictionary = snapshot.get("economy", {})
+	var _extra_before: float = float(_econ_before.get("extra_spending_daily", 0.0))
+	var _debt_before: float = float(_econ_before.get("national_debt", 0.0))
 	if cmd.type == "budget_allocate":
 		var allocs = cmd.payload.get("allocations", {})
 		for k in allocs.keys():
@@ -2201,6 +2205,18 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 				snapshot = result.state
 				for ev in result.events:
 					EventLog.log_event("map_building_event", ev, cmd.tick, cmd.version)
+	# بازرسی اقدامات ۲ — هر اقدام «_action» که از مسیر مدیرش هم هیچ شارژی نگذرانده،
+	# هزینه پایه برنامه ملی (۰.۱۲٪ تولید ناخالص) به بدهی دولت می‌گیرد؛ رایگان نیست!
+	var _final_type: String = str(cmd.type)
+	if _final_type.ends_with("_action"):
+		var _econ_after: Dictionary = snapshot.get("economy", {})
+		var _extra_after: float = float(_econ_after.get("extra_spending_daily", 0.0))
+		var _debt_after: float = float(_econ_after.get("national_debt", 0.0))
+		var _gdp_final: float = float(_econ_after.get("gdp", 0.0))
+		if absf(_extra_after - _extra_before) < 1.0 and absf(_debt_after - _debt_before) < 1.0 and _gdp_final > 0.0:
+			_econ_after["national_debt"] = _debt_after + _gdp_final * 0.0012
+			snapshot["economy"] = _econ_after
+			EventLog.log_event("action_cost", {"message": "اعتبار اجرای برنامه از محل بدهی دولت تأمین شد (۰.۱۲٪ تولید ناخالص)", "command": _final_type}, cmd.tick, cmd.version)
 	# تمام انواع فرمان در همان تراکنش و با فراداده نسخه مقصد ثبت می‌شوند.
 	EventLog.log_event("command_applied", cmd.to_dict(), cmd.tick, cmd.version)
 
