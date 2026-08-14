@@ -40,14 +40,15 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		health_care = clampf(health_care + 0.02, 0.05, 1.0)
 
 	# هزینه ماهانه مستمری و برنامه‌ها (اشتغال هزینه پشتیبانی را کم می‌کند)
+	# (بازرسی ۱۴۰۵ — دور نهم): شارژ دوم مازاد روی بدهی دوشماره‌ای بود؛ حالا یک مسیر
+	# از کانال policy_costs — هزینهٔ کامل در بودجه/کسری دیده می‌شود.
 	var gdp := float(econ.get("gdp", 1.0))
 	var cost := gdp * (0.001 + pension_level * 0.002) * (1.0 - employment_program * 0.3)
 	if clinic_active:
 		cost += gdp * 0.0005
-	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
-	var revenue := float(econ.get("government_revenue", 0.0))
-	if cost > revenue * 0.08:
-		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + (cost - revenue * 0.08) * 0.5
+	var vt_costs: Dictionary = econ.get("policy_costs", {})
+	vt_costs["مستمری و خدمات کهنه‌سربازان"] = cost
+	econ["policy_costs"] = vt_costs
 
 	# رضایت کهنه‌سربازان
 	var satisfaction := clampf(0.30 + pension_level * 0.25 + employment_program * 0.20 + recognition * 0.10 + health_care * 0.15, 0.05, 1.0)

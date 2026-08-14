@@ -68,10 +68,10 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/stock_market_manager.gd": 1,  # مالیات عایدی به کانال رفت (جمع فانتوم هم حذف)؛ صندوق تثبیت باقی
     "scripts/core/tourism_manager.gd": 3,
     "scripts/core/trade_policy_manager.gd": 4,
-    "scripts/core/transport_manager.gd": 1,
+    "scripts/core/transport_manager.gd": 0,  # یارانه به کانال رفت؛ شارژ دوم مازاد (دوشماره‌ای) حذف شد
     "scripts/core/urban_manager.gd": 3,
-    "scripts/core/veterans_manager.gd": 1,
-    "scripts/core/welfare_manager.gd": 4,
+    "scripts/core/veterans_manager.gd": 0,  # مستمری به کانال رفت؛ شارژ دوم مازاد (دوشماره‌ای) حذف شد
+    "scripts/core/welfare_manager.gd": 3,  # انتقال‌ها به کانال رفت؛ ۲ اقدام + رویداد بحران صندوق باقی
     "scripts/core/world_manager.gd": 3,
     "scripts/systems/economy_system.gd": 2,   # مالک مخزن: تسویهٔ کسری/سود + اوراق جنگی
     "scripts/systems/map_advanced_system.gd": 4,
@@ -86,6 +86,11 @@ POLICY_COST_PUBLISHERS = {
     "scripts/core/arms_manager.gd": ["نگهداری صنایع دفاعی"],
     "scripts/core/space_manager.gd": ["برنامه فضایی (آژانس)"],
     "scripts/core/national_project_manager.gd": ["پروژه‌های ملی"],
+    # دور نهم: تحلیل سه‌گانهٔ transferها (transport/veterans شارژ دومِ مازادِ
+    # دوشماره‌ای هم داشتند که حذف شد؛ welfare از شارژ خاموش بدهی مهاجرت کرد)
+    "scripts/core/transport_manager.gd": ["یارانه کرایه حمل‌ونقل عمومی"],
+    "scripts/core/veterans_manager.gd": ["مستمری و خدمات کهنه‌سربازان"],
+    "scripts/core/welfare_manager.gd": ["انتقال‌های اجتماعی"],
 }
 
 # ── ۱) سرشماری «فقط کم است» ────────────────────────────────────────────

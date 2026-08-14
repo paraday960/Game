@@ -30,9 +30,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var pension_pressure := elderly * 0.5 + (65.0 - float(pension_age)) * 0.02
 	welfare["pension_pressure"] = clampf(pension_pressure, 0.0, 1.0)
 	# هزینه رفاه: بیمه بیکاری + یارانه فرزند + پوشش سلامت
+	# (بازرسی ۱۴۰۵ — دور نهم) انتقال‌های اجتماعی هزینهٔ مداوم ماهانه‌اند؛ قبلاً خاموش
+	# به بدهی شارژ می‌شدند و در بودجه/کسری دیده نمی‌شدند → کانال policy_costs.
 	var welfare_cost := unemployment_benefit * 0.004 + child_allowance * 0.003 + health_coverage * 0.005 + pension_pressure * 0.003
 	econ["welfare_cost"] = welfare_cost
-	econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 1.0)) * welfare_cost
+	var wl_costs: Dictionary = econ.get("policy_costs", {})
+	wl_costs["انتقال‌های اجتماعی"] = float(econ.get("gdp", 1.0)) * welfare_cost
+	econ["policy_costs"] = wl_costs
 	# اثرها: رفاه → رضایت بازنشستگان/بیکاران؛ یارانه فرزند → نرخ تولد
 	state["media"]["groups"]["بازنشستگان"]["approval"] = clampf(float(state["media"]["groups"]["بازنشستگان"].get("approval", 52.0)) + (0.6 - pension_pressure) * 2.0, 5.0, 100.0)
 	pop["birth_rate"] = float(pop.get("birth_rate", 15.0)) + child_allowance * 1.5

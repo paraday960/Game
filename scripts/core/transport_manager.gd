@@ -33,13 +33,14 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var satisfaction := clampf(0.15 + coverage * 0.30 + affordability * 0.25 + punctuality * 0.20 + (1.0 - fleet_age / 15.0) * 0.10, 0.05, 1.0)
 	pt["satisfaction"] = satisfaction
 
-	# هزینه ماهانه یارانه کرایه
+	# هزینه ماهانه یارانه کرایه (بازرسی ۱۴۰۵ — دور نهم): قبلاً هم به انبارهٔ استهلاک
+	# می‌رفت و هم مازادِ سهم مستقیم به بدهی شارژ می‌شد → مازاد دو بار تأمین‌مالی شد!
+	# حالا یک مسیر: نرخ ماهانه در کانال policy_costs (هزینه → کسری → بدهی با سود).
 	var gdp := float(econ.get("gdp", 1.0))
 	var cost := gdp * 0.001 * subsidy_level
-	econ["extra_spending_daily"] = float(econ.get("extra_spending_daily", 0.0)) + cost
-	var revenue := float(econ.get("government_revenue", 0.0))
-	if cost > revenue * 0.05:
-		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + (cost - revenue * 0.05) * 0.5
+	var tr_costs: Dictionary = econ.get("policy_costs", {})
+	tr_costs["یارانه کرایه حمل‌ونقل عمومی"] = cost
+	econ["policy_costs"] = tr_costs
 
 	# آلودگی شهری: ناوگان فرسوده و دیزلی
 	var emission_factor := (fleet_age / 12.0) * (1.0 - electrification * 0.7)
