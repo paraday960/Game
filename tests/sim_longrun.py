@@ -266,13 +266,15 @@ def step_day(s):
     s["tension"] = clamp(s["tension"] + s["poverty"] * 0.002 + s["unemployment"] * 0.003, 0.0, 1.0)
 
     # ── central_bank_system (قاعدهٔ تیلور یکتا — پس از اتحاد دولایه، بازرسی بانک مرکزی) ──
+    # بازرسی نرخ واقعی ۱۴۰۵: r* صریح ۲٪ به‌جای π*؛ لنگر عرضهٔ پول = نرخ نامی خنثی (π*+r*)
     growth_gap = s["growth_rate"] - 0.025
     infl_gap = s["inflation"] - s["inflation_target"]
-    taylor = clamp(s["inflation_target"] + s["inflation"] + 0.5 * infl_gap + 0.5 * growth_gap, 0.01, 0.60)
+    neutral_nominal = s["inflation_target"] + 0.02
+    taylor = clamp(0.02 + s["inflation"] + 0.5 * infl_gap + 0.5 * growth_gap, 0.01, 0.60)
     pressure = (1.0 - s["independence"]) * 0.02 + (-0.01 if s["stability"] < 0.4 else 0.0)
     taylor_step = 0.010 + s["independence"] * 0.02   # سرعت وابسته به استقلال (تعادل ثابت)
     s["interest_rate"] = clamp(s["interest_rate"] * (1.0 - taylor_step) + (taylor + pressure) * taylor_step, 0.01, 0.60)
-    money_change = (0.15 - s["interest_rate"]) * 0.01 + growth_gap * 0.005
+    money_change = (neutral_nominal - s["interest_rate"]) * 0.01 + growth_gap * 0.005
     s["money_supply"] = clamp(s["money_supply"] + money_change * 0.01, 0.5, 1.8)
 
     # ذخایر ارزیِ واحد (بازرسی: cb/econ ادغام شدند) + نرخ ارز شناور

@@ -25,10 +25,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var debt_to_gdp = economy.get("debt_to_gdp", 0.4)
 
 	# سیاست پولی = f(نرخ بهره، عرضه پول)
-	# قاعده تیلور ساده: نرخ بهره = تورم + 0.5*(تورم-هدف) + 0.5*(رشد-رشد بالقوه)
+	# قاعدهٔ تیلور استاندارد (بازرسی نرخ واقعی ۱۴۰۵): r = r* + π + ۰٫۵(π−π*) + ۰٫۵(شکاف رشد)
+	# پیش از این r* با π* (۵٪) جایگزین شده بود → تعادل نامی ~۱۵٪ یعنی نرخ واقعی ~۱۰٪؛
+	# چسبندگی اعتباری غیرواقعی. نرخ خنثای واقعی صریح (۲٪) تعادل واقع‌بینانه می‌دهد.
+	var neutral_real: float = float(BalanceConfig.get_value("monetary.neutral_real_rate", 0.02))
+	var neutral_nominal: float = float(cb["inflation_target"]) + neutral_real  # لنگر نامی خنثی = π* + r*
 	var inflation_gap = inflation - cb["inflation_target"]
 	var growth_gap = growth - 0.025
-	var taylor_rate = cb["inflation_target"] + inflation + 0.5 * inflation_gap + 0.5 * growth_gap
+	var taylor_rate = neutral_real + inflation + 0.5 * inflation_gap + 0.5 * growth_gap
 	taylor_rate = clamp(taylor_rate, 0.01, 0.60)
 
 	# بانک مرکزی استقلال دارد اما تحت فشار سیاسی
@@ -52,15 +56,17 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# عرضه پول و نقدینگی
 	# نرخ بهره بالا → عرضه کم، رشد کم؛ پایین → رشد اما ریسک تورم
-	var money_change = (0.15 - cb["interest_rate"]) * 0.01 + growth_gap * 0.005
+	# لنگر عرضه: نرخ نامی خنثی (π*+r*) نه ثابت تاریخی ۰٫۱۵ — با تعادل تیلور جدید هم‌بسته است.
+	var money_change = (neutral_nominal - cb["interest_rate"]) * 0.01 + growth_gap * 0.005
 	cb["money_supply"] = clamp(cb["money_supply"] + money_change * 0.01, 0.5, 1.8)
 
 	# تورم هدف با نرخ بهره کنترل می‌شود
 	# تورم = f(عرضه پول، تقاضا، انتظارات)
 	var money_effect = (cb["money_supply"] - 1.0) * 0.03
 	var demand_effect = growth * 0.35
-	# اثر نرخ بهره بر تورم (با تاخیر): نرخ بالاتر از ۸٪ تورم را مهار می‌کند
-	var rate_effect = (0.08 - cb["interest_rate"]) * 0.12
+	# اثر نرخ بهره بر تورم (با تاخیر): نرخ بالاتر از نرخ خنثی تورم را مهار می‌کند؛
+	# لنگر ثابت ۰٫۰۸ با تعادل جدید تیلور ناسازگار بود (رقصانش به تورم مثبت).
+	var rate_effect = (neutral_nominal - cb["interest_rate"]) * 0.12
 	economy["inflation"] = clamp(inflation + (money_effect + demand_effect + rate_effect - 0.01) * 0.001, -0.02, 0.50)
 	state["economy"] = economy
 
