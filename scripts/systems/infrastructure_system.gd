@@ -99,21 +99,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		infra["electricity_grid"] -= damage*0.6
 		events.append({"type":"infrastructure_damage","damage": damage, "quality": infra["quality"], "message":"آسیب به زیرساخت - خسارت %d٪ بر اثر بلای طبیعی" % int(damage*100.0)})
 
-	# پروژه‌های بزرگ - هر ۶ ماه
-	if tick % 180 == 0 and infra["quality"] < 0.70 and budget_share > 0.12:
-		if infra["projects"].size() < 5:
-			infra["projects"].append({
-				"name": "توسعه زیرساخت %d" % (infra["projects"].size()+1),
-				"progress": 0.0,
-				"cost": 1_000_000_000.0,
-				"tick_start": tick
-			})
-	# پیشرفت پروژه‌ها
-	for proj in infra["projects"]:
-		proj["progress"] += 0.05
-		if proj["progress"] >= 1.0:
-			events.append({"type":"infra_project_complete","project": proj["name"], "message":"پروژه %s تکمیل شد" % proj["name"]})
-	infra["projects"] = infra["projects"].filter(func(p): return p["progress"] < 1.0)
+	# (بازرسی ۱۴۰۵ — دور سیزدهم) پروژه‌های خودکار زیرساخت حذف شدند: ساختارشان
+	# {name,progress,cost,tick_start} بود، هر روز ۰.۰۵ پیشرفت می‌کردند (۲۰ روزه
+	# تمام می‌شدند) و «تکمیل»شان فقط پیام می‌ساخت — هیچ اثر واقعی روی کیفیت/
+	# ظرفیت/پوشش نداشتند (کانال مرده). هم‌زمان با سینک ماهانهٔ پروژه‌های ملی
+	# (national_project_manager) دونویسندگی می‌کردند و هر ماه بازنویسی می‌شدند.
+	# پروژه‌های زیرساختیِ واقعی از مسیر «پروژه‌های ملی» می‌آیند (effect واقعی روی
+	# infrastructure.quality)؛ مالکیت یکتای infrastructure.projects با
+	# national_project_manager._sync_infrastructure است.
 
 	state["infrastructure"] = infra
 	state["economy"] = econ

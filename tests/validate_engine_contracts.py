@@ -396,6 +396,31 @@ def check_discretionary_base_channel():
         FAIL.append("آینهٔ sim_longrun: تفکیک spend_base از spending گم شده")
 
 
+def check_infra_projects_single_owner():
+    # بازرسی ۱۴۰۵ (دور سیزدهم): infrastructure.projects فقط از سینک پروژه‌های
+    # ملی (national_project_manager._sync_infrastructure) نوشته می‌شود.
+    # باگِ قبل: سیستم روزانهٔ زیرساخت پروژهٔ خودکار {name,progress,cost,tick_start}
+    # می‌ساخت (هر روز +۰.۰۵ → ۲۰ روزه تمام) و «تکمیل» فقط پیام می‌ساخت — هیچ اثر
+    # واقعی روی کیفیت/ظرفیت/پوشش نداشت (کانال مرده) و هم‌زمان با سینک ماهانهٔ
+    # پروژه‌های ملی {id,name,progress,spent} دونویسندگی می‌کرد. بازگشت = شکست.
+    isrc = open("scripts/systems/infrastructure_system.gd", encoding="utf-8").read()
+    if 'infra["projects"].append(' in isrc or 'proj["progress"] += 0.05' in isrc:
+        FAIL.append("infrastructure_system: بلوک پروژهٔ خودکار (کانال مرده) بازگشته — دور سیزدهم")
+    else:
+        print("✅ infrastructure_system دیگر پروژهٔ خودکارِ بی‌اثر نمی‌سازد (تک‌مالک: پروژه‌های ملی)")
+    nsrc = open("scripts/core/national_project_manager.gd", encoding="utf-8").read()
+    if 'state["infrastructure"]["projects"] = active_list' in nsrc:
+        print("✅ سینک پروژه‌های ملی به infrastructure.projects برقرار است")
+    else:
+        FAIL.append("national_project_manager: سینک infrastructure.projects حذف شده — دور سیزدهم")
+    # اثر واقعی پروژه‌های ملی باید روی زیرساخت باشد (مسیرهای effect در رجیستری)
+    njson = open("data/national_projects.json", encoding="utf-8").read()
+    if '"path":"infrastructure.quality"' in njson:
+        print("✅ پروژه‌های ملی اثر واقعی روی infrastructure.quality دارند")
+    else:
+        FAIL.append("national_projects.json: هیچ پروژهٔ ملی با اثر infrastructure.quality نیست")
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
@@ -409,6 +434,7 @@ check_fuel_subsidy_wiring()
 check_cadence_units_365()
 check_veterans_fund_wiring()
 check_discretionary_base_channel()
+check_infra_projects_single_owner()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")
