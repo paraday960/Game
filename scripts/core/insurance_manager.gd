@@ -79,10 +79,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# حتی اگر کلید نباشد، بحران بانکی احتمالی کاهش می‌یابد
 
 	# رویدادها
-	if solvency < 0.25 and Deterministic.chance(0.05):
+	if solvency < 0.25 and (turn - int(ip.get("last_default", -99))) >= 24 and Deterministic.chance(0.05):
 		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + gdp * 0.004
 		state["economy"] = econ
 		state["politics"]["trust"] = clampf(state["politics"].get("trust", 0.55) - 0.015, 0.05, 1.0)
+		ip["last_default"] = turn
 		events.append({"type": "insurer_default", "message": "💥 یک شرکت بیمه بزرگ ورشکست شد؛ خسارت مردم و بیمه‌گذاران پرداخت نشد"})
 	elif penetration > 0.70 and solvency > 0.65 and Deterministic.chance(0.03):
 		events.append({"type": "insurance_resilience", "message": "🛡️ ضریب نفوذ بیمه بالا، خسارت یک بحران را جذب کرد؛ تاب‌آوری اقتصاد تقویت شد"})

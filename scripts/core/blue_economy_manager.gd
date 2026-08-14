@@ -83,7 +83,8 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["economy"] = econ
 
 	# رویدادها
-	if stock_health < 0.25 and Deterministic.chance(0.050):
+	if stock_health < 0.25 and (turn - int(fisheries.get("last_collapse_warn", -99))) >= 6 and Deterministic.chance(0.050):
+		fisheries["last_collapse_warn"] = turn
 		events.append({"type": "fish_stock_collapse", "message": "🐟 ذخایر ماهی در آستانه فروپاشی! صید بی‌رویه معیشت ساحلی را تهدید می‌کند"})
 		pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.006, 0.05, 1.0)
 	elif port > 0.70 and fleet > 0.50 and Deterministic.chance(0.030):

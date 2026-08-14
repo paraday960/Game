@@ -39,8 +39,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + unemployment_benefit * 0.002 + child_allowance * 0.001, 0.05, 1.0)
 	welfare["gini"] = clampf(float(welfare.get("gini", 0.38)) - (unemployment_benefit + child_allowance) * 0.02, 0.15, 0.8)
 	# فشار سنگین → بحران صندوق
-	if pension_pressure > 0.8 and Deterministic.chance(0.12):
+	if pension_pressure > 0.8 and (turn - int(welfare.get("last_pension_crisis", -99))) >= 12 and Deterministic.chance(0.12):
 		econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
+		welfare["last_pension_crisis"] = turn
 		events.append({"type": "pension_crisis", "message": "⚠️ بحران صندوق بازنشستگی: حقوق بازنشستگان به‌موقع پرداخت نمی‌شود!"})
 	state["welfare_policy"] = wp
 	state["economy"] = econ

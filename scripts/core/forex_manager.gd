@@ -123,8 +123,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	forex["black_premium"] = clampf(premium, 0.0, 0.6)
 
 	# بحران ذخایر: فشار بر نرخ
-	if reserves < float(econ.get("gdp", 1.0)) * 0.02 and Deterministic.chance(0.15):
+	if reserves < float(econ.get("gdp", 1.0)) * 0.02 and (turn - int(forex.get("last_fx_crisis", -99))) >= 4 and Deterministic.chance(0.15):
 		cb["exchange_rate"] = clampf(rate * 1.04, 0.2, 5.0)
+		forex["last_fx_crisis"] = turn
 		events.append({"type": "forex_crisis", "message": "🚨 بحران ارزی: ذخایر اندک، فشار سنگین بر پول ملی"})
 	# نرخ با مداخله‌های قبلی تعدیل می‌شود
 	var inter := float(forex.get("intervention", 0.0))

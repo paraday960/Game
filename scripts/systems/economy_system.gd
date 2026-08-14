@@ -187,7 +187,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		war_bonds += bond_issue
 		econ["national_debt"] += bond_issue*0.6 # ۶۰٪ بدهی دولت، ۴۰٪ مردم
 		econ["war_bonds"] = war_bonds
-		if Deterministic.chance(0.15):
+		if Deterministic.chance(0.03):
 			events.append({"type":"war_bonds_issued","amount": bond_issue, "message":"انتشار اوراق جنگی %.1f میلیارد - مردم مشارکت کردند" % (bond_issue/1e9)})
 
 	# سقف بدهی - ۲۰۰٪ GDP + جنگی تا ۲۵۰٪

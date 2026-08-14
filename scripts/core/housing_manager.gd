@@ -79,6 +79,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# رویدادها
 	if bubble > 0.75 and Deterministic.chance(0.05):
 		econ["gdp"] = float(econ.get("gdp", gdp)) * 0.995
+		# بازار سقوط‌کرده حبابش را تخلیه می‌کند؛ ترکیدن‌های ماهانه پیاپی غیرواقعی بود
+		hp["bubble"] = 0.30
+		bubble = 0.30
 		state["economy"] = econ
 		events.append({"type": "housing_bubble", "message": "🏚️ حباب مسکن ترکید! قیمت‌ها سقوط کرد و وام‌های معوق بانک‌ها بالا رفت"})
 	elif rent_burden > 0.60 and Deterministic.chance(0.04):
