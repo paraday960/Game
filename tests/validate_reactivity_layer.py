@@ -78,6 +78,21 @@ for needle, label in [
     else:
         fail.append("world_manager: %s از دست رفته (%s)" % (label, needle))
 
+# ── مشاور بحران (crisis_ai) ──────────────────────────────────────────────
+ca = io.open("scripts/ai/crisis_ai.gd", encoding="utf-8").read()
+for needle, label in [
+    ('CRISIS_BUDGET_MAP', "نگاشت بحران → ردیف بودجه"),
+    ('events_active', "واکنش به بحران‌های فعال"),
+    ('func diagnose', "تابع تشخیص"),
+    ('func decide', "تابع تصمیم"),
+]:
+    if needle in ca:
+        print("✅ crisis_ai: %s" % label)
+    else:
+        fail.append("crisis_ai: %s از دست رفته (%s)" % (label, needle))
+if not io.open("scripts/ai/crisis_ai.gd.uid", encoding="utf-8").read().strip().startswith("uid://"):
+    fail.append("crisis_ai: فایل .uid کنار اسکریپت نیست")
+
 # ── جمع‌بندی ─────────────────────────────────────────────────────────────
 if fail:
     print("\n❌ REACTIVITY LAYER FAILED:")
