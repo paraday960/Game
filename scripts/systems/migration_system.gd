@@ -67,7 +67,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# دیاسپورا و حواله - تجمعی
 	mig["diaspora"] += (mig["emigration"] - mig["returnees"]) / 365.0
 	mig["diaspora"] = max(mig["diaspora"], 100000.0)
-	mig["remittances"] = mig["diaspora"] * 400.0 * (0.5 + pop_hap*0.5) # میانگین 400 دلار
+	# remittances در لایهٔ انتهایی (با اثر شادی) نوشته می‌شود — نویسهٔ این‌جا سایه خورد (بازرسی)
 
 	# مهاجرت ماهر - کیفیت آموزش و درآمد
 	mig["skilled_immigration"] = clamp(mig["skilled_immigration"]*0.98 + (gdp_pc/10000.0*0.4 + edu_q*0.3 + growth*10.0*0.2 + 0.1)*0.02, 0.05, 0.70)
@@ -84,7 +84,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# اثر بر جمعیت و اقتصاد
 	pop["migration_net"] = mig["net"] + mig["refugees_in"] - mig["refugees_out"] + mig["illegal_immigration"]*0.5
-	econ["government_revenue"] = econ.get("government_revenue",0.0) + mig["remittances"]*0.02 # مالیات غیرمستقیم
+	# (بازرسی مالکیت بودجه) مالیات غیرمستقیم حواله‌ها به‌صورت «نرخ ماهانه» ثبت می‌شود و
+	# economy_system آن را در درآمد لحاظ می‌کند؛ تغییر مستقیم سطحِ بازمحاسبه‌شونده مرده بود.
+	econ["remittance_tax_monthly"] = mig["remittances"] * 0.02
 
 	# رویدادها
 	if mig["refugees_in"] > 60000.0 and Deterministic.chance(0.014):
@@ -118,7 +120,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	mig["immigration"] = maxf(float(mig.get("immigration", 50000.0)) * (1.0 + (pull_m - 0.55) * 0.0008 * float(mig.get("border_control_effect", 0.60))), 1000.0)
 	mig["net"] = float(mig["immigration"]) - float(mig["emigration"])
 	# حواله‌های دیاسپورا متناسب با اندازه جمعیت ایرانیان خارج
-	mig["remittances"] = maxf(float(mig.get("diaspora", 5_000_000.0)) * 400.0, 0.0)
+	mig["remittances"] = maxf(float(mig.get("diaspora", 5_000_000.0)) * 400.0 * (0.5 + pop_hap * 0.5), 0.0)  # ۴۰۰ دلار × رضایت
 	if float(mig.get("emigration", 40000.0)) > 120000.0 and Deterministic.chance(0.004):
 		events.append({"type": "brain_exodus", "message": "خروج انبوه نخبگان - موج مهاجرت متخصصان", "emigration": mig["emigration"]})
 	state["migration_detail"] = mig

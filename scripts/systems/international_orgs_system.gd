@@ -65,7 +65,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		elif r < 0.66:
 			if intl["world_bank"] > 0.60 and Deterministic.chance(0.5):
 				events.append({"type":"worldbank_loan_approved","message":"وام توسعه بانک جهانی تایید شد - زیرساخت"})
-				econ["government_revenue"] = econ.get("government_revenue",0.0) + 200_000_000.0
+				econ["foreign_reserves"] = float(econ.get("foreign_reserves", 0.0)) + 200_000_000.0  # وام دلاری بانک جهانی → ذخایر ارزی (بازرسی مالکیت بودجه)
 		else:
 			if intl["treaties_intl"] > 15 and Deterministic.chance(0.3):
 				events.append({"type":"treaty_milestone","treaties": intl["treaties_intl"], "message":"نقطه عطف - %d معاهده فعال بین‌المللی" % intl["treaties_intl"]})

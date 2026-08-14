@@ -141,7 +141,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var seigniorage = central_bank.get("money_supply",1.0) * 0.005 * monthly_gdp
 
 	# درآمد کل
-	econ["government_revenue"] = tax_revenue + resource_revenue/12.0 + customs_revenue + seigniorage*0.1
+	# کانال‌های نرخ ماهانهٔ سیستم‌های همکار (بازرسی مالکیت بودجه): مالیات حواله‌های دیاسپورا
+	# (migration) و زیان قاچاق سوخت (fuel_stations) — نویسهٔ مستقیم‌شان روی این سطح مرده بود.
+	var remittance_tax = float(econ.get("remittance_tax_monthly", 0.0))
+	var smuggling_loss = float(econ.get("fuel_smuggling_loss_monthly", 0.0))
+	econ["government_revenue"] = tax_revenue + resource_revenue/12.0 + customs_revenue + remittance_tax - smuggling_loss + seigniorage*0.1
 	var corruption_loss = corruption * 0.06 + float(private_sector.get("informal_economy",0.25))*0.08
 	econ["government_revenue"] *= (1.0 - corruption_loss)
 	econ["government_revenue"] = max(econ["government_revenue"], 1_000_000_000.0)

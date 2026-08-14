@@ -80,7 +80,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# رویدادها
 	if fuel["smuggling"] > 0.42 and Deterministic.chance(0.014):
 		events.append({"type":"fuel_smuggling_crisis","smuggling": fuel["smuggling"], "subsidy": fuel["subsidy_cost"], "message":"بحران قاچاق سوخت - یارانه %d میلیاردی دود شد" % int(fuel["subsidy_cost"]/1_000_000_000.0)})
-		econ["government_revenue"] = econ.get("government_revenue",0.0) - fuel["smuggling"]*1_200_000_000.0
+
+
+	# (بازرسی مالکیت بودجه) زیان قاچاق سوخت به‌صورت «نرخ ماهانهٔ پیوسته» ثبت می‌شود و
+	# economy_system آن را از درآمد کم می‌کند (کاهش مستقیمِ سطحِ بازمحاسبه‌شونده مرده بود).
+	econ["fuel_smuggling_loss_monthly"] = float(fuel.get("smuggling", 0.0)) * 1_200_000_000.0
 
 	if fuel["storage_days"] < 6.0 and Deterministic.chance(0.018):
 		events.append({"type":"fuel_shortage","storage": fuel["storage_days"], "message":"ذخیره سوخت %d روز - صف طولانی پمپ بنزین" % int(fuel["storage_days"])})
