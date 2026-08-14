@@ -2879,6 +2879,22 @@ func _build_economy():
 	var oneoff_month: float = float(econ.get("oneoff_spending_monthly", 0.0))
 	if oneoff_month > 0.0:
 		_row(c3, "برنامه‌های در‌حال‌اجرا (سهم ماه)", PersianFormatter.format_money(oneoff_month))
+	# کانال مالک-یکتای GDP (ممیزی نویسندگان ۱۴۰۵): اثر مداوم بخش‌ها فقط از این کانال
+	# با سقف تکی/کلی می‌گذرد؛ این‌جا جمع نرخ سالانه و برترین سهم‌دهنده نشان داده می‌شود
+	var boost_total_ui: float = float(econ.get("sector_boosts_total", 0.0))
+	if boost_total_ui != 0.0:
+		_row(c3, "رشد کانال بخش‌ها", PersianFormatter.to_persian_digits("%+.1f٪ در سال" % (boost_total_ui * 100.0)),
+			_color_for(clampf(0.5 + boost_total_ui * 5.0, 0.0, 1.0)))
+	var boost_top_key := ""
+	var boost_top_val := 0.0
+	for bk in econ.get("sector_boosts", {}).keys():
+		var bv_ui: float = float(econ["sector_boosts"][bk])
+		if absf(bv_ui) > absf(boost_top_val):
+			boost_top_val = bv_ui
+			boost_top_key = str(bk)
+	if boost_top_key != "":
+		_row(c3, "برترین اثر بخشی", "%s (%s)" % [boost_top_key, PersianFormatter.to_persian_digits("%+.1f٪" % (boost_top_val * 100.0))],
+			_color_for(clampf(0.5 + boost_top_val * 5.0, 0.0, 1.0)))
 
 	var cb: Dictionary = st.get("central_bank", {})
 	var trade: Dictionary = st.get("trade", {})
@@ -3044,6 +3060,11 @@ func _build_forex_card(st: Dictionary):
 	var reserves_v := float(econ_fx.get("foreign_reserves", 0.0))
 	var res_gdp_ratio := reserves_v / maxf(float(econ_fx.get("gdp", 1.0)), 1.0)
 	_row(card, "ذخایر ارزی", PersianFormatter.format_money(reserves_v), _color_for(clampf(res_gdp_ratio / 0.15, 0.0, 1.0)))
+	# کانال ورودی بخشی ذخایر (بازرسی ارزی ۱۴۰۵): حواله‌ها، ترانزیت هاب، گردشگری سلامت،
+	# صادرات فناوری و محصولات پالایشی — تسویهٔ روزانه فقط توسط بانک مرکزی (مالکیت یکتا)
+	var inflow_m: float = float(econ_fx.get("reserve_inflows_monthly", 0.0))
+	if inflow_m > 0.0:
+		_row(card, "ورودی بخشی ذخایر (ماهانه)", PersianFormatter.format_money(inflow_m), _color_for(0.7))
 	_row(card, "صرف بازار سیاه", PersianFormatter.to_persian_digits("%.0f٪" % (float(forex.get("black_premium", 0.05)) * 100.0)), _color_for(1.0 - clampf(float(forex.get("black_premium", 0.05)) * 5.0, 0.0, 1.0)))
 	_row(card, "کنترل سرمایه", "فعال" if bool(forex.get("capital_control", false)) else "غیرفعال")
 	var inter := clampf(float(forex.get("intervention", 0.0)), 0.0, 1.0)

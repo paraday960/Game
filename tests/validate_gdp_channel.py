@@ -162,6 +162,19 @@ def main():
     NOTES.append("ℹ️ مجموع نویسه‌های مستقیم باقی‌مانده: %d (سقف پین‌شده: %d)"
                  % (sum(actual.values()), sum(BUDGET.values())))
 
+    # ── C8: نمایش کانال‌ها در UI (بازرسی ۱۴۰۵ج) ─────────────────────────
+    # کانال‌های GDP و ورودی ذخایر برای بازیکن دیده می‌شوند — در غیر این صورت
+    # سیم‌کشی مدل «جعبهٔ سیاه» می‌ماند و قراردادِ نمایش زنجیره‌اثر نقض است.
+    ui_src = read(os.path.join(SCRIPTS, "ui", "main_ui.gd"))
+    check("C8) کارت آمار مالی: خواندن sector_boosts_total و لیبل «رشد کانال بخش‌ها»",
+          'econ.get("sector_boosts_total"' in ui_src and "رشد کانال بخش‌ها" in ui_src)
+    check("C8) کارت آمار مالی: برترین سهم‌دهندهٔ کانال (حلقهٔ کلیدها + لیبل)",
+          'for bk in econ.get("sector_boosts", {}).keys():' in ui_src
+          and "برترین اثر بخشی" in ui_src)
+    check("C8) کارت ارز: نمایش ورودی ماهانهٔ بخشی ذخایر (reserve_inflows_monthly)",
+          'econ_fx.get("reserve_inflows_monthly"' in ui_src
+          and "ورودی بخشی ذخایر (ماهانه)" in ui_src)
+
     # ── C6: قفل الگوی «سطح هدف همگرا» (_gdp_boost) ───────────────────────
     for conv in get_convergent_level_files():
         src_conv = read(os.path.join(ROOT, conv))
