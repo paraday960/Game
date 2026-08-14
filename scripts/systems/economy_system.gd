@@ -81,7 +81,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ثبات و اعتماد
 	var stability_effect = (stability - 0.5) * 0.03 + (trust - 0.5)*0.01
 	# بحران انرژی و غذا
-	var energy_penalty = -0.025 if energy_crisis else 0.0
+	var energy_penalty = (-0.05 * float(BalanceConfig.get_value("resources.energy_crisis_factor", 0.5))) if energy_crisis else 0.0
 	var food_penalty = -0.018 if food_crisis else 0.0
 	# اثر جنگ - بسیج جزئی +۱٪ رشد کینزی کوتاه‌مدت اما جنگ تمام‌عیار -۲٪ به خاطر نابودی سرمایه
 	var war_effect = 0.0
@@ -171,7 +171,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	econ["deficit"] = max(-surplus, 0.0)
 	econ["surplus"] = max(surplus, 0.0)
 
-	var interest_rate = central_bank.get("interest_rate", 0.15)
+	# نرخ مؤثر سود بدهی: ۶۰٪ نرخ سیاستی جاری + ۴۰٪ کوپن قدیمی بدهی انباشته
+	var legacy_coupon = float(BalanceConfig.get_value("economy.debt_interest", 0.12))
+	var policy_rate = float(central_bank.get("interest_rate", legacy_coupon))
+	var interest_rate = policy_rate * 0.6 + legacy_coupon * 0.4
 	var debt_interest = econ["national_debt"] * interest_rate / 365.0
 	econ["national_debt"] = max(econ["national_debt"] - surplus / days_in_month + debt_interest, 0.0)
 	econ["debt_to_gdp"] = econ["national_debt"] / max(econ["gdp"], 1.0)

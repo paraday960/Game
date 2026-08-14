@@ -100,8 +100,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	pop["festival_glow"] = maxf(float(pop.get("festival_glow", 0.0)) - 0.0015, 0.0)
 	pop["satisfaction"] = pop["happiness"] * 0.9 + pol["trust"] * 0.1
 
-	# آستانه شورش - ۳.۱۱.۴
-	if pop["happiness"] < 0.30 and Deterministic.chance(0.05):
+	# آستانه شورش - ۳.۱۱.۴ (آستانه از منبع واحد بالانس)
+	var happiness_critical = float(BalanceConfig.get_value("population.happiness_critical", 0.30))
+	if pop["happiness"] < happiness_critical and Deterministic.chance(0.05):
 		events.append({"type": "unrest_risk", "happiness": pop["happiness"], "message": "نارضایتی شدید مردمی - خطر شورش"})
 
 	# رویدادهای جمعیتی - ۳.۱۱.۵

@@ -26,6 +26,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	res["blackout_risk"] = res.get("blackout_risk", 0.10)
 	res["water_stress"] = res.get("water_stress", 0.30)
 
+	# آستانهها و ثابتها از منبع واحد بالانس (data/balance.json)
+	var energy_crisis_threshold = float(BalanceConfig.get_value("resources.energy_crisis_threshold", 20.0))
+	var energy_recovery_threshold = float(BalanceConfig.get_value("resources.energy_recovery_threshold", 50.0))
+	var food_crisis_threshold = float(BalanceConfig.get_value("resources.food_crisis_threshold", 30.0))
+	var food_recovery_threshold = float(BalanceConfig.get_value("resources.food_recovery_threshold", 60.0))
+	var storage_base = float(BalanceConfig.get_value("resources.storage_base", 100.0))
+	var depletion_rate = float(BalanceConfig.get_value("resources.depletion_rate", 0.01))
+
 	var events = []
 
 	var is_at_war = not world.get("wars", {}).is_empty()
@@ -46,7 +54,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var demand = float(res["demand"][resource])
 
 		# نرخ استخراج - منابع تجدیدناپذیر کاهش با زمان اگر سرمایه‌گذاری نشود
-		var extraction = float(res["extraction_rate"].get(resource, 0.01)) if res["extraction_rate"].has(resource) else 0.01
+		var extraction = float(res["extraction_rate"].get(resource, depletion_rate)) if res["extraction_rate"].has(resource) else depletion_rate
 		var depletion = 0.0
 		if resource in ["نفت","گاز","آهن","مس"]:
 			depletion = extraction * 0.5 / 365.0
@@ -104,16 +112,16 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			net += import_needed
 			res["import_dependency"][resource] = clamp(import_dep + 0.0001, 0.05, 0.85)
 
-		res["inventory"][resource] = clamp(float(res["inventory"][resource]) + net*0.05, 0.0, float(res["capacity"][resource]))
+		res["inventory"][resource] = clamp(float(res["inventory"][resource]) + net*0.05, 0.0, float(res["capacity"].get(resource, storage_base)))
 
 		# بحران - اگر موجودی < ۳۰٪ ظرفیت و تقاضا بالا
-		if res["inventory"][resource] < 30.0 and res["demand"][resource] > 10.0:
-			if resource == "برق" and res["inventory"]["برق"] < 20.0:
+		if res["inventory"][resource] < max(energy_crisis_threshold, food_crisis_threshold) and res["demand"][resource] > 10.0:
+			if resource == "برق" and res["inventory"]["برق"] < energy_crisis_threshold:
 				res["energy_crisis"] = true
 				res["blackout_risk"] = clamp(float(res.get("blackout_risk",0.10)) + 0.02, 0.05, 0.85)
 				if Deterministic.chance(0.015):
 					events.append({"type":"energy_crisis","inventory": res["inventory"]["برق"], "message":"بحران برق - ذخیره %.0f%% - خاموشی برنامه‌ریزی" % res["inventory"]["برق"]})
-			elif resource == "غذا" and res["inventory"]["غذا"] < 35.0:
+			elif resource == "غذا" and res["inventory"]["غذا"] < food_crisis_threshold:
 				res["food_crisis"] = true
 				if Deterministic.chance(0.012):
 					events.append({"type":"food_crisis","inventory": res["inventory"]["غذا"], "message":"بحران غذا - ذخیره %d روز" % int(res["inventory"]["غذا"])})
@@ -149,13 +157,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# خطر خاموشی - برق + گرما
 	if res["energy_crisis"]:
-		if res["inventory"]["برق"] > 50.0:
+		if res["inventory"]["برق"] > energy_recovery_threshold:
 			res["energy_crisis"] = false
 			res["blackout_risk"] = clamp(float(res["blackout_risk"])*0.8, 0.05, 0.85)
 			events.append({"type":"energy_crisis_resolved","message":"بحران برق پایان یافت"})
 
 	if res["food_crisis"]:
-		if res["inventory"]["غذا"] > 60.0:
+		if res["inventory"]["غذا"] > food_recovery_threshold:
 			res["food_crisis"] = false
 			events.append({"type":"food_crisis_resolved","message":"بحران غذا پایان یافت"})
 
