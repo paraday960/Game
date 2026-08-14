@@ -201,6 +201,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var corruption_loss = corruption * 0.06 + float(private_sector.get("informal_economy",0.25))*0.08
 	econ["government_revenue"] *= (1.0 - corruption_loss)
 	econ["government_revenue"] = max(econ["government_revenue"], 1_000_000_000.0)
+	# کمک خارجی به خزانه (بازرسی ۱۴۰۵ — دور دوازدهم): این واریز قبلاً پایین‌تر از محاسبهٔ
+	# کسری/بدهی/بدهی-روزانه انجام می‌شد و چون این سیستم روزانه است و درآمد هر روز از نو
+	# ساخته می‌شود، رقم کمک همان روز پاک می‌گشت — کانال فقط در UI نفس می‌کشید و به
+	# خزانه نمی‌رسید. حالا در مبدأ به پایهٔ درآمد اضافه می‌شود: بودجهٔ ردیفی آن را خرج
+	# می‌کند و مابقی‌اش کسری/بدهی را کم می‌کند (نرخ روزانه × ۳۰ = سهم ماهانه).
+	econ["government_revenue"] += float(econ.get("aid_inflow_daily", 0.0)) * 30.0
 
 	# ==================== ج) هزینه و بودجه - ۱۰ ردیف ====================
 	var budget_alloc = econ.get("budget_allocations", {})
@@ -433,10 +439,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var power_rel_e = float(econ.get("power_reliability", 1.0))
 	if power_rel_e < 0.75:
 		econ["growth_rate"] = clampf(float(econ.get("growth_rate", 0.02)) - (0.75 - power_rel_e) * 0.0015, -0.12, 0.15)
-	# کمک‌های بین‌المللی (سازمان‌ها دور ۱۴) واقعاً به خزانه واریز می‌شود
-	var aid_in_e = float(econ.get("aid_inflow_daily", 0.0))
-	if aid_in_e > 0.0:
-		econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + aid_in_e * days_in_month  # نرخ روزانه → واریز ماهانه
+	# (واریز کمک خارجی از این‌جا به مبدأ محاسبهٔ درآمد منتقل شد — دور دوازدهم؛
+	# این‌جا بودنش آن را به کانال مرده تبدیل کرده بود.)
 	# سرمایه‌گذاری بخش خصوصی از فضای کسب‌وکار (دور ۹) و اعتماد بانکی (دور ۱۵)
 	var biz_climate = float(private_sector.get("business_ease", private_sector.get("ease_of_business", 0.55)))
 	var bank_trust_e = float(state.get("financial_services", {}).get("trust_banks", 0.60))

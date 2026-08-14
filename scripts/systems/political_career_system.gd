@@ -64,7 +64,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# حقوق - تورم‌زدایی
 	var inflation = state.get("economy", {}).get("inflation", 0.08)
-	career["salaries"] *= (1.0 + inflation * 0.5 / 365.0)
+	# واحد cadence (دور دوازدهم): سیستم ماهانه است (۲۴ اجرا در سال) ⇒ شاخص‌سازی سالانه
+	# با ۱۵/۳۶۵ در هر اجرا (نیم‌بند تورمیِ طراحی‌شده حفظ شد).
+	career["salaries"] *= (1.0 + inflation * 0.5 * 15.0 / 365.0)
 
 	# رویدادها
 	if career["meritocracy"] < 0.30 and Deterministic.chance(0.015):

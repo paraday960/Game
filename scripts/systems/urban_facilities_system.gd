@@ -61,7 +61,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# هزینه
 	urban["maintenance_cost"] = total_waste * 120000.0 + urban["water_network"]*1_100_000_000.0 + urban["electricity_grid"]*800_000_000.0
-	urban["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)
+	# واحد cadence (دور دوازدهم): شاخص‌سازی سالانهٔ هزینه با تورم؛ هفتگی ⇒ ×۶/۳۶۵.
+	urban["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08) * 6.0 / 365.0)
 
 	# اثر بر بهداشت و محیط و رضایت
 	var waste_effect = (1.0 - urban["waste_collection"])*0.30 + (1.0 - urban["sewage_coverage"])*0.20 + urban["leakage_water"]*0.1

@@ -29,7 +29,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# حقوق - تورم + رشد اما با تاخیر دولتی
 	var wage_growth = inflation * 0.6 + growth * 0.3
-	emp["salary_avg"] *= (1.0 + wage_growth / 365.0)
+	# واحد cadence (دور دوازدهم): wage_growth شاخص‌سازی سالانهٔ حقوق است (تورم×۰٫۶
+	# + رشد×۰٫۳)؛ هفتگی ⇒ ×۶/۳۶۵. پیش از این حقوق اسمی ~۱٪/سال می‌چرخید و حقوق واقعی
+	# کارمندان در برابر تورم فرسایش می‌یافت ⇒ فشار رضایتیِ بی‌مبنا.
+	emp["salary_avg"] *= (1.0 + wage_growth * 6.0 / 365.0)
 	# اثر کسری بودجه - اگر کسری بالا حقوق معوق
 	if econ.get("deficit",0.0) > econ.get("government_revenue",1.0)*0.15:
 		emp["salary_avg"] *= (1.0 - 0.0001)

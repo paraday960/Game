@@ -50,7 +50,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	settlements["crowding"] = clampf((urban_pop / max(est_urban_area, 1.0)) / max(density_target, 1.0), 0.0, 1.5)
 	var capacity_factor: float = clampf(1.6 - float(settlements["crowding"]), 0.15, 1.6)
 	var urban_attraction = ((gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2) * (1.0 - rural_stay) * capacity_factor
-	settlements["migration_urban"] = total_pop * urbanization_rate / 365.0 * urban_attraction
+	# واحد cadence (بازرسی ۱۴۰۵ — دور دوازدهم): سیستم هفتگی است (۵ بار در ماه = ۶۰ اجرا
+	# در سال) پس نرخ سالانهٔ شهرنشینی با ۶/۳۶۵ تقسیم می‌شود، نه ۱/۳۶۵ — پیش از این جریان
+	# واقعی حدود ۰٫۲٪ در سال بود (یک‌ششم طراحی) و موج‌های شهریِ آینهٔ بلندمدت (روزانه
+	# ۱/۳۶۵) را از دست می‌داد. بازخورد ظرفیت (crowding) سقف را نرم نگه می‌دارد.
+	settlements["migration_urban"] = total_pop * urbanization_rate * 6.0 / 365.0 * urban_attraction
 	urban_pop += settlements["migration_urban"]
 	# بازرسی واقع‌گرایی ۱۴۰۵: سقف شهرنشینی ۰٫۹۰ → ۰٫۹۵. در افق ۳۰+ ساله کشور روی
 	# سقف ۹۰٫ می‌چسبید، درحالی که اقتصادهای شهریِ بالغ (هلند ~۹۳٪، ژاپن ~۹۲٪،

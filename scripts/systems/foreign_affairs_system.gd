@@ -47,7 +47,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# ماموریت‌های فرهنگی
 	fa["cultural_missions"] = int(fa["soft_power"] * 50.0)
-	fa["public_diplomacy_budget"] *= (1.0 + econ.get("growth_rate",0.02)/365.0)
+	# واحد cadence (دور دوازدهم): سیستم ماهانه است (۲۴ اجرا در سال) ⇒ نرخ سالانه با
+	# ۱۵/۳۶۵ در هر اجرا؛ پیش از این بودجهٔ دیپلماسی عمومی ~۲٫۵ برابر کندتر رشد می‌کرد.
+	fa["public_diplomacy_budget"] *= (1.0 + econ.get("growth_rate",0.02) * 15.0 / 365.0)
 
 	# پرونده‌های کنسولی - مهاجرت
 	var migration = state.get("migration_detail", {}).get("emigration", 40000.0) if state.has("migration_detail") else 40000.0

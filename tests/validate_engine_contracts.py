@@ -269,36 +269,53 @@ def check_cadence_units_365():
             print("✅ واحد cadence اصلاح‌شده در %s" % f.split("/")[-1])
         else:
             FAIL.append("سایت cadence اصلاح‌شده در %s پینش شکست: %s" % (f, needle))
-    DEFERRED = {
-        "scripts/systems/government_buildings_system.gd":
-            'gov["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)',
-        "scripts/systems/physical_system.gd":
-            '* 12.0 / 120000.0 / 365.0',
-        "scripts/systems/private_sector_system.gd":
-            'priv["investment"] *= (1.0 + priv["investment_growth"]/365.0)',
-        "scripts/systems/public_employees_system.gd":
-            'emp["salary_avg"] *= (1.0 + wage_growth / 365.0)',
+    # پاس تعادل دور دوازدهم: هر ۱۱ سایت به‌تأخیرافتاده بازبینی و درمان شد —
+    # ۶ سایت هفتگی به ۶/۳۶۵ (شهرنشینی/پژوهش/سرمایهٔ خصوصی/حقوق کارمندان/نگهداری
+    # ساختمان و تأسیسات/ساخت مسکن: همهٔ مقادیر «سالانه» بودند و در cadence هفتگی
+    # فقط یک‌ششم رخ می‌دادند)، ۳ سایت ماهانه به ۱۵/۳۶۵ (سپرده‌ها/دیپلماسی/حقوق
+    # سیاسیون). سایت یازدهم (کمک خارجی) واحدش درست بود (نرخ روزانه با نام صریح)
+    # ولی مصرف‌کننده پس از محاسبهٔ کسری می‌نوشت و روز بعد پاک می‌شد — درمان در
+    # economy_system (واریز در مبدأ درآمد)، نه در واحد ناشر؛ پین ناشر حفظ شد.
+    FIXED2 = {
         "scripts/systems/settlements_system.gd":
-            '= total_pop * urbanization_rate / 365.0 * urban_attraction',
+            'total_pop * urbanization_rate * 6.0 / 365.0 * urban_attraction',
         "scripts/systems/technology_system.gd":
-            'tech["research_points"] += tech["research_rate"] / 365.0',
+            'tech["research_points"] += tech["research_rate"] * 6.0 / 365.0',
+        "scripts/systems/private_sector_system.gd":
+            'priv["investment_growth"] * 6.0 / 365.0',
+        "scripts/systems/public_employees_system.gd":
+            'emp["salary_avg"] *= (1.0 + wage_growth * 6.0 / 365.0)',
+        "scripts/systems/government_buildings_system.gd":
+            'gov["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08) * 6.0 / 365.0)',
         "scripts/systems/urban_facilities_system.gd":
-            'urban["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)',
+            'urban["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08) * 6.0 / 365.0)',
+        "scripts/systems/physical_system.gd":
+            '* 12.0 * 6.0 / 120000.0 / 365.0',
         "scripts/systems/financial_services_system.gd":
-            'fin["saving_deposits"] *= (1.0 + (growth*0.5 + saving_rate*0.1)/365.0)',
+            '(growth*0.5 + saving_rate*0.1) * 15.0 / 365.0',
         "scripts/systems/foreign_affairs_system.gd":
-            'fa["public_diplomacy_budget"] *= (1.0 + econ.get("growth_rate",0.02)/365.0)',
+            'econ.get("growth_rate",0.02) * 15.0 / 365.0',
+        "scripts/systems/political_career_system.gd":
+            'career["salaries"] *= (1.0 + inflation * 0.5 * 15.0 / 365.0)',
+        # ناشر «نرخ روزانه» — قرارداد واحد درست است؛ مصرف اقتصاد: ×۳۰ در مبدأ درآمد
         "scripts/systems/international_orgs_system.gd":
             'econ["aid_inflow_daily"] = float(intl.get("aid_received", 500_000_000.0)) / 365.0',
-        "scripts/systems/political_career_system.gd":
-            'career["salaries"] *= (1.0 + inflation * 0.5 / 365.0)',
     }
-    for f, needle in sorted(DEFERRED.items()):
+    for f, needle in sorted(FIXED2.items()):
         if needle not in open(f, encoding="utf-8").read():
-            FAIL.append("سایت به‌تأخیرافتادهٔ cadence در %s بی‌سروصدا تغییر کرد "
-                        "(رجیستری را آگاهانه به‌روز کن): %s" % (f, needle))
-    print("ℹ️ %d سایت cadence به‌تأخیرافتاده در رجیستری پین شد (هر تغییر = بازبینی)"
-          % len(DEFERRED))
+            FAIL.append("پین پاس تعادل cadence (دور دوازدهم) در %s شکست: %s" % (f, needle))
+    # کانال کمک خارجی باید در مبدأ درآمد خزانه برسد (نه پس از تسویهٔ کسری/بدهی)
+    es_src = open("scripts/systems/economy_system.gd", encoding="utf-8").read()
+    i_rev = es_src.find('econ["government_revenue"] += float(econ.get("aid_inflow_daily"')
+    i_spend = es_src.find("var spending = econ[\"government_revenue\"]")
+    if 0 < i_rev < i_spend and "aid_in_e" not in es_src:
+        print("✅ کمک خارجی در مبدأ درآمد می‌رسد (کانال مردهٔ ترتیبی درمان شد)")
+    else:
+        FAIL.append("کمک خارجی باید پیش از محاسبهٔ بودجه/کسری به درآمد اضافه شود")
+    print("ℹ️ پاس تعادل دور دوازدهم: %d سایت cadence درمان و پین شد (رجیستری تأخیری خالی)"
+          % len(FIXED2))
+    # آینهٔ بلندمدت مرجع طراحی جریان شهری است (روزانه ۱/۳۶۵ = سالانه واقعی) —
+    # engine هفتگی با ۶/۳۶۵ به همان نرخ سالانه می‌رسد.
 
 
 def check_veterans_fund_wiring():

@@ -49,7 +49,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tech["research_rate"] = base_rate * budget_factor * edu_factor * infra_factor * researcher_factor * lab_factor * elite_factor
 	tech["research_rate"] = clamp(tech["research_rate"], 2.0, 260.0)
 
-	tech["research_points"] += tech["research_rate"] / 365.0
+	# واحد cadence (بازرسی ۱۴۰۵ — دور دوازدهم): research_rate «امتیاز در سال» است؛ در
+	# cadence هفتگی با ۶/۳۶۵ اعمال می‌شود. پیش از این درخت فناوری (مجموع ۲۷۸ امتیاز با
+	# هزینهٔ تکی ≤۳۰) در مقیاس واقعی ۲۰–۱۷۰ سال طول می‌کشید و عملاً مرده بود؛ حالا
+	# سرمایه‌گذاری فناوری در افق یک دولتِ ۸–۱۲ ساله میوه می‌دهد.
+	tech["research_points"] += tech["research_rate"] * 6.0 / 365.0
 
 	# تعداد پژوهشگران - آموزش و بودجه
 	if tick % 90 == 0:

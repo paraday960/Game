@@ -43,7 +43,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	gov["citizen_satisfaction"] = clamp(gov["citizen_satisfaction"]*0.95 + target_sat*0.05, 0.1, 0.95)
 
 	# هزینه نگهداری - تورم
-	gov["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08)/365.0)
+	# واحد cadence (دور دوازدهم): شاخص‌سازی سالانهٔ هزینه با تورم؛ هفتگی ⇒ ×۶/۳۶۵.
+	gov["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08) * 6.0 / 365.0)
 
 	# پیشخوان دولت
 	if tick % 90 == 0 and gov["digital_government"] > 0.60:

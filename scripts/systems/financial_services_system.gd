@@ -57,7 +57,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# سپرده‌ها - پس‌انداز خانوار + رشد
 	var saving_rate = state.get("households_detail_full", {}).get("savings_rate",0.15) if state.has("households_detail_full") else 0.15
-	fin["saving_deposits"] *= (1.0 + (growth*0.5 + saving_rate*0.1)/365.0)
+	# واحد cadence (دور دوازدهم): سیستم ماهانه است (۲۴ اجرا در سال) ⇒ نرخ سالانه با
+	# ۱۵/۳۶۵ در هر اجرا؛ پیش از این عمق بانکی ~۲٫۵ برابر کندتر از طراحی رشد می‌کرد.
+	fin["saving_deposits"] *= (1.0 + (growth*0.5 + saving_rate*0.1) * 15.0 / 365.0)
 	fin["saving_deposits"] = max(fin["saving_deposits"], 10_000_000_000.0)
 
 	# شرکت‌های فین‌تک - فناوری
