@@ -58,9 +58,8 @@ DOT_WRITE_RE = re.compile(r'^\s*(\w+)\.([A-Za-z0-9_]+)\s*([+\-*/]?=)(?![=])')
 WHITELIST_RE = re.compile(
     r'(?:^last_|^prev_|_history$|_hist$|_cooldown$|_latched?$|^shock_|_shock$|'
     r'^initial_|_initialized$|^seen_|^pending_|_queue$|^queued_|'
-    # مهرهای قالب خودکار _deep_export_* — کد داربستی بدون فراخوان (حذف کامل در نوبت پاک‌سازی)
-    # و دفترچه‌ی صورت‌وضعیت سناریو/جهان برای یکپارچگی ذخیره و چندنفره:
-    r'^export_tick$|^export_version$|^completed_day$|^completed_tick$|^partial_annexed_by$)'
+    # دفترچه‌ی صورت‌وضعیت سناریو/جهان برای یکپارچگی ذخیره و چندنفره:
+    r'^completed_day$|^completed_tick$|^partial_annexed_by$)'
 )
 
 # کلیدهای حیاتیِ زنجیره‌ی اثر — باید بیرون از فایل نویسنده هم خواننده داشته باشند.
