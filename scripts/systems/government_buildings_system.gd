@@ -47,13 +47,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	gov["maintenance_cost"] *= (1.0 + econ.get("inflation",0.08) * 6.0 / 365.0)
 
 	# پیشخوان دولت
-	if tick % 90 == 0 and gov["digital_government"] > 0.60:
+	if tick % 90 == 15 and gov["digital_government"] > 0.60:
 		gov["one_stop_shops"] += Deterministic.next_int_range(2, 10)
 
 	# تعداد شهرداری‌ها متناسب جمعیت
 	var pop_total = pop.get("total", 85_000_000.0)
 	var needed_municipalities = int(pop_total / 70000.0)
-	if gov["municipalities"] < needed_municipalities and tick % 180 == 0:
+	if gov["municipalities"] < needed_municipalities and tick % 180 == 15:
 		gov["municipalities"] += 5
 
 	# پوشش خدمات دولتی در روستاها - زیرساخت

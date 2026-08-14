@@ -79,7 +79,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	physical["housing_build_daily"] = housing_build_daily  # نرخ واقعی — مصرف‌کننده: settlements_system
 
 	# خدمات عمومی
-	if tick % 30 == 0:  # ماهانه
+	if tick % 30 == 15:  # ماهانه
 		physical["public_services"]["بیمارستان"] += 0.01
 		physical["public_services"]["مدرسه"] += 0.1
 

@@ -59,7 +59,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if green > 0.28 and Deterministic.chance(0.012):
 		fuel["ev_charging"] += Deterministic.next_int_range(3,12)
 		fuel["cng_stations"] += Deterministic.next_int_range(1,4)
-		if tick % 90 == 0:
+		if tick % 90 == 15:
 			events.append({"type":"ev_expansion","ev": fuel["ev_charging"], "message":"توسعه ایستگاه شارژ برقی - %d ایستگاه فعال" % fuel["ev_charging"]})
 
 	# ذخیره - روز پوشش

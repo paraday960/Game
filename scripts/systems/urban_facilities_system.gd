@@ -84,7 +84,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if urban["waste_recycling"] > 0.40 and Deterministic.chance(0.007):
 		events.append({"type":"recycling_success","recycling": urban["waste_recycling"], "message":"جهش بازیافت - %d٪ زباله بازیافت می‌شود" % int(urban["waste_recycling"]*100.0)})
 
-	if urban["5g_coverage"] > 0.60 and tick % 180 == 0 and Deterministic.chance(0.02):
+	if urban["5g_coverage"] > 0.60 and tick % 180 == 15 and Deterministic.chance(0.02):
 		events.append({"type":"5g_milestone","coverage": urban["5g_coverage"], "message":"پوشش 5G ۶۰٪ - شهر هوشمند"})
 
 	state["urban_facilities"] = urban

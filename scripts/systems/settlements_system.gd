@@ -93,11 +93,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# قبلاً فرمول موازی ~۱۰۰هزار/سال مستقل از تولید واقعی (~۲۹هزار/سال) گزارش می‌کرد
 	var construction = float(state.get("physical",{}).get("housing_build_daily", 80.0)) * 365.0
 	settlements["new_houses_per_year"] = int(construction)
-	if tick % 180 == 0:
+	if tick % 180 == 15:
 		settlements["new_houses_per_year"] = int(construction * (0.8 + Deterministic.next_range(0.0,0.4)))
 
 	# تعداد سکونتگاه‌ها با رشد جمعیت
-	if tick % 365 == 0:
+	if tick % 360 == 15:
 		if settlements["urban_pop"] > settlements["cities_large"]*1500000.0*1.2:
 			settlements["cities_large"] += 1
 			settlements["cities_medium"] += 2

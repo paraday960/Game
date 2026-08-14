@@ -37,7 +37,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# ریل
 	transport["rail_quality"] = clamp(transport["rail_quality"] + (transport_budget_share - 0.07) * 0.001, 0.1, 0.95)
-	if tick % 365 == 0 and transport_budget_share > 0.08 and Deterministic.chance(0.3):
+	if tick % 360 == 15 and transport_budget_share > 0.08 and Deterministic.chance(0.3):
 		transport["rail_km"] += 100.0
 		events.append({"type": "rail_expansion", "message": "توسعه خطوط راه‌آهن - %s کیلومتر جدید" % str(int(transport["rail_km"]))})
 

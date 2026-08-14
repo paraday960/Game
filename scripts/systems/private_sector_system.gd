@@ -71,7 +71,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	priv["export_oriented"] = clamp(priv["export_oriented"] + trade.get("balance",0.0)/100e9*0.0001 + priv["innovation_index"]*0.0002, 0.05, 0.70)
 
 	# پویایی تعداد شرکت‌ها
-	if tick % 90 == 0:
+	if tick % 90 == 15:
 		var birth = int(priv["business_climate"] * 5000.0 + priv["innovation_index"]*2000.0)
 		var death = int(priv["failure_rate"] * priv["smes"] * 0.02)
 		priv["smes"] += birth - death

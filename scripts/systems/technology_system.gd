@@ -56,7 +56,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tech["research_points"] += tech["research_rate"] * 6.0 / 365.0
 
 	# تعداد پژوهشگران - آموزش و بودجه
-	if tick % 90 == 0:
+	if tick % 90 == 15:
 		if edu.get("quality",0.55) > 0.60 and budget_factor > 1.0:
 			tech["researchers"] += Deterministic.next_int_range(200, 800)
 			tech["labs"] += Deterministic.next_int_range(1, 5)
@@ -89,7 +89,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			tech["in_progress"] = null
 			tech["patents_tech"] += Deterministic.next_int_range(20, 80)
 			tech["tech_level"] += 0.02
-		elif tick % 30 == 0:
+		elif tick % 30 == 15:
 			var progress = tech["research_points"]/max(cost,1.0)*100.0
 			events.append({
 				"type":"research_progress","points": tech["research_points"], "tech": current_id, "progress": progress,
@@ -107,11 +107,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tech["spillover"] = clamp(tech["spillover"] + tech["international_collab"]*0.0004, 0.02, 0.50)
 
 	# پتنت - رشد با نوآوری
-	if tick % 60 == 0:
+	if tick % 60 == 15:
 		tech["patents_tech"] += int(tech["research_rate"]*0.5)
 
 	# انتخاب خودکار فناوری اگر خالی - AI داخلی
-	if tech["in_progress"] == null and tick % 90 == 0 and Deterministic.chance(0.3):
+	if tech["in_progress"] == null and tick % 90 == 15 and Deterministic.chance(0.3):
 		var candidates = TechnologyManager.get_available(state)
 		if candidates.size() > 0:
 			tech["in_progress"] = candidates[Deterministic.next_int_range(0, candidates.size()-1)]
@@ -123,7 +123,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if tech["innovation_index"] > 0.65 and Deterministic.chance(0.008):
 		events.append({"type":"innovation_breakthrough","innovation": tech["innovation_index"], "message":"جهش نوآوری - خوشه فناوری شکل گرفت"})
 
-	if tech["tech_level"] > 0.70 and tick % 365 == 0 and Deterministic.chance(0.05):
+	if tech["tech_level"] > 0.70 and tick % 360 == 15 and Deterministic.chance(0.05):
 		events.append({"type":"tech_milestone","level": tech["tech_level"], "message":"سطح فناوری ۷۰٪ - کشور در زمره قدرت‌های نوظهور فناوری"})
 
 	state["technology"] = tech

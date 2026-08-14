@@ -70,7 +70,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	emp["union_strength"] = clamp(emp["union_strength"] + (0.001 if emp["satisfaction"] < 0.4 else 0.0) - (pol.get("tension",0.35))*0.0005, 0.1, 0.85)
 
 	# تعداد کارکنان - رشد جمعیت
-	if tick % 90 == 0:
+	if tick % 90 == 15:
 		var target_count = int(state.get("population",{}).get("total",85_000_000.0) / 42.0)
 		if emp["count"] < target_count:
 			emp["count"] += Deterministic.next_int_range(5000, 15000)
@@ -84,7 +84,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if emp["corruption"] > 0.50 and Deterministic.chance(0.010):
 		events.append({"type":"bureaucratic_corruption","corruption": emp["corruption"], "message":"فساد خرده‌پا در ادارات - رشوه برای تسریع پرونده"})
 
-	if emp["digital_literacy"] > 0.75 and emp["efficiency"] > 0.75 and tick % 180 == 0 and Deterministic.chance(0.02):
+	if emp["digital_literacy"] > 0.75 and emp["efficiency"] > 0.75 and tick % 180 == 15 and Deterministic.chance(0.02):
 		events.append({"type":"digital_workforce_success","message":"کارکنان دولت دیجیتال شد - میانگین ۸۰ ساعت آموزش سالانه"})
 
 	if emp["union_strength"] > 0.70 and emp["satisfaction"] < 0.40 and Deterministic.chance(0.012):
