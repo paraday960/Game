@@ -43,3 +43,5 @@ release.keystore
 Desktop.ini
 godot
 /godot
+__pycache__/
+*.pyc
