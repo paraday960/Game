@@ -116,7 +116,11 @@ func antiquities_crackdown(state: Dictionary, turn: int) -> Dictionary:
 		return {"success": false, "reason": "عملیات ضدقاچاق هر ۶ نوبت یک بار ممکن است", "state": state, "events": []}
 	var econ: Dictionary = state.get("economy", {})
 	var gdp := float(econ.get("gdp", 1.0))
-	econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + gdp * 0.002
+	# درآمد مصادرهٔ آثار (بازرسی ۱۴۰۵ — دور نهم): جمع روی government_revenue فانتوم
+	# بود (تیک روزانهٔ بعد economy_system بازنویسی می‌کند و هرگز حاشیهٔ بودجه نمی‌شد؛
+	# درآمد صفر می‌ماند). حالا مسیر واقعی اقدام یک‌بارمصرف: عایدی بازپس‌گیری بدهی
+	# را کم می‌کند — مبلغ همان، اثر واقعی.
+	econ["national_debt"] = maxf(0.0, float(econ.get("national_debt", 0.0)) - gdp * 0.002)
 	hp["last_antiq"] = turn
 	state["politics"]["corruption"] = clampf(float(state["politics"].get("corruption", 0.3)) - 0.012, 0.01, 1.0)
 	state["heritage"]["digital_archives"] = clampf(float(state["heritage"].get("digital_archives", 0.4)) + 0.05, 0.05, 1.0)

@@ -52,6 +52,7 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/epidemic_manager.gd": 2,
     "scripts/core/fdi_manager.gd": 2,
     "scripts/core/fuel_transition_manager.gd": 1,  # سهم خزانهٔ اصلاح قیمت به کانال رفت
+    "scripts/core/heritage_manager.gd": 1,  # عایدی ضدقاچاق (اقدام؛ قبلاً جمع فانتوم روی revenue بود)
     "scripts/core/industry_manager.gd": 1,
     "scripts/core/infrastructure_manager.gd": 1,
     "scripts/core/insurance_manager.gd": 1,

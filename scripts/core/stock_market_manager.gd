@@ -93,7 +93,9 @@ func ipo(state: Dictionary) -> Dictionary:
 	var econ: Dictionary = state.get("economy", {})
 	var gdp := float(econ.get("gdp", 1.0))
 	var inflow := gdp * 0.03
-	econ["government_revenue"] = float(econ.get("government_revenue", 0.0)) + inflow
+	# (بازرسی ۱۴۰۵ — دور نهم) جمع روی government_revenue فانتوم بود (بازنویسی روزانهٔ
+	# مالک پاکش می‌کرد)؛ نصف واقعیِ عرضهٔ اولیه از همان ابتدا راه بدهی بود و می‌ماند —
+	# بدون تغییر مبلغ مؤثر، فانتوم حذف و مسیر مستند شد.
 	econ["national_debt"] = maxf(0.0, float(econ.get("national_debt", 0.0)) - inflow * 0.5)
 	sm["index"] = float(sm.get("index", 1000.0)) * 1.03
 	sm["listed_companies"] = int(sm.get("listed_companies", 100)) + 1
