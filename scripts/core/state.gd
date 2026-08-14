@@ -68,7 +68,6 @@ func init_default_state():
 			"year": 2027,
 			"month": 1,
 			"day": 1,
-			"hour": 0,
 			"season": "بهار"
 		},
 		# لایه‌ی سیستم‌های عملکردی - ۳۳ سیستم
@@ -330,7 +329,6 @@ func _apply_initial_overrides():
 	state["clock"]["year"] = int(state["clock"].get("year", 2027))
 	state["clock"]["month"] = int(state["clock"].get("month", 1))
 	state["clock"]["day"] = int(state["clock"].get("day", 1))
-	state["clock"]["hour"] = int(state["clock"].get("hour", 0))
 	state["schema_version"] = int(state.get("schema_version", 20))
 	# کشور پیش‌فرض و درخت فناوری پیش از نخستین روز آماده می‌شوند.
 	state = WorldManager.apply_country_profile(state, WorldManager.default_country)

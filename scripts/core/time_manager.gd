@@ -23,7 +23,7 @@ func reset(state: Dictionary) -> Dictionary:
 	clock["year"] = int(clock.get("year", 2027))
 	clock["month"] = clamp(int(clock.get("month", 1)), 1, 12)
 	clock["day"] = 1
-	clock["hour"] = 0
+	# (بازرسی کلید یتیم ۱۴۰۵) clock.hour هرگز افزایش نمی‌یافت و هیچ خواننده‌ای نداشت → حذف
 	state["clock"] = clock
 	state["time"] = {
 		"turn": int(state.get("tick", 0)),

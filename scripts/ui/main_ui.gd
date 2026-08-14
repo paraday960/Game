@@ -3376,6 +3376,8 @@ func _build_infrastructure_card(st: Dictionary):
 	var focus := str(ip.get("focus", "roads"))
 	var focus_names := {"roads": "جاده و حمل‌ونقل", "power": "شبکه برق", "water": "آب و فاضلاب", "telecom": "مخابرات"}
 	_row(card, "اولویت توسعه", str(focus_names.get(focus, focus)))
+	# مسیرهای ترابری ملی (خوانندهٔ کلید physical.transport_routes — بازرسی کلید یتیم)
+	_row(card, "مسیرهای ترابری ملی", PersianFormatter.format_large(float(st.get("physical", {}).get("transport_routes", 5000))) + " مسیر")
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for m in [[0.2, "🟢 کم (۲۰٪)"], [0.5, "🟡 متوسط (۵۰٪)"], [0.8, "🔴 زیاد (۸۰٪)"]]:
 		var btn = Button.new(); btn.text = m[1]
@@ -5902,6 +5904,8 @@ func _build_nation_brand_card(st: Dictionary):
 		return
 	var card = _card("🌟 برند ملی")
 	_bar(card, "شاخص برند", float(nb.get("brand_index", 0.35)))
+	# اعتبار نرم کسب‌شده از برند (خوانندهٔ soft_power_gain — بازرسی کلید یتیم)
+	_bar(card, "اعتبار نرم کسب‌شده", float(nb.get("soft_power_gain", 0.10)))
 	_bar(card, "رویدادهای بین‌المللی", float(nb.get("events", 0.20)))
 	_bar(card, "میراث فرهنگی", float(nb.get("heritage", 0.40)))
 	_bar(card, "صادرات فرهنگی", float(nb.get("cultural_exports", 0.20)))
@@ -6462,6 +6466,8 @@ func _build_military():
 	var branches = mil.get("branches", {})
 	for b in branches.keys():
 		_bar(c2, str(b), branches[b])
+	# بری راهبردی = ترکیب هوایی+موشکی (خوانندهٔ صریح branches.هوایی — بازرسی کلید یتیم)
+	_bar(c2, "بری راهبردی (هوایی+موشکی)", float(branches.get("هوایی", 0.25)) * 0.5 + float(branches.get("موشکی", 0.10)) * 0.5)
 
 	var intel = st.get("intelligence", {})
 	var c3 = _card("🕵️ اطلاعات")

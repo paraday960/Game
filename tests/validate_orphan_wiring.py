@@ -107,7 +107,7 @@ else:
 
 # ── ۶) پاک‌سازی init ────────────────────────────────────────────────────
 st = src("scripts/core/state.gd")
-for dead in ["citizens_sample", "front_lines"]:
+for dead in ["citizens_sample", "front_lines", "hour"]:  # hour: شمارندهٔ مردهٔ clock (هرگز افزایش نمی‌یافت)
     if '"%s"' % dead in st:
         fail.append("کلید مردهٔ «%s» دوباره به state.gd برگشته" % dead)
     else:
