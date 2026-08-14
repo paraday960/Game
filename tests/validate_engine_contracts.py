@@ -197,6 +197,35 @@ def check_pension_fund_wiring():
         FAIL.append("آینهٔ sim_longrun مدل صندوق بازنشستگی را ندارد")
 
 
+def check_fuel_subsidy_wiring():
+    # بازرسی ۱۴۰۵ (دور دهم): سه باگ سوخت درمان شدند و باید پین شوند —
+    # ۱) subsidy_rate باید از سیاست واقعی (fuel_policy.subsidy) خوانده شود،
+    #    نه لیترال ۰٫۶۸ (وگرنه اهرم «اصلاح یارانه» به قیمت پمپ نمی‌رسد)؛
+    # ۲) قیمت همسایه باید از نفت جهانی/ارز مشتق شود (نه ثابت ۳۰هزار)؛
+    # ۳) مالک مدل قاچاق فقط fuel_stations_system است (مدیر گذار ماهانه
+    #    state را با فرمول موازی بازنویسی می‌کرد و مدل زنده را خنثی می‌کرد)؛
+    # ۴) subsidy_cost یک نویسهٔ مفهومی دارد (+مقداردهی اولیه) — نویسهٔ مرده
+    #    دوم (شکاف×مصرف که هر بار بازنویسی می‌شد) برنگردد.
+    fuel = open("scripts/systems/fuel_stations_system.gd", encoding="utf-8").read()
+    if 'get("subsidy", 0.65)' in fuel and "= 0.68" not in fuel:
+        print("✅ نرخ یارانهٔ پمپ به سیاست واقعی fuel_policy.subsidy وصل است")
+    else:
+        FAIL.append("نرخ یارانهٔ سوخت دوباره سخت‌کد شد (اهرم سیاست قطع است)")
+    if "neighbor_price = oil_price" in fuel:
+        print("✅ قیمت همسایهٔ قاچاق از نفت جهانی و ارز مشتق می‌شود")
+    else:
+        FAIL.append("قیمت همسایهٔ قاچاق دوباره ثابت شد")
+    if fuel.count('fuel["subsidy_cost"] =') == 2:
+        print("✅ subsidy_cost تک‌نویسهٔ مفهومی است (نمایشی، مقیاس دلاری صحیح)")
+    else:
+        FAIL.append("نویسهٔ مرده/موازی subsidy_cost برگشته است")
+    ftm = open("scripts/core/fuel_transition_manager.gd", encoding="utf-8").read()
+    if 'fuel_stations["smuggling"] = ' not in ftm and "smuggle_target" not in fuel:
+        print("✅ مالکیت مدل قاچاق یکتا است (بازنویسی ماهانهٔ موازی حذف شد)")
+    else:
+        FAIL.append("مدل موازی قاچاق (بازنویسی state توسط مدیر گذار) برگشته است")
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
@@ -206,6 +235,7 @@ check_noise_symmetry()
 check_resource_revenue_basis()
 check_strategic_reserves_wiring()
 check_pension_fund_wiring()
+check_fuel_subsidy_wiring()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

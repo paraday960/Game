@@ -28,7 +28,6 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var env: Dictionary = state.get("environment", {})
 	var urban: Dictionary = state.get("urban_policy", {})
 	var welfare: Dictionary = state.get("welfare", {})
-	var blue: Dictionary = state.get("blue_economy_policy", {})
 	var fuel_stations: Dictionary = state.get("fuel_stations", {})
 
 	var subsidy := float(fp.get("subsidy", 0.65))
@@ -47,12 +46,11 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var ev_share := clampf(ev_charging * 0.30 + emission * 0.20 + public_fleet * 0.15, 0.0, 0.70)
 	fp["ev_share"] = ev_share
 
-	# قاچاق سوخت: یارانه زیاد + گشت دریایی کم
-	var coast_guard := float(blue.get("coast_guard", 0.30))
-	var smuggling := clampf(subsidy * 0.55 - coast_guard * 0.20, 0.02, 0.80)
-	fp["smuggling"] = smuggling
-	fuel_stations["smuggling"] = smuggling
-	state["fuel_stations"] = fuel_stations
+	# قاچاق سوخت (بازرسی ۱۴۰۵ — دور دهم): مالک مدل fuel_stations_system است
+	# (شکاف قیمت زندهٔ پمپ/همسایه + کنترل مرز). قبلاً این مدیر هر ماه state را
+	# با فرمول موازی خودش بازنویسی می‌کرد و مدل زندهٔ سیستم را خنثی می‌کرد؛
+	# حالا فقط مقدار زنده را برای نمایش در fuel_policy منعکس می‌کند.
+	fp["smuggling"] = float(fuel_stations.get("smuggling", 0.15))
 
 	# درآمد اصلاح قیمت (هرچه یارانه کمتر، درآمد بیشتر)
 	var revenue := gdp * (1.0 - subsidy) * 0.012
@@ -78,7 +76,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if subsidy < 0.30 and float(econ.get("inflation", 0.08)) > 0.15 and Deterministic.chance(0.06):
 		state["politics"]["stability"] = clampf(state["politics"].get("stability", 0.60) - 0.020, 0.05, 1.0)
 		events.append({"type": "fuel_protest", "message": "⛽ اعتراض به گرانی سوخت و تورم برخاست؛ ثبات سیاسی تحت فشار"})
-	elif smuggling > 0.50 and Deterministic.chance(0.04):
+	elif float(fp.get("smuggling", 0.15)) > 0.50 and Deterministic.chance(0.04):
 		events.append({"type": "fuel_smuggling", "message": "🚛 قاچاق سازمان‌یافته سوخت؛ یارانه از مرز خارج می‌شود"})
 	elif ev_share > 0.35 and Deterministic.chance(0.03):
 		events.append({"type": "ev_transition", "message": "🔌 گذار به خودروی برقی شتاب گرفت؛ هوای شهرها پاک‌تر شد"})

@@ -33,7 +33,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var inflation = econ.get("inflation",0.08)
 
 	# قیمت‌ها - تابع نفت جهانی + یارانه + ارز + مالیات
-	var subsidy_rate = 0.68
+	# (بازرسی ۱۴۰۵ — دور دهم) نرخ یارانه سخت‌کدشدهٔ ۰٫۶۸ بود: اهرم «اصلاح یارانه»ٔ
+	# بازیکن (fuel_policy.subsidy) هرگز به قیمت پمپ نمی‌رسید ⇒ سیاست بی‌اثر.
+	# حالا به همان سیاست واقعی وصل است: اصلاح یارانه = گران‌تر شدن بنزین.
+	var subsidy_rate = clampf(float(state.get("fuel_policy", {}).get("subsidy", 0.65)), 0.0, 1.0)
 	var gasoline_target = oil_price * 1050.0 * exchange * (1.0 - subsidy_rate*0.8) + 4000.0
 	fuel["gasoline_price"] = fuel["gasoline_price"]*0.985 + gasoline_target*0.015 + inflation*3.0
 	fuel["diesel_price"] = fuel["gasoline_price"]*0.85
@@ -65,15 +68,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	fuel["storage_days"] = oil_inv / max(daily_cons/80_000_000.0*10.0, 1.0) * 12.0
 	fuel["storage_days"] = clamp(fuel["storage_days"], 2.0, 90.0)
 
-	# قاچاق - اختلاف قیمت + کنترل مرز
-	var neighbor_price = 30000.0
+	# قاچاق - اختلاف قیمت + کنترل مرز (مالک یکتای مدل قاچاق — بازرسی دور دهم)
+	# قیمت همسایه زنده شد: قیمت منطقه‌ایِ یارانه‌صفر (+مارژین ۸٪) که با نفت جهانی
+	# و ارز تنفس می‌کند؛ قبلی ۳۰هزار ثابت بود و شوک نفتی به قاچاق نمی‌رسید.
+	var neighbor_price = oil_price * 1050.0 * exchange * 1.08 + 4000.0
 	var price_gap = neighbor_price - fuel["gasoline_price"]
 	var border_ctrl = state.get("security",{}).get("border_control",0.60)
-	var smuggling_target = 0.08 + max(0.0, price_gap/30000.0)*0.45 - border_ctrl*0.25 + (1.0 - border_ctrl)*0.10
+	var smuggling_target = 0.08 + max(0.0, price_gap/maxf(neighbor_price, 1.0))*0.45 - border_ctrl*0.25 + (1.0 - border_ctrl)*0.10
 	fuel["smuggling"] = clamp(fuel["smuggling"]*0.97 + smuggling_target*0.03, 0.01, 0.70)
-
-	# هزینه یارانه - شکاف قیمت * مصرف
-	fuel["subsidy_cost"] = max(0.0, price_gap) * daily_cons * 0.7
 
 	# اثر بر اقتصاد و رضایت
 	var price_effect = (15000.0 - fuel["gasoline_price"])/15000.0
@@ -103,13 +105,13 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["transport_detail"] = transport
 	state["economy"] = econ
 	
-	# ── لایه واقع‌گرایانه اختصاصی جایگاه‌های سوخت (جایگزین قالب خودکار) — بخش ۳.۴۶ ──
-	# قاچاق سوخت از شکاف قیمت واقعی و ضعف مرزبانی (پیوند با امنیت دور ۵)
-	var border_ctrl_f = float(state.get("security", {}).get("border_control", 0.60))
-	var smuggle_target = clampf(float(subsidy_rate) * 0.35 * (1.0 - border_ctrl_f) + 0.03, 0.02, 0.55)
-	fuel["smuggling"] = clampf(float(fuel.get("smuggling", 0.15)) * 0.99 + smuggle_target * 0.01, 0.02, 0.60)
-	# هزینه واقعی یارانه: مصرف روزانه × شکاف قیمت — هر سیاست قیمت‌گذاری فوراً اثر بودجه‌ای دارد
-	fuel["subsidy_cost"] = float(fuel.get("consumption_daily", 80_000_000.0)) * 365.0 * float(subsidy_rate) * float(fuel.get("gasoline_price", 15000.0)) * 0.02 / 1000.0
+	# ── لایه واقع‌گرایانه اختصاصی جایگاه‌های سوخت — بخش ۳.۴۶ ──
+	# (بازرسی ۱۴۰۵ — دور دهم) دومین مدل موازی قاچاق (ضریب ثابت روی نرخ یارانه)
+	# حذف شد — مالک یکتا مدل شکاف قیمت است (زنده با سیاست یارانه/نفت/ارز/مرز).
+	# هزینهٔ یارانه — شکاف قیمت × مصرف سالانه با تبدیل دلاریِ ضمنیِ مدل قیمت‌گذاری
+	# (هر دلار نفت = ۱۵۰۰ واحد محلی ⇒ بنزین منطقه ≈ ۰٫۷ $/لیتر). نمایشی است؛
+	# مسیر خزانه‌ای یارانه از کانال «یارانه انرژی» (energy_manager) می‌گذرد.
+	fuel["subsidy_cost"] = maxf(0.0, neighbor_price - float(fuel.get("gasoline_price", 15000.0))) * float(fuel.get("consumption_daily", 80_000_000.0)) * 365.0 / maxf(oil_price * 1500.0, 1.0)
 	# ذخیره استراتژیک: ذخایر نفت کم یا قاچاق بالا روزهای پوشش را می‌خورد
 	var storage_target = 8.0 + float(oil_inv) / 80.0 * 12.0 - float(fuel.get("smuggling", 0.15)) * 10.0
 	fuel["storage_days"] = clampf(float(fuel.get("storage_days", 15.0)) * 0.995 + storage_target * 0.005, 2.0, 45.0)

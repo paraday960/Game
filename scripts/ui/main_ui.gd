@@ -5419,7 +5419,7 @@ func _build_fuel_card(st: Dictionary):
 		_mark_decision_button(btn, "fuel:" + a[0])
 		row.add_child(btn)
 	var hint = Label.new()
-	hint.text = "اصلاح یارانه هر ۱۰ نوبت. ایستگاه شارژ به انرژی پاک ۴+ نیاز دارد."
+	hint.text = "یارانه سوخت قیمت پمپ را پایین نگه می‌دارد: اصلاح آن بنزین را گران می‌کند (تورم و اعتراض کوتاه‌مدت) ولی قاچاق را از ریشه می‌خشکاند و خزانهٔ اصلاح قیمت را پر می‌کند. اصلاح یارانه هر ۱۰ نوبت؛ ایستگاه شارژ به انرژی پاک ۴+ نیاز دارد."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
 	card.add_child(hint)
