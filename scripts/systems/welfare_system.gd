@@ -57,17 +57,45 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var gini_change = (unemployment - 0.08) * 0.01 - (welfare_budget_share - 0.12) * 0.02
 	welfare["gini"] = clamp(welfare["gini"] + gini_change * 0.01, 0.20, 0.65)
 
-	# نظام بازنشستگی و مستمری - ۳.۲۱.۲
-	welfare["retirees"] = pop.get("total",85_000_000) * pop.get("age_structure",{}).get("سالمند",0.10)
-	var pension_cost = welfare["retirees"] * 5000.0  # ساده‌سازی
-	var pension_income = welfare["pension_fund_balance"] * 0.03 / 365.0 + welfare_budget * 0.4
-	welfare["pension_fund_balance"] += pension_income - pension_cost
-	welfare["pension_fund_balance"] = max(welfare["pension_fund_balance"], 0.0)
-
-	if welfare["pension_fund_balance"] < 100_000_000.0 and Deterministic.chance(0.01):
-		events.append({"type": "pension_crisis", "message": "بحران صندوق بازنشستگی - ناترازی!", "balance": welfare["pension_fund_balance"]})
-		politics["stability"] = politics.get("stability",0.6) - 0.02
+	# نظام بازنشستگی و مستمری - ۳.۲۱.۲ — بازرسی ۱۴۰۵ (دور دهم): واحدها شکسته بود.
+	# قبل: مستمری ثابت ۵۰۰۰ × ~۸٫۵M بازنشسته در هر اجرای هفتگی ≈ خروجی ۴۳B
+	#   (صدها برابر تعهدات واقعی) ⇒ موجودی صندوق از همان اجرای اول برای همیشه
+	#   به صفر میخکوب می‌شد و رویداد «بحران صندوق» فانتوم با احتمال ۱٪ در هر اجرا
+	#   (~۲۶٪ در ماه، مستقل از هر سیاستی) پایداری را می‌خورد.
+	# حالا مدل تأمین اجتماعی واقعی (پرداخت-از-محل-جاری + بافر):
+	#   تعهدات = بازنشستگان (واجدشدگی تابع سن بازنشستگی) × نسبت جایگزینی ۵۵٪ × درآمد سرانه؛
+	#   منابع  = سهم‌برداری ۹٪ شاغلان + تکمیلی دولت از ردیف بودجهٔ «رفاه» (۵۰٪ ردیف)؛
+	#   موجودی = بافر تعدیل. کسری پایدار ⇒ تأخیر مستمری ⇒ اعتراض سالمندان و فرسایش ثبات
+	#   (شارژ خاموش بدهی نیست — هزینهٔ واقعی، اجتماعی است نه حسابداری).
+	var pop_total_p: float = maxf(float(pop.get("total", 85_000_000)), 1.0)
+	var elderly_sh: float = clampf(float(pop.get("age_structure", {}).get("سالمند", 0.10)), 0.03, 0.45)
+	var children_sh: float = clampf(float(pop.get("age_structure", {}).get("کودک", 0.24)), 0.10, 0.50)
+	var work_sh: float = clampf(1.0 - elderly_sh - children_sh, 0.30, 0.80)
+	var pen_age: float = float(state.get("welfare_policy", {}).get("pension_age", 65))
+	# سن پایین‌تر ⇒ دههٔ ۶۰-۶۴ (و پایین‌تر) هم واجد مستمری: +۱۲٪ مستحق به‌ازای هر سال
+	var eligibility: float = clampf(1.0 + (65.0 - pen_age) * 0.12, 0.55, 1.6)
+	welfare["retirees"] = pop_total_p * elderly_sh * eligibility
+	var pc_month: float = float(econ.get("gdp", 1.0)) / pop_total_p / 12.0
+	var obligations_m: float = welfare["retirees"] * pc_month * 0.55
+	var contributions_m: float = pop_total_p * work_sh * pc_month * 0.09
+	var topup_m: float = welfare_budget * 0.5  # سهم دولت از ردیف «رفاه» (نرخ ماهانه)
+	welfare["pension_obligations_monthly"] = obligations_m
+	welfare["pension_resources_monthly"] = contributions_m + topup_m
+	welfare["pension_solvency"] = clampf((contributions_m + topup_m) / maxf(obligations_m, 1.0), 0.0, 2.0)
+	# جریان هر اجرا: این سیستم هفتگی ۵ بار در ماه می‌دود ⇒ ۱/۵ نرخ ماهانه در هر اجرا
+	var flow_w: float = (contributions_m + topup_m - obligations_m) * 0.2
+	var bal_before: float = float(welfare["pension_fund_balance"])
+	var bal_new: float = bal_before + flow_w + bal_before * 0.03 * (6.0 / 365.0)
+	welfare["pension_fund_balance"] = maxf(bal_new, 0.0)
+	if bal_new < 0.0:
+		politics["stability"] = clampf(float(politics.get("stability", 0.6)) - 0.004, 0.05, 0.95)
 		state["politics"] = politics
+		var retirees_grp: Dictionary = state.get("media", {}).get("groups", {}).get("بازنشستگان", {})
+		if not retirees_grp.is_empty():
+			retirees_grp["approval"] = clampf(float(retirees_grp.get("approval", 52.0)) - 0.8, 5.0, 100.0)
+		if bal_before > 0.0 or (tick - int(welfare.get("last_shortfall_tick", -9999))) >= 56:
+			welfare["last_shortfall_tick"] = tick
+			events.append({"type": "pension_shortfall", "message": "⚠️ صندوق بازنشستگی ناتوان شد: مستمری سالمندان با تأخیر پرداخت می‌شود — سن بازنشستگی یا ردیف بودجهٔ رفاه را بازبینی کنید", "shortfall": -bal_new})
 
 	# حمایت اجتماعی
 	welfare["social_safety"] = clamp(welfare["social_safety"] + (welfare_budget_share - 0.12) * 0.005, 0.1, 0.95)

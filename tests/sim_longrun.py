@@ -54,6 +54,8 @@ def initial_state():
         # social
         "health_q": 0.60, "edu_q": 0.55, "literacy": 0.85,
         "poverty": 0.15, "gini": 0.38, "social_safety": 0.60,
+        # صندوق بازنشستگی (بازرسی ۱۴۰۵ — دور دهم؛ pay-as-you-go + بافر)
+        "pension_age": 65.0, "pension_balance": 1e9, "elderly_share": 0.10,
         # منابع (ممیزی انرژی: تقاضای نسبی + جاذب تولید + انبار واقعی)
         "res_prod": {"برق": 15.0, "نفت": 8.0, "غذا": 10.0},
         "res_dem": {"برق": 12.0, "نفت": 6.0, "غذا": 9.0},
@@ -294,6 +296,28 @@ def step_day(s):
     tension_pressure = min(s["poverty"] * 0.5 + s["unemployment"] * 1.2, 0.6)
     s["tension"] = clamp(s["tension"] * (1.0 - 0.00083) + tension_pressure * 0.00083, 0.0, 1.0)
 
+    # ── صندوق بازنشستگی (همگام با welfare_system.gd — بازرسی ۱۴۰۵ دور دهم) ──
+    # مدل pay-as-you-go + بافر: تعهدات = سالمندان × جایگزینی ۵۵٪ × درآمد سرانه؛
+    # منابع = سهم‌برداری ۹٪ شاغلان + تکمیلی ۵۰٪ ردیف «رفاه». در بازی هفتگی
+    # (۵ بار در ماه، ضریب ۱/۵) می‌دود؛ آینه روزانه با /۳۰ — تجمیع ماهانه برابر است.
+    # پیری جمعیت (population_system: +۰٫۰۰۲ سالمند در سال) تعهدات را می‌برد و
+    # پایهٔ سهم‌برداری را می‌کاهد ⇒ ناتوانی ساختاری در افق بلندمدت، مگر اصلاح سن/ردیف.
+    s["elderly_share"] = min(s["elderly_share"] + 0.002 / 365.0, 0.30)
+    pc_month = s["gdp"] / s["pop_total"] / 12.0
+    elig = clamp(1.0 + (65.0 - s["pension_age"]) * 0.12, 0.55, 1.6)
+    child_sh = clamp(0.24 - (s["elderly_share"] - 0.10) / 2.0, 0.15, 0.35)
+    work_sh = clamp(1.0 - s["elderly_share"] - child_sh, 0.30, 0.80)
+    oblig_m = s["pop_total"] * s["elderly_share"] * elig * pc_month * 0.55
+    contrib_m = s["pop_total"] * work_sh * pc_month * 0.09
+    topup_m = spending * s["alloc"]["رفاه"] * 0.5
+    flow_d = contrib_m + topup_m - oblig_m  # نرخ ماهانه
+    new_bal = s["pension_balance"] + flow_d / 30.0 + s["pension_balance"] * 0.03 / 365.0
+    if new_bal < 0.0:
+        s["stability"] = clamp(s["stability"] - 0.004 * 5.0 / 30.0, 0.05, 0.95)  # اعتراض سالمندان
+        new_bal = 0.0
+    s["pension_balance"] = new_bal
+    s["pension_solvency"] = (contrib_m + topup_m) / max(oblig_m, 1.0)
+
     # ── central_bank_system (قاعدهٔ تیلور یکتا — پس از اتحاد دولایه، بازرسی بانک مرکزی) ──
     # بازرسی نرخ واقعی ۱۴۰۵: r* صریح ۲٪ به‌جای π*؛ لنگر عرضهٔ پول = نرخ نامی خنثی (π*+r*)
     growth_gap = s["growth_rate"] - 0.025
@@ -370,7 +394,8 @@ def run(years=10, verbose=True, policy_hook=None):
                           y["birth_rate"], y["death_rate"],
                           y["happiness"], y["stability"], y["health_q"], y["edu_q"],
                           y["poverty"], y["interest_rate"], y["money_supply"],
-                          y["trade_balance"] / 1e9, y["foreign_reserves"] / 1e9, y["exchange_rate"]))
+                          y["trade_balance"] / 1e9, y["foreign_reserves"] / 1e9, y["exchange_rate"])
+                + " | صندوق %.2f/%.0fB" % (y["pension_solvency"], y["pension_balance"] / 1e9))
     global LAST_PIN
     LAST_PIN = pin_days
     return s, hist
@@ -407,6 +432,11 @@ def check_bounds(s, hist):
         ("تجارت: تراز نهایی مهارشده (<۵٪ GDP — بدون انفجار مازاد/کسری)", abs(s["trade_balance"]) < 0.05 * s["gdp"]),
         ("ذخایر ارزی: مثبت و مهارشده (<۴۰۰ میلیارد)", 0.0 < s["foreign_reserves"] < 400e9),
         ("نرخ ارز: در دالان معقول بدون چسبیدن به دیوارهٔ clamp", 0.25 < s["exchange_rate"] < 4.5),
+        # ── صندوق بازنشستگی (بازرسی ۱۴۰۵ — دور دهم) ──
+        ("بازنشستگی: بدون ورشکستگی فانتوم — موجودی در ۵ سال نخست خط پایه مثبت است",
+         all(snap["pension_balance"] > 0.0 for _y, snap in hist[:5])),
+        ("بازنشستگی: پیری جمعیت توان پرداخت را در ۱۰ سال می‌فرساید (نه میخکوب)",
+         s["pension_solvency"] < hist[0][1]["pension_solvency"]),
     ]
     # پایداری مسیر: تورم در هیچ سالی ابرتورم نشود؛ شادی زیر آستانهٔ شورش نیاید
     for y, snap in hist[2:]:   # دو سال اول گذار آزاد
@@ -867,6 +897,8 @@ def run_horizon30_suite():
          pin.get("urban_ratio", 0) / 10950.0 < 0.40),
         ("شادی/ثبات ۳۰ساله در دالان انسانی", 0.30 <= s["happiness"] <= 0.95
          and 0.30 <= s["stability"] <= 0.95),
+        ("بازنشستگی: فشار پیری جمعیت در افق ۳۰ساله به صندوق می‌رسد (solvency < ۱٫۰۵)",
+         s["pension_solvency"] < 1.05),
     ]
     ok = True
     for name, passed in checks:

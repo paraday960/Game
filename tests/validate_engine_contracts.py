@@ -172,6 +172,31 @@ def check_strategic_reserves_wiring():
         FAIL.append("منطق آزادسازی ذخیره راهبردی در آستانهٔ بحران حذف شده")
 
 
+def check_pension_fund_wiring():
+    # بازرسی ۱۴۰۵ (دور دهم): صندوق بازنشستگی باید pay-as-you-go واقعی باشد
+    # (تعهدات ∝ سالمندان × درآمد سرانه، منابع = سهم‌برداری + تکمیلی ردیف رفاه).
+    # قبل: مستمری ثابت ۵۰۰۰ × میلیون‌ها بازنشسته در هر اجرای هفتگی ⇒ موجودی برای
+    # همیشه صفر و بحران فانتوم ۱٪/اجرا. هر بازگشت به مستمری ثابت = باگ واحد.
+    src = open("scripts/systems/welfare_system.gd", encoding="utf-8").read()
+    if ("retirees\"]" in src and "* 5000.0" in src):
+        FAIL.append("مستمری ثابت ۵۰۰۰ برگشته است (باگ واحد صندوق بازنشستگی)")
+        return
+    ok = ('pc_month' in src and 'contributions_m' in src
+          and 'pension_obligations_monthly' in src
+          and 'pension_solvency' in src and '"pension_shortfall"' in src)
+    if ok:
+        print("✅ صندوق بازنشستگی: pay-as-you-go واقعی (تعهدات/منابع/بافر/کسری اجتماعی)")
+    else:
+        FAIL.append("مدل صندوق بازنشستگی (تعهدات/منابع/کسری) در welfare_system ناقص است")
+    # آینهٔ بلندمدت باید همان مدل را بپوشاند (پایش رگرسیون پیری جمعیت)
+    mir = open("tests/sim_longrun.py", encoding="utf-8").read()
+    if ('pension_solvency' in mir and 'pension_balance' in mir
+            and 'elderly_share' in mir):
+        print("✅ آینهٔ بلندمدت صندوق بازنشستگی را مدل می‌کند")
+    else:
+        FAIL.append("آینهٔ sim_longrun مدل صندوق بازنشستگی را ندارد")
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
@@ -180,6 +205,7 @@ check_queue_key_coverage()
 check_noise_symmetry()
 check_resource_revenue_basis()
 check_strategic_reserves_wiring()
+check_pension_fund_wiring()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

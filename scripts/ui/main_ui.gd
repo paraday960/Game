@@ -4510,6 +4510,11 @@ func _build_welfare_card(st: Dictionary):
 	var _pen_left: int = maxi(0, 12 - (_turn_now - int(wp.get("last_pension", -99))))
 	_row(card, "سن بازنشستگی", PersianFormatter.to_persian_digits(str(int(wp.get("pension_age", 65)))) + " سال" + ("" if _pen_left <= 0 else " · ⏳ " + PersianFormatter.to_persian_digits(str(_pen_left)) + " نوبت تا اصلاح"))
 	_bar(card, "فشار صندوق بازنشستگی", float(welfare.get("pension_pressure", 0.3)))
+	# سلامت واقعی صندوق (بازرسی ۱۴۰۵ — دور دهم): تعهدات/منابع pay-as-you-go + بافر
+	_row(card, "تعهدات ماهانهٔ مستمری", PersianFormatter.format_money(welfare.get("pension_obligations_monthly", 0.0)))
+	_row(card, "منابع ماهانهٔ صندوق", PersianFormatter.format_money(welfare.get("pension_resources_monthly", 0.0)))
+	_row(card, "موجودی صندوق", PersianFormatter.format_money(welfare.get("pension_fund_balance", 0.0)), ACCENT_RED if float(welfare.get("pension_resources_monthly", 1.0)) < float(welfare.get("pension_obligations_monthly", 0.0)) else ACCENT_GREEN)
+	_bar(card, "توان پرداخت صندوق (منابع/تعهدات)", float(welfare.get("pension_solvency", 1.0)) / 2.0)
 	_bar(card, "بیمه بیکاری", float(wp.get("unemployment_benefit", 0.4)))
 	_bar(card, "یارانه فرزند", float(wp.get("child_allowance", 0.2)))
 	_bar(card, "پوشش بیمه سلامت", float(wp.get("health_coverage", 0.6)))
@@ -4539,7 +4544,7 @@ func _build_welfare_card(st: Dictionary):
 		_mark_decision_button(btn, "welfare:" + a[0])
 		row3.add_child(btn)
 	var hint = Label.new()
-	hint.text = "افزایش سن بازنشستگی صندوق را نجات می‌دهد ولی بازنشستگان و کارگران می‌شورند؛ بیمه بیکاری رفاه می‌آورد ولی بدهی و تنبلی؛ یارانه فرزند جمعیت جوان می‌کند."
+	hint.text = "منابع صندوق = سهم‌برداری شاغلان + تکمیلی از ردیف بودجهٔ «رفاه»؛ پیری جمعیت تعهدات را می‌برد و سهم‌برداری را می‌کاهد. بیمه بیکاری و یارانه فرزند انتقال‌های نقدی‌اند و هزینه‌شان در کارت مالی زیر «هزینه‌های بخشی مداوم» دیده می‌شود. افزایش سن بازنشستگی صندوق را نجات می‌دهد ولی بازنشستگان و کارگران می‌شورند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 14); hint.modulate = TEXT_FAINT
 	card.add_child(hint)
