@@ -698,11 +698,32 @@ def run_gdp_boost_suite():
     for _ in range(365):
         step_day(s)
     cap_g, cap_t = s["gdp"], s["sector_boosts_total"]
+    # رویداد محرک کانال (همگام با economy_system.gd): جهش/فرود هم‌جهت در پنجرهٔ [۰٫۷٪،۱٫۵٪]
+    s = initial_state()
+    prev_bt, drive_hit, drive_spam = 0.0, False, False
+    for day in range(240):
+        if day == 120:
+            s["sector_boosts"] = {"آزمون جهش": 0.008}
+        if day == 180:
+            s["sector_boosts"] = {"آزمون جهش": 0.008, "آزمون بزرگ": 0.06}
+        step_day(s)
+        if day % 3 == 0:
+            jump = abs(s["sector_boosts_total"] - prev_bt)
+            fired = (prev_bt * s["sector_boosts_total"] >= 0.0
+                     and 0.007 <= jump <= 0.015)
+            if day < 177 and fired:
+                drive_hit = True
+            if day >= 177 and fired:
+                drive_spam = True
+            prev_bt = s["sector_boosts_total"]
+            s["_sb_prev_total"] = prev_bt
     checks = [
         ("کانال مثبت ۳٪/سال: GDP ≈ ۳٪ بالاتر از پایه", 1.020 < pos_g / base_g < 1.040),
         ("کانال منفی ۴٪/سال: GDP ≈ ۴٪ پایین‌تر از پایه", 0.950 < neg_g / base_g < 0.970),
         ("سقف تکی ۵٪ و سقف کل ۱۰٪ اعمال می‌شود", abs(cap_t - 0.10) < 1e-9),
         ("با سقف کلی، اثر سالانهٔ کانال از ۱۱٪ فراتر نمی‌رود", cap_g / base_g < 1.11),
+        ("رویداد محرک کانال در جهش ۰٫۸٪ داخل پنجره فعال می‌شود", drive_hit),
+        ("جهش بزرگ‌تر از ۱٫۵٪ (شوک) رویداد محرک نمی‌شود — بدون اسپم", not drive_spam),
     ]
     ok = True
     for name, passed in checks:

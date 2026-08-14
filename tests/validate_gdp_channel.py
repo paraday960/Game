@@ -175,6 +175,16 @@ def main():
           'econ_fx.get("reserve_inflows_monthly"' in ui_src
           and "ورودی بخشی ذخایر (ماهانه)" in ui_src)
 
+    # ── C9: فید رویدادهای کانال GDP (بازرسی ۱۴۰۵د) ───────────────────────
+    check("C9) رویداد محرک کانال در economy_system (نوع sector_boost_drive)",
+          '"type": "sector_boost_drive"' in econ_src and "_sb_prev_total" in econ_src)
+    check("C9) پنجرهٔ فرکانس/شدت رویداد محرک (هر ۳ روز + پنجرهٔ شدت)",
+          "tick % 3 == 0" in econ_src and "0.007" in econ_src and "0.015" in econ_src)
+    check("C9) فید اخبار مهم UI نوع رویداد را می‌شناسد (sector_boost در hints)",
+          '"sector_boost"' in ui_src)
+    check("C9) آینه: رویداد محرک در سناریوی کانال پایش می‌شود",
+          "_sb_prev_total" in mirror2 if "mirror2" in dir() else "_sb_prev_total" in mirror)
+
     # ── C6: قفل الگوی «سطح هدف همگرا» (_gdp_boost) ───────────────────────
     for conv in get_convergent_level_files():
         src_conv = read(os.path.join(ROOT, conv))

@@ -8103,7 +8103,7 @@ func _format_metric_value(value, key: String) -> String:
 # کلمات کلیدی رویدادهای پراهمیت برای فید خبری (بازرسی رویداد-اسپم):
 # فید قبلی صرفاً «دو رویداد آخر» را نشان می‌داد — با ~۱۰۰+ رویداد در هر نوبت، دو تای
 # دمِ صف عملاً تصادفی (و معمولاً طعم‌دهندهٔ آماری) بودند و بحران‌ها دفن می‌شدند.
-const EVENT_IMPORTANT_HINTS := ["crisis", "war", "peace", "treaty", "sanction", "election", "coup", "debt", "disaster", "epidemic", "attack", "assassin", "referendum", "riot", "collapse", "shortage", "blackout", "earthquake", "flood", "launch", "breakthrough", "olympics", "nuclear", "missile", "strike", "unrest", "protest", "bankin", "reserve", "trade_deficit", "hyperinflation", "supply_shock", "energy_crisis", "famine", "default", "resign", "impeach"]
+const EVENT_IMPORTANT_HINTS := ["crisis", "war", "peace", "treaty", "sanction", "election", "coup", "debt", "disaster", "epidemic", "attack", "assassin", "referendum", "riot", "collapse", "shortage", "blackout", "earthquake", "flood", "launch", "breakthrough", "olympics", "nuclear", "missile", "strike", "unrest", "protest", "bankin", "reserve", "trade_deficit", "hyperinflation", "supply_shock", "energy_crisis", "famine", "default", "resign", "impeach", "sector_boost"]
 
 func _event_is_important(e: Dictionary) -> bool:
 	var t := str(e.get("type", ""))

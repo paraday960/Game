@@ -299,6 +299,27 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		if Deterministic.chance(0.012):
 			events.append({"type":"black_market_growth","size": econ["black_market_size"], "message":"بازار سیاه رونق گرفت - جیره‌بندی"})
 
+	# ── رویدادهای کانال GDP (بازرسی ۱۴۰۵د): تغییر رژیمِ کانال برای بازیکن روایت شود.
+	# فقط جهش/فرود هم‌جهت در پنجرهٔ [۰٫۷٪، ۱٫۵٪] هر ۳ روز یک بار — عبور صفر یا تغییر
+	# بزرگ‌تر (شوک/تحریم) رویدادهای اختصاصی خودشان را دارند و اسپم نمی‌شود.
+	if tick % 3 == 0:
+		var prev_boost: float = float(econ.get("_sb_prev_total", 0.0))
+		var boost_jump: float = absf(boost_total - prev_boost)
+		if prev_boost * boost_total >= 0.0 and boost_jump >= 0.007 and boost_jump <= 0.015:
+			var drive_key := ""
+			var drive_val := 0.0
+			for bk in econ.get("sector_boosts", {}).keys():
+				var bv: float = float(econ["sector_boosts"][bk])
+				if absf(bv) > absf(drive_val):
+					drive_val = bv
+					drive_key = str(bk)
+			var drive_fa := "جهش محرک بخش‌ها" if boost_total > prev_boost else "فرود محرک بخش‌ها"
+			events.append({"type": "sector_boost_drive",
+				"message": "📊 %s: کانال GDP به %.1f٪/سال رسید (بزرگ‌ترین سهم‌دهنده: %s)"
+					% [drive_fa, boost_total * 100.0, drive_key]})
+		econ["_sb_prev_total"] = boost_total
+		state["economy"] = econ
+
 	# ==================== ز) اقتصاد سایه، فساد، نابرابری ====================
 	var gini = welfare.get("gini",0.38)
 	var poverty = welfare.get("poverty",0.15)
