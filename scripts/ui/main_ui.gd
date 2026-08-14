@@ -252,7 +252,30 @@ const METRIC_WORD_FA = {
 	"foreign":"خارجی", "local":"محلی", "government":"دولت", "market":"بازار", "human":"انسانی",
 	"life":"زندگی", "expectancy":"امید", "crime":"جرم", "poverty":"فقر", "welfare":"رفاه",
 	"spending":"هزینه‌کرد", "personnel":"پرسنل", "influence":"نفوذ", "soft":"نرم",
-	"score":"امتیاز", "ratio":"نسبت", "reserve":"ذخیره", "reserves":"ذخایر", "value":"مقدار"
+	"score":"امتیاز", "ratio":"نسبت", "reserve":"ذخیره", "reserves":"ذخایر", "value":"مقدار",
+	"economy":"اقتصاد", "policy":"سیاست", "private":"خصوصی", "investment":"سرمایه‌گذاری",
+	"informal":"غیررسمی", "tax":"مالیات", "daily":"روزانه", "household":"خانوار",
+	"female":"زنان", "workforce":"نیروی کار", "size":"اندازه", "service":"خدمت",
+	"months":"ماه", "error":"خطا", "estimate":"برآورد", "elite":"نخبگان",
+	"lifestyle":"سبک زندگی", "fitness":"تناسب", "charity":"خیریه", "contribution":"مشارکت",
+	"reliability":"پایداری", "ethnic":"قومی", "unrest":"ناآرامی", "extremism":"افراطی‌گرایی",
+	"bureaucracy":"بوروکراسی", "burden":"بار", "aid":"کمک خارجی", "inflow":"ورود",
+	"continuity":"تداوم", "appeal":"جاذبه", "overstaffing":"اضافه‌استخدام",
+	"wage":"حقوق", "arrears":"معوقه"
+}
+
+# ترجمه دقیق کلیدهای ترکیبی که معنای واحدی دارند (ترجیح بر ترجمه تکه‌به‌تکه)
+const METRIC_EXACT_FA := {
+	"ethnic_unrest_risk": "ریسک ناآرامی قومی", "extremism_risk": "ریسک افراطی‌گرایی",
+	"charity_contribution": "مشارکت خیریه‌ها", "power_reliability": "پایداری شبکه برق",
+	"lifestyle_fitness": "تناسب سبک زندگی", "elite_research_capacity": "ظرفیت پژوهش نخبگان",
+	"policy_error_risk": "ریسک خطای سیاست", "informal_economy_estimate": "برآورد اقتصاد غیررسمی",
+	"avg_household_size": "بعد خانوار", "female_workforce": "اشتغال زنان",
+	"bureaucracy_burden": "بار بوروکراسی", "aid_inflow_daily": "کمک خارجی روزانه",
+	"policy_continuity": "تداوم سیاستگذاری", "service_appeal": "جاذبه خدمت",
+	"overstaffing": "اضافه‌استخدام", "wage_arrears_months": "معوقه حقوق (ماه)",
+	"private_investment": "سرمایه‌گذاری خصوصی", "informal_tax_loss_daily": "فرار مالیاتی روزانه",
+	"demographic_stage_announced": "مرحله گذار جمعیتی اعلام‌شده", "prev_absorption": "جذب شوک ثبت‌شده قبلی"
 }
 
 const TABS := [
@@ -2636,6 +2659,11 @@ func _build_security_card(st: Dictionary):
 	var mode := str(sp.get("mode", "civil"))
 	var mode_names := {"civil": "آزادی‌محور", "surveillance": "نظارتی", "tough": "سختگیرانه"}
 	_row(card, "سیاست پلیس", str(mode_names.get(mode, mode)))
+	var sec_live: Dictionary = st.get("security", {})
+	var eth_risk := clampf(float(sec_live.get("ethnic_unrest_risk", 0.07)), 0.0, 1.0)
+	var ext_risk := clampf(float(sec_live.get("extremism_risk", 0.11)), 0.0, 1.0)
+	_row(card, "ریسک ناآرامی قومی", PersianFormatter.to_persian_digits("%.0f٪" % (eth_risk * 100.0)), _color_for(1.0 - eth_risk))
+	_row(card, "ریسک افراطی‌گرایی", PersianFormatter.to_persian_digits("%.0f٪" % (ext_risk * 100.0)), _color_for(1.0 - ext_risk))
 	var act_row = HBoxContainer.new(); act_row.add_theme_constant_override("separation", 4); card.add_child(act_row)
 	for m in [["civil", "🕊️ آزادی‌محور"], ["surveillance", "📹 نظارتی"], ["tough", "🚨 سختگیرانه"]]:
 		var btn = Button.new(); btn.text = m[1]
@@ -2718,6 +2746,13 @@ func _build_government():
 	_bar(summary, "انسجام کابینه", float(cabinet.get("cohesion", 0.65)))
 	_bar(summary, "سرمایه سیاسی انتصاب", float(state.get("policies", {}).get("political_capital", 0.0)) / max(float(BalanceConfig.get_value("politics.policy_capital_max", 5.0)), 1.0))
 	_row(summary, "رسوایی‌های ثبت‌شده", PersianFormatter.to_persian_digits(str(cabinet.get("scandal_count", 0))), _color_for(0.75 if int(cabinet.get("scandal_count", 0)) == 0 else 0.25))
+	_bar(summary, "بار بوروکراسی", float(state.get("government_buildings", {}).get("bureaucracy_burden", 0.40)))
+	_bar(summary, "تداوم سیاستگذاری", float(state.get("political_career", {}).get("policy_continuity", 0.60)))
+	var emp_live: Dictionary = state.get("public_employees", {})
+	if not emp_live.is_empty():
+		_bar(summary, "اضافه‌استخدام دولت", float(emp_live.get("overstaffing", 0.0)))
+		var arrears := clampf(float(emp_live.get("wage_arrears_months", 0.0)), 0.0, 12.0)
+		_row(summary, "معوقه حقوق کارکنان", PersianFormatter.to_persian_digits("%.1f ماه" % arrears), _color_for(1.0 - arrears / 12.0))
 	var hint = Label.new(); hint.text = "وزیر کارآمد خروجی وزارتخانه را بهتر می‌کند؛ پاکدستی پایین خطر رسوایی دارد و وفاداری بیشتر انسجام کابینه را حفظ می‌کند. هر انتصاب سرمایه سیاسی مصرف می‌کند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75, 0.82, 0.92); summary.add_child(hint)
 	_build_parliament_card(state)
@@ -2831,6 +2866,10 @@ func _build_economy():
 		_color_for(0.5 + sign(-econ.get("deficit", 0)) * 0.5))
 	_row(c3, "بدهی ملی", PersianFormatter.format_money(econ.get("national_debt", 0)))
 	_bar(c3, "نسبت بدهی به GDP", clamp(econ.get("debt_to_gdp", 0) / 2.0, 0, 1))
+	_row(c3, "سرمایه‌گذاری خصوصی", PersianFormatter.to_persian_digits("%.0f٪ از GDP" % (float(econ.get("private_investment", 0.15)) * 100.0)))
+	var aid_month := float(econ.get("aid_inflow_daily", 0.0)) * 30.0
+	if aid_month > 0.0:
+		_row(c3, "کمک خارجی ماهانه", PersianFormatter.format_money(aid_month))
 
 	var cb: Dictionary = st.get("central_bank", {})
 	var trade: Dictionary = st.get("trade", {})
@@ -3043,6 +3082,9 @@ func _build_shadow_card(st: Dictionary):
 	var size := clampf(float(shadow.get("size", 0.18)), 0.0, 1.0)
 	var card = _card("🕳️ اقتصاد سایه و فساد")
 	_row(card, "اندازه اقتصاد سایه", PersianFormatter.to_persian_digits("%.0f٪ از GDP" % (size * 100.0)), _color_for(1.0 - size))
+	var tax_loss_month := float(st.get("economy", {}).get("informal_tax_loss_daily", 0.0)) * 30.0
+	if tax_loss_month > 0.0:
+		_row(card, "فرار مالیاتی ماهانه", PersianFormatter.format_money(tax_loss_month))
 	var scandal: Dictionary = shadow.get("scandal", {})
 	if not scandal.is_empty():
 		var scandal_lbl = Label.new()
@@ -3092,6 +3134,8 @@ func _build_energy_card(st: Dictionary):
 	var card = _card("⚡ سیاست انرژی و اقلیم")
 	_row(card, "امنیت انرژی", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("security", 0.6)) * 100.0)), _color_for(float(en.get("security", 0.6))))
 	_row(card, "ریسک خاموشی", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("blackout_risk", 0.1)) * 100.0)), _color_for(1.0 - float(en.get("blackout_risk", 0.1))))
+	var p_rel := clampf(float(st.get("economy", {}).get("power_reliability", 0.75)), 0.0, 1.0)
+	_row(card, "پایداری شبکه برق", PersianFormatter.to_persian_digits("%.0f٪" % (p_rel * 100.0)), _color_for(p_rel))
 	_row(card, "انتشار کربن", PersianFormatter.to_persian_digits("%.0f٪" % (float(en.get("emissions", 0.7)) * 100.0)), _color_for(1.0 - float(en.get("emissions", 0.7))))
 	_bar(card, "سهم فسیلی", float(mix.get("fossil", 0.7)))
 	_bar(card, "سهم تجدیدپذیر", float(mix.get("renewable", 0.1)))
@@ -4050,6 +4094,8 @@ func _build_epidemic_card(st: Dictionary):
 	_row(card, "تلفات کل", PersianFormatter.to_persian_digits(str(ep.get("deaths", 0))))
 	_row(card, "پوشش واکسیناسیون", PersianFormatter.to_persian_digits("%.0f٪" % (float(ep.get("vaccinated", 0.0)) * 100.0)))
 	_row(card, "ظرفیت بیمارستانی", PersianFormatter.to_persian_digits("%.0f٪" % (float(ep.get("hospital_bonus", 0.0)) * 100.0)))
+	var life_fit := clampf(float(st.get("health", {}).get("lifestyle_fitness", 0.50)), 0.0, 1.0)
+	_row(card, "تناسب سبک زندگی", PersianFormatter.to_persian_digits("%.0f٪" % (life_fit * 100.0)), _color_for(life_fit))
 	var lockdown := int(ep.get("lockdown", 0))
 	var lock_names := ["—", "سبک", "سنگین"]
 	_row(card, "قرنطینه", str(lock_names[lockdown]) if lockdown < 3 else "؟")
@@ -4334,6 +4380,7 @@ func _build_welfare_card(st: Dictionary):
 	_bar(card, "بیمه بیکاری", float(wp.get("unemployment_benefit", 0.4)))
 	_bar(card, "یارانه فرزند", float(wp.get("child_allowance", 0.2)))
 	_bar(card, "پوشش بیمه سلامت", float(wp.get("health_coverage", 0.6)))
+	_row(card, "مشارکت خیریه‌های مذهبی", PersianFormatter.to_persian_digits("%.0f٪" % (float(welfare.get("charity_contribution", 0.08)) * 100.0)))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for p in [[60, "👵 ۶۰"], [65, "👴 ۶۵"], [70, "🧓 ۷۰"]]:
 		var btn = Button.new(); btn.text = p[1]
@@ -4476,6 +4523,7 @@ func _build_veterans_card(st: Dictionary):
 	_bar(card, "سطح مستمری", float(vp.get("pension_level", 0.5)))
 	_bar(card, "طرح اشتغال", float(vp.get("employment_program", 0.4)))
 	_bar(card, "پوشش درمانی", float(vt.get("health_care", 0.65)))
+	_bar(card, "جاذبه خدمت نظامی", float(vt.get("service_appeal", 0.68)))
 	_row(card, "بیمارستان تخصصی", "فعال 🟢" if bool(vp.get("clinic", false)) else "غیرفعال ⚪")
 	_row(card, "مراسم بزرگداشت", PersianFormatter.to_persian_digits(str(vp.get("parades", 0))))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
@@ -4685,6 +4733,7 @@ func _build_research_card(st: Dictionary):
 	_bar(card, "انتقال فناوری", float(rp.get("tech_transfer", 0.20)))
 	_bar(card, "تجاری‌سازی", float(rp.get("commercialization", 0.30)))
 	_bar(card, "فرار مغزها", float(rp.get("brain_drain", 0.28)))
+	_bar(card, "ظرفیت پژوهش نخبگان", float(st.get("technology", {}).get("elite_research_capacity", 0.65)))
 	_row(card, "مقاله‌های علمی", PersianFormatter.to_persian_digits(str(rp.get("papers", 0))))
 	_row(card, "اختراع‌های ثبت‌شده", PersianFormatter.to_persian_digits(str(rp.get("patents", 0))))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
@@ -4877,6 +4926,9 @@ func _build_demographic_card(st: Dictionary):
 	_bar(card, "مراقبت سالمندی", float(dp.get("elderly_care", 0.20)))
 	_bar(card, "بازآموزی نیروی کار", float(dp.get("retraining", 0.15)))
 	_row(card, "میانگین سن", PersianFormatter.to_persian_digits("%.1f" % float(dp.get("median_age", 31.0))))
+	var fam: Dictionary = st.get("family", {})
+	_row(card, "بعد خانوار", PersianFormatter.to_persian_digits("%.1f نفر" % float(fam.get("avg_household_size", 3.0))))
+	_bar(card, "اشتغال زنان", float(fam.get("female_workforce", 0.53)))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["pronatal", "👶 مشوق تولد"], ["childcare", "🧸 مهدکودک"], ["elderly", "👴 سالمندی"], ["retraining", "🎓 بازآموزی"]]:
 		var btn = Button.new(); btn.text = a[1]
@@ -4989,6 +5041,10 @@ func _build_statistics_card(st: Dictionary):
 	_bar(card, "زیرساخت داده", float(sp.get("data_infrastructure", 0.40)))
 	_bar(card, "پوشش کد ملی", float(sp.get("id_coverage", 0.85)))
 	_bar(card, "کم‌گمارشی", float(sp.get("underreporting", 0.20)))
+	var stats_live: Dictionary = st.get("statistics", {})
+	var p_err := clampf(float(stats_live.get("policy_error_risk", 0.36)), 0.0, 1.0)
+	_row(card, "ریسک خطای سیاست", PersianFormatter.to_persian_digits("%.0f٪" % (p_err * 100.0)), _color_for(1.0 - p_err))
+	_row(card, "برآورد اقتصاد غیررسمی", PersianFormatter.to_persian_digits("%.0f٪ از GDP" % (float(stats_live.get("informal_economy_estimate", 0.16)) * 100.0)))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["census", "📋 سرشماری"], ["infra", "🗄️ پایگاه داده"], ["independence", "📜 استقلال"], ["opendata", "🔓 داده باز"]]:
 		var btn = Button.new(); btn.text = a[1]
@@ -7932,6 +7988,8 @@ func _build_system_detail(system_name: String):
 		detail.add_child(more)
 
 func _metric_name_fa(key: String) -> String:
+	if METRIC_EXACT_FA.has(key):
+		return str(METRIC_EXACT_FA[key])
 	var clean = key.replace("_", " ")
 	# کلیدهایی که از ابتدا فارسی‌اند بدون تغییر نمایش داده می‌شوند.
 	for i in range(clean.length()):
