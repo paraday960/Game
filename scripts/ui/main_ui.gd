@@ -3061,10 +3061,12 @@ func _build_forex_card(st: Dictionary):
 	var res_gdp_ratio := reserves_v / maxf(float(econ_fx.get("gdp", 1.0)), 1.0)
 	_row(card, "ذخایر ارزی", PersianFormatter.format_money(reserves_v), _color_for(clampf(res_gdp_ratio / 0.15, 0.0, 1.0)))
 	# کانال ورودی بخشی ذخایر (بازرسی ارزی ۱۴۰۵): حواله‌ها، ترانزیت هاب، گردشگری سلامت،
-	# صادرات فناوری و محصولات پالایشی — تسویهٔ روزانه فقط توسط بانک مرکزی (مالکیت یکتا)
+	# صادرات فناوری و محصولات پالایشی — تسویهٔ روزانه فقط توسط بانک مرکزی (مالکیت یکتا).
+	# جمع کانال علامت‌دار نمایش داده می‌شود: مثبت=ورود ارز، منفی=خروج/فرار سرمایه.
 	var inflow_m: float = float(econ_fx.get("reserve_inflows_monthly", 0.0))
-	if inflow_m > 0.0:
-		_row(card, "ورودی بخشی ذخایر (ماهانه)", PersianFormatter.format_money(inflow_m), _color_for(0.7))
+	if inflow_m != 0.0:
+		var inflow_label := "ورودی بخشی ذخایر (ماهانه)" if inflow_m > 0.0 else "خروج بخشی ذخایر (ماهانه)"
+		_row(card, inflow_label, PersianFormatter.format_money(inflow_m), _color_for(0.7 if inflow_m > 0.0 else 0.15))
 	_row(card, "صرف بازار سیاه", PersianFormatter.to_persian_digits("%.0f٪" % (float(forex.get("black_premium", 0.05)) * 100.0)), _color_for(1.0 - clampf(float(forex.get("black_premium", 0.05)) * 5.0, 0.0, 1.0)))
 	_row(card, "کنترل سرمایه", "فعال" if bool(forex.get("capital_control", false)) else "غیرفعال")
 	var inter := clampf(float(forex.get("intervention", 0.0)), 0.0, 1.0)

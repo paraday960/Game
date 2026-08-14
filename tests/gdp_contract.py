@@ -85,6 +85,7 @@ MIGRATED = {
 # ── کانال نرخ ماهانهٔ ورودی ذخایر ارزی (reserve_inflows) ─────────────────
 # الگوی مشابه sector_boosts: ناشر بخشی کلید فارسی خودش را با «مبلغ دلاری ماهانه»
 # بازنویسی می‌کند (نه انباشت) و central_bank_system به‌عنوان مالک روزانه تسویه می‌کند.
+# مقادیر منفی = جریان خروج ارز (فرار سرمایه) — کانال، «جریان خالص» است.
 RESERVE_PUBLISHERS = {
     "scripts/core/aerospace_manager.gd": ["خدمات ماهواره‌ای"],
     "scripts/core/aviation_manager.gd": ["هاب هوایی و بار"],
@@ -93,6 +94,7 @@ RESERVE_PUBLISHERS = {
     "scripts/core/standards_manager.gd": ["صادرات استاندارد"],
     "scripts/core/downstream_energy_manager.gd": ["محصولات پالایشی"],
     "scripts/core/diaspora_manager.gd": ["حواله‌های دیاسپورا"],
+    "scripts/core/fdi_manager.gd": ["خروج سرمایه خارجی"],
 }
 # بودجهٔ pestleٔ نویسههای مستقیم foreign_reserves (غیر از کانال) — فقط کم می‌شود.
 RESERVE_BUDGET = {
@@ -101,7 +103,6 @@ RESERVE_BUDGET = {
     "scripts/core/diaspora_manager.gd": 1,            # اقدام اعتماد‌سازی دیاسپورا
     "scripts/core/dilemma_manager.gd": 1,             # پیامد رویداد انتخابی
     "scripts/core/faction_manager.gd": 1,             # برش بحرانی (آشوب)
-    "scripts/core/fdi_manager.gd": 1,                 # خروج سرمایه (رویداد)
     "scripts/core/forex_manager.gd": 1,               # هزینهٔ مداخله ارزی (اقدام)
     "scripts/core/industry_manager.gd": 1,            # درآمد خصوصی‌سازی (اقدام)
     "scripts/core/market_manager.gd": 2,              # خرید/فروش بازار (اقدام)

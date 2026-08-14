@@ -29,13 +29,18 @@ func format_percent(value: float) -> String:
 	return to_persian_digits("%.1f" % (value * 100.0)) + "٪"
 
 func format_money(amount: float) -> String:
-	# میلیارد ریال - نمایشی فارسی
-	if amount >= 1_000_000_000:
-		return to_persian_digits("%.1f" % (amount / 1_000_000_000.0)) + " میلیارد ریال"
-	elif amount >= 1_000_000:
-		return to_persian_digits("%.1f" % (amount / 1_000_000.0)) + " میلیون ریال"
+	# میلیارد ریال - نمایشی فارسی (اعداد منفی با علامت منفی — مثل تراز بودجه یا خروج ارز)
+	var sign := ""
+	var a: float = amount
+	if a < 0.0:
+		sign = "-"
+		a = -a
+	if a >= 1_000_000_000:
+		return sign + to_persian_digits("%.1f" % (a / 1_000_000_000.0)) + " میلیارد ریال"
+	elif a >= 1_000_000:
+		return sign + to_persian_digits("%.1f" % (a / 1_000_000.0)) + " میلیون ریال"
 	else:
-		return to_persian_digits(str(int(amount))) + " ریال"
+		return sign + to_persian_digits(str(int(a))) + " ریال"
 
 func format_large(num: float) -> String:
 	if num >= 1_000_000_000:

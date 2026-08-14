@@ -43,16 +43,26 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	econ["unemployment"] = clampf(float(econ.get("unemployment", 0.08)) - inflow * 0.0008, 0.02, 0.30)
 	# شرکت‌های خارجی → نفوذ فناوری
 	state["technology"]["spillover"] = clampf(float(state["technology"].get("spillover", 0.1)) + inflow * 0.002, 0.02, 0.5)
+	# ممیزی ذخایر (۱۴۰۵): خروج سرمایه دیگر برش یک‌بارهٔ مخزن نیست — جریان ماهانهٔ
+	# منفی در کانال reserve_inflows است (مالک تسویه: بانک مرکزی). تا وقتی اعتماد فرو
+	# ریخته (inflow<0.08) جریان ادامه دارد و با بازگشت اعتماد خودبه‌خود صفر می‌شود؛
+	# بازیکن در کارت ارز رقم منفی را می‌بیند (اصلاح نمایش مقادیر منفی).
+	var fdi_infl: Dictionary = econ.get("reserve_inflows", {})
+	var flight_month: float = 0.0
+	if inflow < 0.08:
+		flight_month = -float(econ.get("foreign_reserves", 0.0)) * 0.002
+	fdi_infl["خروج سرمایه خارجی"] = flight_month
+	econ["reserve_inflows"] = fdi_infl
 	# رویداد: ورود غول خارجی
 	if inflow > 0.6 and Deterministic.chance(0.06):
 		fdi["companies"] = int(fdi.get("companies", 0)) + 1
 		events.append({"type": "fdi_boom", "message": "🏢 سرمایه‌گذار بزرگ خارجی کارخانه جدید افتتاح کرد؛ هزاران شغل ایجاد شد"})
 	elif inflow < 0.08 and Deterministic.chance(0.05):
-		# خروج سرمایه یعنی تخلیه ارز و رکود سرمایه‌گذاری — اثر واقعی نه صرفاً اعلام
-		econ["foreign_reserves"] = maxf(float(econ.get("foreign_reserves", 0.0)) * 0.98, 0.0)
+		# اعلان خبرِ جریانِ جاریِ خروج سرمایه (اثر ارزی از کانال می‌گذرد؛ فرسایش
+		# سرمایه‌گذاری خصوصی اثر گذرای بحران است و همچنان مستقیم اعمال می‌شود)
 		econ["private_investment"] = clampf(float(econ.get("private_investment", 0.15)) - 0.010, 0.03, 0.40)
 		state["economy"] = econ
-		events.append({"type": "fdi_flee", "message": "✈️ سرمایه‌گذاران خارجی کشور را ترک می‌کنند؛ اعتماد از دست رفته"})
+		events.append({"type": "fdi_flee", "message": "✈️ سرمایه‌گذاران خارجی کشور را ترک می‌کنند؛ ذخایر ارزی در حال تخلیه است"})
 	state["fdi_policy"] = fdi
 	state["economy"] = econ
 	return {"state": state, "events": events}

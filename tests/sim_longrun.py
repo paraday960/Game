@@ -758,11 +758,22 @@ def run_reserve_inflow_suite():
     for _ in range(183):
         step_day(s)
     rew = s["foreign_reserves"]
+    # جریان منفی (فرار سرمایه): کانال «جریان خالص» است — خروج باید مخزن را بخورد
+    s = initial_state()
+    s["reserve_inflows"] = {"آزمون فرار": -1.5e9}
+    for _ in range(365):
+        step_day(s)
+    out_flow = s["foreign_reserves"]
+    monthly_pub = s["reserve_inflows_monthly"]
     checks = [
         ("یک ناشر ۳م/ماه: +~۳۶م در سال نسبت به پایه", 34e9 < one_pub - base_r < 38e9),
         ("دو ناشر ۴+۲م/ماه: +~۷۲م در سال نسبت به پایه", 70e9 < two_pub - base_r < 74e9),
         ("بازنویسی ناشر (انباشت نشدن): پس از تعویض فقط ب فعال است",
          rew > base_r and rew < two_pub - 20e9),
+        ("جریان منفی ۱٫۵م/ماه: -~۱۸م در سال نسبت به پایه (فرار سرمایه دیده می‌شود)",
+         -21e9 < out_flow - base_r < -15e9),
+        ("انتشار جمع علامت‌دار کانال برای UI (reserve_inflows_monthly منفی)",
+         abs(monthly_pub - (-1.5e9)) < 1.0),
     ]
     ok = True
     for name, passed in checks:

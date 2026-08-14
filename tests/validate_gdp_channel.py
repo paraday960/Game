@@ -174,6 +174,9 @@ def main():
     check("C8) کارت ارز: نمایش ورودی ماهانهٔ بخشی ذخایر (reserve_inflows_monthly)",
           'econ_fx.get("reserve_inflows_monthly"' in ui_src
           and "ورودی بخشی ذخایر (ماهانه)" in ui_src)
+    check("C8) کارت ارز: نمایش علامت‌دار — خروج/فرار سرمایه (شرط != ۰ و لیبل منفی)",
+          "inflow_m != 0.0" in ui_src
+          and "خروج بخشی ذخایر (ماهانه)" in ui_src)
 
     # ── C9: فید رویدادهای کانال GDP (بازرسی ۱۴۰۵د) ───────────────────────
     check("C9) رویداد محرک کانال در economy_system (نوع sector_boost_drive)",
