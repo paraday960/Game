@@ -147,16 +147,34 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		res["inventory"][resource] = clamp(float(res["inventory"][resource]) + net*0.05, 0.0, float(res["capacity"].get(resource, storage_base)))
 
 		# بحران - اگر موجودی < ۳۰٪ ظرفیت و تقاضا بالا
+		# (بازرسی ۱۴۰۵ — دور نهم) ذخایر راهبردی بالاخره مصرف واقعی دارند: پیش از اعلان
+		# بحران، SPR تزریق می‌شود (نفت→برق، غذا→انبار غذا) و موجودی را نگه می‌دارد؛
+		# بحران فقط وقتی فرامی‌رسد که ذخیره راهبردی هم رو به پایان باشد — همان نقش
+		# واقعی SPR در کشورها (تعویق/جذب شوک، نه حذف آن).
 		if res["inventory"][resource] < max(energy_crisis_threshold, food_crisis_threshold) and res["demand"][resource] > 10.0:
 			if resource == "برق" and res["inventory"]["برق"] < energy_crisis_threshold:
-				res["energy_crisis"] = true
-				res["blackout_risk"] = clamp(float(res.get("blackout_risk",0.10)) + 0.02, 0.05, 0.85)
-				if Deterministic.chance(0.015):
-					events.append({"type":"energy_crisis","inventory": res["inventory"]["برق"], "message":"بحران برق - ذخیره %.0f%% - خاموشی برنامه‌ریزی" % res["inventory"]["برق"]})
+				var spr_oil := float(res["strategic_reserves"].get("نفت", 30.0))
+				if spr_oil > 15.0:
+					res["strategic_reserves"]["نفت"] = spr_oil - 0.4
+					res["inventory"]["برق"] = float(res["inventory"]["برق"]) + 0.25
+					if Deterministic.chance(0.008):
+						events.append({"type":"spr_release","message":"🛢️ آزادسازی ذخیره راهبردی نفت — نیروگاه‌ها با سوخت ذخیره کار می‌کنند (%.0f روز باقی)" % spr_oil})
+				else:
+					res["energy_crisis"] = true
+					res["blackout_risk"] = clamp(float(res.get("blackout_risk",0.10)) + 0.02, 0.05, 0.85)
+					if Deterministic.chance(0.015):
+						events.append({"type":"energy_crisis","inventory": res["inventory"]["برق"], "message":"بحران برق - ذخیره %.0f%% - خاموشی برنامه‌ریزی" % res["inventory"]["برق"]})
 			elif resource == "غذا" and res["inventory"]["غذا"] < food_crisis_threshold:
-				res["food_crisis"] = true
-				if Deterministic.chance(0.012):
-					events.append({"type":"food_crisis","inventory": res["inventory"]["غذا"], "message":"بحران غذا - ذخیره %d روز" % int(res["inventory"]["غذا"])})
+				var spr_food := float(res["strategic_reserves"].get("غذا", 45.0))
+				if spr_food > 20.0:
+					res["strategic_reserves"]["غذا"] = spr_food - 0.5
+					res["inventory"]["غذا"] = float(res["inventory"]["غذا"]) + 0.3
+					if Deterministic.chance(0.008):
+						events.append({"type":"spr_release","message":"🌾 آزادسازی ذخیره راهبردی غذا — بازار با ذخایر دولتی تعدیل شد (%.0f روز باقی)" % spr_food})
+				else:
+					res["food_crisis"] = true
+					if Deterministic.chance(0.012):
+						events.append({"type":"food_crisis","inventory": res["inventory"]["غذا"], "message":"بحران غذا - ذخیره %d روز" % int(res["inventory"]["غذا"])})
 
 	# ==================== خودکفایی و ذخایر راهبردی ====================
 	var total_prod = 0.0

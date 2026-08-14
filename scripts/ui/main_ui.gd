@@ -1793,6 +1793,14 @@ func _build_dashboard():
 		if inv.has(rname):
 			var cap = res.get("capacity", {}).get(rname, 150.0)
 			_bar(c3, rname, inv[rname] / cap)
+	# روزهای پوشش ذخیره راهبردی (بازرسی ۱۴۰۵ — دور نهم: حالا در آستانهٔ بحران واقعاً آزاد می‌شود)
+	var spr_map: Dictionary = res.get("strategic_reserves", {})
+	if not spr_map.is_empty():
+		var spr_txt_parts: Array = []
+		for rname in ["غذا", "نفت", "آب", "مهمات"]:
+			if spr_map.has(rname):
+				spr_txt_parts.append("%s %s روز" % [rname, PersianFormatter.to_persian_digits(str(int(spr_map[rname])))])
+		_row(c3, "ذخیره راهبردی", " · ".join(spr_txt_parts), Color(0.55, 0.85, 0.95))
 
 	_dashboard_section("🛡️ قدرت و راهبرد")
 	var c4 = _card("🏅 قدرت و اعتبار")

@@ -160,6 +160,18 @@ def check_resource_revenue_basis():
         FAIL.append("قیمت سوخت دوباره ثابت شد یا متغیر مردهٔ gas_inv برگشته است")
 
 
+def check_strategic_reserves_wiring():
+    # بازرسی ۱۴۰۵ (دور نهم): ذخایر راهبردی باید پیش از اعلان بحران تزریق شوند
+    # (SPR واقعی: تعویق/جذب شوک) — نه فقط شاخص نمایشیِ بی‌مصرف.
+    src = open("scripts/systems/resources_system.gd", encoding="utf-8").read()
+    if ('res["strategic_reserves"]["نفت"] = spr_oil - 0.4' in src
+            and 'res["strategic_reserves"]["غذا"] = spr_food - 0.5' in src
+            and '"spr_release"' in src):
+        print("✅ ذخایر راهبردی در آستانهٔ بحران برق/غذا آزاد می‌شوند (SPR واقعی)")
+    else:
+        FAIL.append("منطق آزادسازی ذخیره راهبردی در آستانهٔ بحران حذف شده")
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
@@ -167,6 +179,7 @@ check_duplicate_deep_blocks()
 check_queue_key_coverage()
 check_noise_symmetry()
 check_resource_revenue_basis()
+check_strategic_reserves_wiring()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")
