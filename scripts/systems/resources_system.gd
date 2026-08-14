@@ -15,6 +15,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	res["capacity"] = res.get("capacity", {"برق":200.0,"نفت":150.0,"گاز":150.0,"آب":150.0,"غذا":150.0,"آهن":120.0,"مس":100.0,"مواد_صنعتی":120.0})
 	res["production"] = res.get("production", {"برق":15.0,"نفت":8.0,"گاز":6.0,"آب":12.0,"غذا":10.0,"آهن":4.0,"مس":2.0,"مواد_صنعتی":5.0})
 	res["demand"] = res.get("demand", {"برق":12.0,"نفت":6.0,"گاز":5.0,"آب":10.0,"غذا":9.0,"آهن":3.0,"مس":1.5,"مواد_صنعتی":4.0})
+	res["demand_base"] = res.get("demand_base", res["demand"].duplicate())
+	res["war_extra"] = res.get("war_extra", {})  # افزونهٔ جنگی: جداگانه تا پس از صلح زوال کند (τ≈۱سال)
 	res["self_sufficiency"] = res.get("self_sufficiency", 0.85)
 	res["energy_crisis"] = res.get("energy_crisis", false)
 	res["food_crisis"] = res.get("food_crisis", false)
@@ -51,7 +53,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var base_prod = float(res["production"][resource])
 		var capacity = float(res["capacity"][resource])
 		var inv = float(res["inventory"][resource])
-		var demand = float(res["demand"][resource])
+		var demand = float(res["demand_base"].get(resource, res["demand"][resource]))
+		var eff_demand: float = demand + float(res["war_extra"].get(resource, 0.0))
 
 		# نرخ استخراج - منابع تجدیدناپذیر کاهش با زمان اگر سرمایه‌گذاری نشود
 		var extraction = float(res["extraction_rate"].get(resource, depletion_rate)) if res["extraction_rate"].has(resource) else depletion_rate
@@ -68,15 +71,23 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		elif resource == "غذا": tech_factor = 0.6 + state.get("agriculture",{}).get("production",100.0)/100.0*0.3 + tech_energy*0.1
 		else: tech_factor = 0.7 + tech_industry*0.5
 
-		var prod_change = (invest_factor*0.3 + tech_factor*0.3 + infra_q*0.2 + 0.2) * 0.01 - depletion
+		# تولید - مدل جاذب به «تقاضا + حاشیه امن» (اصلاح ممیزی انرژی).
+		# مدل قبلی: رشد مکانیکی ~+۱۹٪/سال مستقل از تقاضا → اشباع دائمی انبار و بحرانِ هرگزنرسیدنی.
+		# حالا تولید به‌سمت تقاضا×(۱+حاشیه) جذب می‌شود؛ سرعت همگرایی از سرمایه‌گذاری/فناوری/زیرساخت.
+		var margin: float = 0.06 + invest_factor*0.02 + tech_factor*0.01
+		var capacity_limit: float = capacity * 1.2
+		# هدف تولید از تقاضای مؤثر (شامل افزونهٔ جنگی) تا شبکه در جنگ پاسخ‌گو باشد
+		var target_prod: float = minf(eff_demand * (1.0 + margin), capacity_limit)
+		var pull: float = 0.04 + invest_factor*0.02 + tech_factor*0.02 + infra_q*0.01
+		var prod_change: float = (target_prod - float(res["production"][resource])) * pull / 30.0 - depletion
 		# جنگ - تولید نظامی افزایش، غیرنظامی کاهش اگر بسیج بالا
 		if is_at_war:
 			if resource in ["نفت","مواد_صنعتی","آهن","برق"]:
-				prod_change += mobilization*0.005 # اولویت نظامی
+				prod_change += mobilization*0.005/30.0 # اولویت نظامی
 			elif resource == "غذا" and mobilization >= 4:
-				prod_change -= 0.008 # کمبود کارگر کشاورزی
+				prod_change -= 0.008/30.0 # کمبود کارگر کشاورزی
 
-		res["production"][resource] = clamp(float(res["production"][resource]) + prod_change + Deterministic.next_range(-0.02,0.03), 1.0, capacity*1.2)
+		res["production"][resource] = clamp(float(res["production"][resource]) + prod_change + Deterministic.next_range(-0.015,0.015), 1.0, capacity_limit)
 
 		# پالایش - برای نفت و مواد صنعتی
 		if res["refining_capacity"].has(resource):
@@ -85,20 +96,41 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			res["refining_capacity"][resource] = clamp(refining*0.999 + refining_eff*0.01, 20.0, 200.0)
 
 		# تقاضا - جمعیت + GDP + فصل + جنگ
+		# تقاضا - با «نرخ رشد نسبی» اقتصاد/جمعیت هم‌مقیاس می‌شود (اصلاح ممیزی انرژی).
+		# فرمول قبلی انحرافِ سطح از نقطه شروع را اضافه می‌کرد (≈+۰٫۲٪/سال → تقاضا عملاً یخ می‌زد
+		# و بحران انرژی در هیچ سناریوی ۱۰ساله رخ نمی‌داد). حالا: تقاضا ≈ به‌علاوهٔ رشد اقتصادی.
+		var demand_base: float = float(res["demand_base"].get(resource, demand))
 		var demand_change = 0.0
-		demand_change += (pop_total/85e6 -1.0)*0.1 + (gdp/500e9 -1.0)*0.05
-		demand_change += mobilization*0.02 if resource in ["نفت","غذا","برق","مواد_صنعتی"] else 0.0
-		if is_at_war and resource in ["نفت","مهمات","مواد_صنعتی"]:
-			demand_change += 0.08
-		# فصل - برق تابستان و زمستان بیشتر
+		demand_change += demand_base * (float(pop.get("growth_rate", 0.012)) * 365.0 * 0.4 + float(econ.get("real_growth", 0.02)) * 0.6)
+		# فصل - اثر فصلی خالصِصفر در سال (تابستان/زمستان بالا، بهار/پاییز جبران می‌کند)
 		var season = state.get("clock",{}).get("season","بهار")
-		if resource == "برق":
-			if season == "تابستان" or season == "زمستان":
-				demand_change += 0.15
-		elif resource == "آب" and season == "تابستان":
-			demand_change += 0.20
+		if season == "تابستان" or season == "زمستان":
+			if resource == "برق":
+				demand_change += demand_base * 0.44
+			elif resource == "آب" and season == "تابستان":
+				demand_change += demand_base * 0.30
+		else:
+			if resource == "برق":
+				demand_change -= demand_base * 0.44
+			elif resource == "آب":
+				demand_change -= demand_base * 0.10
 
-		res["demand"][resource] = clamp(float(res["demand"][resource]) + demand_change/365.0 + Deterministic.next_range(-0.01,0.02), 1.0, 200.0)
+		res["demand_base"][resource] = clamp(demand_base + demand_change/365.0 + Deterministic.next_range(-0.015,0.015)*demand_base*0.01, 1.0, 200.0)
+
+		# جنگ/بسیج - افزونهٔ جنگی جداگانه (احتکار + لجستیک)؛ با صلح با τ≈۱سال زوال می‌کند،
+		# پس تقاضای جنگی «دائمی نمی‌چسبد» (رفع باگ ratchet کشف‌شده در سناریوی جنگ آینه)
+		var war_add := 0.0
+		if resource in ["نفت","غذا","برق","مواد_صنعتی"]:
+			war_add += mobilization * 0.03
+		if is_at_war and resource in ["نفت","مهمات","مواد_صنعتی","غذا","برق"]:
+			war_add += 0.15
+		var war_extra: float = float(res["war_extra"].get(resource, 0.0))
+		if war_add > 0.0:
+			war_extra += demand_base * war_add / 365.0
+		else:
+			war_extra *= (1.0 - 1.0/365.0)
+		res["war_extra"][resource] = war_extra
+		res["demand"][resource] = clamp(float(res["demand_base"][resource]) + war_extra, 1.0, 200.0)
 
 		# موجودی = تولید - تقاضا + واردات - صادرات
 		var net = float(res["production"][resource]) - float(res["demand"][resource])

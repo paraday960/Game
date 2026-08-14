@@ -45,6 +45,14 @@ def initial_state():
         # social
         "health_q": 0.60, "edu_q": 0.55, "literacy": 0.85,
         "poverty": 0.15, "gini": 0.38, "social_safety": 0.60,
+        # منابع (ممیزی انرژی: تقاضای نسبی + جاذب تولید + انبار واقعی)
+        "res_prod": {"برق": 15.0, "نفت": 8.0, "غذا": 10.0},
+        "res_dem": {"برق": 12.0, "نفت": 6.0, "غذا": 9.0},
+        "res_dem_base": {"برق": 12.0, "نفت": 6.0, "غذا": 9.0},
+        "res_war_extra": {"برق": 0.0, "نفت": 0.0, "غذا": 0.0},
+        "res_inv": {"برق": 100.0, "نفت": 80.0, "غذا": 85.0},
+        "res_cap": {"برق": 100.0, "نفت": 100.0, "غذا": 100.0},
+        "res_energy_crisis": False, "res_food_crisis": False,
         # سکونتگاه‌ها (تعمیق فاز B: بازخورد ظرفیت)
         "urban_pop": 85_000_000.0 * 0.75, "cities_large": 50, "cities_medium": 200,
         "cities_small": 350, "density": 1700.0, "crowding": 0.16,
@@ -74,16 +82,18 @@ def step_day(s):
     war_eco = s.get("shock_war_economy", 0.0)
     war_exh = s.get("shock_war_exhaustion", 0.0)
     n_sanc = s.get("shock_sanctions", 0)
-    e_crisis = s.get("shock_energy_crisis", False)
+    e_crisis = s.get("shock_energy_crisis", False) or s.get("res_energy_crisis", False)
+    f_crisis = s.get("shock_food_crisis", False) or s.get("res_food_crisis", False)
     sanct_pen = n_sanc * 0.003
     energy_penalty = -0.025 if e_crisis else 0.0
+    food_penalty = -0.018 if f_crisis else 0.0
     war_effect = 0.0
     if mobil > 0:
         war_effect = (0.008 if mobil == 2 else (-0.005 if mobil == 3 else -0.018)) - war_exh * 0.015
     growth_potential = clamp(0.02 + infra_effect + workforce_effect + tech_effect
                              + stability_effect, -0.05, 0.12)
     g_smoothed = clamp(s["growth_rate"] * 0.95 + growth_potential * 0.05, -0.10, 0.12)
-    real_growth = clamp(g_smoothed + energy_penalty + war_effect - sanct_pen
+    real_growth = clamp(g_smoothed + energy_penalty + food_penalty + war_effect - sanct_pen
                         + (CYCLE_EFFECT * 0.3 if mobil > 0 else CYCLE_EFFECT), -0.08, 0.10)
     s["gdp"] = max(s["gdp"] * (1.0 + real_growth / 365.0), 10e9)
     gdp_pc = s["gdp"] / s["pop_total"]
@@ -120,7 +130,8 @@ def step_day(s):
 
     # تورم
     infl_change = ((s["money_supply"] - 1.0) * 0.010 + real_growth * 0.5 * 0.008
-                   + (0.02 if energy_penalty < 0 else 0.0) + war_eco * 0.03 + mobil * 0.005
+                   + (0.02 if energy_penalty < 0 else 0.0) + (0.01 if f_crisis else 0.0)
+                   + war_eco * 0.03 + mobil * 0.005
                    + sanct_pen * 0.5 - 0.0015) / DPM
     s["inflation"] += infl_change + (s["inflation_target"] - s["inflation"]) * 0.12 / DPM
     if s["unemployment"] < 0.04:
@@ -130,7 +141,7 @@ def step_day(s):
     s["inflation"] = clamp(s["inflation"], -0.03, 0.60)
 
     # تجارت
-    s["exports"] *= 1.0 + real_growth * 0.3 / 365.0
+    s["exports"] *= 1.0 + real_growth * 0.3 / 365.0 - sanct_pen * 0.2 / 365.0
     s["imports"] *= 1.0 + (s["pop_total"] / 85e6 - 1.0) * 0.1 / 365.0
 
     # ── population_system (مدل هدف+بازگشت میانگین، τ≈۷ماه) ──
@@ -147,7 +158,7 @@ def step_day(s):
 
     h_target = (0.05 + (1.0 - s["unemployment"]) * 0.2 + (1.0 - s["inflation"]) * 0.15
                 + s["health_q"] * 0.15 + s["edu_q"] * 0.1 + (1.0 - s["poverty"]) * 0.2
-                + s["trust"] * 0.1 - s["tension"] * 0.2 - (0.1 if e_crisis else 0.0))
+                + s["trust"] * 0.1 - s["tension"] * 0.2 - (0.1 if e_crisis else 0.0) - (0.2 if f_crisis else 0.0))
     s["happiness"] = s["happiness"] * 0.95 + clamp(h_target, 0.05, 0.95) * 0.05
     s["satisfaction"] = s["happiness"] * 0.9 + s["trust"] * 0.1
 
@@ -162,6 +173,36 @@ def step_day(s):
                            s["pop_total"] * 0.05, s["pop_total"] * 0.90)
     s["urban_ratio"] = clamp(s["urban_pop"] / s["pop_total"], 0.0, 0.90)
     s["density"] = s["urban_pop"] / max(area, 1.0)
+
+    # ── resources_system (برق/نفت/غذا: تقاضای نسبی + جاذب تولید + انبار) ──
+    invest_factor = s["alloc"]["زیرساخت"] * 1.5 + 0.5
+    rel_growth = s["growth_rate_pop"] * 365.0 * 0.4 + s["real_growth"] * 0.6
+    for r in ("برق", "نفت", "غذا"):
+        base = s["res_dem_base"][r]
+        base = max(base + base * rel_growth / 365.0, 1.0)
+        s["res_dem_base"][r] = base
+        war_add = (mobil * 0.03 + 0.15) if mobil > 0 else 0.0
+        we = s["res_war_extra"][r]
+        we = we + base * war_add / 365.0 if war_add > 0.0 else we * (1.0 - 1.0 / 365.0)
+        s["res_war_extra"][r] = we
+        dem = max(base + we, 1.0)   # تقاضای مؤثر = بنیادی + افزونهٔ جنگی
+        margin = 0.06 + invest_factor * 0.02 + 0.83 * 0.01
+        target = min(dem * (1.0 + margin), s["res_cap"][r] * 1.2)
+        pull = (0.04 + invest_factor * 0.02 + 0.83 * 0.02 + s["infra_q"] * 0.01) / 30.0
+        prod = s["res_prod"][r]
+        prod += (target - prod) * pull
+        if mobil > 0 and r in ("نفت", "برق"):
+            prod += mobil * 0.005 / 30.0
+        if mobil >= 4 and r == "غذا":
+            prod -= 0.008 / 30.0
+        prod = clamp(prod, 1.0, s["res_cap"][r] * 1.2)
+        net = prod - dem
+        if net < 0:
+            net *= 0.75   # واردات ~۲۵٪ کسری را پوشش می‌دهد
+        s["res_inv"][r] = clamp(s["res_inv"][r] + net * 0.05, 0.0, 150.0)
+        s["res_prod"][r], s["res_dem"][r] = prod, dem
+    s["res_energy_crisis"] = s["res_inv"]["برق"] < 20.0 and s["res_dem"]["برق"] > 10.0
+    s["res_food_crisis"] = s["res_inv"]["غذا"] < 30.0
 
     # ── politics_system ──
     econ_effect = ((-0.1 if s["unemployment"] > 0.12 else 0.0) + (-0.1 if s["inflation"] > 0.12 else 0.0)
@@ -252,6 +293,9 @@ def check_bounds(s, hist):
         ("نسبت شهری معقول (۵۰٪ تا ۹۰٪)", 0.50 <= s["urban_ratio"] <= 0.90),
         ("تراکم شهری مهارشده (<۱۶k نفر/km² — بازخورد ظرفیت کار می‌کند)", s["density"] < 16000),
         ("crowding نهایی زیر ۱٫۳۵", s["crowding"] < 1.35),
+        ("انرژی: بدون بحران کاذب در خط پایه", not s["res_energy_crisis"] and not s["res_food_crisis"]),
+        ("انرژی: تقاضای برق با اقتصاد رشد می‌کند (≥۱۴ تا سال ۱۰، از ۱۲)", s["res_dem"]["برق"] >= 14.0),
+        ("انرژی: تولید برق به تقاضا+حاشیه همگرا می‌شود (فاصله < ۴ واحد)", abs(s["res_prod"]["برق"] - s["res_dem"]["برق"]) < 4.0),
         ("GDP سرانه ۱۰ساله در محدودهٔ واقعی (۰٫۹× تا ۱٫۶×)", 0.9 <= gdp_pc_f / gdp_pc0 <= 1.6),
     ]
     # پایداری مسیر: تورم در هیچ سالی ابرتورم نشود؛ شادی زیر آستانهٔ شورش نیاید
@@ -299,14 +343,18 @@ def run_shock_suite():
             war_h = s["happiness"]
         if day == 730:
             war_h = s["happiness"]; war_infl = s["inflation"]; war_debt = s["national_debt"] / s["gdp"]
+            war_dem = s["res_dem"]["برق"]
         if day == 365 * 4:
-            peace_h = s["happiness"]; peace_infl = s["inflation"]
+            peace_h = s["happiness"]; peace_infl = s["inflation"]; peace_dem = s["res_dem"]["برق"]
     print("پایان جنگ: تورم %.0f%% | شادی %.2f | بدهی/GDP %.0f%%" % (war_infl * 100, war_h, war_debt * 100))
     print("اوج تورم جنگی: %.0f%% | دو سال بعد: تورم %.1f%% | شادی %.2f" % (peak_infl * 100, peace_infl * 100, peace_h))
     checks = [
         ("شوک: تورم به سقف ابرتورم (۶۰٪) نمی‌رسد", peak_infl < 0.60),
         ("شوک: تورم جنگی بالای ۱۵٪ (هزینه واقعی جنگ)", war_infl > 0.15),
         ("شوک: شادی در جنگ افت معنادار می‌کند (<۰٫۵۵ در برابر ۰٫۶۶ صلح)", war_h < 0.55),
+        ("شوک: تقاضای برق جنگی جهش می‌کند (≥۱۳٫۵ از ۱۲)", war_dem >= 13.5),
+        ("شوک: بازگشت تقاضا پس از جنگ (<۱۴٫۵ دو سال بعد)", peace_dem < 14.5),
+        ("شوک: بدون بحران انرژی ابدی (۲ سال پس از جنگ پاک)", not s["res_energy_crisis"]),
         ("بازسازی: ۲ سال پس از جنگ تورم زیر ۱۲٪ برمی‌گردد", peace_infl < 0.12),
         ("بازسازی: شادی بازیابی می‌شود (>۰٫۵۵)", peace_h > 0.55),
     ]
@@ -360,6 +408,32 @@ def run_policy_suites(base_final):
             FAIL.append(name); ok = False
     return ok
 
+def run_sanctions_suite():
+    """سناریوی تحریم طولانی/شدید (۳ تحریم دائمی از ماه ۱۴) — تاب‌آوری بدون مرگ اقتصادی."""
+    base, _ = run(verbose=False)
+    def emb(day, s):
+        if day == 400:
+            s["shock_sanctions"] = 3
+    x, _ = run(verbose=False, policy_hook=emb)
+    print("═══ سناریوی تحریم طولانی: ۳ تحریم دائمی از سال ۲ ═══")
+    print("پایان سال ۱۰: رشد %+.1f%% | تورم %.1f%% | بیکاری %.1f%% | GDP %.0fB (خط پایه %.0fB) | ثبات %.2f | شادی %.2f" % (
+        x["growth_rate"] * 100, x["inflation"] * 100, x["unemployment"] * 100,
+        x["gdp"] / 1e9, base["gdp"] / 1e9, x["stability"], x["happiness"]))
+    checks = [
+        ("تحریم: اقتصاد زنده می‌ماند (GDP ≥ ۸۵٪ خط پایه)", x["gdp"] >= base["gdp"] * 0.85),
+        ("تحریم: تورم مزمنه ولی مهارشده (<۱۸٪)", x["inflation"] < 0.18),
+        ("تحریم: تورم از خط پایه بالاتر است (هزینه واقعی)", x["inflation"] > base["inflation"] + 0.01),
+        ("تحریم: بیکاری بحرانی نمی‌شود (≤۱۶٪)", x["unemployment"] <= 0.16),
+        ("تحریم: بدون فروپاشی (ثبات ≥ ۰٫۳۵، شادی ≥ ۰٫۴۰)", x["stability"] >= 0.35 and x["happiness"] >= 0.40),
+        ("تحریم: بحران انرژی خودبه‌خودی شلیک نمی‌کند", not x["res_energy_crisis"]),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 def _apply_shock(s):
     """فعال‌سازی رژیم جنگ تمام‌عیار روی آینه (ایدمپوتنت)."""
     s["shock_mobil"] = 4.0
@@ -381,6 +455,8 @@ if __name__ == "__main__":
     ok = check_bounds(s, hist) and check_determinism()
     print()
     ok = run_policy_suites(s) and ok
+    print()
+    ok = run_sanctions_suite() and ok
     print()
     ok = run_shock_suite() and ok
     print()
