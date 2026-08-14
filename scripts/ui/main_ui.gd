@@ -2872,6 +2872,13 @@ func _build_economy():
 	var aid_month := float(econ.get("aid_inflow_daily", 0.0)) * 30.0
 	if aid_month > 0.0:
 		_row(c3, "کمک خارجی ماهانه", PersianFormatter.format_money(aid_month))
+	# کانال‌های بودجهٔ بازرسی ۱۴۰۵ — هزینهٔ سیاست‌های فعال و استهلاک برنامه‌های یک‌بارمصرف
+	var pol_month: float = float(econ.get("policy_spending_monthly", 0.0))
+	if pol_month != 0.0:
+		_row(c3, "هزینهٔ ماهانهٔ سیاست‌های فعال", PersianFormatter.format_money(pol_month))
+	var oneoff_month: float = float(econ.get("oneoff_spending_monthly", 0.0))
+	if oneoff_month > 0.0:
+		_row(c3, "برنامه‌های در‌حال‌اجرا (سهم ماه)", PersianFormatter.format_money(oneoff_month))
 
 	var cb: Dictionary = st.get("central_bank", {})
 	var trade: Dictionary = st.get("trade", {})
@@ -3393,6 +3400,10 @@ func _build_trade_policy_card(st: Dictionary):
 	_bar(card, "ذخیره راهبردی واردات", float(tp.get("strategic_imports", 0.2)))
 	_bar(card, "امنیت زنجیره تأمین", float(tp.get("supply_security", 0.3)))
 	_row(card, "مأموریت‌های تجاری", PersianFormatter.to_persian_digits(str(tp.get("trade_missions", 0))))
+	# دسترسی پایدار به بازار (مأموریت‌ها/کریدورها/راهبرد صادرات‌محور) — سهم هدف صادرات
+	var access_v := float(trade.get("market_access_bonus", 0.0))
+	if access_v > 0.0005:
+		_row(card, "دسترسی پایدار به بازار", PersianFormatter.to_persian_digits("+%.1f٪ از GDP" % (access_v * 100.0)))
 	# بازرسی تراز پرداخت‌ها: این اعداد حالا واقعاً زنده‌اند (مدل سهم هدف از GDP)
 	var exports_v := float(trade.get("exports", 0.0))
 	var imports_v := float(trade.get("imports", 0.0))
