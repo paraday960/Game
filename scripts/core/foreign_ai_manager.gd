@@ -49,13 +49,16 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# تصمیم ماهانه‌ی کشورهای راهبردی، به ترتیب ثابت برای قطعی‌بودن مصرف اعداد دترمینستیک.
 	var issued = 0
-	var strategic_ids = WorldManager.get_strategic_country_ids(player_id, 40).duplicate()
+	var strategic_ids = WorldManager.get_strategic_country_ids(player_id, 40, state).duplicate()
 	strategic_ids.sort()
 	for country_id in strategic_ids:
 		if issued >= MAX_FOREIGN_ACTIONS_PER_MONTH:
 			break
 		country_id = str(country_id)
 		if country_id == player_id or not diplomacy.get("relations", {}).has(country_id):
+			continue
+		# کشور ضمیمه‌شده مستقل نیست؛ هیچ تصمیم/پیشنهاد/جنگی شاملش نمی‌شود (بازرسی ۱۴۰۵)
+		if str(world.get("countries", {}).get(country_id, {}).get("annexed_by", "")) != "":
 			continue
 		var decision = _country_decision(state, country_id, turn, current_day)
 		if decision.has("action"):

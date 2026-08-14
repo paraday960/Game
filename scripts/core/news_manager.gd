@@ -278,6 +278,9 @@ func _world_news(state: Dictionary, turn: int, player: String, year: int, month_
 	var codes: Array = []
 	for c in countries_map.keys():
 		if str(c) != player:
+			# کشور ضمیمه‌شده مستقل نیست؛ اخبار جداگانه ندارد (بازرسی ۱۴۰۵)
+			if str(countries_map.get(c, {}).get("annexed_by", "")) != "":
+				continue
 			codes.append(str(c))
 	if codes.is_empty():
 		return out

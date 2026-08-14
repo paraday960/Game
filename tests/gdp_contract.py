@@ -195,7 +195,7 @@ BUDGET = {
     "scripts/systems/map_advanced_system.gd": 1,   # اقدام ساخت‌وساز بازیکن (یک‌باره)
     "scripts/systems/trade_route_warfare_system.gd": 1,  # دزدی دریایی گذرا
     "scripts/core/engine.gd": 2,                   # شوک‌های snapshot جنگی
-    "scripts/core/world_manager.gd": 11,           # جهان/NPC + نتیجهٔ جنگ + سرایت منطقه‌ای (گذرا؛ دور سیزدهم)
+    "scripts/core/world_manager.gd": 12,           # جهان/NPC + نتیجهٔ جنگ + سرایت منطقه‌ای + الحاق کامل (گذرا؛ دور سیزدهم)
     "scripts/core/npc_turn_manager.gd": 3,         # رشد NPC
     "scripts/multiplayer/multiplayer_campaign_manager.gd": 1,  # کپی runtime چندنفره
     "scripts/core/leader_manager.gd": 2,           # الحاق/جنگ NPC

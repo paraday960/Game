@@ -414,6 +414,9 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		if country_id == world["player_country"]:
 			continue
 		var runtime: Dictionary = world["countries"][country_id]
+		# کشورهای ضمیمه‌شده مستقل نیستند و رشد خودکار نمی‌گیرند (بازرسی ۱۴۰۵)
+		if str(runtime.get("annexed_by", "")) != "":
+			continue
 		runtime["gdp"] = max(1.0, float(runtime.get("gdp", 1.0)) * (1.0 + Deterministic.next_range(-0.00003, 0.00004)))
 		world["countries"][country_id] = runtime
 	var finished: Array = []
@@ -703,6 +706,9 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 		if country_id == player_id:
 			continue
 		var runtime: Dictionary = world["countries"][country_id]
+		# کشورهای ضمیمه‌شده رشد خودکار نمی‌گیرند (بازرسی ۱۴۰۵ — دور سیزدهم)
+		if str(runtime.get("annexed_by", "")) != "":
+			continue
 		var base_growth = 0.0012 + float(runtime.get("tech_level", 0.35)) * 0.0018
 		var bloc_growth = {"غربی": 0.0008, "شرقی": 0.0006, "جنوب": 0.0003}.get(str(runtime.get("bloc", "")), 0.0002)
 		var at_war = false
@@ -830,6 +836,15 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 			world["war_history"].append(ended_war)
 			while world["war_history"].size() > 50:
 				world["war_history"].pop_front()
+			# الحاق در جنگ‌های NPC (بازرسی ۱۴۰۵ — دور سیزدهم): برنده در پیروزی قاطع
+			# می‌تواند بازنده‌ی همسایه را ضمیمه کند — دنیا واقعاً تغییر می‌کند (مثل
+			# جنگ‌های تاریخ). پیروزیِ ناشی از تایماوت ۳۶ ماهه = جنگ فرسایشی، بی‌الحاق.
+			var decisive := abs(float(war["progress"])) >= 100.0
+			var loser_rt: Dictionary = world["countries"].get(loser, {})
+			var already_taken := str(loser_rt.get("annexed_by", "")) != ""
+			if decisive and not already_taken and _is_neighbor_state(state, winner, loser) \
+					and Deterministic.chance(0.40):
+				_annex_npc_country(state, winner, loser, turn, world, events)
 			events.append(_global_event("npc_war_ended", winner, loser, "جنگ %s و %s با برتری %s پایان یافت" % [get_country_name(a), get_country_name(b), get_country_name(winner)]))
 		else:
 			npc_wars[key] = war
@@ -887,15 +902,25 @@ func _player_crisis_weight(state: Dictionary) -> float:
 		weight += 1.5
 	return weight
 
-func get_strategic_country_ids(player_id: String = "", limit: int = 40) -> Array:
+func get_strategic_country_ids(player_id: String = "", limit: int = 40, state: Dictionary = {}) -> Array:
+	# کشورهای ضمیمه‌شده مستقل نیستند و از بازی راهبردی NPC حذف می‌شوند (بازرسی ۱۴۰۵)
+	var runtime_map: Dictionary = state.get("world", {}).get("countries", {})
 	var ids = countries.keys()
 	ids.sort_custom(func(a,b): return float(countries[a].get("strategic_weight",0.0)) > float(countries[b].get("strategic_weight",0.0)))
-	var selected: Array = ids.slice(0,min(limit,ids.size()))
+	var selected: Array = []
+	for id in ids:
+		if str(runtime_map.get(id, {}).get("annexed_by", "")) != "":
+			continue
+		selected.append(id)
+		if selected.size() >= limit:
+			break
 	if countries.has(player_id):
 		var player = countries[player_id]
 		var nearby: Array = []
 		for id in countries.keys():
 			if id == player_id: continue
+			if str(runtime_map.get(id, {}).get("annexed_by", "")) != "":
+				continue
 			var other = countries[id]
 			var distance = Vector2(float(player.get("lon",0.0)),float(player.get("lat",0.0))).distance_to(Vector2(float(other.get("lon",0.0)),float(other.get("lat",0.0))))
 			nearby.append({"id":id,"distance":distance})
@@ -1064,15 +1089,26 @@ func _apply_war_goal_victory(state: Dictionary, target: String, goal: String, wa
 			events.append({"type": "war_reparations", "message": "%s غرامت جنگی معادل %s به خزانه کشور واریز کرد" % [get_country_name(target), PersianFormatter.format_money(payout)]})
 		"annexation":
 			if _is_neighbor_state(state, player_id, target):
-				# الحاق بخشی از خاک و توانایی‌ها
-				world["annexations"].append({"annexed": target, "by": player_id, "turn": int(war.get("ended_tick", 0)), "partial": true})
-				enemy["partial_annexed_by"] = player_id
-				var gain := enemy_gdp * 0.05
-				enemy["gdp"] = maxf(1.0, enemy_gdp * 0.95)
-				econ["gdp"] = float(econ.get("gdp", 1.0)) * (1.0 + gain * 0.02)
-				enemy["population"] = maxf(100000.0, float(enemy.get("population", 1.0)) * 0.94)
+				# الحاق کامل (بازرسی ۱۴۰۵ — دور سیزدهم): همسایه + پیروزی → سراسر خاک
+				world["annexations"].append({"annexed": target, "by": player_id,
+					"turn": int(war.get("ended_tick", 0)), "full": true})
+				var gain := enemy_gdp * 0.6
+				enemy["annexed_by"] = player_id
+				enemy["annexed"] = true
+				# اقتصاد/جمعیت/توانایی‌ها به برنده منتقل می‌شود؛ بخش کوچکی به‌عنوان
+				# مقاومت/بازسازی در همان خاک می‌ماند
+				enemy["gdp"] = maxf(1.0, enemy_gdp * 0.4)
+				enemy["population"] = maxf(100000.0, float(enemy.get("population", 1.0)) * 0.3)
+				enemy["military_power"] = maxf(8.0, float(enemy.get("military_power", 50.0)) * 0.6)
 				world["countries"][target] = enemy
-				events.append({"type": "war_annexation", "message": "بخشی از خاک %s ضمیمه کشور شد و توانایی‌های آن به کشور شما منتقل گردید" % get_country_name(target)})
+				# رشد واقعی اقتصاد بازیکن متناسب با اقتصاد دشمن (پاداش تسخیر کامل)
+				var econ_gdp := float(econ.get("gdp", 1.0))
+				econ["gdp"] = econ_gdp * (1.0 + gain / maxf(econ_gdp, 1.0) * 0.25)
+				leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 6.0, 0.0, 100.0)
+				state["leader"] = leader
+				_cleanup_annexed(world, target)
+				events.append({"type": "war_full_annexation",
+					"message": "پیروزی قاطع! %s به‌طور کامل ضمیمهٔ خاک کشور شد؛ اقتصاد، جمعیت و توانایی‌های آن به کشور شما منتقل گردید" % get_country_name(target)})
 			else:
 				# بدون مرز: حاکم دست‌نشانده
 				world["puppets"].append({"puppet": target, "master": player_id, "turn": int(war.get("ended_tick", 0))})
@@ -1117,6 +1153,53 @@ func _apply_war_goal_defeat(state: Dictionary, target: String, goal: String, war
 	state["economy"] = econ
 	state["leader"] = leader
 	return {"state": state, "events": events}
+
+# ── الحاق کامل کشور بازنده توسط برندهٔ NPC (بازرسی ۱۴۰۵ — دور سیزدهم) ──
+func _annex_npc_country(state: Dictionary, winner: String, loser: String, turn: int, world: Dictionary, events: Array) -> void:
+	world["annexations"].append({"annexed": loser, "by": winner, "turn": turn, "full": true, "npc": true})
+	var loser_rt: Dictionary = world["countries"].get(loser, {})
+	var winner_rt: Dictionary = world["countries"].get(winner, {})
+	# اقتصاد/جمعیت/توانایی به برنده منتقل می‌شود (الگوی leader_manager)
+	winner_rt["gdp"] = float(winner_rt.get("gdp", 1.0)) + float(loser_rt.get("gdp", 0.0)) * 0.6
+	winner_rt["population"] = float(winner_rt.get("population", 1.0)) + float(loser_rt.get("population", 0.0)) * 0.7
+	winner_rt["military_power"] = clampf(float(winner_rt.get("military_power", 50.0)) + float(loser_rt.get("military_power", 50.0)) * 0.4, 8.0, 150.0)
+	world["countries"][winner] = winner_rt
+	loser_rt["annexed_by"] = winner
+	loser_rt["annexed"] = true
+	world["countries"][loser] = loser_rt
+	_cleanup_annexed(world, loser)
+	events.append(_global_event("npc_annexation", winner, loser,
+		"%s پس از پیروزی قاطع، %s را ضمیمه خاک خود کرد؛ مرزها و توانایی‌ها منتقل شد" % [get_country_name(winner), get_country_name(loser)]))
+
+# ── پاک‌سازی ارجاع‌های یک کشور تازه‌ضمیمه‌شده ────────────────────────────
+# کشور ضمیمه‌شده دیگر مستقل نیست: از جنگ‌ها/ائتلاف‌ها/توافق‌های تجاری/روابط
+# NPC و پیشنهادهای ورودی حذف می‌شود (روی نقشه با رنگ برنده دیده می‌شود).
+func _cleanup_annexed(world: Dictionary, loser_id: String) -> void:
+	var kept_war: Dictionary = {}
+	for wk in world.get("npc_wars", {}).keys():
+		if not str(wk).split("|").has(loser_id):
+			kept_war[wk] = world["npc_wars"][wk]
+	world["npc_wars"] = kept_war
+	var kept: Array = []
+	for pk in world.get("npc_alliances", []):
+		if not str(pk).split("|").has(loser_id):
+			kept.append(pk)
+	world["npc_alliances"] = kept
+	kept = []
+	for pk in world.get("npc_trade_agreements", []):
+		if not str(pk).split("|").has(loser_id):
+			kept.append(pk)
+	world["npc_trade_agreements"] = kept
+	var kept_rel: Dictionary = {}
+	for rk in world.get("npc_relations", {}).keys():
+		if not str(rk).split("|").has(loser_id):
+			kept_rel[rk] = world["npc_relations"][rk]
+	world["npc_relations"] = kept_rel
+	var kept_offers: Array = []
+	for offer in world.get("incoming_offers", []):
+		if str(offer.get("from", "")) != loser_id and str(offer.get("target", "")) != loser_id:
+			kept_offers.append(offer)
+	world["incoming_offers"] = kept_offers
 
 func _is_neighbor_state(state: Dictionary, a: String, b: String) -> bool:
 	var profile_a: Dictionary = countries.get(a, {})
