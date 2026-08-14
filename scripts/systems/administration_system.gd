@@ -29,6 +29,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var tech_digital = state.get("technology", {}).get("branches", {}).get("دیجیتال", 0.20)
 
 	var efficiency = 0.5 + (admin_budget / 5_000_000_000.0) * 0.1 - corruption * 0.3 + decentral * 0.1 + tech_digital * 0.1
+	# اضافه‌استخدام دستگاه دولت (دور ۱۴) و نادقتی آمار ملی (دور ۱۰) اجرای سیاست را می‌لنگواند
+	efficiency -= float(state.get("public_employees", {}).get("overstaffing", 0.0)) * 0.15
+	efficiency -= float(state.get("statistics", {}).get("policy_error_risk", 0.30)) * 0.10
 	admin["efficiency"] = clamp(admin["efficiency"] * 0.99 + efficiency * 0.01, 0.1, 0.95)
 
 	# حکومت محلی

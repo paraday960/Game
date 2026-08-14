@@ -23,7 +23,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if econ["inflation"] > 0.12:
 		econ_effect -= 0.1
 
-	var new_stability = base_stability + happiness_effect + corruption_effect + inequality_effect + trust_effect + econ_effect
+	# تداوم سیاستگذاری (دور ۱۳) ثبات می‌سازد؛ معوقه حقوق کارکنان دولت (دور ۱۴) اعتراض می‌آورد
+	var continuity_p = float(state.get("political_career", {}).get("policy_continuity", 0.50)) - 0.50
+	var arrears_p = minf(float(state.get("public_employees", {}).get("wage_arrears_months", 0.0)), 6.0)
+	var new_stability = base_stability + happiness_effect + corruption_effect + inequality_effect + trust_effect + econ_effect + continuity_p * 0.10 - arrears_p * 0.015
 	new_stability = clamp(new_stability, 0.05, 0.95)
 	pol["stability"] = pol["stability"] * 0.97 + new_stability * 0.03
 
@@ -41,6 +44,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tension += pol["corruption"] * 0.2
 	tension += welfare["gini"] * 0.2
 	tension += econ["unemployment"] * 0.3
+	# ریسک‌های امنیتی دورهای ۱۰ و ۱۳ (ناآرامی قومی و افراطی‌گرایی) مستقیم به تنش تزریق می‌شود
+	tension += float(state.get("security", {}).get("ethnic_unrest_risk", 0.0)) * 0.25
+	tension += float(state.get("security", {}).get("extremism_risk", 0.0)) * 0.20
 	pol["tension"] = clamp(pol["tension"] * 0.97 + tension * 0.03, 0.0, 1.0)
 
 	# فساد پویا

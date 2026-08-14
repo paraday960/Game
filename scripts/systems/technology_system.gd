@@ -44,7 +44,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var researcher_factor = tech["researchers"]/50000.0
 	var lab_factor = tech["labs"]/200.0*0.5 + 0.5
 
-	tech["research_rate"] = base_rate * budget_factor * edu_factor * infra_factor * researcher_factor * lab_factor
+	# ظرفیت پژوهش نخبگان (دور ۱۳): نخبه کم/زیاد = تحقیق کند/تند (۰.۸× تا ۱.۲۵×)
+	var elite_factor = 0.70 + float(tech.get("elite_research_capacity", 0.50)) * 0.55
+	tech["research_rate"] = base_rate * budget_factor * edu_factor * infra_factor * researcher_factor * lab_factor * elite_factor
 	tech["research_rate"] = clamp(tech["research_rate"], 2.0, 260.0)
 
 	tech["research_points"] += tech["research_rate"] / 365.0

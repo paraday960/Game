@@ -475,6 +475,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	power *= 1.6
 	mil["power"] = clamp(power, 5.0, 350.0)
 	mil["readiness"] = clamp(readiness, 0.05, 1.0)
+	# روحیه = f(جاذبه خدمت نزد ایثارگران دور ۱۰، آمادگی، فرسودگی جنگ) — حلقه جنگ→ایثارگر→مستمری→روحیه→قدرت
+	var service_appeal_m = float(state.get("veterans", {}).get("service_appeal", 0.60))
+	var morale_target = 0.45 + service_appeal_m * 0.25 + mil["readiness"] * 0.15 - float(mil.get("war_exhaustion", 0.0)) * 0.20
+	personnel["morale"] = clamp(float(personnel.get("morale", 0.70)) * 0.985 + morale_target * 0.015, 0.10, 0.95)
 
 	# بازدارندگی = قدرت + سلاح راهبردی + دکترین + اتحاد + سلاح هسته‌ای فرضی
 	var deterrence = mil["power"] * 0.5 + readiness_factor*25.0 + float(development_modifiers.get("deterrence_bonus",0.0)) + current_doctrine["deterrence_bonus"]

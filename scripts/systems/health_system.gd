@@ -40,6 +40,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	population_health += prevention * 0.2
 	population_health += nutrition * 0.1
 	population_health += env_health * 0.1
+	# تناسب سبک زندگی (ورزش و جوانان دور ۱۱) سلامت جمعیت را واقعاً جابه‌جا می‌کند
+	population_health += (float(health.get("lifestyle_fitness", 0.50)) - 0.50) * 0.15
 	health["population_health"] = clamp(population_health, 0.1, 0.95)
 
 	# کیفیت با بودجه

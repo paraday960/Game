@@ -50,6 +50,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	poverty += unemployment * 0.8
 	poverty -= welfare["social_safety"] * 0.3
 	poverty += welfare["gini"] * 0.2
+	# خیریه‌های مذهبی (دور ۱۳) بخشی از فقر را جبران می‌کنند
+	poverty -= float(welfare.get("charity_contribution", 0.0)) * 0.15
 	poverty += Deterministic.next_range(-0.002, 0.002)
 	welfare["poverty"] = clamp(welfare["poverty"] * 0.99 + poverty * 0.01, 0.02, 0.60)
 

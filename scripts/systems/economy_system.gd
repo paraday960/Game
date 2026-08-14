@@ -318,6 +318,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var biz_climate = float(private_sector.get("business_ease", private_sector.get("ease_of_business", 0.55)))
 	var bank_trust_e = float(state.get("financial_services", {}).get("trust_banks", 0.60))
 	econ["private_investment"] = clampf(float(econ.get("private_investment", 0.15)) * 0.995 + (biz_climate * 0.20 + bank_trust_e * 0.05 + 0.02) * 0.005, 0.03, 0.40)
+	# اثر شتاب‌دهنده: سرمایه‌گذاری خصوصی بالاتر از تعادل ۱۵٪ رشد نوبت بعد را بالا/پایین می‌برد
+	econ["growth_rate"] = clampf(float(econ.get("growth_rate", 0.02)) + (float(econ["private_investment"]) - 0.15) * 0.003, -0.12, 0.15)
 	if informal_e > 0.40 and Deterministic.chance(0.004):
 		events.append({"type": "shadow_economy_leak", "message": "دزدی مالیاتی اقتصاد زیرزمینی - خزانه از %d٪ اقتصاد بی‌نصیب است" % int(informal_e * 100.0), "informal": informal_e})
 	if power_rel_e < 0.55 and Deterministic.chance(0.005):
