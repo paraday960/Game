@@ -78,19 +78,29 @@ func devalue(state: Dictionary, percent: float) -> Dictionary:
 func toggle_capital_control(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var forex: Dictionary = state["forex"]
+	# بازرسی اقدامات ۳ — پایداری سیاستی: کنترل سرمایه هر نوبت روشن/خاموش نمی‌شود؛
+	# در دنیای واقعی تغییر جهت‌های پیاپی اعتبار بانک مرکزی را نابود می‌کند
+	var turn_now: int = int(state.get("time", {}).get("turn", 0))
+	var last_toggle: int = int(forex.get("last_toggle_turn", -99))
+	if turn_now - last_toggle < 4:
+		return {"success": false, "reason": "تغییر زودبه‌زود کنترل سرمایه مجاز نیست — سیاست ارزی باید حداقل ۴ نوبت ثبات داشته باشد", "state": state, "events": []}
+	var reimpose_premium: float = 0.03 if (turn_now - last_toggle) < 8 else 0.0
 	var control := not bool(forex.get("capital_control", false))
 	forex["capital_control"] = control
+	forex["last_toggle_turn"] = turn_now
 	state["forex"] = forex
 	var econ: Dictionary = state.get("economy", {})
 	if control:
 		econ["foreign_investment"] = float(econ.get("foreign_investment", 1.0)) * 0.92
-		forex["black_premium"] = clampf(float(forex.get("black_premium", 0.05)) + 0.06, 0.0, 0.6)
+		forex["black_premium"] = clampf(float(forex.get("black_premium", 0.05)) + 0.06 + reimpose_premium, 0.0, 0.6)
 	else:
 		econ["foreign_investment"] = float(econ.get("foreign_investment", 1.0)) * 1.04
 	state["economy"] = econ
 	state["forex"] = forex
-	return {"success": true, "state": state,
-		"events": [{"type": "capital_control", "message": "🔒 کنترل سرمایه %s شد؛ فرار ارز مهار شد ولی سرمایه‌گذاری خارجی کاهش یافت" % ("فعال" if control else "لغو")}]}
+	var cc_events: Array = [{"type": "capital_control", "message": "🔒 کنترل سرمایه %s شد؛ فرار ارز مهار شد ولی سرمایه‌گذاری خارجی کاهش یافت" % ("فعال" if control else "لغو")}]
+	if reimpose_premium > 0.0:
+		cc_events.append({"type": "policy_flipflop", "message": "⚠️ تغییر جهت ناگهانی سیاست ارزی — اعتبار بانک مرکزی خدشه‌دار شد و صرف بازار سیاه جهش کرد"})
+	return {"success": true, "state": state, "events": cc_events}
 
 # ── شبیه‌سازی ماهانه ──
 func simulate_month(state: Dictionary, turn: int) -> Dictionary:
