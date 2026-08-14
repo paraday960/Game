@@ -41,7 +41,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var border_ctrl = sec.get("border_control", 0.60)
 	mig["border_control_effect"] = border_ctrl
 	var immigration_base = 50000.0 * attractiveness * (0.5 + border_ctrl*0.5)
-	mig["immigration"] = clamp(mig["immigration"]*0.92 + immigration_base*0.08 + Deterministic.next_range(-2000.0,3000.0), 5000.0, 300000.0)
+	mig["immigration"] = clamp(mig["immigration"]*0.92 + immigration_base*0.08 + Deterministic.next_range(-2500.0, 2500.0), 5000.0, 300000.0)
 
 	# مهاجرت خروجی - نارضایتی + بیکاری + فساد
 	var push_factor = (1.0 - pop_hap)*0.4 + unemployment*0.3 + pol.get("corruption",0.30)*0.15 + (1.0 - stability)*0.15

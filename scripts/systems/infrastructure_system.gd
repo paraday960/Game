@@ -60,7 +60,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	infra["quality"] = clamp(infra["quality"], 0.05, 0.98)
 
 	# زیرشاخه‌ها - هرکدام با تاخیر به کیفیت کل همگرا
-	infra["road_quality"] = clamp(infra["road_quality"]*0.995 + infra["quality"]*0.005 + Deterministic.next_range(-0.0005,0.0008), 0.1, 0.95)
+	infra["road_quality"] = clamp(infra["road_quality"]*0.995 + infra["quality"]*0.005 + Deterministic.next_range(-0.00065, 0.00065), 0.1, 0.95)
 	infra["rail_quality"] = clamp(infra["rail_quality"]*0.995 + infra["quality"]*0.004 + tech.get("branches",{}).get("صنعت",0.20)*0.001, 0.1, 0.90)
 	infra["electricity_grid"] = clamp(infra["electricity_grid"]*0.994 + infra["quality"]*0.005 + (resources.get("production",{}).get("برق",15.0)/20.0)*0.001, 0.2, 0.98)
 	infra["water_network"] = clamp(infra["water_network"]*0.996 + infra["quality"]*0.004, 0.2, 0.95)

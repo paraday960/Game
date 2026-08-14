@@ -56,7 +56,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# بدهی - نرخ بهره و بیکاری
 	var interest = econ.get("central_bank",{}).get("interest_rate",0.15) if econ.has("central_bank") else state.get("central_bank",{}).get("interest_rate",0.15)
-	hh["debt_ratio"] = clamp(hh["debt_ratio"] + (interest - 0.10)*0.0008 + unemployment*0.0005 + Deterministic.next_range(-0.0003,0.0006), 0.02, 0.85)
+	hh["debt_ratio"] = clamp(hh["debt_ratio"] + (interest - 0.10)*0.0008 + unemployment*0.0005 + Deterministic.next_range(-0.00045, 0.00045), 0.02, 0.85)
 	hh["debt_absolute"] = hh["income_avg"] * hh["debt_ratio"]
 
 	# مسکن - مالکیت با پس‌انداز

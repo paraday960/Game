@@ -50,7 +50,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# سرمایه‌گذاری - فضای کسب‌وکار + رشد + اعتبار
 	var investment_target = priv["business_climate"] * 0.4 + priv["credit_access"]*0.3 + econ.get("growth_rate",0.02)*10.0*0.2 + 0.1
-	priv["investment_growth"] = clamp(investment_target*0.15 - 0.05 + Deterministic.next_range(-0.01,0.02), -0.10, 0.25)
+	priv["investment_growth"] = clamp(investment_target*0.15 - 0.05 + Deterministic.next_range(-0.015, 0.015), -0.10, 0.25)
 	priv["investment"] *= (1.0 + priv["investment_growth"]/365.0)
 
 	# نوآوری - فناوری + آموزش + سرمایه‌گذاری

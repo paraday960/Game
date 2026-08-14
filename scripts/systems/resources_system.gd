@@ -172,7 +172,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		var current = float(res["strategic_reserves"][reserve_key])
 		var prod = float(res["production"].get(reserve_key,10.0)) if res["production"].has(reserve_key) else 10.0
 		var reserve_change = (prod*0.1 - 0.05) + (0.1 if is_at_war else 0.0) # در جنگ ذخیره بیشتر
-		res["strategic_reserves"][reserve_key] = clamp(current + reserve_change + Deterministic.next_range(-0.1,0.2), 5.0, target_days*1.5)
+		res["strategic_reserves"][reserve_key] = clamp(current + reserve_change + Deterministic.next_range(-0.15, 0.15), 5.0, target_days*1.5)
 		if res["strategic_reserves"][reserve_key] < target_days*0.5 and Deterministic.chance(0.010):
 			events.append({"type":"strategic_reserve_low","resource": reserve_key, "reserve": res["strategic_reserves"][reserve_key], "message":"ذخیره راهبردی %s پایین - %d روز" % [reserve_key, int(res["strategic_reserves"][reserve_key])]})
 

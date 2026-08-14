@@ -116,7 +116,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	cb["bank_stability"] = clamp(cb["bank_stability"] * 0.99 + bank_stability * 0.01, 0.1, 0.95)
 
 	# رشد اعتباری
-	cb["credit_growth"] = clamp(cb["credit_growth"] + Deterministic.next_range(-0.002, 0.003) + (0.10 - cb["interest_rate"]) * 0.01, -0.10, 0.40)
+	cb["credit_growth"] = clamp(cb["credit_growth"] + Deterministic.next_range(-0.0025, 0.0025) + (0.10 - cb["interest_rate"]) * 0.01, -0.10, 0.40)
 
 	# استقلال بانک مرکزی
 	if politics.get("stability",0.6) > 0.7 and politics.get("trust",0.55) > 0.6:

@@ -188,14 +188,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# کاهش ذخایر با مصرف، افزایش با تولید و واردات
 	var prod_capacity = state.get("industry",{}).get("output",100.0)/100.0
 	var fuel_prod = resources.get("production",{}).get("نفت",8.0) * prod_capacity
-	logistics["fuel_stock_days"] = clamp(logistics["fuel_stock_days"] - consumption_mult*0.05 + fuel_prod*0.02 + (0.0 if logistics["is_blockaded"] else 0.08) + Deterministic.next_range(-0.05,0.08), 1.0, 90.0)
-	logistics["ammo_stock_days"] = clamp(logistics["ammo_stock_days"] - consumption_mult*0.06 + prod_capacity*0.04 + Deterministic.next_range(-0.06,0.07), 0.5, 60.0)
+	logistics["fuel_stock_days"] = clamp(logistics["fuel_stock_days"] - consumption_mult*0.05 + fuel_prod*0.02 + (0.0 if logistics["is_blockaded"] else 0.08) + Deterministic.next_range(-0.065, 0.065), 1.0, 90.0)
+	logistics["ammo_stock_days"] = clamp(logistics["ammo_stock_days"] - consumption_mult*0.06 + prod_capacity*0.04 + Deterministic.next_range(-0.065, 0.065), 0.5, 60.0)
 	logistics["food_stock_days"] = clamp(logistics["food_stock_days"] - 0.03 + state.get("agriculture",{}).get("food_security",0.85)*0.05, 3.0, 90.0)
 
 	# مهمات تفکیکی - هر نوع جدا
 	for ammo_type in logistics["ammo_types"].keys():
 		var base_cons = {"small_arms":0.03,"artillery":0.08,"tank":0.06,"air":0.07,"missile":0.05,"sam":0.04}.get(ammo_type,0.05)
-		var new_val = float(logistics["ammo_types"][ammo_type]) - base_cons*consumption_mult + prod_capacity*0.03 + Deterministic.next_range(-1.0,1.5)
+		var new_val = float(logistics["ammo_types"][ammo_type]) - base_cons*consumption_mult + prod_capacity*0.03 + Deterministic.next_range(-1.25, 1.25)
 		logistics["ammo_types"][ammo_type] = clamp(new_val, 0.0, 150.0)
 
 	# قطعات یدکی - فرسایش با سن تجهیزات

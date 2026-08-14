@@ -112,6 +112,15 @@ NOISE_WALKS = {
     "scripts/systems/tourism_system.gd": ["next_range(-0.0025, 0.0025)"],
     "scripts/systems/trade_system.gd": ["next_range(-0.0025, 0.0025)"],
     "scripts/systems/welfare_system.gd": ["next_range(-0.0015, 0.0015)"],
+    # سایت‌های سیاست‌محرک (جاروی دوم): نویز مرکز-صفر در کنار جملهٔ سیاستی
+    "scripts/systems/central_bank_system.gd": ["next_range(-0.0025, 0.0025)"],
+    "scripts/systems/households_system.gd": ["next_range(-0.00045, 0.00045)"],
+    "scripts/systems/infrastructure_system.gd": ["next_range(-0.00065, 0.00065)"],
+    "scripts/systems/international_orgs_system.gd": ["next_range(-0.00125, 0.00125)"],
+    "scripts/systems/migration_system.gd": ["next_range(-2500.0, 2500.0)"],
+    "scripts/systems/military_system.gd": ["next_range(-0.065, 0.065)", "next_range(-1.25, 1.25)"],
+    "scripts/systems/resources_system.gd": ["next_range(-0.15, 0.15)"],
+    "scripts/systems/private_sector_system.gd": ["next_range(-0.015, 0.015)"],
 }
 # الگوهای سوگیریداری که درمان شدند و نباید برگردند
 BIASED_GONE = {

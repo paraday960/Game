@@ -28,7 +28,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# تطابق - حاکمیت قانون و ثبات
 	var rule_of_law = state.get("judicial",{}).get("rule_of_law",0.60)
-	intl["compliance"] = clamp(intl["compliance"] + rule_of_law*0.0002 - pol.get("corruption",0.30)*0.0002 + Deterministic.next_range(-0.001,0.0015), 0.15, 0.95)
+	intl["compliance"] = clamp(intl["compliance"] + rule_of_law*0.0002 - pol.get("corruption",0.30)*0.0002 + Deterministic.next_range(-0.00125, 0.00125), 0.15, 0.95)
 
 	# بانک جهانی و IMF - تطابق و بدهی
 	var debt_ratio = econ.get("debt_to_gdp",0.4)
