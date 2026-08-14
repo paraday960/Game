@@ -51,7 +51,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ۲ بار می‌دود؛ قبل با +۱/۳۶۵ در هر اجرا ناوگان عملاً پیر نمی‌شد (۰٫۵٪ سال در
 	# برابر ۱ سال طراحی) و نوسازی‌های −۲ سال همیشه جلو می‌افتادند؛ حالا نیم‌ماه در هر اجرا.
 	pt["fleet_age"] += 15.0/365.0
-	if tick % 180 == 0 and budget_share > 0.15:
+	if tick % 180 == 15 and budget_share > 0.15:
 		pt["fleet_age"] = max(pt["fleet_age"] - 0.3, 2.0)
 		pt["buses"] += Deterministic.next_int_range(20, 80)
 
@@ -69,7 +69,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	pt["subsidy"] *= (1.0 + inflation*0.8*15.0/365.0)
 
 	# رشد مترو - شهرهای بزرگ
-	if tick % 365 == 0 and pt["metro_lines"] < 10 and total_pop > 50_000_000 and Deterministic.chance(0.4):
+	if tick % 360 == 15 and pt["metro_lines"] < 10 and total_pop > 50_000_000 and Deterministic.chance(0.4):
 		pt["metro_lines"] += 1
 		pt["metro_stations"] += Deterministic.next_int_range(10, 25)
 		pt["metro_length_km"] += Deterministic.next_range(15.0, 35.0)

@@ -78,7 +78,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if career["turnover_rate"] > 0.35 and Deterministic.chance(0.01):
 		events.append({"type":"high_turnover","rate": career["turnover_rate"], "message":"گردش سریع مدیران - بی‌ثباتی مدیریتی"})
 
-	if career["women_in_politics"] < 0.10 and tick % 180 == 0 and Deterministic.chance(0.02):
+	if career["women_in_politics"] < 0.10 and tick % 180 == 15 and Deterministic.chance(0.02):
 		events.append({"type":"gender_gap_politics","message":"شکاف جنسیتی در مناصب سیاسی - مطالبه سهم زنان"})
 
 	state["political_career"] = career

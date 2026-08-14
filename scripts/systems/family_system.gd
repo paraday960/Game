@@ -62,7 +62,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	family["parental_leave"] = clamp(family["parental_leave"] + (family_budget_share - 0.04) * 0.002, 0.1, 0.95)
 
 	# اثر باروری بر جمعیت - در سیستم جمعیت اعمال می‌شود اما اینجا سیگنال
-	if tick % 365 == 0:
+	if tick % 360 == 15:
 		# هر سال باروری روی نرخ تولد اثر می‌گذارد
 		pop["birth_rate"] = pop.get("birth_rate",15.0) * 0.9 + family["fertility"] * 5.0 * 0.1
 		state["population"] = pop

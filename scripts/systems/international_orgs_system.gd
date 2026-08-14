@@ -37,7 +37,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	intl["wto"] = clamp(intl["wto"]*0.994 + diplomacy.get("influence",40.0)/100.0*0.003, 0.1, 0.90)
 
 	# معاهدات
-	if tick % 60 == 0 and intl["influence_un"] > 0.5 and Deterministic.chance(0.08):
+	if tick % 60 == 15 and intl["influence_un"] > 0.5 and Deterministic.chance(0.08):
 		intl["treaties_intl"] += 1
 
 	# کمک‌ها - GDP
@@ -45,7 +45,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	intl["aid_given"] = econ.get("gdp",500e9) * 0.0002 * intl["influence_un"]
 
 	# رای سازمان ملل
-	if tick % 30 == 0 and Deterministic.chance(0.10):
+	if tick % 30 == 15 and Deterministic.chance(0.10):
 		if Deterministic.next_float() < intl["influence_un"]:
 			intl["un_votes_won"] += 1
 
@@ -70,7 +70,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			if intl["treaties_intl"] > 15 and Deterministic.chance(0.3):
 				events.append({"type":"treaty_milestone","treaties": intl["treaties_intl"], "message":"نقطه عطف - %d معاهده فعال بین‌المللی" % intl["treaties_intl"]})
 
-	if intl["aid_received"] < 100_000_000.0 and econ.get("gdp_per_capita",5000.0) < 3000.0 and tick % 90 == 0:
+	if intl["aid_received"] < 100_000_000.0 and econ.get("gdp_per_capita",5000.0) < 3000.0 and tick % 90 == 15:
 		events.append({"type":"aid_crisis","message":"کاهش کمک‌های بین‌المللی - کسری بودجه توسعه"})
 
 	state["international_orgs"] = intl

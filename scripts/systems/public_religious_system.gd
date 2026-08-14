@@ -60,7 +60,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	places["private_vs_public_ratio"] = clamp(places["private_vs_public_ratio"] + econ.get("growth_rate",0.02)*0.0005, 0.1, 0.70)
 
 	# رشد اماکن با جمعیت
-	if tick % 120 == 0:
+	if tick % 120 == 15:
 		var needed_parks = int(pop_total / 25000.0)
 		if places["parks"] < needed_parks:
 			places["parks"] += Deterministic.next_int_range(5, 20)

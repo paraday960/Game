@@ -35,7 +35,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	prison["population"] = max(prison["population"], 10000)
 
 	# ظرفیت - رشد با بودجه
-	if tick % 180 == 0 and prison["overcrowding"] > 0.90:
+	if tick % 180 == 15 and prison["overcrowding"] > 0.90:
 		prison["capacity"] += Deterministic.next_int_range(1000, 3000)
 
 	prison["overcrowding"] = clamp(float(prison["population"]) / max(float(prison["capacity"]),1.0), 0.2, 2.5)

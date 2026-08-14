@@ -63,7 +63,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	fin["saving_deposits"] = max(fin["saving_deposits"], 10_000_000_000.0)
 
 	# شرکت‌های فین‌تک - فناوری
-	if tick % 90 == 0 and tech > 0.4:
+	if tick % 90 == 15 and tech > 0.4:
 		fin["fintech_companies"] += Deterministic.next_int_range(5, 20)
 
 	# اعتماد به بانک‌ها - ثبات + NPL معکوس + تورم
@@ -71,7 +71,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	fin["trust_banks"] = clamp(fin["trust_banks"]*0.98 + trust_target*0.02, 0.1, 0.95)
 
 	# تعداد شعب و خودپرداز - فراگیری
-	if tick % 180 == 0:
+	if tick % 180 == 15:
 		if fin["financial_inclusion"] > 0.70 and fin["banks"] < 50:
 			fin["banks"] += 1
 			fin["bank_branches"] += Deterministic.next_int_range(50, 150)
@@ -91,7 +91,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if fin["trust_banks"] < 0.35 and Deterministic.chance(0.011):
 		events.append({"type":"bank_trust_crisis","trust": fin["trust_banks"], "message":"بی‌اعتمادی به بانک‌ها - هجوم برای برداشت سپرده"})
 
-	if fin["insurance_penetration"] < 0.015 and tick % 180 == 0 and Deterministic.chance(0.02):
+	if fin["insurance_penetration"] < 0.015 and tick % 180 == 15 and Deterministic.chance(0.02):
 		events.append({"type":"low_insurance","penetration": fin["insurance_penetration"], "message":"نفوذ بیمه ۱٪ - ۹۹٪ مردم بیمه عمر ندارند"})
 
 	state["financial_services"] = fin

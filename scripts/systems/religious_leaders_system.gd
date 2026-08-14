@@ -45,7 +45,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	rel["charity"] = clamp(rel["charity"]*0.998 + (0.5 + poverty*0.2 - welfare.get("gini",0.38)*0.2)*0.002, 0.2, 0.90)
 
 	# شبکه مساجد - رشد کند جمعیت
-	if tick % 60 == 0:
+	if tick % 60 == 15:
 		var pop_growth = state.get("population",{}).get("growth_rate",0.012)
 		rel["mosque_network"] += pop_growth * 100.0
 		rel["count"] = int(rel["mosque_network"] * 0.5)

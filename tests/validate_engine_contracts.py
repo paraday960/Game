@@ -396,6 +396,40 @@ def check_discretionary_base_channel():
         FAIL.append("آینهٔ sim_longrun: تفکیک spend_base از spending گم شده")
 
 
+def check_temporal_gate_alignment():
+    # بازرسی ۱۴۰۵ (دور سیزدهم): گیت‌های زمانی باید با روز اجرای سیستم هم‌تراز
+    # باشند. موتور سیستم هفتگی را روزهای dom%7==1 (۱/۸/۱۵/۲۲/۲۹) و ماهانه را
+    # روزهای ۱/۱۵ اجرا می‌کند. گیت `tick%N==0` برای N=30..360 به روز ۳۰ یا
+    # مضرب‌ها می‌افتد که هرگز روز اجرا نیست ⇒ صفر بار در ۲۰ سال (شبیه‌سازی
+    # عددی تأیید شد) و `tick%365==0` فقط ~۳ بار در ۲۰ سال. شکل درست:
+    # `tick%N==15` (روز ۱۵ = روز اجرای هر دو cadence) و سالانه `tick%360==15`.
+    # ۳۵ سایت در ۱۹ فایل (۱۶ هفتگی + ۱۹ ماهانه) درمان شد. بازگشت = شکست.
+    BAD_N = (30, 60, 90, 120, 180, 360, 365)
+    src = open("scripts/core/engine.gd", encoding="utf-8").read()
+    lists = {}
+    for name in ("WEEKLY_SYSTEMS", "MONTHLY_SYSTEMS"):
+        m = re.search(r'const %s = \[(.*?)\]' % name, src, re.S)
+        lists[name] = re.findall(r'"([a-z_]+)"', m.group(1)) if m else []
+    checked = 0
+    bad = []
+    for name, names in lists.items():
+        for sys_name in names:
+            path = "scripts/systems/%s_system.gd" % sys_name
+            try:
+                txt = open(path, encoding="utf-8").read()
+            except OSError:
+                continue
+            checked += 1
+            for m in re.finditer(r'tick\s*%\s*(\d+)\s*==\s*0', txt):
+                if int(m.group(1)) in BAD_N:
+                    bad.append((path, m.group(0)))
+    if bad:
+        for p, g in sorted(set(bad)):
+            FAIL.append("%s: گیت ناهم‌تراز %s (باید ==15 باشد)" % (p, g))
+    else:
+        print("✅ هر %d فایل هفتگی/ماهانه گیت زمانی هم‌تراز دارند (tick%%N==15)" % checked)
+
+
 def check_infra_projects_single_owner():
     # بازرسی ۱۴۰۵ (دور سیزدهم): infrastructure.projects فقط از سینک پروژه‌های
     # ملی (national_project_manager._sync_infrastructure) نوشته می‌شود.
@@ -435,6 +469,7 @@ check_cadence_units_365()
 check_veterans_fund_wiring()
 check_discretionary_base_channel()
 check_infra_projects_single_owner()
+check_temporal_gate_alignment()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

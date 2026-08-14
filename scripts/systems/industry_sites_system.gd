@@ -57,7 +57,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	sites["maintenance_backlog"] = clamp(sites["maintenance_backlog"] + sites["utilization"]*0.0005 - econ.get("budget_allocations",{}).get("زیرساخت",0.18)*0.001, 0.05, 0.70)
 
 	# رشد کارخانه‌ها
-	if tick % 90 == 0:
+	if tick % 90 == 15:
 		if output > 120.0 and econ.get("growth_rate",0.02) > 0.02:
 			sites["factories"] += Deterministic.next_int_range(5, 15)
 			sites["warehouses"] += Deterministic.next_int_range(10, 30)
@@ -67,11 +67,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 			sites["factories"] = max(sites["factories"] - Deterministic.next_int_range(2, 8), 3000)
 
 	# نیروگاه‌ها - انرژی
-	if tick % 180 == 0 and resources.get("demand",{}).get("برق",12.0) > sites["power_plants"]*1.2:
+	if tick % 180 == 15 and resources.get("demand",{}).get("برق",12.0) > sites["power_plants"]*1.2:
 		sites["power_plants"] += Deterministic.next_int_range(1, 3)
 
 	# پالایشگاه‌ها - نفت
-	if tick % 180 == 0 and resources.get("inventory",{}).get("نفت",80.0) > 70.0 and sites["refineries"] < 20:
+	if tick % 180 == 15 and resources.get("inventory",{}).get("نفت",80.0) > 70.0 and sites["refineries"] < 20:
 		sites["refineries"] += Deterministic.next_int_range(0,1)
 
 	# رویدادها
@@ -87,7 +87,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if sites["utilization"] > 0.90 and Deterministic.chance(0.009):
 		events.append({"type":"full_utilization","util": sites["utilization"], "message":"ظرفیت تولید تکمیل - نیاز به توسعه شهرک صنعتی جدید"})
 
-	if sites["automation"] > 0.60 and tick % 180 == 0 and Deterministic.chance(0.02):
+	if sites["automation"] > 0.60 and tick % 180 == 15 and Deterministic.chance(0.02):
 		events.append({"type":"automation_milestone","automation": sites["automation"], "message":"اتوماسیون ۶۰٪ - ربات‌ها جای ۲۰۰۰ کارگر را گرفتند"})
 
 	state["industry_sites_detail"] = sites

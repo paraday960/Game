@@ -40,7 +40,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	fa["visa_free_count"] = int(fa["visa_policy"] * 120.0)
 
 	# دیپلمات‌ها - رشد با نفوذ
-	if tick % 90 == 0 and influence > 50.0:
+	if tick % 90 == 15 and influence > 50.0:
 		fa["diplomats"] += Deterministic.next_int_range(20, 80)
 		fa["embassies"] += Deterministic.next_int_range(0, 2)
 		fa["consulates"] += Deterministic.next_int_range(0, 3)
@@ -68,7 +68,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	if fa["consular_cases"] > 15000 and Deterministic.chance(0.010):
 		events.append({"type":"consular_overload","cases": fa["consular_cases"], "message":"ازدحام پرونده کنسولی ایرانیان خارج کشور"})
 
-	if fa["soft_power"] > 0.70 and tick % 180 == 0 and Deterministic.chance(0.02):
+	if fa["soft_power"] > 0.70 and tick % 180 == 15 and Deterministic.chance(0.02):
 		events.append({"type":"soft_power_peak","soft": fa["soft_power"], "message":"قدرت نرم در اوج - سریال ایرانی در ۲۰ کشور پخش شد"})
 
 	state["foreign_affairs"] = fa
