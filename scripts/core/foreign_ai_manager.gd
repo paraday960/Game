@@ -61,6 +61,12 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		if decision.has("action"):
 			issued += 1
 			events.append_array(decision.get("events", []))
+			continue
+		# واکنش به بحران‌های بازیکن (عمق‌بخشی ۳): دنیا به ضعف/بحران شما بی‌تفاوت نیست.
+		var crisis_action = _crisis_reaction(state, country_id, turn, current_day)
+		if crisis_action.has("action"):
+			issued += 1
+			events.append_array(crisis_action.get("events", []))
 
 	state["world"] = world
 	state["diplomacy"] = diplomacy
@@ -151,8 +157,78 @@ func _country_decision(state: Dictionary, country_id: String, turn: int, current
 				return {"action": "offer_alliance", "events": events}
 	return {}
 
-# جنگ زمینی/تنها از همسایه نزدیک معقول است؛ قدرت‌های بزرگ از راه دور هم می‌رسند.
-func _can_reach_player(state: Dictionary, country_id: String) -> bool:
+# ── واکنش کشورها به بحران‌های بازیکن (عمق‌بخشی ۳) ─────────────────────────
+# در دنیای واقعی، بی‌ثباتی/بحران مالی یک کشور برای دیگران فرصت یا تهدید می‌سازد:
+# دشمنان از ضعف سود می‌برند و متحدان کمک یا شرایط سخت می‌خواهند.
+func _crisis_reaction(state: Dictionary, country_id: String, turn: int, current_day: int) -> Dictionary:
+	var world: Dictionary = state["world"]
+	var diplomacy: Dictionary = state["diplomacy"]
+	var events: Array = []
+	var stance := _stance_for(state, country_id)
+	var relation := float(diplomacy.get("relations", {}).get(country_id, 50.0))
+	var name_fa := WorldManager.get_country_name(country_id)
+
+	# شاخص بحران‌زایی بازیکن: بحران‌های فعال + فشار کلان
+	var active_crises: Array = state.get("events_active", [])
+	var crisis_weight := 0.0
+	for c in active_crises:
+		if str(c.get("status", "active")) == "active":
+			crisis_weight += float(c.get("severity", 1))
+	var econ: Dictionary = state.get("economy", {})
+	if float(econ.get("debt_to_gdp", 0.0)) > 1.2:
+		crisis_weight += 2.0
+	if float(econ.get("inflation", 0.0)) > 0.25:
+		crisis_weight += 2.0
+	if float(econ.get("foreign_reserves", 0.0)) < 15_000_000_000.0:
+		crisis_weight += 1.0
+	var pol: Dictionary = state.get("politics", {})
+	if float(pol.get("stability", 0.6)) < 0.35:
+		crisis_weight += 1.5
+	var mil: Dictionary = state.get("military", {})
+	var deterrence := float(mil.get("deterrence", 60.0))
+	# بحران خفیف = دنیا بی‌تفاوت است
+	if crisis_weight < 2.5:
+		return {}
+
+	# ۱) دشمن فرصت‌طلب: تحریم/جنگ علیه بازیکنِ بحران‌زده (در دنیای واقعی رایج است)
+	if stance == "hostile":
+		if not WorldManager._has_incoming_sanction(diplomacy, country_id) and Deterministic.chance(0.22 * minf(crisis_weight / 6.0, 1.5)):
+			diplomacy["sanctions"].append({"target": country_id, "by": "foreign", "tick": turn})
+			events.append({
+				"type": "foreign_sanction", "target": country_id,
+				"message": "⚠️ %s با بهره‌برداری از بحران‌های شما تحریم تازه‌ای وضع کرد" % name_fa
+			})
+			return {"action": "sanction", "events": events}
+		var player_wars = world.get("wars", {}).size()
+		if relation <= 20.0 and deterrence < 35.0 and crisis_weight >= 4.0 \
+				and player_wars <= 1 and _can_reach_player(state, country_id) \
+				and Deterministic.chance(0.10 * minf(crisis_weight / 6.0, 1.5)):
+			world["wars"][country_id] = {
+				"target": country_id, "started_tick": turn, "progress": 0.0,
+				"player_losses": 0, "enemy_losses": 0, "started_by": "foreign"
+			}
+			diplomacy["relations"][country_id] = 0.0
+			state["politics"]["tension"] = clampf(float(state["politics"].get("tension", 0.3)) + 0.10, 0.0, 1.0)
+			events.append({
+				"type": "foreign_war_declared", "target": country_id,
+				"message": "⚠️ %s با مشاهده‌ی ضعف شما اعلام جنگ کرد!" % name_fa
+			})
+			return {"action": "war", "events": events}
+		return {}
+
+	# ۲) متحد/دوست: پیشنهاد کمک مالی یا مذاکره برای شرایط (واقع‌گرایانه: نجات مشروط)
+	if stance == "friendly" or stance == "allied":
+		if crisis_weight >= 3.5 and relation >= 60.0 and not _has_offer(world, "trade_agreement", country_id) \
+				and Deterministic.chance(0.14 * minf(crisis_weight / 6.0, 1.5)):
+			_add_offer(world, "trade_agreement", country_id, turn, current_day,
+				"%s با توجه به بحران‌های شما، پیشنهاد توافق تجاری ترجیحی برای کمک به اقتصاد شما دارد" % name_fa)
+			events.append({
+				"type": "incoming_offer", "target": country_id,
+				"message": "🤝 %s با دیدن بحران‌های شما، توافق تجاری ترجیحی پیشنهاد کرد" % name_fa
+			})
+			return {"action": "offer_trade", "events": events}
+		return {}
+	return {}
 	var world: Dictionary = state["world"]
 	var player_id = str(world.get("player_country", ""))
 	var us = WorldManager.countries.get(player_id, {})
