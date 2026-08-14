@@ -45,8 +45,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	health["population_health"] = clamp(population_health, 0.1, 0.95)
 
 	# کیفیت با بودجه
-	# نُرم مرجع: ۵٪ تولید ناخالص سالانه برای سلامت؛ انحراف از نُرم کیفیت را جابه‌جا می‌کند
-	var health_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.05 / 12.0
+	# نُرم مرجع: ۲٪ تولید ناخالص برای سلامتِ «عمومی» (اصلاح آینه بلندمدت — نُرم ۵٪ که سهم
+	# کل هزینهٔ سلامتِ دولتی+خصوصی در کشورهای توسعه‌یافته است، بودجهٔ عمومی ~۱٫۶٪ GDP را
+	# مزمن زیر نُرم نگه می‌داشت و کیفیت در ~۳ سال به کف ۰٫۱ فرو می‌رفت). منبع واقع‌گرایی:
+	# سلامت عمومی در کشورهای درحال‌توسعه معمولاً ۱٫۵–۲٫۵٪ GDP است.
+	var health_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.02 / 12.0
 	var quality_change = (health_budget_share - 0.08) * 0.01 + clampf(health_budget / health_norm - 1.0, -1.0, 1.0) * 0.001
 	health["quality"] = clamp(health["quality"] + quality_change, 0.1, 0.95)
 

@@ -109,8 +109,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	econ["real_growth"] = real_growth
 	# بیکاری با فاز چرخه حرکت می‌کند (رونق اشتغال‌زا، رکود بیکارکننده)
 	var unemp: float = float(econ.get("unemployment", 0.08))
-	# کشش به نرخ طبیعی بیکاری (NAIRU≈۶٪) — چرخه دیگر بیکاری را ابداً صفر/سقف نمی‌کند
-	var unemp_drift: float = (0.06 - unemp) * 0.0003
+	# کشش به نرخ طبیعی بیکاری — چرخه دیگر بیکاری را ابداً صفر/سقف نمی‌کند.
+	# ناپایایی مهارت (بینشِ مدلِ حذف‌شدهٔ رفاه، قانون ۶: حفظ اثر طراحی) NAIRU را از ۶٪ بالا می‌برد؛
+	# با skill_match پیش‌فرض ۰٫۶۰ نرخ تعادلی ≈ ۹٫۲٪ است (نزدیک الگوی کشور درحال‌توسعه).
+	var skill_match_u: float = clampf(float(state.get("education", {}).get("skill_match", 0.60)), 0.0, 1.0)
+	var nairu: float = 0.06 + (1.0 - skill_match_u) * 0.08
+	var unemp_drift: float = (nairu - unemp) * 0.0003
 	# قانون اوکن: رشد بالاتر از روند ۲٪ بیکاری را می‌کاهد (تصحیح مقیاس روزانه ÷۳۰)
 	var okun: float = (real_growth - 0.02) * -0.0008 / 30.0
 	econ["unemployment"] = clampf(unemp + unemp_drift + okun, 0.02, 0.30)
@@ -213,9 +217,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var war_push = war_economy*0.03 + mobilization*0.005
 	var sanction_push = sanction_penalty*0.5
 	var inflation_change = ( (money_supply-1.0)*0.010 + demand_pull*0.008 + cost_push + war_push + sanction_push - 0.0015) / days_in_month
-	# لنگر هدف تورمی بانک مرکزی — بدون آن جمله ثابت −۰.۰۰۱۵ تورم را در چند سال به رکودتورمی می‌برد
+	# لنگر هدف تورمی بانک مرکزی (اصلاح آینه بلندمدت: ضریب ۰٫۰۲ → ۰٫۱۲).
+	# با ۰٫۰۲ (τ≈۴ سال) جمله ثابت −۰٫۰۰۱۵ لنگر را می‌شکست و تورم طی ~۸ سال به زیر صفر
+	# می‌لغزید (دیفلشن مزمن). با ۰٫۱۲ (τ≈۸ ماه) هدف تورمی جاذب واقعی است و تعادل ≈ ۴٪ می‌ماند.
 	var inflation_target_cb: float = float(central_bank.get("inflation_target", 0.05))
-	econ["inflation"] += inflation_change + (inflation_target_cb - econ["inflation"]) * 0.02 / days_in_month
+	econ["inflation"] += inflation_change + (inflation_target_cb - econ["inflation"]) * 0.12 / days_in_month
 	econ["inflation"] = clamp(econ["inflation"], -0.03, 0.60)
 
 	# منحنی فیلیپس + انتظارات تورمی

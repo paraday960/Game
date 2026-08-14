@@ -25,18 +25,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var welfare_budget = econ.get("government_spending", 0.0) * welfare_budget_share
 
 	# فرمول‌ها - ۳.۲۱.۳
-	# بیکاری = f(رشد اقتصاد، مهارت، سیاست کار)
+	# بیکاری: منبع واحد economy_system است (لنگر NAIRU با تعدیل مهارت + اوکن + بسیج/فناوری).
+	# پیش از این اینجا مدلِ فرمولیِ بی‌حافظهٔ موازی هر روز econ["unemployment"] را بازنویسی
+	# می‌کرد (پرش ۸٪→۱۲٪ در روز اول + پاک‌شدن شوک‌های مدیران) — رفع باگ shadow-write.
 	var growth = econ.get("growth_rate", 0.02)
-	var skill_match = education.get("skill_match", 0.60)
-	# قانون اوکان: رشد بالاتر از ۲.۵٪ بالقوه، بیکاری را ملایم کاهش می‌دهد (نرخ‌ها سالانه‌اند)
-	var unemployment = 0.08
-	unemployment -= (growth - 0.025) * 0.5
-	unemployment += (1.0 - skill_match) * 0.1
-	unemployment += Deterministic.next_range(-0.005, 0.005)
-	unemployment = clamp(unemployment, 0.02, 0.35)
+	var unemployment = clampf(float(econ.get("unemployment", 0.08)), 0.0, 1.0)
 	welfare["unemployment_rate"] = unemployment
-	econ["unemployment"] = unemployment
-	state["economy"] = econ
 
 	# نرخ مشارکت = f(رفاه، حقوق، انگیزه)
 	var participation = 0.65

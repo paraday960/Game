@@ -13,21 +13,22 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var events = []
 
 	# رشد طبیعی - ۳.۱۱.۳
-	# تولد - مرگ
-	var birth_rate = pop["birth_rate"]
-	var death_rate = pop["death_rate"]
+	# تولد و مرگ: «مدل هدف+بازگشت میانگین» (اصلاح آینه بلندمدت).
+	# پیش از این اثرها هر روز به‌صورت انباشتی (integral) روی نرخ سوار می‌شدند و در همان
+	# سال اول به دیوارهٔ clamp می‌چسبیدند (تولد ۳۵/مرگ ۴ دائمی → جمعیت +۳٫۱٪/سال!).
+	# حالا هدف = پایهٔ BalanceConfig + اثرها و نرخ واقعی با τ≈۷ماه به سمت هدف نرم می‌رود.
+	var birth_base: float = float(BalanceConfig.get_value("population.birth_base", 15.0))
+	var death_base: float = float(BalanceConfig.get_value("population.death_base", 8.0))
 
 	# اثر رفاه بر تولد
 	var welfare_effect = (econ["gdp_per_capita"] / 5000.0 - 1.0) * 0.5 + welfare["poverty"] * -2.0
-	birth_rate += welfare_effect
-	birth_rate += (pop["happiness"] - 0.5) * 2.0
-	birth_rate = clamp(birth_rate, 5.0, 35.0)
+	var birth_target = clamp(birth_base + welfare_effect + (pop["happiness"] - 0.5) * 2.0, 5.0, 35.0)
+	var birth_rate = pop["birth_rate"] * 0.995 + birth_target * 0.005
 
 	# اثر بهداشت بر مرگ
 	var health_effect = (health["quality"] - 0.5) * -3.0
-	death_rate += health_effect
-	death_rate += (food_crisis_penalty(resources) + energy_crisis_penalty(resources))
-	death_rate = clamp(death_rate, 4.0, 25.0)
+	var death_target = clamp(death_base + health_effect + (food_crisis_penalty(resources) + energy_crisis_penalty(resources)), 4.0, 25.0)
+	var death_rate = pop["death_rate"] * 0.995 + death_target * 0.005
 
 	pop["birth_rate"] = birth_rate
 	pop["death_rate"] = death_rate
