@@ -181,6 +181,14 @@ def main():
           "ریز اثر بخش‌ها بر رشد (کانال GDP)" in ui_src
           and "boost_rows.sort_custom" in ui_src
           and "absf(bv) > 0.000001" in ui_src)
+    check("C8) مرورگر سامانه‌ها: کارت «شاخص‌های کلیدی بخش‌ها» (جاروی یتیم اطلاعاتی)",
+          "SECTOR_INDICATORS" in ui_src
+          and "شاخص‌های کلیدی بخش‌ها" in ui_src)
+    check("C8) نمونه‌های کلید یتیم سیم‌کشی‌شده در جدول شاخص‌ها (جمعیت/مسکن/آب/دارو)",
+          '"population", "dependency_ratio"' in ui_src
+          and '"housing_policy", "home_ownership"' in ui_src
+          and '"water_infrastructure", "rural_access"' in ui_src
+          and '"pharma_policy", "drug_cost"' in ui_src)
 
     # ── C9: فید رویدادهای کانال GDP (بازرسی ۱۴۰۵د) ───────────────────────
     check("C9) رویداد محرک کانال در economy_system (نوع sector_boost_drive)",

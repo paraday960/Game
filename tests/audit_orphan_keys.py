@@ -83,6 +83,10 @@ RE_GET = re.compile(r'\.(?:get|has|erase)\("([^"]+)"')
 RE_DOT = re.compile(r'\.([A-Za-z_]\w*)\s*(=|\+=|-=|\*=|/=)?')
 RE_INITKEY = re.compile(r'"([^"]+)"\s*:')
 RE_PATHSTR = re.compile(r'(?:get_value|apply_delta)\("([^"]+)"')
+# جدول 선언ی شاخص‌های UI (مانند SECTOR_INDICATORS در main_ui): ردیف‌های
+# ["بخش", "کلید", "برچسب"] خواندنِ واقعی زمان‌اجرا هستند (حلقهٔ نمایش با
+# .get(str(ind[1])) دینامیک عمل می‌کند) و پویشگر استاتیک باید آن‌ها را «خواندن» بشمارد.
+RE_UITABLE = re.compile(r'\[\s*"[^"]+"\s*,\s*"([^"]+)"\s*,\s*"')
 
 def strip_comments(line):
     out = []
@@ -114,6 +118,10 @@ def main():
     for fp in files:
         for line in open(fp, encoding="utf-8"):
             code = strip_comments(line)
+            for m in RE_UITABLE.finditer(code):
+                seg = m.group(1)
+                if seg in segs:
+                    reads[seg] = reads.get(seg, 0) + 1
             for m in RE_PATHSTR.finditer(code):
                 last = m.group(1).split(".")[-1]
                 if last in segs:

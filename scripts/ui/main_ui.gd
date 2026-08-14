@@ -228,11 +228,40 @@ const SYSTEM_AI_ALIASES = {
 	"citizens_detail": "citizens", "workforce_detail": "workforce_jobs",
 	"officials": "officials_managers", "politicians_detail": "politicians",
 	"elites_detail": "elites", "security_forces_detail": "security_forces",
+
 	"households_detail_full": "households", "migration_detail": "migration",
 	"quantitative": "quantitative_temporal", "retail": "retail",
 	"transport_roads": "transport_roads", "public_services": "public_services",
 	"industry_sites": "industry_sites"
 }
+# شاخص‌های کلیدی بخش‌ها (جاروی یتیم‌های اطلاعاتی ۱۴۰۵): این کلیدها توسط مدیران
+# سیاست می‌شدند ولی هیچ‌جا خوانده نمی‌شدند — در واقع شاخص‌های واقعی کشورداری‌اند
+# که حالا در تب سامانه‌ها برای بازیکن دیده می‌شوند.
+# قالب ردیف: [بخش state، کلید، برچسب فارسی] + عضو چهارم اختیاری «money» برای قالب پولی.
+const SECTOR_INDICATORS := [
+	["population", "dependency_ratio", "نسبت وابستگی جمعیتی"],
+	["housing_policy", "home_ownership", "نرخ مالکیت مسکن"],
+	["sme_policy", "sme_share", "سهم بنگاه‌های کوچک و متوسط از اقتصاد"],
+	["creative_policy", "creative_gdp", "اندازهٔ اقتصاد خلاق", "money"],
+	["transit_policy", "transit_share", "سهم ترانزیت منطقه"],
+	["textile_policy", "export_share", "سهم صادرات نساجی"],
+	["insurance_policy", "premium_gdp", "حق‌بیمه به GDP (ضریب نفوذ بیمه)"],
+	["insurance_policy", "claims", "نسبت خسارت بیمه‌ای"],
+	["disaster_policy", "casualty_risk", "ریسک تلفات بلایا"],
+	["disaster_policy", "recovery_speed", "سرعت بازسازی پس از بحران"],
+	["food_chain_policy", "cold_chain", "پوشش زنجیرهٔ سرد مواد غذایی"],
+	["food_chain_policy", "price_volatility", "نوسان قیمت مواد غذایی"],
+	["livestock_policy", "disease_risk", "ریسک بیماری دام"],
+	["downstream_policy", "product_exports", "ضریب صادرات محصولات پایین‌دستی"],
+	["ai_policy", "ai_exports", "ضریب صادرات هوش مصنوعی"],
+	["ip_policy", "royalty_income", "ضریب درآمد حق امتیاز (رویالتی)"],
+	["science_policy", "co_publications", "همکاری علمی بین‌المللی"],
+	["nation_brand_policy", "tourism_boost", "تقویت گردشگری از برند ملی"],
+	["care_policy", "informal_care", "سهم مراقبت غیررسمی (خانوادگی)"],
+	["water_infrastructure", "rural_access", "دسترسی روستایی به آب سالم"],
+	["rural_policy", "rural_pop_share", "سهم جمعیت روستایی"],
+	["pharma_policy", "drug_cost", "شاخص هزینهٔ دارو (۱۰۰ = پایه)", "index"],
+]
 const METRIC_WORD_FA = {
 	"total":"کل", "count":"تعداد", "rate":"نرخ", "quality":"کیفیت", "coverage":"پوشش",
 	"efficiency":"کارآمدی", "stability":"پایداری", "happiness":"شادی", "satisfaction":"رضایت",
@@ -7972,6 +8001,28 @@ func _build_systems():
 			shown_count += 1
 		if boost_rows.size() > shown_count:
 			_row(boost_card, "…", PersianFormatter.to_persian_digits("و %d بخش دیگر" % (boost_rows.size() - shown_count)))
+
+	# شاخص‌های کلیدی بخش‌ها — مقادیری که مدیران سیاست محاسبه می‌کنند ولی تا پیش از
+	# بازرسی ۱۴۰۵ هیچ‌جای UI خوانده نمی‌شدند؛ این‌جا یک‌جا برای بازیکن دیده می‌شوند.
+	var indicator_count: int = 0
+	for ind in SECTOR_INDICATORS:
+		if float(GameState.state.get(str(ind[0]), {}).get(str(ind[1]), 0.0)) > 0.0:
+			indicator_count += 1
+	if indicator_count > 0:
+		var indicator_card = _card("📊 شاخص‌های کلیدی بخش‌ها")
+		for ind in SECTOR_INDICATORS:
+			var ind_sec: Dictionary = GameState.state.get(str(ind[0]), {})
+			var ind_val: float = float(ind_sec.get(str(ind[1]), 0.0))
+			if ind_val <= 0.0:
+				continue  # پیش از نخستین گام ماهانه هنوز محاسبه نشده
+			var ind_text: String
+			if ind.size() > 3 and str(ind[3]) == "money":
+				ind_text = PersianFormatter.format_money(ind_val)
+			elif ind.size() > 3 and str(ind[3]) == "index":
+				ind_text = PersianFormatter.to_persian_digits(str(int(ind_val * 100.0)))
+			else:
+				ind_text = PersianFormatter.format_percent(ind_val)
+			_row(indicator_card, str(ind[2]), ind_text)
 
 	_build_system_detail(selected_system)
 
