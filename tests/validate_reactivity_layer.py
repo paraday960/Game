@@ -62,6 +62,19 @@ for needle, label in [
     else:
         fail.append("foreign_ai: %s از دست رفته (%s)" % (label, needle))
 
+# ── پاشش قیمت کالاها به اقتصاد جهان ──────────────────────────────────────
+wm = io.open("scripts/core/world_manager.gd", encoding="utf-8").read()
+for needle, label in [
+    ('func _commodity_growth_effect', "تابع اثر کالا روی رشد NPC"),
+    ('_commodity_growth_effect(str(country_id)', "فراخوانی در simulate_npc_month"),
+    ('OIL_EXPORTERS', "لیست صادرکنندگان نفت"),
+    ('wheat_price > 380.0', "اثر گرانی گندم بر کم‌درآمدها"),
+]:
+    if needle in wm:
+        print("✅ world_manager: %s" % label)
+    else:
+        fail.append("world_manager: %s از دست رفته (%s)" % (label, needle))
+
 # ── جمع‌بندی ─────────────────────────────────────────────────────────────
 if fail:
     print("\n❌ REACTIVITY LAYER FAILED:")

@@ -689,6 +689,10 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 	# ===== رشد ماهانه کشورهای غیربازیکن (جهان زنده) =====
 	# هر کشور بر پایه سطح فناوری، بلوک و منطقه رشد اقتصادی، جمعیت و قدرت نظامی واقعی دارد.
 	var world_growth_shock = Deterministic.next_range(-0.004, 0.006) # شوک اقتصادی جهانی ماهانه
+	# پاشش قیمت کالاها به اقتصاد جهان (عمق‌بخشی ۳): وقتی شوک جهانی نفت/غذا
+	# فعال است، صادرکنندگان و واردکنندگان واکنش متفاوت و واقع‌گرایانه نشان می‌دهند.
+	var oil_price := CommodityManager.get_price(state, "نفت")
+	var wheat_price := CommodityManager.get_price(state, "گندم")
 	for country_id in world["countries"].keys():
 		if country_id == player_id:
 			continue
@@ -701,6 +705,8 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 				at_war = true
 				break
 		var growth = base_growth + bloc_growth + world_growth_shock + (-0.006 if at_war else 0.0)
+		# ── اثر کالاهای جهانی (واقع‌گرایانه: صادرکننده در گرانی نفت می‌برد) ──
+		growth += _commodity_growth_effect(str(country_id), runtime, oil_price, wheat_price)
 		growth += Deterministic.next_range(-0.0008, 0.0012)
 		runtime["gdp"] = max(1.0, float(runtime.get("gdp", 1.0)) * (1.0 + growth))
 		var pop_growth = {"Africa": 0.0016, "Americas": 0.0007, "Asia": 0.0009, "Europe": 0.0002, "Oceania": 0.0008}.get(str(runtime.get("region", "")), 0.0008)
@@ -712,6 +718,37 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 		runtime["tech_level"] = clamp(float(runtime.get("tech_level", 0.35)) + 0.00015 + Deterministic.next_range(-0.00005, 0.0001), 0.05, 0.95)
 		world["countries"][country_id] = runtime
 	state["world"] = world
+
+	# ── اثر قیمت کالاهای جهانی بر رشد یک کشور NPC (عمق‌بخشی ۳) ───────────
+	# صادرکنندگان خالص نفت در گرانی نفت سود می‌برند و در ریزش آن آسیب می‌بینند؛
+	# کشورهای کم‌درآمدِ وابسته به واردات غذا در گرانی گندم ضربه می‌خورند.
+	# لیست صادرکنندگان خالص نفت (تقریبی، ثابت برای دترمینیسم).
+	const OIL_EXPORTERS := {
+		"SAU", "RUS", "IRN", "IRQ", "ARE", "KWT", "QAT", "VEN", "NGA", "DZA",
+		"LBY", "KAZ", "AZE", "OMN", "BHR", "GAB", "GNQ", "COG", "TCD", "TKM",
+		"BRN", "TTO", "ECU", "CAN", "NOR", "USA", "MEX", "Guy", "SSD"
+	}
+	# این تابع فقط در simulate_npc_month صدا زده می‌شود؛ خروجی عددی به‌صورت
+	# دترمینستیک (بدون RNG) از قیمت‌های واقعی کالا محاسبه می‌شود.
+	func _commodity_growth_effect(country_id: String, runtime: Dictionary, oil_price: float, wheat_price: float) -> float:
+		var effect := 0.0
+		# نفت: صادرکننده در گرانی برنده، واردکننده در گرانی بازنده است
+		if oil_price > 105.0:
+			if OIL_EXPORTERS.has(country_id):
+				effect += 0.0045
+			else:
+				effect -= 0.0018
+		elif oil_price < 45.0:
+			if OIL_EXPORTERS.has(country_id):
+				effect -= 0.0035
+			else:
+				effect += 0.0008
+		# گندم: کشورهای کم‌درآمد (وابسته به واردات غذا) در گرانی آسیب می‌بینند
+		if wheat_price > 380.0:
+			var gdp_pc := float(runtime.get("gdp", 1.0)) / maxf(float(runtime.get("population", 1.0)), 1.0)
+			if gdp_pc < 5000.0:
+				effect -= 0.0025
+		return clampf(effect, -0.008, 0.008)
 
 	# روابط کشورهای غیرِبازیکن با بلوک، فاصله، قدرت و نویز کم ماهانه تغییر می‌کند.
 	for key in relations.keys():
