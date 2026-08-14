@@ -8002,6 +8002,23 @@ func _build_systems():
 		if boost_rows.size() > shown_count:
 			_row(boost_card, "…", PersianFormatter.to_persian_digits("و %d بخش دیگر" % (boost_rows.size() - shown_count)))
 
+	# ریز کانال ذخایر ارزی (بازرسی ۱۴۰۵): جریان‌های ماهانهٔ ورود/خروج ارز به تفکیک
+	# منبع — مثبت=ورودی (حواله، ترانزیت…) و منفی=خروجی (فرار سرمایه) با رنگ علامت‌دار
+	var reserve_src: Dictionary = GameState.state.get("economy", {}).get("reserve_inflows", {})
+	var reserve_rows: Array = []
+	for rk in reserve_src.keys():
+		var rv: float = float(reserve_src[rk])
+		if absf(rv) > 1e6:
+			reserve_rows.append([str(rk), rv])
+	if not reserve_rows.is_empty():
+		reserve_rows.sort_custom(func(a, b): return absf(a[1]) > absf(b[1]))
+		var reserve_card = _card("💵 ریز جریان‌های ارزی (کانال ذخایر، ماهانه)")
+		_row(reserve_card, "جریان خالص", PersianFormatter.format_money(float(GameState.state.get("economy", {}).get("reserve_inflows_monthly", 0.0))),
+			_color_for(0.7 if float(GameState.state.get("economy", {}).get("reserve_inflows_monthly", 0.0)) > 0.0 else 0.15))
+		for rr in reserve_rows:
+			_row(reserve_card, str(rr[0]), PersianFormatter.format_money(float(rr[1])),
+				_color_for(0.7 if float(rr[1]) > 0.0 else 0.15))
+
 	# شاخص‌های کلیدی بخش‌ها — مقادیری که مدیران سیاست محاسبه می‌کنند ولی تا پیش از
 	# بازرسی ۱۴۰۵ هیچ‌جای UI خوانده نمی‌شدند؛ این‌جا یک‌جا برای بازیکن دیده می‌شوند.
 	var indicator_count: int = 0
