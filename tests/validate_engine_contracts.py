@@ -96,11 +96,48 @@ def check_queue_key_coverage():
     else:
         print("✅ پوشش کلید صف تصمیم: همه نوع فرمان‌ها کیس صریح دارند")
 
+# ── ۵) قرارداد نویز متقارن — راه‌پیمای تصادفی سوگیریدار ممنوع ────────────
+# بازرسی واقع‌گرایی ۱۴۰۵: health.vaccination با next_range(-0.001, 0.002) دریفت
+# تصادفی ~+۰٫۰۰۰۵ در روز داشت و بی‌توجه به سیاست به سقف می‌چسبید. درمان: واکسیناسیون
+# بازگشت‌به‌هدف سیاست‌محور شد و همهٔ «راه‌پیماهای خالص روی سطح پایدار» مرکز-صفر شدند.
+NOISE_WALKS = {
+    "scripts/systems/health_system.gd": ["vax_target", "next_range(-0.0005, 0.0005)"],
+    "scripts/systems/agriculture_system.gd": ["next_range(-0.0015, 0.0015)"],
+    "scripts/systems/citizens_system.gd": ["next_range(-0.025, 0.025)"],
+    "scripts/systems/culture_system.gd": ["next_range(-0.0025, 0.0025)"],
+    "scripts/systems/elections_system.gd": ["next_range(-0.0015, 0.0015)", "next_range(-0.0025, 0.0025)"],
+    "scripts/systems/foreign_affairs_system.gd": ["next_range(-0.15, 0.15)"],
+    "scripts/systems/security_system.gd": ["next_range(-0.0025, 0.0025)", "next_range(-0.0015, 0.0015)"],
+    "scripts/systems/stock_market_system.gd": ["next_range(-0.0015, 0.0015)"],
+    "scripts/systems/tourism_system.gd": ["next_range(-0.0025, 0.0025)"],
+    "scripts/systems/trade_system.gd": ["next_range(-0.0025, 0.0025)"],
+    "scripts/systems/welfare_system.gd": ["next_range(-0.0015, 0.0015)"],
+}
+# الگوهای سوگیریداری که درمان شدند و نباید برگردند
+BIASED_GONE = {
+    "scripts/systems/health_system.gd": ["health[\"vaccination\"] + Deterministic.next_range(-0.001, 0.002)"],
+}
+def check_noise_symmetry():
+    for f, pats in sorted(NOISE_WALKS.items()):
+        src = open(f, encoding="utf-8").read()
+        for pat in pats:
+            if pat not in src:
+                FAIL.append("الگوی نویز متقارن «%s» در %s یافت نشد" % (pat, f))
+    for f, pats in sorted(BIASED_GONE.items()):
+        src = open(f, encoding="utf-8").read()
+        for pat in pats:
+            if pat in src:
+                FAIL.append("الگوی نویز سوگیریدار «%s» به %s برگشته" % (pat, f))
+    if not FAIL:
+        print("✅ قرارداد نویز متقارن: %d سایت راه‌پیمای مرکز-صفر پین شد" % len(NOISE_WALKS))
+
+
 check_simulate_month_contract()
 check_determinism()
 check_state_key_collisions()
 check_duplicate_deep_blocks()
 check_queue_key_coverage()
+check_noise_symmetry()
 
 if FAIL:
     print("\n❌ ENGINE CONTRACTS FAILED:")

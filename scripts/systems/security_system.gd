@@ -62,14 +62,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# پیشگیری و واکنش
 	security["prevention"] = clamp(security["prevention"] + (police_budget_share - 0.05) * 0.005, 0.1, 0.95)
-	security["response"] = clamp(security["response"] + Deterministic.next_range(-0.002, 0.003), 0.1, 0.95)
+	security["response"] = clamp(security["response"] + Deterministic.next_range(-0.0025, 0.0025), 0.1, 0.95)
 
 	# امنیت سایبری - رشد با فناوری
 	var tech_digital = state.get("technology", {}).get("branches", {}).get("دیجیتال", 0.2)
 	security["cyber"] = clamp(security["cyber"] * 0.999 + tech_digital * 0.001 + 0.0002, 0.1, 0.95)
 
 	# ضد تروریسم
-	security["counter_terror"] = clamp(security["counter_terror"] + Deterministic.next_range(-0.001, 0.002), 0.1, 0.95)
+	security["counter_terror"] = clamp(security["counter_terror"] + Deterministic.next_range(-0.0015, 0.0015), 0.1, 0.95)
 
 	# کنترل مرز
 	security["border_control"] = clamp(security["border_control"] + Deterministic.next_range(-0.001, 0.001), 0.1, 0.95)

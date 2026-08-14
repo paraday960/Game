@@ -32,7 +32,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# تعداد معاهدات فعال
 	fa["treaties_active"] = diplomacy.get("treaties", []).size()
-	fa["treaties_pending"] = clamp(fa["treaties_pending"] + Deterministic.next_range(-0.1,0.2), 0, 10)
+	fa["treaties_pending"] = clamp(fa["treaties_pending"] + Deterministic.next_range(-0.15, 0.15), 0, 10)
 
 	# سیاست روادید - قدرت نرم بالا روادید بازتر
 	var visa_target = fa["soft_power"]*0.6 + influence/100.0*0.4

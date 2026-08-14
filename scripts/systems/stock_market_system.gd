@@ -66,7 +66,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# مقررات و شفافیت
 	var regulation_target = 0.6 + (1.0 - corruption) * 0.2 + stock["transparency"] * 0.1
 	stock["regulation"] = clamp(stock["regulation"] * 0.999 + regulation_target * 0.001, 0.2, 0.95)
-	stock["transparency"] = clamp(stock["transparency"] + Deterministic.next_range(-0.001, 0.002), 0.2, 0.95)
+	stock["transparency"] = clamp(stock["transparency"] + Deterministic.next_range(-0.0015, 0.0015), 0.2, 0.95)
 
 	# شرکت‌های فهرست شده
 	if stock["investor_confidence"] > 0.7 and Deterministic.chance(0.005):

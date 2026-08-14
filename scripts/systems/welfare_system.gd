@@ -74,7 +74,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	welfare["unemployment_benefit_coverage"] = clamp(welfare["social_safety"] * 0.8, 0.1, 0.95)
 
 	# پوشش مستمری
-	welfare["pension_coverage"] = clamp(welfare["pension_coverage"] + Deterministic.next_range(-0.001, 0.002), 0.3, 0.95)
+	welfare["pension_coverage"] = clamp(welfare["pension_coverage"] + Deterministic.next_range(-0.0015, 0.0015), 0.3, 0.95)
 
 	# حلقه بازخورد: اشتغال ← رضایت ← ثبات؛ فقر ← تنش
 	pop["happiness"] = clamp(pop.get("happiness",0.6) + (0.08 - unemployment) * 0.001 + (0.15 - welfare["poverty"]) * 0.001, 0.05, 0.95)

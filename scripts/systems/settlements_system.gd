@@ -52,13 +52,16 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var urban_attraction = ((gdp_pc/5000.0)*0.3 + infra["quality"]*0.3 + settlements["service_access"]*0.2 + 0.2) * (1.0 - rural_stay) * capacity_factor
 	settlements["migration_urban"] = total_pop * urbanization_rate / 365.0 * urban_attraction
 	urban_pop += settlements["migration_urban"]
-	urban_pop = clampf(urban_pop, total_pop*0.05, total_pop*0.90)
-	rural_pop = max(total_pop - urban_pop, total_pop*0.10)
+	# بازرسی واقع‌گرایی ۱۴۰۵: سقف شهرنشینی ۰٫۹۰ → ۰٫۹۵. در افق ۳۰+ ساله کشور روی
+	# سقف ۹۰٫ می‌چسبید، درحالی که اقتصادهای شهریِ بالغ (هلند ~۹۳٪، ژاپن ~۹۲٪،
+	# بلژیک ~۹۸٪) بالاترند؛ بازخورد تراکم (crowding) پیش از سقف جریان را کند می‌کند.
+	urban_pop = clampf(urban_pop, total_pop*0.05, total_pop*0.95)
+	rural_pop = max(total_pop - urban_pop, total_pop*0.05)
 
 	settlements["urban_pop"] = urban_pop
 	settlements["rural_pop"] = rural_pop
 	pop["total"] = total_pop
-	pop["urban_ratio"] = clampf(urban_pop / max(total_pop,1.0), 0.0, 0.90)
+	pop["urban_ratio"] = clampf(urban_pop / max(total_pop,1.0), 0.0, 0.95)
 
 	# تراکم - جمعیت شهری / مساحت مصنوعی شهری (مساحت از بلوک ظرفیت بالا محاسبه شده)
 	settlements["density"] = urban_pop / max(est_urban_area,1.0)

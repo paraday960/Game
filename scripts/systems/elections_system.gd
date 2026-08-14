@@ -53,10 +53,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	elections["opposition_support"] = 1.0 - elections["ruling_party_support"]
 
 	# نظام حزبی
-	elections["party_system"] = clamp(elections["party_system"] + Deterministic.next_range(-0.001, 0.002), 0.2, 0.90)
+	elections["party_system"] = clamp(elections["party_system"] + Deterministic.next_range(-0.0015, 0.0015), 0.2, 0.90)
 
 	# هزینه کمپین
-	elections["campaign_cost"] = clamp(elections["campaign_cost"] + Deterministic.next_range(-0.002, 0.003), 0.1, 0.90)
+	elections["campaign_cost"] = clamp(elections["campaign_cost"] + Deterministic.next_range(-0.0025, 0.0025), 0.1, 0.90)
 
 	# انتخابات - هر ۴ سال (قانون سیاسی)
 	if year >= elections["next_election_year"]:

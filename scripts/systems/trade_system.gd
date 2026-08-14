@@ -114,7 +114,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		events.append({"type": "trade_agreement_signed", "message": "توافقنامه تجارت آزاد جدید امضا شد", "agreements": trade["trade_agreements"]})
 
 	# انطباق WTO
-	trade["wto_compliance"] = clamp(trade["wto_compliance"] + Deterministic.next_range(-0.002, 0.003), 0.2, 0.95)
+	trade["wto_compliance"] = clamp(trade["wto_compliance"] + Deterministic.next_range(-0.0025, 0.0025), 0.2, 0.95)
 
 	# اطلاع‌رسانی اثر تحریم (اثر واقعی از طریق جریمهٔ سهم صادرات اعمال شد؛ اینجا فقط خبر)
 	if incoming_sanctions > 0 and Deterministic.chance(0.008):

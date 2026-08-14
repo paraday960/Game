@@ -57,8 +57,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var insurance_target = 0.75 + (health_budget_share - 0.08) * 2.0
 	health["insurance"] = clamp(health["insurance"] * 0.995 + insurance_target * 0.005, 0.1, 0.99)
 
-	# واکسیناسیون
-	health["vaccination"] = clamp(health["vaccination"] + Deterministic.next_range(-0.001, 0.002), 0.5, 0.99)
+	# واکسیناسیون — بازرسی واقع‌گرایی ۱۴۰۵: قبلاً راه‌پیمای تصادفی با میانگین مثبت بود
+	# (next_range(-0.001, 0.002) یعنی دریفت تصادفی ~+۱۸ واحد در صدسال!) و پوشش واکسن
+	# فارغ از بودجه/ظرفیت به سقف ۰٫۹۹ می‌چسبید. حالا مثل بیمه: بازگشت به هدفِ
+	# سیاست‌محور (کیفیت نظام + پوشش بهداشت + سواد) با نویز متقارنِ میانگین‌صفر.
+	var vax_target: float = clampf(0.60 + health["quality"] * 0.20 + health["coverage"] * 0.10 + education.get("quality", 0.55) * 0.10, 0.50, 0.98)
+	health["vaccination"] = clampf(health["vaccination"] * 0.997 + vax_target * 0.003 + Deterministic.next_range(-0.0005, 0.0005), 0.5, 0.99)
 
 	# آمادگی اپیدمی
 	health["epidemic_readiness"] = clamp(health["epidemic_readiness"] + (health_budget_share - 0.08) * 0.003, 0.1, 0.95)

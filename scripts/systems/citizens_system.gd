@@ -32,7 +32,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	citizens["avg_age"] += 1.0 / 365.0
 	if tick % 30 == 0:
 		# ماهانه: ترکیب سنی تغییر کند
-		citizens["age_std"] = clamp(citizens["age_std"] + Deterministic.next_range(-0.02, 0.03), 8.0, 18.0)
+		citizens["age_std"] = clamp(citizens["age_std"] + Deterministic.next_range(-0.025, 0.025), 8.0, 18.0)
 
 	# رضایت جمعی = تابع چند متغیره واقعی
 	var hap = 0.05

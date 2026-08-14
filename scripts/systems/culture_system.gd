@@ -80,7 +80,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	culture["media_trust"] = clamp(culture["media_trust"] + media_trust_change, 0.05, 0.95)
 
 	# تنوع رسانه
-	culture["media_diversity"] = clamp(culture["media_diversity"] + Deterministic.next_range(-0.002, 0.003), 0.1, 0.95)
+	culture["media_diversity"] = clamp(culture["media_diversity"] + Deterministic.next_range(-0.0025, 0.0025), 0.1, 0.95)
 
 	# تولید فرهنگی
 	# نُرم مرجع: ~۰.۶٪ تولید ناخالص سالانه برای فرهنگ — جریمه پنهان −۰.۵ قدیمی حذف شد

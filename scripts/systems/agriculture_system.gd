@@ -64,7 +64,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	agri["waste"] = clamp(agri["waste"] + (0.25 - infra_q * 0.1 - storage * 0.1) * 0.001, 0.05, 0.50)
 
 	# تنوع محصول
-	agri["crop_diversity"] = clamp(agri["crop_diversity"] + Deterministic.next_range(-0.001, 0.002), 0.2, 0.90)
+	agri["crop_diversity"] = clamp(agri["crop_diversity"] + Deterministic.next_range(-0.0015, 0.0015), 0.2, 0.90)
 
 	# ذخیره
 	agri["storage_capacity"] = clamp(agri["storage_capacity"] + (agri_budget_share - 0.04) * 0.002, 0.2, 0.95)

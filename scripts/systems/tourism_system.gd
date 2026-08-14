@@ -51,7 +51,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	tourism["visa_openness"] = clamp(tourism["visa_openness"] + (diplomacy.get("soft_power",35.0)/100.0 - 0.5) * 0.001, 0.1, 0.90)
 
 	# بازاریابی
-	tourism["marketing"] = clamp(tourism["marketing"] + Deterministic.next_range(-0.002, 0.003), 0.1, 0.95)
+	tourism["marketing"] = clamp(tourism["marketing"] + Deterministic.next_range(-0.0025, 0.0025), 0.1, 0.95)
 
 	# اثر بر اقتصاد
 	economy["gdp"] += tourism["revenue"] * 0.1 / 365.0

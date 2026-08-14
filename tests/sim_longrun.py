@@ -207,8 +207,8 @@ def step_day(s):
     rural_stay = min((0.40 + 0.25 + 0.25 + 0.20) * 0.10, 0.45)
     attr = ((gdp_pc / 5000.0) * 0.3 + s["infra_q"] * 0.3 + s["service_access"] * 0.2 + 0.2) * (1.0 - rural_stay) * capacity_factor
     s["urban_pop"] = clamp(s["urban_pop"] + s["pop_total"] * 0.012 / 365.0 * attr,
-                           s["pop_total"] * 0.05, s["pop_total"] * 0.90)
-    s["urban_ratio"] = clamp(s["urban_pop"] / s["pop_total"], 0.0, 0.90)
+                           s["pop_total"] * 0.05, s["pop_total"] * 0.95)
+    s["urban_ratio"] = clamp(s["urban_pop"] / s["pop_total"], 0.0, 0.95)
     s["density"] = s["urban_pop"] / max(area, 1.0)
 
     # ── resources_system (برق/نفت/غذا: تقاضای نسبی + جاذب تولید + انبار) ──
@@ -351,7 +351,7 @@ def check_bounds(s, hist):
         ("ثبات نهایی (۰٫۳ تا ۰٫۹۵)", 0.30 <= s["stability"] <= 0.95),
         ("کیفیت سلامت بالای کف بحران (≥۰٫۴)", s["health_q"] >= 0.40),
         ("فقر نهایی زیر ۳۵٪", s["poverty"] <= 0.35),
-        ("نسبت شهری معقول (۵۰٪ تا ۹۰٪)", 0.50 <= s["urban_ratio"] <= 0.90),
+        ("نسبت شهری معقول (۵۰٪ تا ۹۵٪ — سقف واقع‌گرایانهٔ ۱۴۰۵)", 0.50 <= s["urban_ratio"] <= 0.95),
         ("تراکم شهری مهارشده (<۱۶k نفر/km² — بازخورد ظرفیت کار می‌کند)", s["density"] < 16000),
         ("crowding نهایی زیر ۱٫۳۵", s["crowding"] < 1.35),
         ("انرژی: بدون بحران کاذب در خط پایه", not s["res_energy_crisis"] and not s["res_food_crisis"]),
