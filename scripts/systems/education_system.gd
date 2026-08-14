@@ -32,6 +32,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# نُرم مرجع واقع‌گرایانه: ۳٪ تولید ناخالص سالانه برای آموزش (بودجه ماهانه ÷۱۲)
 	var edu_norm: float = max(float(econ.get("gdp", 1.0)), 1.0) * 0.03 / 12.0
 	var literacy_target = 0.6 + education["primary_coverage"] * 0.3 + education["quality"] * 0.2 + clampf(edu_budget / edu_norm, 0.0, 2.0) * 0.05
+	# پویش خودکفا: literacy_bonus انباشتِ سرمایه‌گذاری یادگیری دیجیتال بود که هرگز مصرف نمی‌شد؛ حالا به سواد می‌رسد
+	literacy_target += float(state.get("education_policy", {}).get("literacy_bonus", 0.0)) * 0.25
 	education["literacy"] = clamp(education["literacy"] * 0.999 + literacy_target * 0.001, 0.1, 0.99)
 
 	# پوشش‌ها با بودجه

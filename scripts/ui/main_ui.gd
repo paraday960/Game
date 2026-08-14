@@ -3176,6 +3176,7 @@ func _build_industry_card(st: Dictionary):
 	_row(card, "مناطق آزاد", PersianFormatter.to_persian_digits("%.0f٪" % (float(ind.get("free_zones", 0.0)) * 100.0)))
 	var winner := str(ind.get("winner", ""))
 	_row(card, "صنعت برگزیده", IndustryManager._winner_name(winner) if winner != "" else "—")
+	_row(card, "تاریخچه ملی‌کردن / خصوصی‌سازی", "%s / %s" % [PersianFormatter.to_persian_digits(str(ind.get("nationalized", 0))), PersianFormatter.to_persian_digits(str(ind.get("privatized", 0)))])
 	var strat_row = HBoxContainer.new(); strat_row.add_theme_constant_override("separation", 5); card.add_child(strat_row)
 	var strat_lbl = Label.new(); strat_lbl.text = "راهبرد:"; strat_lbl.add_theme_font_size_override("font_size", 15); strat_lbl.modulate = TEXT_MUTED; strat_row.add_child(strat_lbl)
 	for sid in ["diversified", "high_tech", "heavy", "export"]:
