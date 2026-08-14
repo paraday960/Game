@@ -3397,6 +3397,9 @@ func _build_trade_policy_card(st: Dictionary):
 	_row(card, "واردات سالانه", PersianFormatter.format_money(imports_v))
 	_row(card, "تراز تجاری", PersianFormatter.format_money(balance_v), _color_for(0.5 + signf(balance_v) * 0.5))
 	_row(card, "درآمد گمرکی ماهانه", PersianFormatter.format_money(float(trade.get("customs_revenue", 0.0))))
+	# بازخورد بحران ارزی: پوشش واردات با ذخایر (زیر ۳ ماه → واردات خودکار فشرده می‌شود)
+	var cover_v := float(trade.get("import_cover_months", 12.0))
+	_row(card, "پوشش واردات با ذخایر", PersianFormatter.to_persian_digits("%.1f ماه" % cover_v), _color_for(clampf(cover_v / 6.0, 0.0, 1.0)))
 	var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
 	for a in [["diversify", "📦 تنوع صادرات"], ["imports", "📦 ذخیره واردات"], ["mission", "🤝 مأموریت (۱)"], ["supply", "🔗 زنجیره امن"]]:
 		var btn = Button.new(); btn.text = a[1]

@@ -154,7 +154,9 @@ def step_day(s):
     exp_share_t = clamp(0.13 + comps * 0.03 + fx_bonus * 0.02 + s["export_div"] * 0.02
                         - n_sanc * 0.008 - exp_block_pen, 0.06, 0.25)
     s["exports"] = max(s["exports"] * 0.997 + s["gdp"] * exp_share_t * 0.003, 1e9)
-    imp_share_t = clamp(0.16 - s["tariff_rate"] * 0.25 - block_pen + war_eco * 0.02, 0.05, 0.30)
+    cover = s["foreign_reserves"] / max(s["imports"] / 12.0, 1.0)
+    cover_pen = clamp((3.0 - cover) * 0.008, 0.0, 0.03)
+    imp_share_t = clamp(0.16 - s["tariff_rate"] * 0.25 - block_pen + war_eco * 0.02 - cover_pen, 0.05, 0.30)
     s["imports"] = max(s["imports"] * 0.997 + s["gdp"] * imp_share_t * 0.003, 1e9)
     s["trade_balance"] = s["exports"] - s["imports"]
 
@@ -507,6 +509,51 @@ def run_blockade_suite():
             FAIL.append(name); ok = False
     return ok
 
+def run_reserve_crisis_suite():
+    """سناریوی پنجم: بحران تراز پرداخت‌ها — ۲ تحریم دائمی + مداخلهٔ ارزی ماهانهٔ سنگین
+    (حمایت از نرخ ارز با سوزاندن ذخایر) تا پوشش واردات از ۳ ماه پایین بیاید؛
+    اثبات فعال‌شدن بازخورد خودکار فشردگی واردات و بازسازی ذخایر پس از توقف مداخله."""
+    base, _ = run(verbose=False)
+    snap0, snap1 = {}, {}
+    def drain(day, s):
+        if day == 200:
+            snap0.update(dict(s))
+            s["shock_sanctions"] = 2
+        # مداخلهٔ ماهانهٔ ۲ میلیارد دلاری به مدت ۳ سال (مانند forex_manager.intervene)
+        if 240 <= day < 240 + 365 * 3 and day % 30 == 0 and s["foreign_reserves"] > 2.0e9:
+            s["foreign_reserves"] = s["foreign_reserves"] - 2.0e9
+            s["exchange_rate"] = max(s["exchange_rate"] * 0.99, 0.2)   # تقویت موقت
+        if day == 240 + 365 * 3:
+            snap1.update(dict(s))
+    x, _ = run(verbose=False, policy_hook=drain)
+    print("═══ سناریوی بحران ذخایر: ۲ تحریم دائمی + مداخلهٔ ۲B$/ماه به مدت ۳ سال ═══")
+    print("پایان مداخله: ذخیره %.1fB (شروع %.0fB) پوشش %.1f ماه واردات | پایان: ذخیره %.0fB ارز %.2f" % (
+        snap1["foreign_reserves"] / 1e9, snap0["foreign_reserves"] / 1e9,
+        snap1["foreign_reserves"] / max(snap1["imports"] / 12.0, 1.0),
+        x["foreign_reserves"] / 1e9, x["exchange_rate"]))
+    checks = [
+        ("بحران ذخایر: مداخلهٔ مداوم ذخایر را واقعاً تخلیه می‌کند (زیر ۱۵ میلیارد)",
+         snap1["foreign_reserves"] < 15e9),
+        ("بحران ذخایر: پوشش واردات از ۳ ماه پایین می‌آید (بازخورد فعال می‌شود)",
+         snap1["foreign_reserves"] / max(snap1["imports"] / 12.0, 1.0) < 3.0),
+        ("بحران ذخایر: واردات در بحران فشرده می‌شود (< واردات پیش از شوک)",
+         snap1["imports"] < snap0["imports"]),
+        ("بازسازی: پس از توقف مداخله ذخایر برمی‌گردند (≥ +۱۰ میلیارد)",
+         x["foreign_reserves"] >= snap1["foreign_reserves"] + 10e9),
+        ("بحران ذخایر: ذخایر هرگز منفی نمی‌شود (کف clamp)",
+         snap1["foreign_reserves"] >= 0.0 and x["foreign_reserves"] >= 0.0),
+        ("بحران ذخایر: حمایت مصنوعی موقت است — پس از توقف مداخله ارز تضعیف می‌شود (≥+۲٪)",
+         x["exchange_rate"] >= snap1["exchange_rate"] * 1.02),
+        ("بحران ذخایر: بدون فروپاشی (GDP ≥ ۸۵٪ خط پایه)",
+         x["gdp"] >= base["gdp"] * 0.85),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 def _apply_shock(s):
     """فعال‌سازی رژیم جنگ تمام‌عیار روی آینه (ایدمپوتنت)."""
     s["shock_mobil"] = 4.0
@@ -532,6 +579,8 @@ if __name__ == "__main__":
     ok = run_sanctions_suite() and ok
     print()
     ok = run_blockade_suite() and ok
+    print()
+    ok = run_reserve_crisis_suite() and ok
     print()
     ok = run_shock_suite() and ok
     print()

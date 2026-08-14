@@ -54,8 +54,15 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	trade["exports"] = maxf(float(trade["exports"]) * 0.997 + gdp * export_share_t * 0.003, 1_000_000_000.0)
 
 	# ── واردات: سهم هدف ← تعرفه (اهرم بازیکن)، محاصرهٔ دریایی، اقتصاد جنگی، پوشش تولید داخل ──
+	# بازخورد ذخایر ارزی (بازرسی تراز پرداخت‌ها): پوشش واردات زیر ~۳ ماه یعنی کشور
+	# توان تأمین ارز واردات را ندارد → واردات فشرده می‌شود (حلقهٔ منفیِ بحران ارزی:
+	# واردات کمتر → تراز بهتر → ذخایر بازسازی می‌شود).
+	var reserves_t: float = float(state.get("economy", {}).get("foreign_reserves", 60_000_000_000.0))
+	var import_cover: float = reserves_t / maxf(float(trade.get("imports", 70_000_000_000.0)) / 12.0, 1.0)
+	trade["import_cover_months"] = import_cover
+	var cover_pen: float = clampf((3.0 - import_cover) * 0.008, 0.0, 0.03)
 	var domestic_coverage: float = (float(industry.get("output", 100.0)) + float(agriculture.get("production", 100.0))) / 200.0
-	var import_share_t: float = clamp(0.16 - float(trade["tariff_rate"]) * 0.25 - (0.05 if blockaded else 0.0) + war_economy_t * 0.02 + (1.0 - domestic_coverage) * 0.04, 0.05, 0.30)
+	var import_share_t: float = clamp(0.16 - float(trade["tariff_rate"]) * 0.25 - (0.05 if blockaded else 0.0) - cover_pen + war_economy_t * 0.02 + (1.0 - domestic_coverage) * 0.04, 0.05, 0.30)
 	trade["import_share_target"] = import_share_t
 	trade["imports"] = maxf(float(trade["imports"]) * 0.997 + gdp * import_share_t * 0.003, 1_000_000_000.0)
 
