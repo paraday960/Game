@@ -88,6 +88,8 @@ def step_day(s):
     n_sanc = s.get("shock_sanctions", 0)
     e_crisis = s.get("shock_energy_crisis", False) or s.get("res_energy_crisis", False)
     f_crisis = s.get("shock_food_crisis", False) or s.get("res_food_crisis", False)
+    pan = s.get("shock_pandemic", 0.0)   # شدت موج همه‌گیری ۰..۱ (سناریوی ششم)
+    vax = s.get("shock_vax", 0.0)        # کارزار واکسیناسیون فعال (بازسازی)
     sanct_pen = n_sanc * 0.003
     energy_penalty = -0.025 if e_crisis else 0.0
     food_penalty = -0.018 if f_crisis else 0.0
@@ -98,6 +100,7 @@ def step_day(s):
                              + stability_effect, -0.05, 0.12)
     g_smoothed = clamp(s["growth_rate"] * 0.95 + growth_potential * 0.05, -0.10, 0.12)
     real_growth = clamp(g_smoothed + energy_penalty + food_penalty + war_effect - sanct_pen
+                        - pan * 0.05    # غیبت نیروی کار + تعطیلی در اوج موج (~-۵pp رشد در پیک)
                         + (CYCLE_EFFECT * 0.3 if mobil > 0 else CYCLE_EFFECT), -0.08, 0.10)
     s["gdp"] = max(s["gdp"] * (1.0 + real_growth / 365.0), 10e9)
     gdp_pc = s["gdp"] / s["pop_total"]
@@ -170,7 +173,7 @@ def step_day(s):
     welfare_effect = (gdp_pc / 5000.0 - 1.0) * 0.5 + s["poverty"] * -2.0
     birth_target = clamp(15.0 + welfare_effect + (s["happiness"] - 0.5) * 2.0, 5.0, 35.0)
     s["birth_rate"] += (birth_target - s["birth_rate"]) * 0.005
-    death_target = clamp(8.0 + (s["health_q"] - 0.5) * -3.0, 4.0, 25.0)
+    death_target = clamp(8.0 + (s["health_q"] - 0.5) * -3.0 + pan * 6.0, 4.0, 25.0)  # مرگ‌ومیر اضافی موج
     s["death_rate"] += (death_target - s["death_rate"]) * 0.005
     natural = (s["birth_rate"] - s["death_rate"]) / 1000.0
     mig_cap = max(s["pop_total"] * 0.02, 10000.0)
@@ -245,7 +248,8 @@ def step_day(s):
     hb_budget = spending * hb_share
     hb_norm = max(s["gdp"], 1.0) * 0.02 / 12.0   # نُرم ۲٪ GDP عمومی (طبق مستندات تعادل)
     s["health_q"] = clamp(s["health_q"] + (hb_share - 0.08) * 0.01
-                          + clamp(hb_budget / hb_norm - 1.0, -1.0, 1.0) * 0.001, 0.1, 0.95)
+                          + clamp(hb_budget / hb_norm - 1.0, -1.0, 1.0) * 0.001
+                          - pan * 0.0015 + vax * 0.0008, 0.1, 0.95)   # موج فرسایش، واکسن ترمیم
 
     # ── education_system (کیفیت) ──
     ed_share = s["alloc"]["آموزش"]
@@ -257,7 +261,8 @@ def step_day(s):
                  + s["gini"] * 0.2)
     s["poverty"] = clamp(s["poverty"] * 0.99 + poverty_t * 0.01, 0.02, 0.60)
     s["happiness"] = clamp(s["happiness"] + (0.08 - s["unemployment"]) * 0.001
-                           + (0.15 - s["poverty"]) * 0.001, 0.05, 0.95)
+                           + (0.15 - s["poverty"]) * 0.001
+                           - pan * 0.0022 + vax * 0.0008, 0.05, 0.95)  # ترس/عزا در موج، امید با واکسن
     s["tension"] = clamp(s["tension"] + s["poverty"] * 0.002 + s["unemployment"] * 0.003, 0.0, 1.0)
 
     # ── central_bank_system (قاعدهٔ تیلور یکتا — پس از اتحاد دولایه، بازرسی بانک مرکزی) ──
@@ -566,6 +571,77 @@ def run_reserve_crisis_suite():
             FAIL.append(name); ok = False
     return ok
 
+def run_pandemic_suite():
+    """سناریوی ششم: همه‌گیری — موج قوسی ۷ ماهه (سینوسی، اوج در ماه ۳٫۵) + کارزار واکسن
+    ۹ ماهه. اثبات هزینهٔ واقعی: مرگ‌ومیر اضافی، رکود موقت، فرسایش بهداشت و شادی؛
+    و سپس بازیابی کامل پس از کارزار — همه‌چیز از کانال‌های مدل می‌گذرد، نه شوک دلخواه."""
+    import math
+    base, _ = run(verbose=False)
+    snap0, snap1 = {}, {}
+    WAVE_START, WAVE_DAYS, VAX_DAYS = 400, 210, 270
+    def plague(day, s):
+        if day == WAVE_START:
+            snap0.update({"pop_total": s["pop_total"], "death_rate": s["death_rate"],
+                          "health_q": s["health_q"], "happiness": s["happiness"],
+                          "gdp": s["gdp"], "min_rg": 1.0})
+        in_wave = WAVE_START < day <= WAVE_START + WAVE_DAYS
+        if in_wave:
+            prog = (day - WAVE_START) / float(WAVE_DAYS)
+            s["shock_pandemic"] = math.sin(prog * math.pi)   # قوس موج
+        else:
+            s.pop("shock_pandemic", None)
+        if WAVE_START + WAVE_DAYS < day <= WAVE_START + WAVE_DAYS + VAX_DAYS:
+            s["shock_vax"] = 1.0
+        else:
+            s.pop("shock_vax", None)
+        if in_wave:
+            snap0["min_rg"] = min(snap0.get("min_rg", 1.0), s["real_growth"])
+        if day == WAVE_START + WAVE_DAYS:
+            snap1.update({"pop_total": s["pop_total"], "death_rate": s["death_rate"],
+                          "health_q": s["health_q"], "happiness": s["happiness"],
+                          "gdp": s["gdp"]})
+    x, _ = run(verbose=False, policy_hook=plague)
+    print("═══ سناریوی همه‌گیری: موج ۷ ماهه + کارزار واکسن ۹ ماهه (شروع روز ۴۰۰) ═══")
+    print("پیش از موج: جمعیت %.1fM مرگ %.1f‰ بهداشت %.2f شادی %.2f" % (
+        snap0["pop_total"] / 1e6, snap0["death_rate"], snap0["health_q"], snap0["happiness"]))
+    print("پایان موج: جمعیت %.1fM مرگ %.1f‰ بهداشت %.2f شادی %.2f | کمینه رشد واقعی %.2f%%" % (
+        snap1["pop_total"] / 1e6, snap1["death_rate"], snap1["health_q"], snap1["happiness"],
+        snap0["min_rg"] * 100))
+    print("پایان دوره (سال ۱۰): جمعیت %.1fM مرگ %.1f‰ بهداشت %.2f شادی %.2f | GDP خط پایه %.0f%%" % (
+        x["pop_total"] / 1e6, x["death_rate"], x["health_q"], x["happiness"],
+        x["gdp"] / base["gdp"] * 100))
+    checks = [
+        # مرگ واقعی: نرخ مرگ‌ومیر در موج به‌طور معنادار بالا می‌رود (≥ +۲ در هزار)
+        ("همه‌گیری: مرگ‌ومیر در موج جهش می‌کند (≥ +۲‰ نسبت به پیش از موج)",
+         snap1["death_rate"] >= snap0["death_rate"] + 2.0),
+        # رشد جمعیت در موج تقریباً می‌ایستد (مرگ اضافی رشد طبیعی را می‌بلعد؛ <۰٫۵٪ در ۷ ماه)
+        ("همه‌گیری: رشد جمعیت در موج متوقف می‌شود (<۰٫۵٪)",
+         snap1["pop_total"] < snap0["pop_total"] * 1.005),
+        # رکود بهداشتی واقعی: ماه‌هایی با رشد واقعی منفی در موج وجود دارد
+        ("همه‌گیری: ماه‌های رکود واقعی در موج (رشد واقعی منفی)", snap0["min_rg"] < -0.002),
+        # نظام بهداشت فرسایش می‌یابد ولی فرو نمی‌ریزد
+        ("همه‌گیری: بهداشت در موج فرسایش می‌یابد (<۰٫۵۵) ولی فروپاشی نمی‌شود (≥۰٫۳۰)",
+         0.30 <= snap1["health_q"] < 0.55),
+        ("همه‌گیری: شادی در موج افت معنادار می‌کند (≥ ۰٫۰۳۵)", snap0["happiness"] - snap1["happiness"] >= 0.035),
+        # بازیابی پس از واکسن: بهداشت به نزدیک سطح پیش از موج برمی‌گردد
+        ("بازیابی: بهداشت پس از واکسن به ≤۰٫۰۳ سطح پیش از موج برمی‌گردد",
+         x["health_q"] >= snap0["health_q"] - 0.03),
+        ("بازیابی: شادی بازیابی می‌شود (≤۰٫۰۳ زیر سطح پیش از موج)",
+         x["happiness"] >= snap0["happiness"] - 0.03),
+        ("بازیابی: رشد جمعیت از سر گرفته می‌شود",
+         x["pop_total"] > snap1["pop_total"] + 1e6),
+        ("بازیابی: مرگ‌ومیر به تک‌رقمی برمی‌گردد (<۹٫۵‰)", x["death_rate"] < 9.5),
+        # خسارت بلندمدت محدود: اقتصاد در بلندمدت جذب شوک می‌کند (≥۹۲٪ خط پایه)
+        ("همه‌گیری: خسارت بلندمدت محدود است (GDP ≥ ۹۲٪ خط پایه)",
+         x["gdp"] >= base["gdp"] * 0.92),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(("✅ " if passed else "❌ ") + name)
+        if not passed:
+            FAIL.append(name); ok = False
+    return ok
+
 def _apply_shock(s):
     """فعال‌سازی رژیم جنگ تمام‌عیار روی آینه (ایدمپوتنت)."""
     s["shock_mobil"] = 4.0
@@ -593,6 +669,8 @@ if __name__ == "__main__":
     ok = run_blockade_suite() and ok
     print()
     ok = run_reserve_crisis_suite() and ok
+    print()
+    ok = run_pandemic_suite() and ok
     print()
     ok = run_shock_suite() and ok
     print()
