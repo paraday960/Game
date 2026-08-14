@@ -94,20 +94,25 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var sanctions = state.get("diplomacy", {}).get("sanctions", []).size()
 	var sanction_penalty = sanctions * 0.003
 
-	var real_growth = growth_base + infra_effect + workforce_effect + tech_effect + stability_effect + energy_penalty + food_penalty + war_effect - sanction_penalty + cycle_effect
-	real_growth = clamp(real_growth, -0.08, 0.10)
+	# پتانسیل ساختاری از عوامل عرضه؛ جناح نوسان (جنگ، بحران انرژی/غذا، تحریم، چرخه) فقط بر رشد امروز
+	var growth_potential: float = clamp(0.02 + infra_effect + workforce_effect + tech_effect + stability_effect, -0.05, 0.12)
+	# حالت موتوم رشد با بازگشت میانگین ۵٪/روز به پتانسیل — رشد دیروز دیگر خودکار بر امروز سوار نمی‌شود
+	# (رفع قفل‌شدن رشد روی سقف ۱۰٪ در شبیه‌سازی بلندمدت؛ کشور پیش‌فرض قرار نیست چین شود)
+	var growth_smoothed: float = clamp(growth_base * 0.95 + growth_potential * 0.05, -0.10, 0.12)
+	var real_growth = clamp(growth_smoothed + energy_penalty + food_penalty + war_effect - sanction_penalty + cycle_effect, -0.08, 0.10)
 
 	var old_gdp = econ.get("gdp", 500e9)
 	econ["gdp"] *= (1.0 + real_growth / 365.0)
 	econ["gdp"] = max(econ["gdp"], 10_000_000_000.0)
 	econ["gdp_per_capita"] = econ["gdp"] / max(pop.get("total",85_000_000.0), 1.0)
-	econ["growth_rate"] = real_growth
+	econ["growth_rate"] = growth_smoothed
 	econ["real_growth"] = real_growth
 	# بیکاری با فاز چرخه حرکت می‌کند (رونق اشتغال‌زا، رکود بیکارکننده)
 	var unemp: float = float(econ.get("unemployment", 0.08))
-	var unemp_drift: float = float({"boom": -0.00006, "growth": -0.00002, "stagnation": 0.00003, "recession": 0.00012}.get(str(cycle["phase"]), 0.0))
-	# قانون اوکن: رشد بالاتر از روند ۲٪ بیکاری را می‌کاهد و رشد زیر روند آن را بالا می‌برد
-	var okun: float = (real_growth - 0.02) * -0.0008
+	# کشش به نرخ طبیعی بیکاری (NAIRU≈۶٪) — چرخه دیگر بیکاری را ابداً صفر/سقف نمی‌کند
+	var unemp_drift: float = (0.06 - unemp) * 0.0003
+	# قانون اوکن: رشد بالاتر از روند ۲٪ بیکاری را می‌کاهد (تصحیح مقیاس روزانه ÷۳۰)
+	var okun: float = (real_growth - 0.02) * -0.0008 / 30.0
 	econ["unemployment"] = clampf(unemp + unemp_drift + okun, 0.02, 0.30)
 
 	# ==================== ب) درآمد دولت - مالیه عمومی عمیق ====================
@@ -207,7 +212,9 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var war_push = war_economy*0.03 + mobilization*0.005
 	var sanction_push = sanction_penalty*0.5
 	var inflation_change = ( (money_supply-1.0)*0.010 + demand_pull*0.008 + cost_push + war_push + sanction_push - 0.0015) / days_in_month
-	econ["inflation"] += inflation_change
+	# لنگر هدف تورمی بانک مرکزی — بدون آن جمله ثابت −۰.۰۰۱۵ تورم را در چند سال به رکودتورمی می‌برد
+	var inflation_target_cb: float = float(central_bank.get("inflation_target", 0.05))
+	econ["inflation"] += inflation_change + (inflation_target_cb - econ["inflation"]) * 0.02 / days_in_month
 	econ["inflation"] = clamp(econ["inflation"], -0.03, 0.60)
 
 	# منحنی فیلیپس + انتظارات تورمی

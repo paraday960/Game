@@ -50,7 +50,6 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# تا ورودی تصادفی روزانه در بلندمدت به جابه‌جایی غیرواقعی میلیونی تبدیل نشود
 	var mig_cap: float = max(float(pop.get("total", 85_000_000.0)) * 0.02, 10000.0)
 	pop["migration_net"] = clampf(float(pop.get("migration_net", 0.0)) * 0.999, -mig_cap, mig_cap)
-		pop["migration_net"] = clamp(pop["migration_net"], -100000, 200000)
 
 	var total_growth_rate = natural_growth + migration_rate
 	pop["growth_rate"] = total_growth_rate / 365.0  # روزانه
