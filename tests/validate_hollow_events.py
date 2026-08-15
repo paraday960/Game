@@ -76,34 +76,36 @@ for path, ev_type, effect_needle in PINS:
 # ── پویش سراسری: رویدادهای با ادعای اثر ولی بدون هیچ assignment در بلوک if ──
 import os
 EFFECT_WORDS = ["جهش", "افزایش", "کاهش", "سقوط", "رونق", "تقویت", "آسیب", "فشار", "بهبود", "ارزآور", "بازگشت", "تضعیف", "رشد"]
-for dp, _, files in os.walk("scripts/core"):
+for dp, _, files in os.walk("scripts"):
+    if "/core/" not in dp and "/systems/" not in dp:
+        continue
     for fn in files:
         if not fn.endswith(".gd") or fn.endswith(".uid"):
             continue
         p = os.path.join(dp, fn)
-        lines = io.open(p, encoding="utf-8").read().splitlines()
-        for i, line in enumerate(lines):
+        lines_src = io.open(p, encoding="utf-8").read().splitlines()
+        for i2, line in enumerate(lines_src):
             if "events.append" in line and "message" in line:
                 if not any(w in line for w in EFFECT_WORDS):
                     continue
                 # پیدا کردن شروع بلوک if
                 indent = len(line) - len(line.lstrip())
-                block_start = i
-                for j in range(i, -1, -1):
-                    s = lines[j].strip()
-                    ci = len(lines[j]) - len(lines[j].lstrip())
+                block_start = i2
+                for j in range(i2, -1, -1):
+                    s = lines_src[j].strip()
+                    ci = len(lines_src[j]) - len(lines_src[j].lstrip())
                     if ci < indent and (s.startswith("if ") or s.startswith("elif ") or s.startswith("for ")):
                         block_start = j
                         break
-                block = "\n".join(lines[max(0, block_start - 1):i + 1])
+                block = "\n".join(lines_src[max(0, block_start - 1):i2 + 1])
                 # اثر با هر عملگر (=, +=, -=, *=, /=) و حتی در ۳ خط قبل از if
                 has_effect = bool(re.search(r'\["[^"]+"\]\s*[+\-*/]?=', block)) \
                     or bool(re.search(r'\b[a-z_]+\s*\*?=\s*\d', block))
                 # رد کردن رویدادهای شناخته‌شده (خروجی از DecisionManager و وضعیت‌ها)
                 known_special = ["decision", "crisis_stage", "dilemma", "war_", "incoming_offer", "offer_", "world_opinion"]
                 if not has_effect and not any(k in line for k in known_special):
-                    # اگر رویداد در فهرست پین‌ها نبود و بی‌اثر بود — هشدار جدی
-                    fail.append("%s:%d: رویداد بی‌اثر جدید: %s" % (p.replace("scripts/core/", ""), i + 1, line.strip()[:70]))
+                    fail.append("%s:%d: رویداد بی‌اثر جدید: %s" % (p.replace("scripts/", ""), i2 + 1, line.strip()[:70]))
+
 
 if fail:
     print("\n❌ HOLLOW EVENTS FAILED:")

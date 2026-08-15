@@ -58,10 +58,11 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# هزینه کمپین
 	elections["campaign_cost"] = clamp(elections["campaign_cost"] + Deterministic.next_range(-0.0025, 0.0025), 0.1, 0.90)
 
-	# انتخابات - هر ۴ سال (قانون سیاسی)
+	# انتخابات - هر «چرخه» سال (قانون سیاسی؛ election_cycle در state گد)
+	var cycle_years: int = max(2, int(state.get("politics", {}).get("election_cycle", 4)))
 	if year >= elections["next_election_year"]:
 		elections["last_election_year"] = year
-		elections["next_election_year"] = year + 4
+		elections["next_election_year"] = year + cycle_years
 
 		# نتیجه انتخابات - با دترمینستیک
 		var result = elections["ruling_party_support"]
