@@ -1189,6 +1189,32 @@ func _build_news():
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	masthead.add_child(legend)
 
+	# ── تیتر اول (مهم‌ترین خبر) ──
+	var lead := _pick_lead_story(items)
+	if not lead.is_empty():
+		var lead_card = PanelContainer.new(); lead_card.theme_type_variation = "CommandPanel"
+		lead_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		content.add_child(lead_card)
+		var lead_box = VBoxContainer.new(); lead_box.add_theme_constant_override("separation", 4); lead_card.add_child(lead_box)
+		var lead_badge = Label.new(); lead_badge.text = "📰 تیتر اول"
+		lead_badge.add_theme_font_size_override("font_size", 15); lead_badge.modulate = ACCENT_GOLD
+		lead_box.add_child(lead_badge)
+		var lead_title = Label.new()
+		lead_title.text = PersianFormatter.to_persian_digits(str(lead.get("headline", "")))
+		lead_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lead_title.add_theme_font_size_override("font_size", 25)
+		lead_title.modulate = Color(0.98, 0.95, 0.82)
+		lead_box.add_child(lead_title)
+		var lead_body = Label.new()
+		lead_body.text = PersianFormatter.to_persian_digits(str(lead.get("body", "")))
+		lead_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lead_body.add_theme_font_size_override("font_size", 17); lead_body.modulate = TEXT_MUTED
+		lead_box.add_child(lead_body)
+		var lead_meta = Label.new()
+		lead_meta.text = "%s · %s %s" % [str(lead.get("country_fa", "")), str(lead.get("month_fa", "")), PersianFormatter.to_persian_digits(str(lead.get("year", 0)))]
+		lead_meta.add_theme_font_size_override("font_size", 14); lead_meta.modulate = TEXT_FAINT
+		lead_box.add_child(lead_meta)
+
 	# ── فهرست اخبار ──
 	var shown := 0
 	for item in items:
@@ -1209,6 +1235,27 @@ func _build_news():
 		empty.add_theme_font_size_override("font_size", 19)
 		empty.modulate = TEXT_FAINT
 		content.add_child(empty)
+
+func _pick_lead_story(items: Array) -> Dictionary:
+	# مهم‌ترین خبر: آخرین خبر حساسِ بازیکن ← آخرین خبر بازیکن ← آخرین خبر
+	var player_id := str(GameState.state.get("country", {}).get("id", ""))
+	var last_player_sensitive: Dictionary = {}
+	var last_player: Dictionary = {}
+	var last_any: Dictionary = {}
+	for item in items:
+		if last_any.is_empty():
+			last_any = item
+		var is_player: bool = bool(item.get("is_player", false)) or str(item.get("country", "")) == player_id
+		if is_player:
+			if last_player.is_empty():
+				last_player = item
+			if str(item.get("sensitivity", "non_sensitive")) == "sensitive" and last_player_sensitive.is_empty():
+				last_player_sensitive = item
+	if not last_player_sensitive.is_empty():
+		return last_player_sensitive
+	if not last_player.is_empty():
+		return last_player
+	return last_any
 
 func _on_news_filter(mode: String):
 	news_filter_mode = mode

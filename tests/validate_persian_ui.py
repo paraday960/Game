@@ -167,6 +167,24 @@ check(
     "کارت خط زمانی به داشبورد متصل نیست",
 )
 
+# ── 8) تیتر اول روزنامه (عمق‌بخشی ۳۱) ────────────────────────────────
+check(
+    "تیتر اول روزنامه",
+    "func _pick_lead_story" in main and "تیتر اول" in main and "lead_title" in main,
+    "تیتر اول روزنامه ساخته نشده است",
+)
+check(
+    "اولویت‌بندی تیتر اول",
+    "last_player_sensitive" in main and "sensitivity" in main,
+    "تیتر اول باید خبر حساس بازیکن را اولویت دهد",
+)
+check(
+    "ارقام فارسی در تیتر اول",
+    "lead_title.text = PersianFormatter.to_persian_digits" in main
+    and "lead_body.text = PersianFormatter.to_persian_digits" in main,
+    "تیتر و متن تیتر اول باید ارقام فارسی داشته باشند",
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))
