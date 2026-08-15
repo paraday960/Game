@@ -126,6 +126,7 @@ var turn_report_overlay: Control
 var _show_report_after_tick := false
 var _last_turn_labels: Array = []
 var _report_open := false
+var _last_level: int = 1
 var remote_code_edit: LineEdit
 var remote_code_lbl: Label
 var remote_upnp_lbl: Label
@@ -346,6 +347,7 @@ func _ready():
 	theme = app_theme
 	SettingsManager.settings_changed.connect(_on_setting_changed)
 	current_state = GameState.get_state_copy()
+	_last_level = int(current_state.get("level", 1))
 	_build_chrome()
 	# افکت لمسی دکمه‌های ثابت (کروم) — ناوبری، کشو، هدر
 	call_deferred("_wire_press_fx", self)
@@ -2091,6 +2093,7 @@ func _on_new_game_pressed():
 	selected_country_unit = ""
 	selected_system = "economy"
 	current_state = GameState.get_state_copy()
+	_last_level = int(current_state.get("level", 1))
 	_refresh_header()
 	_render_events()
 	map_camera_center = Vector2(0.5,0.5); map_zoom = 1.0
@@ -9184,10 +9187,48 @@ func _process(delta):
 
 func _on_tick_completed(new_state, events):
 	current_state = new_state.duplicate(true)
+	# صدای رویدادهای شبیه‌سازی (عمق‌بخشی ۲۹): بحران → هشدار، رخداد مثبت → موفقیت
+	var alert_played := false
+	var success_played := false
 	for event in events:
-		if str(event.get("type", "")) == "achievement_unlocked":
+		var etype := str(event.get("type", ""))
+		if etype == "achievement_unlocked":
 			FeedbackManager.play_achievement()
-			break
+		elif not alert_played and _event_is_critical(etype):
+			FeedbackManager.play_alert()
+			alert_played = true
+		elif not success_played and _event_is_positive(etype):
+			FeedbackManager.play_success()
+			success_played = true
+	# ارتقای سطح رهبری
+	var new_level := int(current_state.get("level", 1))
+	if new_level > _last_level:
+		FeedbackManager.play_levelup()
+		_last_level = new_level
+		_toast("🎉 سطح رهبری شما به %s رسید!" % PersianFormatter.to_persian_digits(str(new_level)))
+	else:
+		_last_level = new_level
+
+func _event_is_critical(event_type: String) -> bool:
+	var danger := ["war", "crisis", "crash", "epidemic", "pandemic", "protest", "riot",
+		"sanction", "embargo", "disaster", "collapse", "attack", "rebellion",
+		"invasion", "hyperinflation", "debt", "deficit", "shortage", "drought",
+		"flood", "quake", "coup", "scandal", "cyber_attack", "threat", "blockade",
+		"chokepoint", "revolt", "strike", "bank_run", "panic", "storm", "leak", "loss"]
+	for d in danger:
+		if event_type.contains(d):
+			return true
+	return false
+
+func _event_is_positive(event_type: String) -> bool:
+	var good := ["boom", "record", "victory", "success", "unlock", "medal",
+		"milestone", "achievement", "agreement", "alliance", "peace", "summit",
+		"olympic", "champion", "breakthrough", "invention", "discovery", "harvest",
+		"celebration", "diplomatic", "deal", "gain", "recovery"]
+	for g in good:
+		if event_type.contains(g):
+			return true
+	return false
 
 func _on_tick_failed(reason):
 	print("خطای تیک: %s" % reason)

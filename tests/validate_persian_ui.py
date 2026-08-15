@@ -127,6 +127,24 @@ check(
     "مقایسهگر باید population_relative/economy_relative و نرمال‌سازی military_score داشته باشد",
 )
 
+# ── 6) صدای رویدادهای شبیه‌سازی (عمق‌بخشی ۲۹) ─────────────────────────
+tick_done = main[main.index("func _on_tick_completed"):main.index("func _event_is_critical")]
+check(
+    "صدای بحران/موفقیت در پایان تیک",
+    "play_alert()" in tick_done and "play_success()" in tick_done,
+    "_on_tick_completed باید بر اساس نوع رویداد صدا پخش کند",
+)
+check(
+    "صدای ارتقای سطح",
+    "play_levelup()" in main and "_last_level" in main and "سطح رهبری شما به" in main,
+    "ارتقای سطح باید صدای levelup و توست فارسی بدهد",
+)
+check(
+    "طبقه‌بندی بحران/موفقیت",
+    "func _event_is_critical" in main and "func _event_is_positive" in main,
+    "توابع طبقه‌بندی رویداد برای صدا حذف شده‌اند",
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))
