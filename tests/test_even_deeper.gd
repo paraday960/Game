@@ -50,10 +50,12 @@ func _init():
 	GS.set_state(r.state, r.version, r.tick)
 	if int(GS.state.get("welfare_policy", {}).get("pension_age", 65)) != 70:
 		fails.append("سن بازنشستگی تغییر نکرد")
-	# افزایش سن → فشار صندوق کم می‌شود
+	# افزایش سن → فشار سیاستی صندوق حذف می‌شود؛ فشار باقی‌مانده فقط ساختاری
+	# (جمعیتی) است — بازرسی دور ۱۵: pension_pressure_structural منبع جداگانه.
 	var pressure := float(GS.state.get("welfare", {}).get("pension_pressure", 0.0))
-	if pressure > 0.2:
-		fails.append("فشار صندوق بازنشستگی با سن ۷۰ بالا ماند: %.2f" % pressure)
+	var structural := float(GS.state.get("welfare", {}).get("pension_pressure_structural", 0.0))
+	if pressure > structural + 0.01:
+		fails.append("فشار سیاستی صندوق با سن ۷۰ حذف نشد: %.2f (ساختاری %.2f)" % [pressure, structural])
 	r = GE.tick(GS.state, GS.version, GS.tick, [CS.create_welfare_action("benefit", 0.6)])
 	GS.set_state(r.state, r.version, r.tick)
 	if float(GS.state.get("welfare_policy", {}).get("unemployment_benefit", 0.0)) < 0.5:

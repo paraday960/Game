@@ -37,11 +37,12 @@ func _init():
 			fails.append("مالیات پس از پایان نوبت اعمال نشد (%s → %s)" % [before_tax, after_tax])
 		if abs(after_tariff - 0.20) > 0.0001:
 			fails.append("تعرفه پس از پایان نوبت اعمال نشد")
-		# هر سه تصمیم باید در receipts همان نوبت ثبت شده باشند
+		# هر سه تصمیم باید در receipts همان نوبت ثبت شده باشند.
+		# قالب جدید کلید idempotent شامل payload است (عمق‌بخشی ۱۵): چهار آرگومان.
 		var receipts: Array = GameStateNode.state.get("command_receipts", [])
 		var expected: Array = []
 		for cmd in commands:
-			expected.append(load("res://scripts/core/versioning.gd").make_idempotent_key(cmd.type, cmd.tick, cmd.player_id))
+			expected.append(load("res://scripts/core/versioning.gd").make_idempotent_key(cmd.type, cmd.tick, cmd.player_id, cmd.payload))
 		for e in expected:
 			if not receipts.has(e):
 				fails.append("رسید تصمیم ثبت نشد: " + str(e))

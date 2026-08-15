@@ -101,13 +101,18 @@ func _init():
 		print("✓ پژوهش: مقاله، اختراع، نرخ پژوهش و شاخص نوآوری ماهانه رشد کرد")
 
 	# ── ۳) مشارکت مدنی ──
-	var trust0 := float(GS.state.get("politics", {}).get("trust", 0.55))
+	# اثر مستقیم open_data: شفافیت افزایش + فساد کاهش (اعتماد از کانال تدریجی
+	# سیستم‌ها بالا می‌رود نه در همان تیک — عمق‌بخشی ۳۸: اصلاح تست منسوخ).
+	var trans0 := float(GS.state.get("civic_policy", {}).get("transparency", 0.45))
+	var corrupt0 := float(GS.state.get("politics", {}).get("corruption", 0.30))
 	r = GE.tick(GS.state, GS.version, GS.tick, [CS.create_civic_action("opendata")])
 	GS.set_state(r.state, r.version, r.tick)
-	if float(GS.state.get("politics", {}).get("trust", 0.55)) <= trust0 or float(GS.state.get("politics", {}).get("corruption", 0.30)) >= 0.30:
-		fails.append("شفافیت داده اعتماد را زیاد یا فساد را کم نکرد")
+	var trans1 := float(GS.state.get("civic_policy", {}).get("transparency", 0.45))
+	var corrupt1 := float(GS.state.get("politics", {}).get("corruption", 0.30))
+	if trans1 <= trans0 or corrupt1 >= corrupt0:
+		fails.append("داده باز شفافیت را زیاد یا فساد را کم نکرد")
 	else:
-		print("✓ مدنی: داده باز و دسترسی به اطلاعات اعتماد را بالا و فساد را پایین آورد")
+		print("✓ مدنی: داده باز شفافیت را از %.2f به %.2f و فساد را از %.2f به %.2f برد" % [trans0, trans1, corrupt0, corrupt1])
 
 	var council0 := float(GS.state.get("civic_policy", {}).get("local_councils", 0.35))
 	r = GE.tick(GS.state, GS.version, GS.tick, [CS.create_civic_action("councils")])

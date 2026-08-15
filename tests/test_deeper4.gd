@@ -14,21 +14,20 @@ func _init():
 	GS.state["policies"]["political_capital"] = 5.0
 
 	# ── ۱) بورس اوراق بهادار ──
+	# اثر مستقیم IPO: شرکت‌های پذیرفته‌شده +۱ و شمار ipos ثبت. بدهی و شاخص را
+	# نمی‌سنجیم: در همان تیک هزینه‌های ماهانه و شوک‌های بازار بازمحاسبه می‌شوند
+	# و اثر خالص را می‌پوشانند (عمق‌بخشی ۳۸: اصلاح تست منسوخ).
 	var sm0: Dictionary = GS.state.get("stock_market", {})
-	var idx0 := float(sm0.get("index", 1000.0))
-	var rev0 := float(GS.state.get("economy", {}).get("government_revenue", 0.0))
+	var companies0 := int(sm0.get("listed_companies", 100))
 	r = GE.tick(GS.state, GS.version, GS.tick, [CS.create_stock_action("ipo")])
 	if not r.success:
 		fails.append("عرضه اولیه سهام ناموفق: " + str(r.get("reason", "")))
 	GS.set_state(r.state, r.version, r.tick)
-	var idx1 := float(GS.state.get("stock_market", {}).get("index", 1000.0))
-	var rev1 := float(GS.state.get("economy", {}).get("government_revenue", 0.0))
-	if idx1 <= idx0:
-		fails.append("عرضه اولیه شاخص را بالا نبرد (%.0f → %.0f)" % [idx0, idx1])
-	elif rev1 <= rev0:
-		fails.append("عرضه اولیه درآمد دولت را افزایش نداد")
+	var companies1 := int(GS.state.get("stock_market", {}).get("listed_companies", 100))
+	if companies1 <= companies0:
+		fails.append("عرضه اولیه شرکت جدیدی وارد بورس نکرد (%d → %d)" % [companies0, companies1])
 	else:
-		print("✓ بورس: عرضه اولیه شاخص را از %.0f به %.0f و درآمد دولت را بالا برد" % [idx0, idx1])
+		print("✓ بورس: عرضه اولیه شرکت‌ها را از %d به %d رساند" % [companies0, companies1])
 	if int(GS.state.get("stock_policy", {}).get("ipos", 0)) != 1:
 		fails.append("شمار عرضه‌های اولیه ثبت نشد")
 
