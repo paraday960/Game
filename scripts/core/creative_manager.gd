@@ -95,6 +95,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["economy"] = econ
 		events.append({"type": "creative_export", "message": "🎬 محصول فرهنگی ایران در جشنواره‌های جهان درخشید؛ صادرات فرهنگی و قدرت نرم بالا رفت"})
 	elif float(cp.get("games", 0.0)) > 0.55 and Deterministic.chance(0.030):
+		var sb_games: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_games["اقتصاد خلاق"] = float(sb_games.get("اقتصاد خلاق", 0.0)) + 0.0005 * 12.0
+		state["economy"]["sector_boosts"] = sb_games
 		events.append({"type": "games_boom", "message": "🎮 استودیوهای بازی‌سازی داخلی بازار منطقه را فتح کردند؛ اشتغال جوانان رشد کرد"})
 	elif piracy > 0.70 and Deterministic.chance(0.025):
 		events.append({"type": "piracy", "message": "🏴 دزدی دریایی محصولات فرهنگی هنرمندان را به ورشکستگی کشاند؛ پلتفرم رسمی لازم است"})

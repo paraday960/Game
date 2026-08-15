@@ -84,6 +84,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["population"] = pop
 		events.append({"type": "election_unrest", "message": "🗳️ در آستانه انتخابات، سرکوب اعتراض‌ها به خیزش انجامید"})
 	elif fairness > 0.75 and turnout > 0.70 and Deterministic.chance(0.03):
+		var pol_el: Dictionary = state.get("politics", {})
+		pol_el["legitimacy"] = clampf(float(pol_el.get("legitimacy", 0.58)) + 0.02, 0.1, 0.95)
+		pol_el["trust"] = clampf(float(pol_el.get("trust", 0.55)) + 0.015, 0.05, 1.0)
+		state["politics"] = pol_el
 		events.append({"type": "election_legitimacy", "message": "🗳️ انتخابات پرشور و منصفانه، مشروعیت ملی را تقویت کرد"})
 
 	state["election_policy"] = ep

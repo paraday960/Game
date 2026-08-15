@@ -103,7 +103,13 @@ func toggle_capital_control(state: Dictionary) -> Dictionary:
 	state["forex"] = forex
 	var cc_events: Array = [{"type": "capital_control", "message": "🔒 کنترل سرمایه %s شد؛ فرار ارز مهار شد ولی سرمایه‌گذاری خارجی کاهش یافت" % ("فعال" if control else "لغو")}]
 	if reimpose_premium > 0.0:
-		cc_events.append({"type": "policy_flipflop", "message": "⚠️ تغییر جهت ناگهانی سیاست ارزی — اعتبار بانک مرکزی خدشه‌دار شد و صرف بازار سیاه جهش کرد"})
+			var cb_ff: Dictionary = state.get("central_bank", {})
+			cb_ff["independence"] = clampf(float(cb_ff.get("independence", 0.7)) - 0.03, 0.1, 0.95)
+			state["central_bank"] = cb_ff
+			var fx_ff: Dictionary = state.get("forex", {})
+			fx_ff["black_premium"] = clampf(float(fx_ff.get("black_premium", 0.3)) + 0.05, 0.0, 1.0)
+			state["forex"] = fx_ff
+			cc_events.append({"type": "policy_flipflop", "message": "⚠️ تغییر جهت ناگهانی سیاست ارزی — اعتبار بانک مرکزی خدشه‌دار شد و صرف بازار سیاه جهش کرد"})
 	return {"success": true, "state": state, "events": cc_events}
 
 # ── شبیه‌سازی ماهانه ──

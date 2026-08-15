@@ -93,8 +93,20 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if depop > 0.65 and Deterministic.chance(0.05):
+		var pop_rd: Dictionary = state.get("population", {})
+		pop_rd["urban_ratio"] = clampf(float(pop_rd.get("urban_ratio", 0.75)) + 0.004, 0.1, 0.95)
+		state["population"] = pop_rd
+		var wf_rd: Dictionary = state.get("welfare", {})
+		wf_rd["poverty"] = clampf(float(wf_rd.get("poverty", 0.15)) + 0.005, 0.02, 0.60)
+		state["welfare"] = wf_rd
 		events.append({"type": "rural_depopulation", "message": "🏚️ تخلیه روستاها شتاب گرفت؛ حاشیه‌نشینی در شهرها و کمبود نیروی کشاورز افزایش یافت"})
 	elif income > 0.65 and Deterministic.chance(0.03):
+		var pop_rv: Dictionary = state.get("population", {})
+		pop_rv["urban_ratio"] = clampf(float(pop_rv.get("urban_ratio", 0.75)) - 0.004, 0.1, 0.95)
+		state["population"] = pop_rv
+		var wf_rv: Dictionary = state.get("welfare", {})
+		wf_rv["poverty"] = clampf(float(wf_rv.get("poverty", 0.15)) - 0.005, 0.02, 0.60)
+		state["welfare"] = wf_rv
 		events.append({"type": "rural_revival", "message": "🌾 رونق روستایی! صنایع تبدیلی و وام‌های خرد مهاجرت معکوس را آغاز کردند"})
 	elif nomad > 0.55 and Deterministic.chance(0.025):
 		events.append({"type": "nomadic_fair", "message": "🐑 خدمات عشایری و نمایشگاه صنایع دستی عشایر گردشگری و رضایت را بالا برد"})

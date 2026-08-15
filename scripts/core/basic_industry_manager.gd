@@ -74,6 +74,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if output > 0.70 and exports > 0.30 and Deterministic.chance(0.03):
+		var ri_steel: Dictionary = state.get("economy", {}).get("reserve_inflows", {})
+		ri_steel["صادرات فولاد"] = float(state.get("economy", {}).get("gdp", 500e9)) * 0.0004
+		state["economy"]["reserve_inflows"] = ri_steel
 		events.append({"type": "steel_export", "message": "🏗️ صادرات فولاد و سیمان جهش کرد؛ صنایع بنیادی ارزآور شدند"})
 	elif self_suff < 0.40 and Deterministic.chance(0.04):
 		# اثر واقعی کمبود مصالح: پروژه‌ها کند می‌شوند و قیمت مصالح/مسکن جهش می‌زند
@@ -83,7 +86,8 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		if state.has("housing_policy"):
 			var hpol: Dictionary = state["housing_policy"]
 			hpol["price_index"] = clampf(float(hpol.get("price_index", 0.50)) + 0.02, 0.0, 1.0)
-		events.append({"type": "material_shortage", "message": "🧱 کمبود مصالح ساختمانی؛ پروژه‌های مسکن و زیرساخت کند شد"})
+			state["housing_policy"] = hpol
+			events.append({"type": "material_shortage", "message": "🧱 کمبود مصالح ساختمانی؛ پروژه‌های مسکن و زیرساخت کند شد"})
 
 	state["basic_industry_policy"] = bp
 	return {"state": state, "events": events}

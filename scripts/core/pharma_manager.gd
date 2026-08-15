@@ -76,6 +76,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["population"]["happiness"] = clampf(float(state["population"].get("happiness", 0.60)) - 0.010, 0.05, 1.0)
 		events.append({"type": "drug_shortage", "message": "💊 کمبود دارو! بیماران و بیمارستان‌ها تحت فشار"})
 	elif local_prod > 0.65 and Deterministic.chance(0.025):
+		var ri_pharma: Dictionary = state.get("economy", {}).get("reserve_inflows", {})
+		ri_pharma["صادرات دارو"] = float(state.get("economy", {}).get("gdp", 500e9)) * 0.0003
+		state["economy"]["reserve_inflows"] = ri_pharma
 		events.append({"type": "pharma_export", "message": "🧪 صادرات داروی داخلی رشد کرد؛ ارزآوری سلامت بالا رفت"})
 	elif vaccine > 0.60 and Deterministic.chance(0.02):
 		events.append({"type": "vaccine_self", "message": "💉 خودکفایی واکسن به ثمر نشست؛ آمادگی همه‌گیری بالا رفت"})

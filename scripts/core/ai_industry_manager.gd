@@ -71,6 +71,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["politics"] = pol2
 		events.append({"type": "automation_protest", "message": "🤖 اعتراض به اتوماسیون؛ مشاغل بدون مهارت‌آموزی حذف شدند"})
 	elif productivity > 0.60 and Deterministic.chance(0.025):
+		var sb_ai: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_ai["هوش مصنوعی و رباتیک"] = float(sb_ai.get("هوش مصنوعی و رباتیک", 0.0)) + 0.0004 * 12.0
+		state["economy"]["sector_boosts"] = sb_ai
 		events.append({"type": "ai_boom", "message": "🧠 بهره‌وری صنعتی با هوش مصنوعی جهش کرد"})
 
 	state["ai_policy"] = ap

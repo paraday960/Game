@@ -82,8 +82,14 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if raw_share > 0.75 and sanction > 0.5 and Deterministic.chance(0.05):
 		events.append({"type": "raw_export_loss", "message": "🛢️ وابستگی به خام‌فروشی، ضربه تحریم را سنگین‌تر کرد"})
 	elif fuel_sec < 0.30 and Deterministic.chance(0.04):
-		events.append({"type": "fuel_import", "message": "⛽ وابستگی به واردات بنزین، آسیب‌پذیری انرژی بالا گرفت"})
+			var ft_imp: Dictionary = state.get("fuel_transition", {})
+			ft_imp["fuel_security"] = clampf(float(ft_imp.get("fuel_security", 0.6)) - 0.02, 0.1, 0.95)
+			state["fuel_transition"] = ft_imp
+			events.append({"type": "fuel_import", "message": "⛽ وابستگی به واردات بنزین، آسیب‌پذیری انرژی بالا گرفت"})
 	elif va > 0.65 and Deterministic.chance(0.03):
+		var ri_petro: Dictionary = state.get("economy", {}).get("reserve_inflows", {})
+		ri_petro["صادرات پتروشیمی"] = float(state.get("economy", {}).get("gdp", 500e9)) * 0.0005
+		state["economy"]["reserve_inflows"] = ri_petro
 		events.append({"type": "petrochem_boom", "message": "🏭 صادرات محصول پتروشیمی جهش کرد؛ ارزآوری غیرنفتی بالا رفت"})
 
 	state["downstream_policy"] = dp

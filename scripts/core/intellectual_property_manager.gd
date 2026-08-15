@@ -75,6 +75,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if innov > 0.70 and Deterministic.chance(0.03):
+		var sb_pat: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_pat["نوآوری و مالکیت فکری"] = float(sb_pat.get("نوآوری و مالکیت فکری", 0.0)) + 0.0004 * 12.0
+		state["economy"]["sector_boosts"] = sb_pat
 		events.append({"type": "patent_boom", "message": "📈 ثبت اختراعات ملی رکورد شکست؛ شرکت‌های فناور رشد کردند"})
 	elif enforce < 0.25 and Deterministic.chance(0.04):
 		events.append({"type": "piracy_risk", "message": "🏴 نقض گسترده مالکیت فکری، سرمایه‌گذاری خارجی ترسید"})

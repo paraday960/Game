@@ -81,6 +81,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["economy"] = econ
 		events.append({"type": "credit_crunch", "message": "💳 خشکی اعتبار بنگاه‌های کوچک را زمین‌گیر کرد؛ تعطیلی‌ها بالا رفت"})
 	elif ease > 0.70 and productivity > 0.60 and Deterministic.chance(0.03):
+		var sb_sme: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_sme["بنگاه‌های کوچک"] = float(sb_sme.get("بنگاه‌های کوچک", 0.0)) + 0.0004 * 12.0
+		state["economy"]["sector_boosts"] = sb_sme
 		events.append({"type": "sme_boom", "message": "📈 بنگاه‌های کوچک شکوفا شدند؛ اشتغال و صادرات غیرنفتی رشد کرد"})
 	elif formal > 0.60 and Deterministic.chance(0.02):
 		events.append({"type": "formalization_win", "message": "🧾 رسمی‌سازی کسب‌وکارها، درآمد مالیاتی را بالا برد"})

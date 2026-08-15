@@ -46,8 +46,14 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	state["economy"] = econ
 	# رویداد: رونق/رکود گردشگری
 	if visitors > 12_000_000.0 and Deterministic.chance(0.08):
+		var tm_boom: Dictionary = state.get("tourism", {})
+		tm_boom["revenue"] = float(tm_boom.get("revenue", 0.0)) * 1.04
+		state["tourism"] = tm_boom
 		events.append({"type": "tourism_boom", "message": "✈️ رونق گردشگری! تعداد بازدیدکنندگان به رکورد جدید رسید"})
 	elif visitors < 2_000_000.0 and Deterministic.chance(0.06):
+		var tm_slump: Dictionary = state.get("tourism", {})
+		tm_slump["revenue"] = float(tm_slump.get("revenue", 0.0)) * 0.96
+		state["tourism"] = tm_slump
 		events.append({"type": "tourism_slump", "message": "📉 گردشگری در رکود؛ درآمد ارزی کاهش یافت"})
 	state["tourism_policy"] = tp
 	return {"state": state, "events": events}

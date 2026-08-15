@@ -89,6 +89,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		ip["last_default"] = turn
 		events.append({"type": "insurer_default", "message": "💥 یک شرکت بیمه بزرگ ورشکست شد؛ خسارت مردم و بیمه‌گذاران پرداخت نشد"})
 	elif penetration > 0.70 and solvency > 0.65 and Deterministic.chance(0.03):
+		var pol_ins: Dictionary = state.get("politics", {})
+		pol_ins["stability"] = clampf(float(pol_ins.get("stability", 0.6)) + 0.01, 0.05, 1.0)
+		state["politics"] = pol_ins
 		events.append({"type": "insurance_resilience", "message": "🛡️ ضریب نفوذ بیمه بالا، خسارت یک بحران را جذب کرد؛ تاب‌آوری اقتصاد تقویت شد"})
 	elif agri_ins > 0.50 and Deterministic.chance(0.025):
 		events.append({"type": "agri_insurance", "message": "🌾 بیمه کشاورزی غرامت خشکسالی را به‌موقع پرداخت کرد؛ مهاجرت روستایی کنترل شد"})

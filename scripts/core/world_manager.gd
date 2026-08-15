@@ -1290,6 +1290,7 @@ func _apply_war_goal_defeat(state: Dictionary, target: String, goal: String, war
 			state["diplomacy"]["influence"] = clamp(float(state["diplomacy"].get("influence", 40.0)) - 8.0, 0.0, 100.0)
 			events.append({"type": "war_humiliation_suffered", "message": "شکست تحقیرآمیز، نفوذ دیپلماتیک کشور را به‌شدت کاهش داد"})
 		_:
+			econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 500e9)) * 0.02
 			events.append({"type": "war_defeat_terms", "message": "پایان جنگ با شرایط دشمن؛ کشور آسیب اقتصادی دید"})
 	state["economy"] = econ
 	state["leader"] = leader

@@ -81,6 +81,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if innovation > 0.70 and Deterministic.chance(0.03):
+		var sb_start: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_start["اکوسیستم استارتاپ"] = float(sb_start.get("اکوسیستم استارتاپ", 0.0)) + 0.0005 * 12.0
+		state["economy"]["sector_boosts"] = sb_start
 		events.append({"type": "startup_boom", "message": "🚀 زیست‌بوم استارتاپی منفجر شد؛ شرکت‌های دانش‌بنیان صادرات فناوری را جهش دادند"})
 	elif failures > new_startups and Deterministic.chance(0.04):
 		events.append({"type": "startup_winter", "message": "❄️ زمستان استارتاپی! کمبود نقدینگی و ریسک‌گریزی شرکت‌ها را تعطیل کرد"})

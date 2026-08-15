@@ -76,6 +76,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	if knowledge > 0.65 and Deterministic.chance(0.03):
 		events.append({"type": "science_breakthrough", "message": "🔬 همکاری علمی بین‌المللی به یک کشف مشترک انجامید"})
 	elif brain_gain > 0.60 and Deterministic.chance(0.025):
+		var tech_bg: Dictionary = state.get("technology", {})
+		tech_bg["research_rate"] = float(tech_bg.get("research_rate", 20.0)) + 2.0
+		state["technology"] = tech_bg
 		events.append({"type": "brain_gain", "message": "🧑‍🔬 دانشمندان برجسته به کشور بازگشتند؛ سرعت پژوهش بالا رفت"})
 	elif consortium > 0.60 and Deterministic.chance(0.02):
 		events.append({"type": "tech_consortium", "message": "🤝 کنسرسیوم فناوری دسترسی به دانش پیشرفته را گشود"})

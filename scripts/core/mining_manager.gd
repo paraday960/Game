@@ -93,6 +93,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	elif processing > 0.65 and Deterministic.chance(0.03):
 		events.append({"type": "mining_value_chain", "message": "🏭 زنجیره فرآوری مواد معدنی کامل شد؛ خام‌فروشی جای خود را به صادرات فرآورده داد"})
 	elif output > 0.80 and Deterministic.chance(0.025):
+		var sb_mine: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_mine["معدن"] = float(sb_mine.get("معدن", 0.0)) + 0.0005 * 12.0
+		state["economy"]["sector_boosts"] = sb_mine
 		events.append({"type": "mining_boom", "message": "💎 کشف ذخایر جدید معدنی؛ تولید و اشتغال معدن رشد کرد"})
 
 	state["mining_policy"] = mp

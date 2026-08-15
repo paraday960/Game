@@ -118,14 +118,23 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if window > 0.80 and Deterministic.chance(0.030):
+		var sb_div: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_div["پنجره جمعیت"] = float(sb_div.get("پنجره جمعیت", 0.0)) + 0.0006 * 12.0
+		state["economy"]["sector_boosts"] = sb_div
 		events.append({"type": "demographic_dividend", "message": "📊 پنجره جمعیت کامل است؛ نیروی کار جوان و پس‌انداز بالا رشد اقتصادی را تقویت می‌کند"})
 	elif fund < 0.25 and Deterministic.chance(0.050):
 		pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.008, 0.05, 1.0)
 		state["population"] = pop
 		events.append({"type": "pension_alarm", "message": "⚠️ صندوق بازنشستگی در آستانه ورشکستگی! اصلاح سن بازنشستگی یا افزایش سهم بیمه لازم است"})
 	elif aging > 0.60 and Deterministic.chance(0.030):
+		var wf_age: Dictionary = state.get("welfare", {})
+		wf_age["pension_pressure_structural"] = clampf(float(wf_age.get("pension_pressure_structural", 0.3)) + 0.02, 0.0, 1.0)
+		state["welfare"] = wf_age
 		events.append({"type": "aging_society", "message": "👴 جامعه سالخورده می‌شود؛ فشار به درمان و صندوق افزایش می‌یابد"})
 	elif fertility > 2.6 and Deterministic.chance(0.020):
+		var pop_bb: Dictionary = state.get("population", {})
+		pop_bb["birth_rate"] = clampf(float(pop_bb.get("birth_rate", 15.0)) + 0.8, 5.0, 25.0)
+		state["population"] = pop_bb
 		events.append({"type": "baby_boom", "message": "👶 سیاست‌های جمعیتی جواب داد؛ نرخ تولد بالا رفت و موج آینده نیروی کار شکل گرفت"})
 
 	state["demographic_policy"] = dp

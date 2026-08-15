@@ -79,7 +79,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["emergency"] = em
 		events.append({"type": "cd_drill", "message": "🚨 مانور سراسری پدافند غیرعامل برگزار شد؛ هماهنگی دستگاه‌ها و واکنش اضطراری بهتر شد"})
 	elif resilience < 0.30 and Deterministic.chance(0.030):
-		events.append({"type": "cd_gap", "message": "⚠️ آسیب‌پذیری زیرساخت‌های حیاتی بالا است؛ یک حمله محدود می‌تواند به اختلال گسترده بینجامد"})
+			var em_gap: Dictionary = state.get("emergency", {})
+			em_gap["preparedness"] = clampf(float(em_gap.get("preparedness", 0.50)) - 0.01, 0.1, 0.95)
+			state["emergency"] = em_gap
+			events.append({"type": "cd_gap", "message": "⚠️ آسیب‌پذیری زیرساخت‌های حیاتی بالا است؛ یک حمله محدود می‌تواند به اختلال گسترده بینجامد"})
 	elif resilience > 0.70 and Deterministic.chance(0.020):
 		mil["deterrence"] = clampf(float(mil.get("deterrence", 60.0)) + 0.5, 0.0, 100.0)
 		state["military"] = mil

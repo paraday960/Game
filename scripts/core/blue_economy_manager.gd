@@ -89,8 +89,17 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		events.append({"type": "fish_stock_collapse", "message": "🐟 ذخایر ماهی در آستانه فروپاشی! صید بی‌رویه معیشت ساحلی را تهدید می‌کند"})
 		pop["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.006, 0.05, 1.0)
 	elif port > 0.70 and fleet > 0.50 and Deterministic.chance(0.030):
+		var ri_port: Dictionary = state.get("economy", {}).get("reserve_inflows", {})
+		ri_port["درآمد بندری"] = float(state.get("economy", {}).get("gdp", 500e9)) * 0.0005
+		state["economy"]["reserve_inflows"] = ri_port
+		var td_port: Dictionary = state.get("transport_detail", {})
+		td_port["logistics_efficiency"] = clampf(float(td_port.get("logistics_efficiency", 0.60)) + 0.01, 0.0, 1.0)
+		state["transport_detail"] = td_port
 		events.append({"type": "port_hub", "message": "🚢 بندر کشور به هاب ترانزیت منطقه تبدیل شد؛ کانتینرها و کشتی‌های تجاری رونق آوردند"})
 	elif coast_guard > 0.60 and Deterministic.chance(0.020):
+		var sm_coast: Dictionary = state.get("shadow", {})
+		sm_coast["size"] = clampf(float(sm_coast.get("size", 0.18)) - 0.01, 0.03, 0.55)
+		state["shadow"] = sm_coast
 		events.append({"type": "coast_patrol", "message": "🛡️ گشت دریایی شبکه قاچاق سوخت و صید غیرمجاز را متلاشی کرد"})
 
 	state["blue_economy_policy"] = be

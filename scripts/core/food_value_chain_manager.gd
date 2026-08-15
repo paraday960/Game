@@ -82,6 +82,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["economy"] = econ
 		events.append({"type": "food_crisis", "message": "🍞 ناامنی غذایی! کمبود و گرانی نان و کالاهای اساسی برخاست"})
 	elif waste > 0.50 and Deterministic.chance(0.04):
+		var agri_fw: Dictionary = state.get("agriculture", {})
+		agri_fw["food_security"] = clampf(float(agri_fw.get("food_security", 0.65)) - 0.015, 0.05, 1.0)
+		state["agriculture"] = agri_fw
 		events.append({"type": "food_waste", "message": "🗑️ ضایعات بالای غذا در مسیر تولید تا مصرف؛ امنیت غذایی تضعیف شد"})
 	elif sec > 0.75 and Deterministic.chance(0.025):
 		events.append({"type": "food_secure", "message": "🌾 امنیت غذایی پایدار شد؛ ذخایر و صنایع تبدیلی نتیجه داد"})

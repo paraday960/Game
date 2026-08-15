@@ -97,6 +97,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["health"] = health
 		events.append({"type": "waste_crisis", "message": "🗑️ بحران پسماند! شیرآبه زباله‌های رهاشده آب و خاک را آلوده کرد"})
 	elif recycling_rate > 0.55 and Deterministic.chance(0.03):
+		var sb_circ: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_circ["اقتصاد چرخه‌ای"] = float(sb_circ.get("اقتصاد چرخه‌ای", 0.0)) + 0.0003 * 12.0
+		state["economy"]["sector_boosts"] = sb_circ
 		events.append({"type": "circular_win", "message": "♻️ صنایع بازیافت رونق گرفت؛ مواد اولیه از زباله استحصال شد"})
 	elif wte > 0.40 and Deterministic.chance(0.02):
 		events.append({"type": "wte_win", "message": "🔥 نیروگاه زباله‌سوز بخشی از برق شهر را تامین کرد"})

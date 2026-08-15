@@ -76,6 +76,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# رویدادها
 	if export_share > 0.55 and Deterministic.chance(0.03):
+		var ri_text: Dictionary = state.get("economy", {}).get("reserve_inflows", {})
+		ri_text["صادرات پوشاک"] = float(state.get("economy", {}).get("gdp", 500e9)) * 0.0003
+		state["economy"]["reserve_inflows"] = ri_text
 		events.append({"type": "textile_export", "message": "👗 صادرات پوشاک رشد کرد؛ اشتغال و ارزآوری بالا رفت"})
 	elif import_dep > 0.70 and Deterministic.chance(0.04):
 		# اثر واقعی کمبود ماده اولیه: ظرفیت افت می‌کند و پوشاک گران می‌شود

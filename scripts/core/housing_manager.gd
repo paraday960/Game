@@ -91,6 +91,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		state["population"]["happiness"] = clampf(float(pop.get("happiness", 0.60)) - 0.008, 0.05, 1.0)
 		events.append({"type": "rent_crisis", "message": "🏠 بحران اجاره‌بها؛ حاشیه‌نشینی و نارضایتی بالا گرفت"})
 	elif supply > 0.7 and Deterministic.chance(0.025):
+		var sb_hous: Dictionary = state.get("economy", {}).get("sector_boosts", {})
+		sb_hous["ساخت‌وساز و مسکن"] = float(sb_hous.get("ساخت‌وساز و مسکن", 0.0)) + 0.0004 * 12.0
+		state["economy"]["sector_boosts"] = sb_hous
 		events.append({"type": "housing_boom", "message": "🏗️ رونق مسکن؛ اشتغال ساخت‌وساز و عرضه بالا رفت"})
 
 	state["housing_policy"] = hp
