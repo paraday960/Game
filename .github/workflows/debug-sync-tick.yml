@@ -1,0 +1,22 @@
+name: Debug Sync Tick - تشخیصی
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip"
+          unzip -q "Godot_v4.7.1-stable_linux.x86_64.zip"
+          chmod +x "Godot_v4.7.1-stable_linux.x86_64"
+          sudo mv "Godot_v4.7.1-stable_linux.x86_64" /usr/local/bin/godot
+          godot --version
+      - name: Import
+        run: godot --headless --path . --import
+      - name: Sync tick test (with timeout)
+        run: |
+          timeout 60 godot --headless --path . -s res://tests/test_sync_tick.gd && echo "SYNC OK" || echo "SYNC FAIL/TIMEOUT"
