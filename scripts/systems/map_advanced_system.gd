@@ -141,11 +141,14 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		# ساختمان‌ها دائمی هستند اما نیاز به نگهداری دارند
 		if age < 365*5: # ۵ سال عمر مفید بدون نوسازی
 			active_buildings.append(building)
-		else:
-			# نیاز به نوسازی
+		elif age < 365*10:
+			# نیاز به نوسازی — در آستانه‌ی فرسودگی ولی هنوز پابرجاست
 			if Deterministic.chance(0.01):
 				events.append({"type":"building_decay","building_type":building.get("building_type",""),"message":"ساختمان %s در %s نیاز به نوسازی دارد" % [building.get("building_type",""), building.get("country_id","")]})
-			active_buildings.append(building) # هنوز نگه می‌داریم اما با کیفیت کمتر
+			active_buildings.append(building) # نگه می‌داریم اما با کیفیت کمتر
+		# بازرسی ۱۴۰۵ (عمق‌بخشی ۴۱): بعد از ۱۰ سال بدون نوسازی، ساختمان
+		# فرسوده و از دور خارج می‌شود — بدون این سقف، آرایه‌ی buildings در
+		# بازی بلندمدت نامحدود رشد می‌کرد (نشت حافظهٔ state).
 
 	adv["buildings"] = active_buildings
 
