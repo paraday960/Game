@@ -150,6 +150,21 @@ jobs:
           cat /tmp/competitive-client.log
           test "$COMP_HOST_STATUS" -eq 0 -a "$COMP_CLIENT_STATUS" -eq 0
 
+      - name: Run deep Godot tests (30 tests outside CI suite)
+        timeout-minutes: 12
+        run: |
+          set -euo pipefail
+          # تست‌های عمقی که در مرحلهٔ اصلی نیستند (عمق‌بخشی ۳۹: همگی سبز شدند).
+          for t in test_deeper3 test_deeper4 test_deeper5 test_deeper6 test_deeper7 \
+                   test_deeper8 test_deeper9 test_deeper10 test_deeper11 test_deeper12 \
+                   test_deeper13 test_deeper14 test_deeper15 test_deeper16 test_deeper17 \
+                   test_deeper18 test_deeper21 test_depth_systems test_depth2_systems \
+                   test_leader_system test_multiplayer_turn test_sync_tick test_turn_system \
+                   test_once_buttons test_balanced_depth test_continued_depth test_even_deeper \
+                   test_max_depth test_more_depth; do
+            timeout 120 godot --headless --path . -s res://tests/$t.gd || { echo "TIMEOUT/FAIL: $t"; exit 1; }
+          done
+
       - name: Export Android APK (Release)
         run: |
           mkdir -p build
