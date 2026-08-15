@@ -106,6 +106,7 @@ func apply_scenario(state: Dictionary, id: String, start_tick: int = 0) -> Dicti
 		"id": id,
 		"name": definition.get("name_fa", id),
 		"difficulty": definition.get("difficulty_fa", "معمولی"),
+		"difficulty_multiplier": float(definition.get("difficulty_multiplier", 1.0)),
 		"description": definition.get("description", ""),
 		"completion_rule": definition.get("completion_rule", "all"),
 		"started_tick": start_tick,

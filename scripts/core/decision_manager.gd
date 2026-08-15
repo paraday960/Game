@@ -496,8 +496,13 @@ static func resolve_decision(state: Dictionary, decision_id: String, choice_id: 
 			break
 	if choice.is_empty():
 		return {"success": false, "reason": "گزینه تصمیم معتبر نیست", "state": state}
+	# ضریب سختی سناریو (عمق‌بخشی ۳۳): در سناریوهای سخت‌تر هزینه‌ی بدهیِ
+	# تصمیم‌ها سنگین‌تر است (difficulty_multiplier از state.scenario).
+	var cost_multiplier: float = 1.0
+	var scenario: Dictionary = state.get("scenario", {})
+	cost_multiplier = float(scenario.get("difficulty_multiplier", 1.0))
 	for effect in choice.get("effects", []):
-		_apply_effect(state, effect)
+		_apply_effect(state, effect, cost_multiplier)
 	pending.remove_at(selected_index)
 	state["pending_decisions"] = pending
 	var history: Array = state.get("decision_history", []).duplicate(true)
@@ -545,7 +550,7 @@ static func _expire_old(state: Dictionary, tick: int) -> Dictionary:
 				break
 	return state
 
-static func _apply_effect(state: Dictionary, effect: Dictionary):
+static func _apply_effect(state: Dictionary, effect: Dictionary, cost_multiplier: float = 1.0):
 	var parts = str(effect.get("path", "")).split(".")
 	if parts.is_empty():
 		return
@@ -571,7 +576,11 @@ static func _apply_effect(state: Dictionary, effect: Dictionary):
 				var gdp_val = state["economy"].get("gdp", base_gdp)
 				if gdp_val is int or gdp_val is float:
 					base_gdp = float(gdp_val)
-			new_value += float(effect.get("value", 0.0)) * base_gdp
+			var ratio_value: float = float(effect.get("value", 0.0))
+			# ضریب سختی فقط هزینه‌ی بدهی را سنگین‌تر می‌کند (نه درآمد ارزی)
+			if str(effect.get("path", "")) == "economy.national_debt":
+				ratio_value *= cost_multiplier
+			new_value += ratio_value * base_gdp
 		_: new_value += float(effect.get("value", 0.0))
 	if effect.has("min"):
 		new_value = max(new_value, float(effect["min"]))
