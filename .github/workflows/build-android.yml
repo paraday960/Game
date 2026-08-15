@@ -115,6 +115,7 @@ jobs:
           timeout 240 godot --headless --path . res://tests/test_long.tscn || { echo "TIMEOUT/FAIL: test_long.tscn"; exit 1; }
           timeout 120 godot --headless --path . -s res://tests/test_ui.gd || { echo "TIMEOUT/FAIL: test_ui.gd"; exit 1; }
           timeout 120 godot --headless --path . -s res://tests/test_save_compat.gd || { echo "TIMEOUT/FAIL: test_save_compat.gd"; exit 1; }
+          timeout 120 godot --headless --path . -s res://tests/test_toast_render.gd || { echo "TIMEOUT/FAIL: test_toast_render.gd"; exit 1; }
 
           # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet
           timeout 120 godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1 &

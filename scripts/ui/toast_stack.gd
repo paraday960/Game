@@ -33,15 +33,15 @@ func push_message(message:String,severity:String="info"):
 	var panel=PanelContainer.new();panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	var color={"success":Color(0.18,0.88,0.59),"warning":Color(1.0,0.72,0.22),"danger":Color(1.0,0.30,0.36),"info":Color(0.25,0.78,0.94)}.get(severity,Color(0.25,0.78,0.94))
 	var style=StyleBoxFlat.new();style.bg_color=Color(0.012,0.043,0.063,0.97);style.border_color=Color(color.r,color.g,color.b,0.88);style.set_border_width_all(1);style.border_width_right=5;style.set_corner_radius_all(9);style.content_margin_left=18;style.content_margin_right=18;style.content_margin_top=14;style.content_margin_bottom=14;style.shadow_color=Color(0,0,0,0.38);style.shadow_size=6;style.shadow_offset=Vector2(0,3);panel.add_theme_stylebox_override("panel",style)
-	panel.clip_contents = true
+	# حداقل عرض واقعی پنل (بازرسی ۱۴۰۵ — رفع کادر خالی): بدون این، پنل فقط به
+	# اندازهٔ حداقلِ فرزندش عرض می‌گیرد (گاهی ۱ پیکسل) و متن هرگز نمایش داده
+	# نمی‌شود. ۳۶۰ پیکسل = حداقل برای یک پیام خوانا؛ با EXPAND_FILL در کادر
+	# واقعی (۵۴۰+ پیکسل) پنل همان‌قدر بزرگ می‌شود.
+	panel.custom_minimum_size = Vector2(360, 0)
 	var label=Label.new();label.text=message;label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_font_size_override("font_size",24);label.modulate=Color(0.92,0.97,0.98);label.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# حداقل عرض/ارتفاع برای نمایش متن؛ بدون این، Label در کادر خالی ۱×۱ میماند
-	# (ارتفاع ۳۶ = یک خط متن با font_size ۲۴ + حاشیه) — روی همه دستگاهها تضمین دید
-	label.custom_minimum_size = Vector2(140, 36)
-	# متن‌های بسیار بلند با سه‌نقطه کوتاه می‌شوند تا هرگز از کادر بیرون نزنند
-	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# فونت صریح (نه فقط ارث‌بری از theme) تا روی همهٔ دستگاه‌ها یکسان باشد
+	label.add_theme_font_override("font", load("res://assets/fonts/Vazirmatn-Regular.ttf"))
 	panel.add_child(label)
 	add_child(panel)
 	if not bool(SettingsManager.get_value("reduce_motion",false)):
