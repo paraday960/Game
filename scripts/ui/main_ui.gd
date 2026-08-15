@@ -140,6 +140,19 @@ var budget_sliders: Dictionary = {}
 
 # نام‌های فارسی سیستم‌ها
 const SYSTEM_FA := {
+	"citizens": "شهروندان",
+	"crisis": "بحران‌ها",
+	"elites": "نخبگان",
+	"households": "خانوارها",
+	"map_advanced": "نقشه پیشرفته",
+	"migration": "مهاجرت",
+	"officials_managers": "مدیران و مقامات",
+	"policies": "سیاست‌ها",
+	"politicians": "سیاستمداران",
+	"quantitative_temporal": "تحلیل کمی و زمانی",
+	"security_forces": "نیروهای امنیتی",
+	"trade_route_warfare": "جنگ مسیرهای تجاری",
+	"workforce_jobs": "بازار کار و اشتغال",
 	"resources": "منابع و انرژی", "economy": "اقتصاد و بودجه", "population": "جمعیت و دموگرافی",
 	"politics": "سیاست و ثبات", "military": "ارتش و دفاع", "diplomacy": "دیپلماسی",
 	"infrastructure": "زیرساخت", "technology": "علم و فناوری", "judicial": "قضایی",
