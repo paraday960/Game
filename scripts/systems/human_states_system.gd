@@ -57,8 +57,7 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var anger_target = (1.0 - happiness)*0.35 + tension*0.25 + corruption*0.20 + poverty*0.15 + 0.05
 	human["anger"] = clamp(human["anger"]*0.90 + anger_target*0.10, 0.03, 0.90)
 
-	# اعتماد
-	human["trust"] = trust
+	# اعتماد — اینرسی نرم (بازرسی ۱۴۰۵، عمق‌بخشی ۴۲: خط clobber اولیهٔ اضافی حذف شد)
 	human["trust"] = clamp(human["trust"]*0.98 + trust*0.02, 0.05, 0.95)
 
 	# غرور ملی = انسجام + قدرت + موفقیت ورزشی

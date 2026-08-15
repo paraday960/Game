@@ -57,13 +57,12 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 		pol["corruption"] -= 0.005
 	pol["corruption"] = clamp(pol["corruption"], 0.0, 0.90)
 
-	# مشروعیت
-	var legitimacy = 0.5
-	legitimacy += pol["trust"] * 0.3
-	legitimacy += (1.0 - pol["corruption"]) * 0.2
-	legitimacy += pol["stability"] * 0.2
-	legitimacy += culture["cohesion"] * 0.1
-	pol["legitimacy"] = clamp(legitimacy, 0.05, 0.95)
+	# مشروعیت — اینرسی نرم به‌سوی هدف (بازرسی ۱۴۰۵، عمق‌بخشی ۴۲):
+	# پیش‌تر از صفر بازمحاسبه می‌شد و شوک‌های رویدادی (نتایج انتخابات +۰٫۰۳/−۰٫۰۲،
+	# اصلاحات مشروعیت‌ساز) فردای همان روز پاک می‌شدند — اتم ناقص.
+	var legitimacy_target = 0.5 + pol["trust"] * 0.3 + (1.0 - pol["corruption"]) * 0.2 \
+		+ pol["stability"] * 0.2 + culture["cohesion"] * 0.1
+	pol["legitimacy"] = clampf(float(pol.get("legitimacy", 0.55)) * 0.997 + legitimacy_target * 0.003, 0.05, 0.95)
 
 	# رویدادهای سیاسی - ۳.۱۲.۵ - آستانه شورش تنش > 80٪
 	if pol["tension"] > float(BalanceConfig.get_value("politics.riot_threshold", 0.8)) and Deterministic.chance(0.1):
