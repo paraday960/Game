@@ -72,6 +72,7 @@ func _sample(state: Dictionary, tick: int, baseline_gdp: float) -> Dictionary:
 		"year": int(clock.get("year", 2027)),
 		"month": int(clock.get("month", 1)),
 		"day": int(clock.get("day", 1)),
+		"label": "%s %s" % [TimeManager.month_name(int(clock.get("month", 1))), PersianFormatter.to_persian_digits(str(int(clock.get("year", 2027))))],
 		"gdp": gdp,
 		"gdp_index": gdp / max(baseline_gdp, 1.0),
 		"gdp_per_capita": float(economy.get("gdp_per_capita", 0.0)),

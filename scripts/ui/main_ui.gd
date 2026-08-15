@@ -6062,7 +6062,7 @@ func _build_tax_card(st: Dictionary):
 	for row in [["income","مالیات بر درآمد"],["corporate","مالیات شرکت"],["vat","مالیات بر ارزش افزوده"],["wealth","مالیات بر ثروت"]]:
 		var r = HBoxContainer.new(); r.add_theme_constant_override("separation", 4); card.add_child(r)
 		var lbl = Label.new(); lbl.text = row[1]; lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; lbl.add_theme_font_size_override("font_size",13); r.add_child(lbl)
-		var val = Label.new(); val.text = "%.0f%%" % (float(tp.get("rates",{}).get(row[0],0))*100.0); val.custom_minimum_size = Vector2(50,0); val.add_theme_font_size_override("font_size",13); r.add_child(val)
+		var val = Label.new(); val.text = PersianFormatter.to_persian_digits("%.0f" % (float(tp.get("rates",{}).get(row[0],0))*100.0)) + "٪"; val.custom_minimum_size = Vector2(50,0); val.add_theme_font_size_override("font_size",13); r.add_child(val)
 		var up = Button.new(); up.text = "＋"; up.custom_minimum_size = Vector2(34,30); up.add_theme_font_size_override("font_size",14)
 		up.pressed.connect(FeedbackManager.play_click); up.pressed.connect(_on_tax_adjust.bind(row[0], 0.02)); r.add_child(up)
 		var down = Button.new(); down.text = "－"; down.custom_minimum_size = Vector2(34,30); down.add_theme_font_size_override("font_size",14)
@@ -6830,7 +6830,7 @@ func _build_unified_map():
 	var constructions = adv_state.get("constructions", [])
 	if not plans.is_empty() or not constructions.is_empty():
 		var active_info = Label.new()
-		active_info.text = "📋 طرح‌های فعال: %d نبرد + %d ساخت‌وساز" % [plans.size(), constructions.size()]
+		active_info.text = "📋 طرح‌های فعال: %s نبرد + %s ساخت‌وساز" % [PersianFormatter.to_persian_digits(str(plans.size())), PersianFormatter.to_persian_digits(str(constructions.size()))]
 		active_info.modulate = Color(0.6,0.85,1.0)
 		controls.add_child(active_info)
 
@@ -7364,7 +7364,7 @@ func _show_comparison_panel():
 		var bar_a = ProgressBar.new(); bar_a.max_value = 1.0; bar_a.value = val_a; bar_a.custom_minimum_size = Vector2(140,14); row.add_child(bar_a)
 		var bar_b = ProgressBar.new(); bar_b.max_value = 1.0; bar_b.value = val_b; bar_b.custom_minimum_size = Vector2(140,14); row.add_child(bar_b)
 		var diff = val_a - val_b
-		var diff_label = Label.new(); diff_label.text = "%+.0f%%" % (diff*100.0); diff_label.modulate = Color(0.2,0.85,0.4) if diff>0 else Color(0.95,0.25,0.25) if diff<0 else Color(0.7,0.7,0.7); row.add_child(diff_label)
+		var diff_label = Label.new(); diff_label.text = PersianFormatter.to_persian_digits("%+.0f" % (diff*100.0)) + "٪"; diff_label.modulate = Color(0.2,0.85,0.4) if diff>0 else Color(0.95,0.25,0.25) if diff<0 else Color(0.7,0.7,0.7); row.add_child(diff_label)
 
 	var clear_btn = Button.new(); clear_btn.text = "❌ پاک کردن مقایسه"; clear_btn.pressed.connect(_on_clear_comparison); compare_card.add_child(clear_btn)
 
