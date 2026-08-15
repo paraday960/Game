@@ -890,6 +890,13 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			elif cabinet_action == "dismiss":
 				if not state.get("cabinet", {}).get("active", {}).has(ministry_id):
 					return {"valid": false, "reason": "وزیر فعالی برای برکناری وجود ندارد"}
+			elif cabinet_action == "mission":
+				var mission_check = CabinetManager.can_mission(state, ministry_id)
+				if not mission_check.valid:
+					return {"valid": false, "reason": mission_check.reason}
+			elif cabinet_action == "mediate":
+				if state.get("cabinet", {}).get("disputes", []).is_empty():
+					return {"valid": false, "reason": "درگیری فعالی در کابینه نیست"}
 			else:
 				return {"valid": false, "reason": "اقدام کابینه نامعتبر است"}
 		elif cmd.type == "law_change":
@@ -2160,7 +2167,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 				EventLog.log_event("national_project_event", project_event, cmd.tick, cmd.version)
 	elif cmd.type == "cabinet_change":
 		var ministry_id = str(cmd.payload.get("ministry_id", ""))
-		var cabinet_result = CabinetManager.appoint(snapshot, ministry_id, str(cmd.payload.get("candidate_id", "")), cmd.tick) if str(cmd.payload.get("action", "appoint")) == "appoint" else CabinetManager.dismiss(snapshot, ministry_id, cmd.tick)
+		var cabinet_result: Dictionary
+		match str(cmd.payload.get("action", "appoint")):
+			"mission": cabinet_result = CabinetManager.assign_mission(snapshot, ministry_id, cmd.tick)
+			"mediate": cabinet_result = CabinetManager.mediate_dispute(snapshot, cmd.tick)
+			"dismiss": cabinet_result = CabinetManager.dismiss(snapshot, ministry_id, cmd.tick)
+			_: cabinet_result = CabinetManager.appoint(snapshot, ministry_id, str(cmd.payload.get("candidate_id", "")), cmd.tick)
 		if cabinet_result.success:
 			snapshot = cabinet_result.state
 			for cabinet_event in cabinet_result.events:

@@ -3018,6 +3018,15 @@ func _build_government():
 		_row(summary, "معوقه حقوق کارکنان", PersianFormatter.to_persian_digits("%.1f ماه" % arrears), _color_for(1.0 - arrears / 12.0))
 	var hint = Label.new(); hint.text = "وزیر کارآمد خروجی وزارتخانه را بهتر می‌کند؛ پاکدستی پایین خطر رسوایی دارد و وفاداری بیشتر انسجام کابینه را حفظ می‌کند. هر انتصاب سرمایه سیاسی مصرف می‌کند."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.modulate = Color(0.75, 0.82, 0.92); summary.add_child(hint)
+	var disputes: Array = CabinetManager.get_disputes(state)
+	if not disputes.is_empty():
+		for d in disputes:
+			var drow = HBoxContainer.new(); drow.add_theme_constant_override("separation", 6); summary.add_child(drow)
+			var dlbl = Label.new(); dlbl.text = "⚡ درگیری: %s و %s" % [CabinetManager.get_candidate_name(str(d.get("a", ""))), CabinetManager.get_candidate_name(str(d.get("b", "")))]
+			dlbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; dlbl.add_theme_font_size_override("font_size", 15); dlbl.modulate = Color(1.0, 0.62, 0.5); drow.add_child(dlbl)
+		var mediate = Button.new(); mediate.text = "🤝 میانجیگری رهبر"; mediate.custom_minimum_size = Vector2(0, 40)
+		mediate.tooltip_text = "پایان درگیری با هزینهٔ ۱ سرمایه سیاسی"
+		mediate.pressed.connect(FeedbackManager.play_click); mediate.pressed.connect(_on_cabinet_mediate); _mark_decision_button(mediate, "cabmediate"); summary.add_child(mediate)
 	_build_parliament_card(state)
 	_build_judiciary_card(state)
 	_build_judicial_reform_card(state)
@@ -3047,8 +3056,17 @@ func _build_government():
 			_bar(card, "شایستگی", float(current.get("competence", 0.5)))
 			_bar(card, "پاکدستی", float(current.get("integrity", 0.5)))
 			_bar(card, "وفاداری", float(current.get("loyalty", 0.5)))
-			var dismiss = Button.new(); dismiss.text = "برکناری وزیر"; dismiss.modulate = Color(1.0, 0.58, 0.55)
-			dismiss.pressed.connect(FeedbackManager.play_click); dismiss.pressed.connect(_on_cabinet_dismiss.bind(str(ministry_id))); _mark_decision_button(dismiss, "cabx:" + str(ministry_id)); card.add_child(dismiss)
+			_row(card, "سن", PersianFormatter.to_persian_digits(str(int(current.get("age", 55)))) + " سال")
+			_row(card, "گرایش", str(current.get("ideology", "—")))
+			var tenure_ui := int(active.get(ministry_id, {}).get("tenure_months", 0))
+			_row(card, "مدت خدمت", PersianFormatter.to_persian_digits(str(tenure_ui)) + " ماه")
+			var action_row = HBoxContainer.new(); action_row.add_theme_constant_override("separation", 4); card.add_child(action_row)
+			var dismiss = Button.new(); dismiss.text = "برکناری"; dismiss.modulate = Color(1.0, 0.58, 0.55)
+			dismiss.pressed.connect(FeedbackManager.play_click); dismiss.pressed.connect(_on_cabinet_dismiss.bind(str(ministry_id))); _mark_decision_button(dismiss, "cabx:" + str(ministry_id)); action_row.add_child(dismiss)
+			var mission_check = CabinetManager.can_mission(state, str(ministry_id))
+			var mission = Button.new(); mission.text = "🎯 مأموریت ویژه"; mission.disabled = not mission_check.valid
+			mission.tooltip_text = "مدیریت بحران حوزهٔ خود؛ موفقیت به شایستگی/پاکدستی/انسجام بستگی دارد" if mission_check.valid else str(mission_check.reason)
+			mission.pressed.connect(FeedbackManager.play_click); mission.pressed.connect(_on_cabinet_mission.bind(str(ministry_id))); _mark_decision_button(mission, "cabmission:" + str(ministry_id)); action_row.add_child(mission)
 		var candidates_title = Label.new(); candidates_title.text = "نامزدهای معرفی‌شده"; candidates_title.add_theme_font_size_override("font_size", 16); card.add_child(candidates_title)
 		for candidate in ministry.get("candidates", []):
 			var candidate_id = str(candidate.get("id", ""))
@@ -3062,6 +3080,14 @@ func _build_government():
 func _on_cabinet_appoint(ministry_id: String, candidate_id: String, candidate_name: String):
 	if _queue_decision(GameCommandClass.create_cabinet_appointment(ministry_id, candidate_id), "👔 انتصاب وزیر: " + candidate_name):
 		_toast("👔 %s با پایان نوبت به کابینه منصوب می‌شود" % candidate_name); _switch_tab("government")
+
+func _on_cabinet_mission(ministry_id: String):
+	if _queue_decision(GameCommandClass.create_cabinet_mission(ministry_id), "🎯 مأموریت ویژه به وزیر"):
+		_toast("🎯 مأموریت ویژه ثبت شد — نتیجه با پایان نوبت مشخص می‌شود"); _switch_tab("government")
+
+func _on_cabinet_mediate():
+	if _queue_decision(GameCommandClass.create_cabinet_mediate(), "🤝 میانجیگری در کابینه"):
+		_toast("🤝 میانجیگری ثبت شد — با پایان نوبت اعمال می‌شود"); _switch_tab("government")
 
 func _on_cabinet_dismiss(ministry_id: String):
 	if _queue_decision(GameCommandClass.create_cabinet_dismissal(ministry_id), "⛔ برکناری وزیر"):
@@ -8874,7 +8900,11 @@ func _command_queue_key(cmd) -> String:
 		"policy_change": return "policy:" + str(p.get("policy_id", ""))
 		"law_change": return "law:" + str(p.get("law_id", "")) + ":" + str(p.get("action", ""))
 		"cabinet_change":
-			return ("cabx:" if str(p.get("action", "")) == "dismiss" else "cab:") + str(p.get("ministry_id", ""))
+			match str(p.get("action", "")):
+				"dismiss": return "cabx:" + str(p.get("ministry_id", ""))
+				"mission": return "cabmission:" + str(p.get("ministry_id", ""))
+				"mediate": return "cabmediate"
+			return "cab:" + str(p.get("ministry_id", ""))
 		"national_project":
 			return ("projx:" if str(p.get("action", "")) == "cancel" else "proj:") + str(p.get("project_id", ""))
 		"research_start": return "res:" + str(p.get("tech_id", ""))

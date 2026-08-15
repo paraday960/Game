@@ -95,6 +95,14 @@ static func create_cabinet_appointment(ministry_id: String, candidate_id: String
 static func create_cabinet_dismissal(ministry_id: String):
 	return _self_script().new("cabinet_change", {"ministry_id": ministry_id, "candidate_id": "", "action": "dismiss"})
 
+static func create_cabinet_mission(ministry_id: String):
+	# مأموریت ویژه به وزیر در بحران (عمق‌بخشی ۴۴)
+	return _self_script().new("cabinet_change", {"ministry_id": ministry_id, "action": "mission"})
+
+static func create_cabinet_mediate():
+	# میانجیگری رهبر در درگیری وزرا
+	return _self_script().new("cabinet_change", {"action": "mediate"})
+
 static func create_law_change(law_id: String, action: String):
 	return _self_script().new("law_change", {"law_id": law_id, "action": action})
 

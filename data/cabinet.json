@@ -1,46 +1,565 @@
 {
-  "version":"1.0.0",
-  "appointment_cost":0.5,
-  "ministries":[
-    {"id":"economy","name_fa":"وزارت اقتصاد","effects":[{"path":"economy.growth_rate","value":0.0015,"min":-0.05,"max":0.08},{"path":"economy.unemployment","value":-0.0010,"min":0.02,"max":0.35}],"candidates":[
-      {"id":"econ_rahimi","name_fa":"آرمان رحیمی","competence":0.78,"integrity":0.70,"loyalty":0.60,"experience":0.76},
-      {"id":"econ_naderi","name_fa":"سارا نادری","competence":0.88,"integrity":0.82,"loyalty":0.48,"experience":0.68},
-      {"id":"econ_karimi","name_fa":"فرهاد کریمی","competence":0.61,"integrity":0.42,"loyalty":0.86,"experience":0.80}]},
-    {"id":"health","name_fa":"وزارت بهداشت","effects":[{"path":"health.quality","value":0.0040,"min":0,"max":1},{"path":"health.coverage","value":0.0030,"min":0,"max":1}],"candidates":[
-      {"id":"health_moradi","name_fa":"دکتر نازنین مرادی","competence":0.90,"integrity":0.84,"loyalty":0.52,"experience":0.82},
-      {"id":"health_salehi","name_fa":"دکتر کامران صالحی","competence":0.74,"integrity":0.64,"loyalty":0.72,"experience":0.78},
-      {"id":"health_azadi","name_fa":"مینا آزادی","competence":0.67,"integrity":0.91,"loyalty":0.44,"experience":0.56}]},
-    {"id":"education","name_fa":"وزارت آموزش","effects":[{"path":"education.quality","value":0.0040,"min":0,"max":1},{"path":"education.skill_match","value":0.0030,"min":0,"max":1}],"candidates":[
-      {"id":"edu_farhadi","name_fa":"لیلا فرهادی","competence":0.86,"integrity":0.88,"loyalty":0.50,"experience":0.71},
-      {"id":"edu_rahbar","name_fa":"محسن رهبر","competence":0.72,"integrity":0.58,"loyalty":0.82,"experience":0.75},
-      {"id":"edu_soroush","name_fa":"شادی سروش","competence":0.80,"integrity":0.76,"loyalty":0.46,"experience":0.62}]},
-    {"id":"defense","name_fa":"وزارت دفاع","effects":[{"path":"military.readiness","value":0.0030,"min":0.1,"max":1},{"path":"military.deterrence","value":0.40,"min":0,"max":100}],"candidates":[
-      {"id":"def_samadi","name_fa":"امیر سهراب صمدی","competence":0.84,"integrity":0.72,"loyalty":0.78,"experience":0.90},
-      {"id":"def_yazdan","name_fa":"پرویز یزدان‌پناه","competence":0.76,"integrity":0.55,"loyalty":0.90,"experience":0.83},
-      {"id":"def_sharifi","name_fa":"ناهید شریفی","competence":0.89,"integrity":0.86,"loyalty":0.45,"experience":0.66}]},
-    {"id":"interior","name_fa":"وزارت کشور","effects":[{"path":"security.public_security","value":0.0035,"min":0,"max":1},{"path":"administration.efficiency","value":0.0025,"min":0,"max":1}],"candidates":[
-      {"id":"int_sadeghi","name_fa":"رضا صادقی","competence":0.73,"integrity":0.61,"loyalty":0.84,"experience":0.79},
-      {"id":"int_mehr","name_fa":"الهام مهرآیین","competence":0.85,"integrity":0.87,"loyalty":0.53,"experience":0.68},
-      {"id":"int_bahrami","name_fa":"بهروز بهرامی","competence":0.64,"integrity":0.39,"loyalty":0.92,"experience":0.81}]},
-    {"id":"foreign","name_fa":"وزارت امور خارجه","effects":[{"path":"diplomacy.influence","value":0.30,"min":0,"max":100},{"path":"diplomacy.soft_power","value":0.25,"min":0,"max":100}],"candidates":[
-      {"id":"for_davari","name_fa":"مهتاب داوری","competence":0.87,"integrity":0.81,"loyalty":0.48,"experience":0.84},
-      {"id":"for_khosravi","name_fa":"سامان خسروی","competence":0.79,"integrity":0.65,"loyalty":0.72,"experience":0.77},
-      {"id":"for_jamali","name_fa":"نادر جمالی","competence":0.68,"integrity":0.44,"loyalty":0.88,"experience":0.86}]},
-    {"id":"infrastructure","name_fa":"وزارت راه و زیرساخت","effects":[{"path":"infrastructure.quality","value":0.0035,"min":0,"max":1},{"path":"transport_detail.logistics_efficiency","value":0.0030,"min":0,"max":1}],"candidates":[
-      {"id":"infra_rasti","name_fa":"کیوان راستی","competence":0.88,"integrity":0.73,"loyalty":0.55,"experience":0.82},
-      {"id":"infra_panahi","name_fa":"آیدا پناهی","competence":0.82,"integrity":0.90,"loyalty":0.43,"experience":0.64},
-      {"id":"infra_tavakoli","name_fa":"مجید توکلی","competence":0.66,"integrity":0.36,"loyalty":0.91,"experience":0.85}]},
-    {"id":"science","name_fa":"وزارت علم و فناوری","effects":[{"path":"technology.research_points","value":0.35,"min":0},{"path":"statistics.accuracy","value":0.0025,"min":0,"max":1}],"candidates":[
-      {"id":"sci_parsa","name_fa":"دکتر رویا پارسا","competence":0.93,"integrity":0.86,"loyalty":0.41,"experience":0.73},
-      {"id":"sci_ebadi","name_fa":"حامد عبادی","competence":0.80,"integrity":0.69,"loyalty":0.69,"experience":0.76},
-      {"id":"sci_nikfar","name_fa":"مریم نیک‌فر","competence":0.75,"integrity":0.92,"loyalty":0.39,"experience":0.58}]},
-    {"id":"environment","name_fa":"وزارت محیط‌زیست","effects":[{"path":"environment.air_quality","value":0.0035,"min":0,"max":1},{"path":"environment.carbon_emission","value":-0.0030,"min":0,"max":1}],"candidates":[
-      {"id":"env_roshan","name_fa":"پریسا روشن","competence":0.85,"integrity":0.91,"loyalty":0.42,"experience":0.66},
-      {"id":"env_omid","name_fa":"داریوش امید","competence":0.72,"integrity":0.70,"loyalty":0.73,"experience":0.71},
-      {"id":"env_kiani","name_fa":"بهنام کیانی","competence":0.63,"integrity":0.40,"loyalty":0.88,"experience":0.80}]},
-    {"id":"agriculture","name_fa":"وزارت کشاورزی","effects":[{"path":"agriculture.food_security","value":0.0035,"min":0,"max":1},{"path":"agriculture.waste","value":-0.0025,"min":0,"max":1}],"candidates":[
-      {"id":"agr_zarei","name_fa":"یوسف زارعی","competence":0.81,"integrity":0.77,"loyalty":0.63,"experience":0.88},
-      {"id":"agr_baran","name_fa":"سپیده باران","competence":0.89,"integrity":0.89,"loyalty":0.40,"experience":0.61},
-      {"id":"agr_hosseini","name_fa":"قاسم حسینی","competence":0.65,"integrity":0.38,"loyalty":0.93,"experience":0.84}]}
-  ]
+ "version": "1.0.0",
+ "appointment_cost": 0.5,
+ "ministries": [
+  {
+   "id": "economy",
+   "name_fa": "وزارت اقتصاد",
+   "effects": [
+    {
+     "path": "economy.growth_rate",
+     "value": 0.0015,
+     "min": -0.05,
+     "max": 0.08
+    },
+    {
+     "path": "economy.unemployment",
+     "value": -0.001,
+     "min": 0.02,
+     "max": 0.35
+    }
+   ],
+   "candidates": [
+    {
+     "id": "econ_rahimi",
+     "name_fa": "آرمان رحیمی",
+     "competence": 0.78,
+     "integrity": 0.7,
+     "loyalty": 0.6,
+     "experience": 0.76,
+     "age": 61,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.5,
+     "resilience": 0.79
+    },
+    {
+     "id": "econ_naderi",
+     "name_fa": "سارا نادری",
+     "competence": 0.88,
+     "integrity": 0.82,
+     "loyalty": 0.48,
+     "experience": 0.68,
+     "age": 58,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.73,
+     "resilience": 0.44
+    },
+    {
+     "id": "econ_karimi",
+     "name_fa": "فرهاد کریمی",
+     "competence": 0.61,
+     "integrity": 0.42,
+     "loyalty": 0.86,
+     "experience": 0.8,
+     "age": 62,
+     "ideology": "پوپولیست",
+     "ambition": 0.43,
+     "resilience": 0.86
+    }
+   ]
+  },
+  {
+   "id": "health",
+   "name_fa": "وزارت بهداشت",
+   "effects": [
+    {
+     "path": "health.quality",
+     "value": 0.004,
+     "min": 0,
+     "max": 1
+    },
+    {
+     "path": "health.coverage",
+     "value": 0.003,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "health_moradi",
+     "name_fa": "دکتر نازنین مرادی",
+     "competence": 0.9,
+     "integrity": 0.84,
+     "loyalty": 0.52,
+     "experience": 0.82,
+     "age": 61,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.71,
+     "resilience": 0.55
+    },
+    {
+     "id": "health_salehi",
+     "name_fa": "دکتر کامران صالحی",
+     "competence": 0.74,
+     "integrity": 0.64,
+     "loyalty": 0.72,
+     "experience": 0.78,
+     "age": 60,
+     "ideology": "پوپولیست",
+     "ambition": 0.78,
+     "resilience": 0.31
+    },
+    {
+     "id": "health_azadi",
+     "name_fa": "مینا آزادی",
+     "competence": 0.67,
+     "integrity": 0.91,
+     "loyalty": 0.44,
+     "experience": 0.56,
+     "age": 55,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.8,
+     "resilience": 0.4
+    }
+   ]
+  },
+  {
+   "id": "education",
+   "name_fa": "وزارت آموزش",
+   "effects": [
+    {
+     "path": "education.quality",
+     "value": 0.004,
+     "min": 0,
+     "max": 1
+    },
+    {
+     "path": "education.skill_match",
+     "value": 0.003,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "edu_farhadi",
+     "name_fa": "لیلا فرهادی",
+     "competence": 0.86,
+     "integrity": 0.88,
+     "loyalty": 0.5,
+     "experience": 0.71,
+     "age": 60,
+     "ideology": "پوپولیست",
+     "ambition": 0.47,
+     "resilience": 0.76
+    },
+    {
+     "id": "edu_rahbar",
+     "name_fa": "محسن رهبر",
+     "competence": 0.72,
+     "integrity": 0.58,
+     "loyalty": 0.82,
+     "experience": 0.75,
+     "age": 59,
+     "ideology": "تکنوکرات",
+     "ambition": 0.11,
+     "resilience": 0.24
+    },
+    {
+     "id": "edu_soroush",
+     "name_fa": "شادی سروش",
+     "competence": 0.8,
+     "integrity": 0.76,
+     "loyalty": 0.46,
+     "experience": 0.62,
+     "age": 57,
+     "ideology": "پوپولیست",
+     "ambition": 0.37,
+     "resilience": 0.29
+    }
+   ]
+  },
+  {
+   "id": "defense",
+   "name_fa": "وزارت دفاع",
+   "effects": [
+    {
+     "path": "military.readiness",
+     "value": 0.003,
+     "min": 0.1,
+     "max": 1
+    },
+    {
+     "path": "military.deterrence",
+     "value": 0.4,
+     "min": 0,
+     "max": 100
+    }
+   ],
+   "candidates": [
+    {
+     "id": "def_samadi",
+     "name_fa": "امیر سهراب صمدی",
+     "competence": 0.84,
+     "integrity": 0.72,
+     "loyalty": 0.78,
+     "experience": 0.9,
+     "age": 62,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.12,
+     "resilience": 0.86
+    },
+    {
+     "id": "def_yazdan",
+     "name_fa": "پرویز یزدان‌پناه",
+     "competence": 0.76,
+     "integrity": 0.55,
+     "loyalty": 0.9,
+     "experience": 0.83,
+     "age": 63,
+     "ideology": "تکنوکرات",
+     "ambition": 0.66,
+     "resilience": 0.47
+    },
+    {
+     "id": "def_sharifi",
+     "name_fa": "ناهید شریفی",
+     "competence": 0.89,
+     "integrity": 0.86,
+     "loyalty": 0.45,
+     "experience": 0.66,
+     "age": 59,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.27,
+     "resilience": 0.27
+    }
+   ]
+  },
+  {
+   "id": "interior",
+   "name_fa": "وزارت کشور",
+   "effects": [
+    {
+     "path": "security.public_security",
+     "value": 0.0035,
+     "min": 0,
+     "max": 1
+    },
+    {
+     "path": "administration.efficiency",
+     "value": 0.0025,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "int_sadeghi",
+     "name_fa": "رضا صادقی",
+     "competence": 0.73,
+     "integrity": 0.61,
+     "loyalty": 0.84,
+     "experience": 0.79,
+     "age": 63,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.48,
+     "resilience": 0.63
+    },
+    {
+     "id": "int_mehr",
+     "name_fa": "الهام مهرآیین",
+     "competence": 0.85,
+     "integrity": 0.87,
+     "loyalty": 0.53,
+     "experience": 0.68,
+     "age": 60,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.46,
+     "resilience": 0.4
+    },
+    {
+     "id": "int_bahrami",
+     "name_fa": "بهروز بهرامی",
+     "competence": 0.64,
+     "integrity": 0.39,
+     "loyalty": 0.92,
+     "experience": 0.81,
+     "age": 63,
+     "ideology": "تکنوکرات",
+     "ambition": 0.85,
+     "resilience": 0.74
+    }
+   ]
+  },
+  {
+   "id": "foreign",
+   "name_fa": "وزارت امور خارجه",
+   "effects": [
+    {
+     "path": "diplomacy.influence",
+     "value": 0.3,
+     "min": 0,
+     "max": 100
+    },
+    {
+     "path": "diplomacy.soft_power",
+     "value": 0.25,
+     "min": 0,
+     "max": 100
+    }
+   ],
+   "candidates": [
+    {
+     "id": "for_davari",
+     "name_fa": "مهتاب داوری",
+     "competence": 0.87,
+     "integrity": 0.81,
+     "loyalty": 0.48,
+     "experience": 0.84,
+     "age": 64,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.78,
+     "resilience": 0.28
+    },
+    {
+     "id": "for_khosravi",
+     "name_fa": "سامان خسروی",
+     "competence": 0.79,
+     "integrity": 0.65,
+     "loyalty": 0.72,
+     "experience": 0.77,
+     "age": 61,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.17,
+     "resilience": 0.49
+    },
+    {
+     "id": "for_jamali",
+     "name_fa": "نادر جمالی",
+     "competence": 0.68,
+     "integrity": 0.44,
+     "loyalty": 0.88,
+     "experience": 0.86,
+     "age": 61,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.78,
+     "resilience": 0.61
+    }
+   ]
+  },
+  {
+   "id": "infrastructure",
+   "name_fa": "وزارت راه و زیرساخت",
+   "effects": [
+    {
+     "path": "infrastructure.quality",
+     "value": 0.0035,
+     "min": 0,
+     "max": 1
+    },
+    {
+     "path": "transport_detail.logistics_efficiency",
+     "value": 0.003,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "infra_rasti",
+     "name_fa": "کیوان راستی",
+     "competence": 0.88,
+     "integrity": 0.73,
+     "loyalty": 0.55,
+     "experience": 0.82,
+     "age": 62,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.19,
+     "resilience": 0.27
+    },
+    {
+     "id": "infra_panahi",
+     "name_fa": "آیدا پناهی",
+     "competence": 0.82,
+     "integrity": 0.9,
+     "loyalty": 0.43,
+     "experience": 0.64,
+     "age": 58,
+     "ideology": "تکنوکرات",
+     "ambition": 0.29,
+     "resilience": 0.49
+    },
+    {
+     "id": "infra_tavakoli",
+     "name_fa": "مجید توکلی",
+     "competence": 0.66,
+     "integrity": 0.36,
+     "loyalty": 0.91,
+     "experience": 0.85,
+     "age": 62,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.32,
+     "resilience": 0.35
+    }
+   ]
+  },
+  {
+   "id": "science",
+   "name_fa": "وزارت علم و فناوری",
+   "effects": [
+    {
+     "path": "technology.research_points",
+     "value": 0.35,
+     "min": 0
+    },
+    {
+     "path": "statistics.accuracy",
+     "value": 0.0025,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "sci_parsa",
+     "name_fa": "دکتر رویا پارسا",
+     "competence": 0.93,
+     "integrity": 0.86,
+     "loyalty": 0.41,
+     "experience": 0.73,
+     "age": 62,
+     "ideology": "تکنوکرات",
+     "ambition": 0.1,
+     "resilience": 0.44
+    },
+    {
+     "id": "sci_ebadi",
+     "name_fa": "حامد عبادی",
+     "competence": 0.8,
+     "integrity": 0.69,
+     "loyalty": 0.69,
+     "experience": 0.76,
+     "age": 63,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.19,
+     "resilience": 0.74
+    },
+    {
+     "id": "sci_nikfar",
+     "name_fa": "مریم نیک‌فر",
+     "competence": 0.75,
+     "integrity": 0.92,
+     "loyalty": 0.39,
+     "experience": 0.58,
+     "age": 56,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.42,
+     "resilience": 0.82
+    }
+   ]
+  },
+  {
+   "id": "environment",
+   "name_fa": "وزارت محیط‌زیست",
+   "effects": [
+    {
+     "path": "environment.air_quality",
+     "value": 0.0035,
+     "min": 0,
+     "max": 1
+    },
+    {
+     "path": "environment.carbon_emission",
+     "value": -0.003,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "env_roshan",
+     "name_fa": "پریسا روشن",
+     "competence": 0.85,
+     "integrity": 0.91,
+     "loyalty": 0.42,
+     "experience": 0.66,
+     "age": 57,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.64,
+     "resilience": 0.58
+    },
+    {
+     "id": "env_omid",
+     "name_fa": "داریوش امید",
+     "competence": 0.72,
+     "integrity": 0.7,
+     "loyalty": 0.73,
+     "experience": 0.71,
+     "age": 58,
+     "ideology": "محافظه‌کار",
+     "ambition": 0.6,
+     "resilience": 0.46
+    },
+    {
+     "id": "env_kiani",
+     "name_fa": "بهنام کیانی",
+     "competence": 0.63,
+     "integrity": 0.4,
+     "loyalty": 0.88,
+     "experience": 0.8,
+     "age": 60,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.6,
+     "resilience": 0.5
+    }
+   ]
+  },
+  {
+   "id": "agriculture",
+   "name_fa": "وزارت کشاورزی",
+   "effects": [
+    {
+     "path": "agriculture.food_security",
+     "value": 0.0035,
+     "min": 0,
+     "max": 1
+    },
+    {
+     "path": "agriculture.waste",
+     "value": -0.0025,
+     "min": 0,
+     "max": 1
+    }
+   ],
+   "candidates": [
+    {
+     "id": "agr_zarei",
+     "name_fa": "یوسف زارعی",
+     "competence": 0.81,
+     "integrity": 0.77,
+     "loyalty": 0.63,
+     "experience": 0.88,
+     "age": 63,
+     "ideology": "پوپولیست",
+     "ambition": 0.44,
+     "resilience": 0.65
+    },
+    {
+     "id": "agr_baran",
+     "name_fa": "سپیده باران",
+     "competence": 0.89,
+     "integrity": 0.89,
+     "loyalty": 0.4,
+     "experience": 0.61,
+     "age": 56,
+     "ideology": "اصلاح‌طلب",
+     "ambition": 0.54,
+     "resilience": 0.77
+    },
+    {
+     "id": "agr_hosseini",
+     "name_fa": "قاسم حسینی",
+     "competence": 0.65,
+     "integrity": 0.38,
+     "loyalty": 0.93,
+     "experience": 0.84,
+     "age": 64,
+     "ideology": "تکنوکرات",
+     "ambition": 0.77,
+     "resilience": 0.57
+    }
+   ]
+  }
+ ]
 }
