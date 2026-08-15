@@ -15,5 +15,12 @@ static func check_conflict(current_version: int, incoming_version: int) -> Dicti
 
 # ایدمپوتنسی - بخش ۳.۷ لایه ۲
 # هر عملیات قابل تکرار امن باشد
-static func make_idempotent_key(command_type: String, tick: int, player_id: String) -> String:
-	return "%s:%d:%s" % [command_type, tick, player_id]
+# کلید یکتا = نوع + تیک + بازیکن + «هش محتوای payload» تا دو فرمان از یک
+# نوع با اهداف مختلف (مثلاً دو اقدام دیپلماتیک به دو کشور، دو قانون، دو
+# پروژه) در یک نوبت «تکراری» تلقی نشوند — فقط فرمان‌های واقعاً یکسان
+# (payload یکسان) رد می‌شوند. (بازرسی ۱۴۰۵ — رفع «فرمان تکراری دریافت شد»)
+static func make_idempotent_key(command_type: String, tick: int, player_id: String, payload: Dictionary = {}) -> String:
+	var content_hash := 0
+	if not payload.is_empty():
+		content_hash = JSON.stringify(payload).hash()
+	return "%s:%d:%s:%d" % [command_type, tick, player_id, content_hash]

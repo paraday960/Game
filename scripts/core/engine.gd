@@ -449,7 +449,7 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		if cmd.tick != expected_tick or cmd.version != expected_version:
 			return {"valid": false, "reason": "فرمان متعلق به تیک یا نسخه دیگری است"}
 
-		var receipt_key = VersioningClass.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id)
+		var receipt_key = VersioningClass.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id, cmd.payload)
 		if seen.has(receipt_key) or receipts.has(receipt_key):
 			return {"valid": false, "reason": "فرمان تکراری دریافت شد"}
 		seen[receipt_key] = true
@@ -957,7 +957,7 @@ func _record_command_receipts(snapshot: Dictionary, commands: Array):
 	var receipts: Array = snapshot.get("command_receipts", []).duplicate()
 	for cmd in commands:
 		if cmd is GameCommandClass:
-			receipts.append(VersioningClass.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id))
+			receipts.append(VersioningClass.make_idempotent_key(cmd.type, cmd.tick, cmd.player_id, cmd.payload))
 	while receipts.size() > MAX_COMMAND_RECEIPTS:
 		receipts.pop_front()
 	snapshot["command_receipts"] = receipts
