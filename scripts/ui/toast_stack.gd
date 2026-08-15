@@ -36,7 +36,9 @@ func push_message(message:String,severity:String="info"):
 	panel.clip_contents = true
 	var label=Label.new();label.text=message;label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_font_size_override("font_size",24);label.modulate=Color(0.92,0.97,0.98);label.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.custom_minimum_size = Vector2(0, 0)
+	# حداقل عرض/ارتفاع برای نمایش متن؛ بدون این، Label در کادر خالی ۱×۱ میماند
+	# (ارتفاع ۳۶ = یک خط متن با font_size ۲۴ + حاشیه) — روی همه دستگاهها تضمین دید
+	label.custom_minimum_size = Vector2(140, 36)
 	# متن‌های بسیار بلند با سه‌نقطه کوتاه می‌شوند تا هرگز از کادر بیرون نزنند
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
