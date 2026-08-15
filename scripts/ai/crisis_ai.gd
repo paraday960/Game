@@ -61,7 +61,19 @@ func diagnose(state: Dictionary) -> Dictionary:
 	if float(pol.get("stability", 0.6)) < 0.35:
 		weight += 1.5
 	if weight <= 0.0:
-		return {}
+		# در آرامش: تشخیص خنثی (health=1، urgency=0) تا شورای هوشمند بتواند
+		# همه‌ی agent ها را بشمارد؛ هیچ فرمانی ساخته نمی‌شود.
+		return {
+			"system": "crisis",
+			"title": "مدیریت بحران",
+			"metric_path": "events_active",
+			"value": 0.0,
+			"target": 0.0,
+			"health": 1.0,
+			"urgency": 0.0,
+			"budget_key": "ذخیره",
+			"reason": "هیچ بحران فعالی وجود ندارد؛ سامانه در وضعیت عادی است"
+		}
 
 	var urgency := clampf(weight / 8.0, 0.0, 1.0)
 	var health := 1.0 - urgency

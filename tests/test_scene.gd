@@ -317,7 +317,7 @@ func _ready():
 
 	# هماهنگ‌کننده باید همه هوش‌ها را تحلیل و یک پیشنهاد معتبر تولید کند.
 	var diagnoses = AIAdvisor.analyze(s, t)
-	if AIAdvisor.agents.size() != 66 or diagnoses.size() != 66:
+	if AIAdvisor.agents.size() != 67 or diagnoses.size() != 67:
 		failed.append("شورای هوشمند همه ۶۶ سامانه را تحلیل نکرد")
 	else:
 		var advisor_cmds = AIAdvisor.build_autonomous_commands(s, t, 1)
@@ -328,7 +328,7 @@ func _ready():
 			if not advisor_result.success:
 				failed.append("پیشنهاد شورای هوشمند نامعتبر بود: " + advisor_result.reason)
 			else:
-				print("AI advisor: 66 diagnoses + valid action OK")
+				print("AI advisor: 67 diagnoses + valid action OK")
 
 	# سیاست عمومی: فعال‌سازی اتمی، اثر روزانه و تعارض راهبردی
 	var policy_state = s.duplicate(true)

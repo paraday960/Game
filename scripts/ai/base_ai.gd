@@ -72,7 +72,8 @@ const PROFILES = {
 	"veterans": ["veterans.health_care", 0.75, "low", "رفاه", "خدمات ایثارگران", 1.0],
 	"welfare": ["welfare.poverty", 0.12, "high", "رفاه", "کاهش فقر", 1.0],
 	"workforce_jobs": ["workforce_detail.unemployed", 0.08, "high", "آموزش", "اشتغال نیروی کار", 1.0],
-	"trade_route_warfare": ["trade_route_warfare.blockade_effectiveness", 0.30, "high", "امنیت", "امنیت مسیرهای تجاری", 1.0]
+	"trade_route_warfare": ["trade_route_warfare.blockade_effectiveness", 0.30, "high", "امنیت", "امنیت مسیرهای تجاری", 1.0],
+	"crisis": ["economy.debt_to_gdp", 0.4, "low", "ذخیره", "فشار کلان و بحران", 1.0]
 }
 
 func get_system_key() -> String:
