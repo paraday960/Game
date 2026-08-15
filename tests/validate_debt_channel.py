@@ -73,7 +73,7 @@ DEBT_WRITER_CENSUS = {
     "scripts/core/urban_manager.gd": 3,
     "scripts/core/veterans_manager.gd": 0,  # مستمری به کانال رفت؛ شارژ دوم مازاد (دوشماره‌ای) حذف شد
     "scripts/core/welfare_manager.gd": 3,  # انتقال‌ها به کانال رفت؛ ۲ اقدام + رویداد بحران صندوق باقی
-    "scripts/core/world_manager.gd": 3,
+    "scripts/core/world_manager.gd": 4,  # + کمک بشردوستانه (عمق‌بخشی ۱۳؛ هزینه یک‌باره به بدهی)
     "scripts/systems/economy_system.gd": 2,   # مالک مخزن: تسویهٔ کسری/سود + اوراق جنگی
     "scripts/systems/map_advanced_system.gd": 4,
     "scripts/systems/military_system.gd": 1,  # سهم اوراق جنگی

@@ -12,7 +12,7 @@ const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
 	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
-	"assassinate", "leader_hidden", "faction_action", "set_war_goal",
+	"assassinate", "leader_hidden", "leader_name", "faction_action", "set_war_goal",
 	"general_recruit", "general_assign", "media_policy", "media_campaign",
 	"commodity_trade", "org_toggle", "org_vote",
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
@@ -822,6 +822,10 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "leader_hidden":
 			if not (cmd.payload.get("hidden", false) is bool):
 				return {"valid": false, "reason": "مقدار وضعیت رهبر نامعتبر است"}
+		elif cmd.type == "leader_name":
+			var name_check: String = str(cmd.payload.get("name", "")).strip_edges()
+			if name_check.length() < 2 or name_check.length() > 30:
+				return {"valid": false, "reason": "نام رهبر باید بین ۲ تا ۳۰ نویسه باشد"}
 		elif cmd.type == "research_start":
 			var tech_id = str(cmd.payload.get("tech_id", ""))
 			var technology_check = TechnologyManager.can_start(state, tech_id)
@@ -2066,6 +2070,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		var hide_result = LeaderManager.set_hidden(snapshot, bool(cmd.payload.get("hidden", false)), cmd.tick)
 		snapshot = hide_result.state
 		for ev in hide_result.get("events", []):
+			if ev is Dictionary:
+				EventLog.log_event("world_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "leader_name":
+		var name_result = LeaderManager.set_leader_name(snapshot, str(cmd.payload.get("name", "")))
+		snapshot = name_result.state
+		for ev in name_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("world_event", ev, cmd.tick, cmd.version)
 	elif cmd.type == "research_start":

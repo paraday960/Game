@@ -116,6 +116,9 @@ static func create_assassinate(target_country: String):
 static func create_leader_hidden(hidden: bool):
 	return _self_script().new("leader_hidden", {"hidden": hidden})
 
+static func create_leader_name(name: String):
+	return _self_script().new("leader_name", {"name": name})
+
 static func create_faction_action(faction: String, action: String):
 	return _self_script().new("faction_action", {"faction": faction, "action": action})
 

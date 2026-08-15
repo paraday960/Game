@@ -1473,6 +1473,19 @@ func _build_leader_card(st: Dictionary):
 		_row(card, "نام", leader_name)
 		if leader_age > 0:
 			_row(card, "سن", PersianFormatter.to_persian_digits(str(leader_age)) + " سال")
+	# انتخاب نام رهبر توسط بازیکن (عمق‌بخشی ۱۳)
+	var name_row := HBoxContainer.new(); name_row.add_theme_constant_override("separation", 6); card.add_child(name_row)
+	var name_input := LineEdit.new()
+	name_input.placeholder_text = "نام جدید رهبر…"
+	name_input.custom_minimum_size = Vector2(0, 42)
+	name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_input.add_theme_font_size_override("font_size", 18)
+	name_row.add_child(name_input)
+	var name_btn := Button.new(); name_btn.text = "✎ ثبت"
+	name_btn.custom_minimum_size = Vector2(80, 42)
+	name_btn.add_theme_font_size_override("font_size", 18)
+	name_btn.pressed.connect(_on_leader_name_chosen.bind(name_input))
+	name_row.add_child(name_btn)
 	var hidden := bool(leader.get("hidden", false))
 	_row(card, "وضعیت", "🛡 پنهان (مکان امن)" if hidden else "☀ آشکار (در برابر مردم)")
 	var pop := clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
@@ -1901,6 +1914,25 @@ func _build_onboarding_card(state: Dictionary):
 func _on_dismiss_tutorial():
 	SettingsManager.set_value("tutorial_dismissed", true)
 	_switch_tab("dashboard")
+
+# ── انتخاب نام رهبر توسط بازیکن (عمق‌بخشی ۱۳) ──
+func _on_leader_name_chosen(input: LineEdit):
+	var name: String = input.text.strip_edges()
+	if name.length() < 2:
+		_toast("⚠️ نام رهبر باید حداقل ۲ نویسه باشد")
+		return
+	var cmd = GameCommandClass.create_leader_name(name)
+	var s = GameState.state.duplicate(true)
+	var v = GameState.version
+	var t = GameState.tick
+	var result = GameEngine.tick(s, v, t, [cmd])
+	if result.success:
+		GameState.set_state(result.state, result.version, result.tick)
+		_toast("✅ نام رهبر به «%s» تغییر کرد" % name)
+		if current_tab != "":
+			_switch_tab(current_tab)
+	else:
+		_toast("⚠️ " + str(result.get("reason", "نامعتبر است")))
 
 func _build_timeline_card(state: Dictionary):
 	var audit: Dictionary = state.get("audit", {})
@@ -7755,7 +7787,11 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		["end_trade_agreement", "پایان توافق تجاری"], ["form_alliance", "تشکیل اتحاد"],
 		["leave_alliance", "خروج از اتحاد"], ["sanction", "اعمال تحریم"],
 		["lift_sanction", "لغو تحریم"], ["negotiate_sanctions", "مذاکره تحریم"],
-		["ultimatum", "اولتیماتوم"], ["declare_war", "اعلام جنگ"], ["offer_peace", "پیشنهاد صلح"]
+		["ultimatum", "اولتیماتوم"], ["declare_war", "اعلام جنگ"], ["offer_peace", "پیشنهاد صلح"],
+		# دیپلماسی واقعی (عمق‌بخشی ۱۳)
+		["humanitarian_aid", "🤲 کمک بشردوستانه"], ["open_embassy", "🏛 بازگشایی سفارت"],
+		["de_escalate", "🕊 گفت‌وگوی تنش‌زدایی"], ["defense_pact", "🛡 پیمان دفاعی متقابل"],
+		["leave_defense_pact", "📜 فسخ پیمان دفاعی"], ["cultural_diplomacy", "🎭 دیپلماسی فرهنگی"]
 	]
 	for action_def in actions:
 		var check = WorldManager.can_action(state, target, action_def[0])
@@ -7772,6 +7808,36 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 		button.pressed.connect(_on_world_action.bind(target, action_def[0], action_def[1]))
 		_mark_decision_button(button, "dip:" + str(target) + ":" + str(action_def[0]))
 		action_grid.add_child(button)
+
+	# ── میانجیگری صلح در جنگ‌های جهانی (عمق‌بخشی ۱۳) ──
+	var npc_wars: Dictionary = state.get("world", {}).get("npc_wars", {})
+	if not npc_wars.is_empty():
+		var med_lbl = Label.new()
+		med_lbl.text = "🕊 میانجیگری صلح در جنگ‌های جهانی:"
+		med_lbl.add_theme_font_size_override("font_size", 15); med_lbl.modulate = TEXT_MUTED
+		card.add_child(med_lbl)
+		var med_grid = GridContainer.new(); med_grid.columns = 2; card.add_child(med_grid)
+		var shown := 0
+		for war_key in npc_wars.keys():
+			if shown >= 4:
+				break
+			var parts := str(war_key).split("|")
+			if parts.size() != 2:
+				continue
+			var war_lbl = Label.new()
+			war_lbl.text = "⚔ %s ↔ %s" % [_fa_country(str(parts[0])), _fa_country(str(parts[1]))]
+			war_lbl.custom_minimum_size = Vector2(0, 40)
+			war_lbl.add_theme_font_size_override("font_size", 14)
+			med_grid.add_child(war_lbl)
+			var med_btn = Button.new()
+			med_btn.text = "🕊 میانجیگری (۱.۵)"
+			med_btn.custom_minimum_size = Vector2(150, 40)
+			med_btn.add_theme_font_size_override("font_size", 13)
+			med_btn.pressed.connect(FeedbackManager.play_click)
+			med_btn.pressed.connect(_on_world_action.bind(war_key, "mediate_peace", "میانجیگری صلح میان"))
+			_mark_decision_button(med_btn, "dip:mediate:" + war_key)
+			med_grid.add_child(med_btn)
+			shown += 1
 
 # ─── انتخابگر لمسی سناریو (جایگزین OptionButton غیرقابل اسکرول در اندروید) ───
 func _open_scenario_picker():
@@ -8675,6 +8741,7 @@ func _command_queue_key(cmd) -> String:
 		"ai_action": return "ai:" + str(p.get("action", ""))
 		"assassinate": return "assassinate:" + str(p.get("target", ""))
 		"leader_hidden": return "leader_hidden:" + str(p.get("hidden", false))
+		"leader_name": return "leader_name"
 		"country_select": return "country_select"
 		"next_tick": return "next_tick"
 		# عمق ۱۸ تا ۲۰: پیشوندها باید دقیقاً با متای دکمه‌ها (cmd_key) یکسان باشند

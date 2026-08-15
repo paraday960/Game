@@ -138,6 +138,23 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	return {"state": state, "events": events}
 
 # ── تغییر وضعیت پنهان/آشکار رهبر در جنگ (هرکدام عواقب واقعی) ──
+# ── انتخاب نام رهبر توسط بازیکن (عمق‌بخشی ۱۳) ──
+# بازیکن می‌تواند نام رهبر کشورش را خودش انتخاب کند (نه فقط تصادفی).
+func set_leader_name(state: Dictionary, name: String) -> Dictionary:
+	state = ensure(state)
+	var clean := name.strip_edges()
+	if clean.length() < 2 or clean.length() > 30:
+		return {"state": state, "success": false, "reason": "نام باید بین ۲ تا ۳۰ نویسه باشد"}
+	# جلوگیری از نویسه‌های کنترلی
+	var safe := ""
+	for ch in clean:
+		if ch.unicode_at(0) >= 32:
+			safe += ch
+	state["leader"]["name_fa"] = safe
+	return {"state": state, "success": true, "events": [{
+		"type": "leader_name_set", "message": "رهبر کشور: «%s»" % safe
+	}]}
+
 func set_hidden(state: Dictionary, hidden: bool, turn: int) -> Dictionary:
 	state = ensure(state)
 	var events: Array = []

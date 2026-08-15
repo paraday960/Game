@@ -15,13 +15,19 @@ const ACTIONS = [
 	"improve_relations", "trade_agreement", "end_trade_agreement",
 	"form_alliance", "leave_alliance", "sanction", "lift_sanction",
 	"declare_war", "offer_peace", "negotiate_sanctions", "ultimatum",
-	"accept_offer", "reject_offer"
+	"accept_offer", "reject_offer",
+	# دیپلماسی واقعی (عمق‌بخشی ۱۳): کارهایی که کشورها واقعاً انجام می‌دهند
+	"humanitarian_aid", "mediate_peace", "open_embassy", "de_escalate",
+	"defense_pact", "leave_defense_pact", "cultural_diplomacy"
 ]
 const ACTION_COSTS = {
 	"improve_relations": 1.0, "trade_agreement": 1.5, "end_trade_agreement": 0.5,
 	"form_alliance": 2.0, "leave_alliance": 1.0, "sanction": 1.0,
 	"lift_sanction": 0.5, "declare_war": 2.0, "offer_peace": 1.0,
-	"negotiate_sanctions": 1.0, "ultimatum": 1.0, "accept_offer": 0.0, "reject_offer": 0.0
+	"negotiate_sanctions": 1.0, "ultimatum": 1.0, "accept_offer": 0.0, "reject_offer": 0.0,
+	"humanitarian_aid": 1.0, "mediate_peace": 1.5, "open_embassy": 0.5,
+	"de_escalate": 1.0, "defense_pact": 2.0, "leave_defense_pact": 1.0,
+	"cultural_diplomacy": 0.5
 }
 
 var countries: Dictionary = {}
@@ -291,6 +297,32 @@ func can_action(state: Dictionary, target: String, action: String) -> Dictionary
 			if not _has_offer(world, [], target): return {"valid": false, "reason": "پیشنهاد فعالی از این کشور وجود ندارد"}
 		"negotiate_sanctions":
 			if not _has_incoming_sanction(diplomacy, target): return {"valid": false, "reason": "تحریم ورودی از این کشور وجود ندارد"}
+		# ── دیپلماسی واقعی (عمق‌بخشی ۱۳) ──
+		"humanitarian_aid":
+			if wars.has(target): return {"valid": false, "reason": "کمک بشردوستانه به کشورِ در جنگ با شما ممکن نیست"}
+			var crisis_target := float(state.get("politics", {}).get("stability", 0.6))
+			# همیشه قابل انجام است؛ اثر بستگی به وضعیت کشور هدف دارد
+		"mediate_peace":
+			# میانجیگری بین دو کشور NPC درگیر: target = "A|B"
+			var pair := str(target).split("|")
+			if pair.size() != 2: return {"valid": false, "reason": "برای میانجیگری دو کشور درگیر را مشخص کنید (فرمت A|B)"}
+			var npc_war_key := _pair_key(str(pair[0]), str(pair[1]))
+			if not world.get("npc_wars", {}).has(npc_war_key): return {"valid": false, "reason": "جنگی میان این دو کشور جریان ندارد"}
+			if float(state["military"].get("readiness", 0.0)) < 0.4: return {"valid": false, "reason": "برای میانجیگری نیاز به وزن نظامی کافی دارید"}
+		"open_embassy":
+			if relation < 35.0: return {"valid": false, "reason": "برای بازگشایی سفارت رابطه حداقل ۳۵ لازم است"}
+			if wars.has(target): return {"valid": false, "reason": "در زمان جنگ سفارت باز نمی‌شود"}
+		"de_escalate":
+			if relation > 55.0: return {"valid": false, "reason": "تنش‌زدایی برای روابط بالای ۵۵ لازم نیست"}
+			if wars.has(target): return {"valid": false, "reason": "در جنگ، تنش‌زدایی از طریق صلح انجام می‌شود"}
+		"defense_pact":
+			if relation < 65.0: return {"valid": false, "reason": "برای پیمان دفاعی رابطه حداقل ۶۵ لازم است"}
+			if wars.has(target): return {"valid": false, "reason": "پیمان دفاعی با کشورِ در جنگ ممکن نیست"}
+			if _has_defense_pact(world, target): return {"valid": false, "reason": "پیمان دفاعی از قبل فعال است"}
+		"leave_defense_pact":
+			if not _has_defense_pact(world, target): return {"valid": false, "reason": "پیمان دفاعی فعالی وجود ندارد"}
+		"cultural_diplomacy":
+			if wars.has(target): return {"valid": false, "reason": "دیپلماسی فرهنگی در زمان جنگ ممکن نیست"}
 	return {"valid": true, "reason": ""}
 
 func apply_action(state: Dictionary, target: String, action: String, tick: int, goal: String = "reparations") -> Dictionary:
@@ -300,6 +332,7 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int, 
 	var diplomacy: Dictionary = state["diplomacy"]
 	var world: Dictionary = state["world"]
 	var events: Array = []
+	var player := str(world.get("player_country", default_country))
 	diplomacy["action_points"] = max(0.0, float(diplomacy["action_points"]) - float(ACTION_COSTS[action]))
 	match action:
 		"improve_relations":
@@ -347,6 +380,19 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int, 
 			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) + 0.12, 0.0, 1.0)
 			state["population"]["happiness"] = clamp(float(state["population"].get("happiness", 0.6)) - 0.04, 0.0, 1.0)
 			events.append(_event("war_declared", target, "جنگ با %s آغاز شد" % get_country_name(target)))
+			# پیمان دفاعی متقابل (عمق‌بخشی ۱۳): حمله به یک کشورِ دارای پیمان دفاعی،
+			# شرکای پیمان را هم وارد جنگ می‌کند — مثل ناتو/پیمان‌های دفاعی واقعی.
+			var pact_joiners: Array = []
+			for pact in world.get("defense_pacts", []):
+				if pact is Dictionary and str(pact.get("partner", "")) == target:
+					pact_joiners.append(str(pact.get("master", player)))
+			for partner in pact_joiners:
+				if partner == player or world["wars"].has(partner):
+					continue
+				world["wars"][partner] = {"target":partner, "started_tick":tick, "progress":0.0, "player_losses":0, "enemy_losses":0,
+					"goal": "reparations", "goal_scale": 1.0}
+				diplomacy["relations"][partner] = 0.0
+				events.append(_event("defense_pact_triggered", partner, "%s بر اساس پیمان دفاعی متقابل با %s وارد جنگ شد!" % [get_country_name(partner), get_country_name(target)]))
 		"offer_peace":
 			# پذیرش صلح دیگر تضمین‌شده نیست: دشمن صلح را وقتی قبول می‌کند که در آستانه
 			# پیروزی نباشد (پیشروی بازیکن > -۴۰) یا جنگ بیش از یک سال کشیده باشد.
@@ -366,6 +412,79 @@ func apply_action(state: Dictionary, target: String, action: String, tick: int, 
 			else:
 				diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 0.0)) - 2.0, 0.0, 100.0)
 				events.append(_event("peace_rejected", target, "%s پیشنهاد صلح را رد کرد؛ در آستانه پیروزی خود را می‌بیند" % get_country_name(target)))
+		# ── دیپلماسی واقعی (عمق‌بخشی ۱۳) ──
+		"humanitarian_aid":
+			# کمک بشردوستانه: هزینه بودجه + قدرت نرم؛ اثر بیشتر وقتی هدف در بحران است
+			var aid_cost: float = float(state["economy"].get("gdp", 500e9)) * 0.0008
+			state["economy"]["national_debt"] = float(state["economy"].get("national_debt", 0.0)) + aid_cost
+			var target_stability := float(state.get("politics", {}).get("stability", 0.6))
+			var target_crisis := clampf((0.5 - target_stability) * 2.0, 0.0, 1.0)
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 6.0 + target_crisis * 6.0, 0.0, 100.0)
+			state["diplomacy"]["influence"] = clamp(float(state["diplomacy"].get("influence", 40.0)) + 1.0 + target_crisis * 1.5, 0.0, 100.0)
+			state["leader"]["popularity_world"] = clampf(float(state["leader"].get("popularity_world", 50.0)) + 1.0 + target_crisis, 0.0, 100.0)
+			var aid_events: Array = state.get("diplomacy", {}).get("humanitarian_acts", [])
+			aid_events.append({"target": target, "tick": tick, "cost": aid_cost})
+			while aid_events.size() > 40:
+				aid_events.pop_front()
+			diplomacy["humanitarian_acts"] = aid_events
+			events.append(_event("humanitarian_aid", target, "کمک بشردوستانه به %s ارسال شد؛ قدرت نرم و روابط تقویت شد" % get_country_name(target)))
+		"mediate_peace":
+			# میانجیگری در جنگ دو کشور NPC: شانس موفقیت بر اساس نفوذ دیپلماتیک
+			var pair := str(target).split("|")
+			var npc_key := _pair_key(str(pair[0]), str(pair[1]))
+			var influence := float(state["diplomacy"].get("influence", 40.0))
+			var success_chance := clampf(0.25 + influence / 100.0 * 0.45, 0.25, 0.70)
+			if Deterministic.chance(success_chance):
+				world["npc_wars"].erase(npc_key)
+				world["war_history"].append({"type": "npc_peace_mediated", "a": str(pair[0]), "b": str(pair[1]), "by": "player", "ended_turn": tick})
+				diplomacy["influence"] = clamp(float(diplomacy.get("influence", 40.0)) + 5.0, 0.0, 100.0)
+				state["leader"]["popularity_world"] = clampf(float(state["leader"].get("popularity_world", 50.0)) + 3.0, 0.0, 100.0)
+				events.append(_event("peace_mediated", target, "میانجیگری موفق! آتش‌بس میان %s و %s با تلاش شما برقرار شد؛ اعتبار دیپلماتیک جهانی" % [get_country_name(str(pair[0])), get_country_name(str(pair[1]))]))
+			else:
+				diplomacy["influence"] = clamp(float(diplomacy.get("influence", 40.0)) - 1.0, 0.0, 100.0)
+				events.append(_event("mediation_failed", target, "میانجیگری میان %s و %s نافرجام ماند؛ طرفین خواهان ادامه جنگ‌اند" % [get_country_name(str(pair[0])), get_country_name(str(pair[1]))]))
+		"open_embassy":
+			# بازگشایی سفارت: روابط + نفوذ پایدار (از طریق diplomacy_policy)
+			var dp: Dictionary = state.get("diplomacy_policy", {})
+			var ambassadors: Dictionary = dp.get("ambassadors", {})
+			ambassadors[target] = clampf(float(ambassadors.get(target, 0.0)) + 0.25, 0.0, 1.0)
+			dp["ambassadors"] = ambassadors
+			dp["missions"] = int(dp.get("missions", 0)) + 1
+			state["diplomacy_policy"] = dp
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 3.0, 0.0, 100.0)
+			events.append(_event("embassy_opened", target, "سفارت کشور در %s گشایش یافت؛ روابط دیپلماتیک تقویت شد" % get_country_name(target)))
+		"de_escalate":
+			# گفت‌وگوی تنش‌زدایی: کاهش تنش + بهبود روابط، با ریسک کم
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 10.0, 0.0, 100.0)
+			state["politics"]["tension"] = clamp(float(state["politics"].get("tension", 0.3)) - 0.05, 0.0, 1.0)
+			var mil_detail: Dictionary = state.get("military", {})
+			mil_detail["border_tension"] = clampf(float(mil_detail.get("border_tension", 0.0)) - 0.05, 0.0, 1.0)
+			state["military"] = mil_detail
+			events.append(_event("de_escalated", target, "گفت‌وگوی تنش‌زدایی با %s برگزار شد؛ تنش مرزی کاهش یافت" % get_country_name(target)))
+		"defense_pact":
+			# پیمان دفاعی متقابل: اگر یکی مورد حمله قرار گیرد، دیگری وارد می‌شود
+			var pacts: Array = world.get("defense_pacts", [])
+			pacts.append({"partner": target, "master": player, "tick": tick})
+			world["defense_pacts"] = pacts
+			diplomacy["treaties"].append({"type": "defense_pact", "target": target, "tick": tick})
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 5.0, 0.0, 100.0)
+			events.append(_event("defense_pact_signed", target, "پیمان دفاعی متقابل با %s امضا شد؛ تعهد دفاعی متقابل برقرار شد" % get_country_name(target)))
+		"leave_defense_pact":
+			var kept_pacts: Array = []
+			for pact in world.get("defense_pacts", []):
+				if str(pact.get("partner", "")) != target:
+					kept_pacts.append(pact)
+			world["defense_pacts"] = kept_pacts
+			_remove_treaty(diplomacy, "defense_pact", target)
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) - 10.0, 0.0, 100.0)
+			events.append(_event("defense_pact_left", target, "پیمان دفاعی با %s فسخ شد؛ اعتماد متزلزل شد" % get_country_name(target)))
+		"cultural_diplomacy":
+			# دیپلماسی فرهنگی: قدرت نرم + روابط ملایم، هزینه کم
+			diplomacy["relations"][target] = clamp(float(diplomacy["relations"].get(target, 50.0)) + 4.0, 0.0, 100.0)
+			var culture: Dictionary = state.get("culture", {})
+			culture["soft_power"] = clampf(float(culture.get("soft_power", 40.0)) + 1.5, 0.0, 100.0)
+			state["culture"] = culture
+			events.append(_event("cultural_diplomacy", target, "برنامه دیپلماسی فرهنگی با %s اجرا شد؛ قدرت نرم و روابط تقویت شد" % get_country_name(target)))
 		"accept_offer":
 			var offer = find_offer(world, target)
 			var offer_type = str(offer.get("type", ""))
@@ -1013,6 +1132,13 @@ func _initial_relations(player_id: String) -> Dictionary:
 func _has_player_sanction(diplomacy: Dictionary, target: String) -> bool:
 	for item in diplomacy.get("sanctions", []):
 		if item is Dictionary and item.get("target", "") == target and item.get("by", "") == "player":
+			return true
+	return false
+
+# آیا پیمان دفاعی متقابل با این کشور فعال است؟ (عمق‌بخشی ۱۳)
+func _has_defense_pact(world: Dictionary, target: String) -> bool:
+	for pact in world.get("defense_pacts", []):
+		if pact is Dictionary and str(pact.get("partner", "")) == target:
 			return true
 	return false
 
