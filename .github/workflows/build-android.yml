@@ -119,25 +119,32 @@ jobs:
           timeout 120 godot --headless --path . -s res://tests/test_multi_command.gd || { echo "TIMEOUT/FAIL: test_multi_command.gd"; exit 1; }
           timeout 180 godot --headless --path . -s res://tests/test_scenarios.gd || { echo "TIMEOUT/FAIL: test_scenarios.gd"; exit 1; }
 
-          # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet
-          timeout 120 godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1 &
+          # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet.
+          # هر نمونه در دایرکتوری خودش اجرا می‌شود تا race روی .godot (cache مشترک)
+          # رخ ندهد — دو نمونه‌ی همزمان با یک .godot، گاهی «File not found» می‌دادند.
+          cp -r . /tmp/GameHost
+          cp -r . /tmp/GameClient
+          rm -rf /tmp/GameHost/.godot /tmp/GameHost/.git /tmp/GameClient/.godot /tmp/GameClient/.git
+          godot --headless --path /tmp/GameHost --import > /tmp/import-host.log 2>&1
+          godot --headless --path /tmp/GameClient --import > /tmp/import-client.log 2>&1
+          (cd /tmp/GameHost && timeout 120 godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1) &
           HOST_PID=$!
-          sleep 1
+          sleep 2
           CLIENT_STATUS=0
           HOST_STATUS=0
-          timeout 120 godot --headless --path . -s res://tests/test_network_client.gd > /tmp/network-client.log 2>&1 || CLIENT_STATUS=$?
+          (cd /tmp/GameClient && timeout 120 godot --headless --path . -s res://tests/test_network_client.gd > /tmp/network-client.log 2>&1) || CLIENT_STATUS=$?
           wait "$HOST_PID" || HOST_STATUS=$?
           cat /tmp/network-host.log
           cat /tmp/network-client.log
           test "$HOST_STATUS" -eq 0 -a "$CLIENT_STATUS" -eq 0
 
-          # تست رقابتی واقعی: دو کشور و State مستقل روی ENet
-          timeout 120 godot --headless --path . -s res://tests/test_competitive_host.gd > /tmp/competitive-host.log 2>&1 &
+          # تست رقابتی واقعی: دو کشور و State مستقل روی ENet (دایرکتوری‌های جدا)
+          (cd /tmp/GameHost && timeout 120 godot --headless --path . -s res://tests/test_competitive_host.gd > /tmp/competitive-host.log 2>&1) &
           COMP_HOST_PID=$!
-          sleep 1
+          sleep 2
           COMP_CLIENT_STATUS=0
           COMP_HOST_STATUS=0
-          timeout 120 godot --headless --path . -s res://tests/test_competitive_client.gd > /tmp/competitive-client.log 2>&1 || COMP_CLIENT_STATUS=$?
+          (cd /tmp/GameClient && timeout 120 godot --headless --path . -s res://tests/test_competitive_client.gd > /tmp/competitive-client.log 2>&1) || COMP_CLIENT_STATUS=$?
           wait "$COMP_HOST_PID" || COMP_HOST_STATUS=$?
           cat /tmp/competitive-host.log
           cat /tmp/competitive-client.log
