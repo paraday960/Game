@@ -38,7 +38,7 @@ const SUPPORTED_COMMANDS = [
 	"basic_industry_action", "nation_brand_action", "ai_action",
 	"tax_action", "ev_action", "health_tourism_action",
 	"defense_industry_action", "knowledge_economy_action", "waste_mgmt_action",
-	"aerospace_action", "petrochemical_action", "pro_sports_action",
+	"aerospace_action", "petrochemical_action", "pro_sports_action", "mega_event",
 	"aviation_action", "postal_action", "standards_action"
 ]
 const MAX_COMMAND_RECEIPTS = 512
@@ -801,6 +801,12 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 		elif cmd.type == "pro_sports_action":
 			if not str(cmd.payload.get("action", "")) in ["leagues", "infrastructure", "events", "academy", "exports"]:
 				return {"valid": false, "reason": "اقدام اقتصاد ورزش نامعتبر است"}
+		elif cmd.type == "mega_event":
+			var me_action := str(cmd.payload.get("action", ""))
+			if me_action != "bid":
+				return {"valid": false, "reason": "اقدام رویداد جهانی نامعتبر است"}
+			if not MegaEventManager.get_event_ids().has(str(cmd.payload.get("event_id", ""))):
+				return {"valid": false, "reason": "رویداد جهانی نامعتبر است"}
 		elif cmd.type == "aviation_action":
 			if not str(cmd.payload.get("action", "")) in ["airports", "fleet", "safety", "hub", "cargo"]:
 				return {"valid": false, "reason": "اقدام هوانوردی نامعتبر است"}
@@ -1975,6 +1981,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		if pe_result.get("success", false):
 			snapshot = PetrochemicalManager.simulate(snapshot, cmd.tick)
 			snapshot = _charge_action_cost(snapshot, str(cmd.type), pe_act)
+	elif cmd.type == "mega_event":
+		var me_result := MegaEventManager.bid(snapshot, str(cmd.payload.get("event_id", "")), cmd.tick)
+		snapshot = me_result.state
+		for me_ev in me_result.get("events", []):
+			if me_ev is Dictionary:
+				EventLog.log_event("mega_event", me_ev, cmd.tick, cmd.version)
 	elif cmd.type == "pro_sports_action":
 		var ps_act := str(cmd.payload.get("action", ""))
 		var ps_result: Dictionary
@@ -2842,6 +2854,9 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var pro_sports_result = ProSportsManager.simulate_month(snapshot, turn)
 	snapshot = pro_sports_result.state
 	_collect_events(pro_sports_result, "pro_sports", snapshot, turn, generated_events, "pro_sports_event")
+	var mega_event_result = MegaEventManager.simulate_month(snapshot, turn)
+	snapshot = mega_event_result.state
+	_collect_events(mega_event_result, "mega_event", snapshot, turn, generated_events, "mega_event")
 	var aviation_result = AviationManager.simulate_month(snapshot, turn)
 	snapshot = aviation_result.state
 	_collect_events(aviation_result, "aviation", snapshot, turn, generated_events, "aviation_event")

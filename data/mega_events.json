@@ -1,0 +1,65 @@
+{
+  "version": "1.0.0",
+  "events": [
+    {
+      "id": "world_cup",
+      "name_fa": "جام جهانی فوتبال",
+      "icon": "⚽",
+      "description_fa": "میزبانی بزرگ‌ترین رویداد ورزشی جهان: گردشگری و قدرت نرم جهش می‌کند، اما هزینه‌ی سنگین و ریسک پروژه‌های نیمه‌کاره دارد.",
+      "bid_cost_gdp_ratio": 0.02,
+      "duration_months": 3,
+      "prestige": 90,
+      "monthly_tourism_gdp_ratio": 0.004,
+      "soft_power_gain": 3.0,
+      "happiness_gain": 0.008,
+      "legacy_tourism_base": 0.04,
+      "legacy_soft_power": 2.0,
+      "legacy_months": 12
+    },
+    {
+      "id": "olympics",
+      "name_fa": "بازی‌های المپیک",
+      "icon": "🏅",
+      "description_fa": "والاترین میزبانی ورزشی جهان: پرستیژ بی‌نظیر و میراث زیرساختی، ولی گران‌ترین گزینه با بیشترین ریسک «فیل سفید».",
+      "bid_cost_gdp_ratio": 0.035,
+      "duration_months": 4,
+      "prestige": 100,
+      "monthly_tourism_gdp_ratio": 0.006,
+      "soft_power_gain": 5.0,
+      "happiness_gain": 0.012,
+      "legacy_tourism_base": 0.06,
+      "legacy_soft_power": 3.5,
+      "legacy_months": 18
+    },
+    {
+      "id": "world_expo",
+      "name_fa": "نمایشگاه جهانی (اکسپو)",
+      "icon": "🌐",
+      "description_fa": "میزبانی نمایشگاه جهانی: جذب سرمایه‌گذاری و ارتقای تصویر فناوری کشور، با بازه‌ی طولانی‌تر و ریسک کمتر.",
+      "bid_cost_gdp_ratio": 0.015,
+      "duration_months": 6,
+      "prestige": 75,
+      "monthly_tourism_gdp_ratio": 0.003,
+      "soft_power_gain": 2.5,
+      "happiness_gain": 0.005,
+      "legacy_tourism_base": 0.03,
+      "legacy_soft_power": 1.5,
+      "legacy_months": 12
+    },
+    {
+      "id": "grand_prix",
+      "name_fa": "جایزه بزرگ موتوراسپرت",
+      "icon": "🏎️",
+      "description_fa": "میزبانی یک گرندپری سالانه: هزینه‌ی کم‌تر و بازده‌ی سریع‌تر، مناسب کشورهای با زیرساخت متوسط.",
+      "bid_cost_gdp_ratio": 0.008,
+      "duration_months": 2,
+      "prestige": 60,
+      "monthly_tourism_gdp_ratio": 0.0025,
+      "soft_power_gain": 1.5,
+      "happiness_gain": 0.004,
+      "legacy_tourism_base": 0.02,
+      "legacy_soft_power": 1.0,
+      "legacy_months": 8
+    }
+  ]
+}

@@ -431,6 +431,10 @@ static func create_petrochemical_action(action: String):
 static func create_pro_sports_action(action: String):
 	return _self_script().new("pro_sports_action", {"action": action})
 
+static func create_mega_event_action(event_id: String):
+	# میزبانی رویداد بزرگ جهانی (عمق‌بخشی ۴۳): نامزدی برای جام جهانی/المپیک/...
+	return _self_script().new("mega_event", {"action": "bid", "event_id": event_id})
+
 static func create_aviation_action(action: String):
 	return _self_script().new("aviation_action", {"action": action})
 

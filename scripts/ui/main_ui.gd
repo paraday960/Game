@@ -154,6 +154,7 @@ const SYSTEM_FA := {
 	"security_forces": "نیروهای امنیتی",
 	"trade_route_warfare": "جنگ مسیرهای تجاری",
 	"workforce_jobs": "بازار کار و اشتغال",
+	"mega_event": "میزبانی رویداد جهانی",
 	"resources": "منابع و انرژی", "economy": "اقتصاد و بودجه", "population": "جمعیت و دموگرافی",
 	"politics": "سیاست و ثبات", "military": "ارتش و دفاع", "diplomacy": "دیپلماسی",
 	"infrastructure": "زیرساخت", "technology": "علم و فناوری", "judicial": "قضایی",
@@ -2091,7 +2092,7 @@ func _event_icon(e: Dictionary) -> String:
 	for h in ["crisis", "debt", "disaster", "epidemic", "riot", "protest", "collapse", "shortage", "hyperinflation", "famine", "default", "resign", "impeach", "sanction"]:
 		if low.contains(h):
 			return "🚨"
-	for h in ["peace", "treaty", "alliance", "victory", "breakthrough", "olympics", "record", "boom", "sector_boost"]:
+	for h in ["peace", "treaty", "alliance", "victory", "breakthrough", "olympics", "record", "boom", "sector_boost", "mega_event"]:
 		if low.contains(h):
 			return "🏆"
 	for h in ["election", "referendum", "coup"]:
@@ -3211,6 +3212,7 @@ func _build_economy():
 	_build_health_tourism_card(st)
 	_build_waste_management_card(st)
 	_build_pro_sports_card(st)
+	_build_mega_event_card(st)
 	_build_supply_card(st)
 	_build_textile_card(st)
 	_build_tax_card(st)
@@ -6424,6 +6426,52 @@ func _on_pro_sports(action: String):
 		_toast(labels.get(action, action) + " ثبت شد")
 		_switch_tab("society")
 
+# ── میزبانی رویداد بزرگ جهانی (عمق‌بخشی ۴۳) ──
+func _build_mega_event_card(st: Dictionary):
+	var me: Dictionary = MegaEventManager.get_status(st)
+	var card = _card("🏟️ میزبانی رویداد بزرگ جهانی")
+	var status := str(me.get("status", "none"))
+	var event_id := str(me.get("event_id", ""))
+	var event_name: String = MegaEventManager.get_event_name(event_id) if event_id != "" else ""
+	match status:
+		"hosting":
+			_row(card, "رویداد جاری", event_name)
+			_row(card, "پایان میزبانی", PersianFormatter.to_persian_digits(str(max(0, int(me.get("ends_turn", 0)) - int(st.get("tick", 0))))) + " نوبت دیگر")
+			var lbl = Label.new(); lbl.text = "🌍 جهان در حال تماشای کشور شماست — گردشگری و قدرت نرم در اوج هستند."
+			lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; lbl.add_theme_font_size_override("font_size", 15)
+			lbl.modulate = ACCENT_GOLD; card.add_child(lbl)
+		"legacy":
+			_row(card, "میراث رویداد", event_name)
+			if bool(me.get("white_elephant", false)):
+				var we = Label.new(); we.text = "🏗️ «فیل سفید»: زیرساخت‌های گران نیمه‌کاره ماندند — نگهداری‌شان بدهی می‌آورد."
+				we.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; we.add_theme_font_size_override("font_size", 15)
+				we.modulate = Color(1.0, 0.55, 0.5); card.add_child(we)
+			else:
+				var ok = Label.new(); ok.text = "🌟 میراث پایدار: گردشگری و جایگاه جهانی کشور ماندگار شد."
+				ok.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; ok.add_theme_font_size_override("font_size", 15)
+				ok.modulate = Color(0.5, 0.9, 0.65); card.add_child(ok)
+			_row(card, "بازگشت به حالت عادی", PersianFormatter.to_persian_digits(str(max(0, int(me.get("legacy_until_turn", 0)) - int(st.get("tick", 0))))) + " نوبت دیگر")
+		_:
+			var hint = Label.new(); hint.text = "برای رویدادهای بزرگ جهانی نامزد شوید؛ شانس موفقیت به زیرساخت، ثبات، قدرت نرم و گردشگری بستگی دارد."
+			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; hint.add_theme_font_size_override("font_size", 14)
+			hint.modulate = TEXT_MUTED; card.add_child(hint)
+			var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 4); card.add_child(row)
+			for eid in MegaEventManager.get_event_ids():
+				var def := MegaEventManager.get_event(eid)
+				var b = Button.new(); b.text = "%s %s" % [def.get("icon", "🏟️"), def.get("name_fa", eid)]
+				b.tooltip_text = str(def.get("description_fa", ""))
+				b.add_theme_font_size_override("font_size", 12); b.custom_minimum_size = Vector2(0, 38)
+				b.pressed.connect(FeedbackManager.play_click); b.pressed.connect(_on_mega_event_bid.bind(eid))
+				_mark_decision_button(b, "megaevent:" + eid); row.add_child(b)
+			var cost_lbl = Label.new(); cost_lbl.text = "💡 هزینه‌ی نامزدی ۰٫۸٪ تا ۳٫۵٪ تولید ناخالص (به بدهی اضافه می‌شود)."
+			cost_lbl.add_theme_font_size_override("font_size", 12); cost_lbl.modulate = TEXT_FAINT; card.add_child(cost_lbl)
+
+func _on_mega_event_bid(event_id: String):
+	var cmd = GameCommandClass.create_mega_event_action(event_id)
+	if _queue_decision(cmd, "🏟️ نامزدی برای " + MegaEventManager.get_event_name(event_id)):
+		_toast("🏟️ نامزدی " + MegaEventManager.get_event_name(event_id) + " ثبت شد — نتیجه با پایان نوبت اعلام می‌شود")
+		_switch_tab("society")
+
 # ── عمق ۲۱: هوانوردی، پست و لجستیک، استاندارد و کیفیت ──
 func _build_aviation_card(st: Dictionary):
 	var ap: Dictionary = AviationManager.get_policy(st)
@@ -8528,7 +8576,7 @@ func _format_metric_value(value, key: String) -> String:
 # کلمات کلیدی رویدادهای پراهمیت برای فید خبری (بازرسی رویداد-اسپم):
 # فید قبلی صرفاً «دو رویداد آخر» را نشان می‌داد — با ~۱۰۰+ رویداد در هر نوبت، دو تای
 # دمِ صف عملاً تصادفی (و معمولاً طعم‌دهندهٔ آماری) بودند و بحران‌ها دفن می‌شدند.
-const EVENT_IMPORTANT_HINTS := ["crisis", "war", "peace", "treaty", "sanction", "election", "coup", "debt", "disaster", "epidemic", "attack", "assassin", "referendum", "riot", "collapse", "shortage", "blackout", "earthquake", "flood", "launch", "breakthrough", "olympics", "nuclear", "missile", "strike", "unrest", "protest", "bankin", "reserve", "trade_deficit", "hyperinflation", "supply_shock", "energy_crisis", "famine", "default", "resign", "impeach", "sector_boost"]
+const EVENT_IMPORTANT_HINTS := ["crisis", "war", "peace", "treaty", "sanction", "election", "coup", "debt", "disaster", "epidemic", "attack", "assassin", "referendum", "riot", "collapse", "shortage", "blackout", "earthquake", "flood", "launch", "breakthrough", "olympics", "nuclear", "missile", "strike", "unrest", "protest", "bankin", "reserve", "trade_deficit", "hyperinflation", "supply_shock", "energy_crisis", "famine", "default", "resign", "impeach", "sector_boost", "mega_event"]
 
 func _event_is_important(e: Dictionary) -> bool:
 	var t := str(e.get("type", ""))
@@ -8878,6 +8926,7 @@ func _command_queue_key(cmd) -> String:
 		"tourism_action": return "tour:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "visa" else "")
 		"urban_action": return "urban:" + str(p.get("action", ""))
 		"security_action": return "sec:" + str(p.get("action", ""))
+		"mega_event": return "megaevent:" + str(p.get("event_id", ""))
 		"infra_action": return "infra:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "maintenance" else "")
 		"climate_action": return "climate:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) == "carbon" else "")
 		"welfare_action": return "welfare:" + str(p.get("action", "")) + (":" + str(p.get("value", "")) if str(p.get("action", "")) in ["pension", "benefit"] else "")
