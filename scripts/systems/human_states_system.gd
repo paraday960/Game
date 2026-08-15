@@ -128,8 +128,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	# ── لایه واقع‌گرایانه اختصاصی حالات انسانی (جایگزین قالب خودکار) — بخش ۳.۶۶ ──
 	# خشم جمعی: تبعیض قومی (دور ۱۰) + فقر + تورم — سوخت بحران‌های اجتماعی است
 	var discrim_h = float(state.get("ethnicity", {}).get("discrimination", 0.20))
-	var anger_target = float(poverty) * 0.35 + float(inflation) * 0.30 + discrim_h * 0.20 + (1.0 - float(happiness)) * 0.15
-	human["anger"] = clampf(float(human.get("anger", 0.20)) * 0.97 + anger_target * 0.03, 0.03, 0.92)
+	var anger_target2 = float(poverty) * 0.35 + float(inflation) * 0.30 + discrim_h * 0.20 + (1.0 - float(happiness)) * 0.15
+	human["anger"] = clampf(float(human.get("anger", 0.20)) * 0.97 + anger_target2 * 0.03, 0.03, 0.92)
 	# فرسودگی شغلی: از ساعات کار واقعی هفته (بازار کار دور ۱۴) و اضافه‌کاری
 	var hours_h = float(state.get("workforce_detail", {}).get("hours_per_week", 44.0))
 	human["burnout"] = clampf(float(human.get("burnout", 0.25)) * 0.995 + (maxf(hours_h - 40.0, 0.0) * 0.012 + float(human.get("stress", 0.35)) * 0.3) * 0.005, 0.05, 0.85)

@@ -351,7 +351,7 @@ func _world_news(state: Dictionary, turn: int, player: String, year: int, month_
 				headline = "گسترش توافق‌های تجاری %s در بازارهای جهانی" % name
 				body = "%s با %s توافق تجاری فعال، مسیر توسعه صادرات را دنبال می‌کند؛ کارشناسان این روند را برای اقتصاد منطقه مثبت ارزیابی می‌کنند." % [name, PersianFormatter.to_persian_digits(str(trade_count))]
 				cat = "economy"; cat_fa = "اقتصاد"; icon = "📦"
-		6:  # جنگ با بازیکن (عمومی — اعلام جنگ)
+			6:  # جنگ با بازیکن (عمومی — اعلام جنگ)
 				var at_war_with_player := player_wars.has(code)
 				if at_war_with_player:
 					headline = "وضعیت درگیری میان %s و %s در کانون توجه رسانه‌ها" % [name, WorldManager.get_country_name(player)]
@@ -361,7 +361,7 @@ func _world_news(state: Dictionary, turn: int, player: String, year: int, month_
 					headline = "%s گزارش اقتصادی ماهانه خود را منتشر کرد" % name
 					body = "داده‌های اقتصادی منتشرشده از %s نشان‌دهنده روند باثبات در شاخص‌های کلان این کشور است." % name
 					cat = "economy"; cat_fa = "اقتصاد"; icon = "📊"
-				out.append(_make_item(state, code, false, cat, cat_fa, icon, PUBLIC_LABEL, headline, body, year, month_fa, turn, 100 + i))
+		out.append(_make_item(state, code, false, cat, cat_fa, icon, PUBLIC_LABEL, headline, body, year, month_fa, turn, 100 + i))
 	# اخبار جهانی واکنشگر به بازار کالاها (عمق‌بخشی ۳): شوک‌های قیمت نفت/گاز/
 	# گندم/فلزات که اقتصاد همه‌ی کشورها را می‌لرزاند باید در تحریریه دیده شوند.
 	out.append_array(_world_market_news(state, turn, player, year, month_fa))
@@ -393,7 +393,7 @@ func _world_market_news(state: Dictionary, turn: int, player: String, year: int,
 			year, month_fa, turn, 203))
 	if metals > 3000.0:
 		out.append(_make_item(state, player, false, "economy", "اقتصاد", "⚙️", PUBLIC_LABEL,
-			"رونق فلزات صنعتی؛ تقاضای دیتاسنترها و انرژی پاک قیمت را بالا برد" % "",
+			"رونق فلزات صنعتی؛ تقاضای دیتاسنترها و انرژی پاک قیمت را بالا برد",
 			"قیمت جهانی فلزات به %s دلار رسید. رقابت بر سر زیرساخت هوش مصنوعی و گذار انرژی، تقاضای فلزات را به اوج تاریخی رسانده است." % _fmt_num(metals, 0),
 			year, month_fa, turn, 204))
 	return out

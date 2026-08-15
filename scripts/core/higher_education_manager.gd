@@ -57,9 +57,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 
 	# اثر اقتصادی و پژوهشی
 	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
-	var quality * 0.0004 * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
-	quality * 0.0004 * 12.0_boosts["آموزش عالی"] = quality * 0.0004 * 12.0
-	econ["sector_boosts"] = quality * 0.0004 * 12.0_boosts
+	var hig_boost: Dictionary = econ.get("sector_boosts", {})
+	hig_boost["آموزش عالی"] = quality * 0.0004 * 12.0
+	econ["sector_boosts"] = hig_boost
 	state["economy"] = econ
 	# سرعت پژوهش
 	if not research.is_empty():

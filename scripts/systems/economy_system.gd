@@ -327,10 +327,10 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 
 	# بیکاری - قانون اوکان + بسیج جنگی
 	# توجه: real_growth نرخ سالانه است؛ همه اجزا باید به مقیاس روزانه تبدیل شوند (تقسیم بر ۳۶۵)
-	var okun = -real_growth * 0.5 / 365.0
+	var okun_daily = -real_growth * 0.5 / 365.0
 	var mobilization_employment = mobilization*0.015 / 365.0 # بسیج اشتغال ایجاد می‌کند (ارتش)
 	var tech_unemployment = (tech_digital*0.005 - tech_ind*0.003) / 365.0
-	econ["unemployment"] += (okun - mobilization_employment + tech_unemployment + Deterministic.next_range(-0.0006,0.0006)) / days_in_month
+	econ["unemployment"] += (okun_daily - mobilization_employment + tech_unemployment + Deterministic.next_range(-0.0006,0.0006)) / days_in_month
 	econ["unemployment"] = clamp(econ["unemployment"], 0.015, 0.40)
 
 	# دستمزد و بهره‌وری

@@ -66,9 +66,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# اثر اقتصادی و غذایی
 	var gdp: float = float(econ.get("gdp", 1.0))
 	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
-	var (milk + meat) * 0.0003 * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
-	(milk + meat) * 0.0003 * 12.0_boosts["دام و پروتئین"] = (milk + meat) * 0.0003 * 12.0
-	econ["sector_boosts"] = (milk + meat) * 0.0003 * 12.0_boosts
+	var liv_boost: Dictionary = econ.get("sector_boosts", {})
+	liv_boost["دام و پروتئین"] = (milk + meat) * 0.0003 * 12.0
+	econ["sector_boosts"] = liv_boost
 	state["economy"] = econ
 	if not agri.is_empty():
 		agri["food_security"] = clampf(float(agri.get("food_security", 0.80)) + protein_sec * 0.0008, 0.1, 1.0)

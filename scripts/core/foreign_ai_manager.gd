@@ -232,6 +232,7 @@ func _crisis_reaction(state: Dictionary, country_id: String, turn: int, current_
 			return {"action": "offer_trade", "events": events}
 		return {}
 	return {}
+func _can_reach_player(state: Dictionary, country_id: String) -> bool:
 	var world: Dictionary = state["world"]
 	var player_id = str(world.get("player_country", ""))
 	var us = WorldManager.countries.get(player_id, {})

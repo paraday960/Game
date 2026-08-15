@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3 uid="uid://testsynctick1"]
+[ext_resource type="Script" uid="uid://testsynctick2" path="res://tests/test_sync_tick.gd" id="1"]
+[node name="TestSync" type="Node"]
+script = ExtResource("1")

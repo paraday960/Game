@@ -5,9 +5,11 @@ const COUNTRIES_PATH = "res://data/countries.json"
 const NpcTurnManagerClass = preload("res://scripts/core/npc_turn_manager.gd")
 # صادرکنندگان خالص نفت (تقریبی، ثابت برای دترمینیسم) — عمق‌بخشی ۴
 const OIL_EXPORTERS := {
-	"SAU", "RUS", "IRN", "IRQ", "ARE", "KWT", "QAT", "VEN", "NGA", "DZA",
-	"LBY", "KAZ", "AZE", "OMN", "BHR", "GAB", "GNQ", "COG", "TCD", "TKM",
-	"BRN", "TTO", "ECU", "CAN", "NOR", "USA", "MEX", "GUY", "SSD"
+	"SAU": true, "RUS": true, "IRN": true, "IRQ": true, "ARE": true, "KWT": true,
+	"QAT": true, "VEN": true, "NGA": true, "DZA": true, "LBY": true, "KAZ": true,
+	"AZE": true, "OMN": true, "BHR": true, "GAB": true, "GNQ": true, "COG": true,
+	"TCD": true, "TKM": true, "BRN": true, "TTO": true, "ECU": true, "CAN": true,
+	"NOR": true, "USA": true, "MEX": true, "GUY": true, "SSD": true
 }
 const ACTIONS = [
 	"improve_relations", "trade_agreement", "end_trade_agreement",
@@ -839,7 +841,7 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 			# الحاق در جنگ‌های NPC (بازرسی ۱۴۰۵ — دور سیزدهم): برنده در پیروزی قاطع
 			# می‌تواند بازنده‌ی همسایه را ضمیمه کند — دنیا واقعاً تغییر می‌کند (مثل
 			# جنگ‌های تاریخ). پیروزیِ ناشی از تایماوت ۳۶ ماهه = جنگ فرسایشی، بی‌الحاق.
-			var decisive := abs(float(war["progress"])) >= 100.0
+			var decisive: bool = abs(float(war["progress"])) >= 100.0
 			var loser_rt: Dictionary = world["countries"].get(loser, {})
 			var already_taken := str(loser_rt.get("annexed_by", "")) != ""
 			if decisive and not already_taken and _is_neighbor_state(state, winner, loser) \

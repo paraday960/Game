@@ -126,8 +126,8 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	var gini_c = float(welfare.get("gini", 0.38))
 	citizens["income_median"] = float(citizens.get("income_avg", 5000.0)) * clampf(1.0 - gini_c * 0.62, 0.45, 0.95)
 	# جابجایی اجتماعی: آموزش باکیفیت آن را بالا می‌برد، نابرابری بالا نردبان طبقاتی را می‌شکند
-	var mobility_target = float(edu.get("quality", 0.55)) * 0.55 + (1.0 - gini_c) * 0.35 + 0.10
-	citizens["social_mobility"] = clampf(float(citizens.get("social_mobility", 0.50)) * 0.996 + mobility_target * 0.004, 0.10, 0.92)
+	var mobility_target2 = float(edu.get("quality", 0.55)) * 0.55 + (1.0 - gini_c) * 0.35 + 0.10
+	citizens["social_mobility"] = clampf(float(citizens.get("social_mobility", 0.50)) * 0.996 + mobility_target2 * 0.004, 0.10, 0.92)
 	# علاقه سیاسی شهروندان: با تنش اجتماعی و آزادی رسانه شارژ می‌شود
 	var interest_target = 0.30 + float(pol.get("tension", 0.35)) * 0.35 + float(culture.get("media_freedom", 0.5)) * 0.25
 	citizens["political_interest"] = clampf(float(citizens.get("political_interest", 0.45)) * 0.995 + interest_target * 0.005, 0.10, 0.95)

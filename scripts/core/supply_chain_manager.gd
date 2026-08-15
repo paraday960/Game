@@ -61,9 +61,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var gdp: float = float(econ.get("gdp", 1.0))
 	econ["inflation"] = clampf(float(econ.get("inflation", 0.08)) + disruption * 0.004, 0.0, 1.0)
 	# ممیزی GDP (۱۴۰۵): اثر مداوم از کانال مالک-یکتای sector_boosts (نرخ سالانه؛ ماهانه: ×۱۲)
-	var (-disruption * 0.0006 + logistics * 0.0003) * 12.0_boosts: Dictionary = econ.get("sector_boosts", {})
-	(-disruption * 0.0006 + logistics * 0.0003) * 12.0_boosts["زنجیرهٔ تأمین"] = (-disruption * 0.0006 + logistics * 0.0003) * 12.0
-	econ["sector_boosts"] = (-disruption * 0.0006 + logistics * 0.0003) * 12.0_boosts
+	var sup_boost: Dictionary = econ.get("sector_boosts", {})
+	sup_boost["زنجیرهٔ تأمین"] = (-disruption * 0.0006 + logistics * 0.0003) * 12.0
+	econ["sector_boosts"] = sup_boost
 	if industry.has("capacity_usage"):
 		industry["capacity_usage"] = clampf(float(industry.get("capacity_usage", 0.75)) - disruption * 0.003, 0.3, 0.98)
 	state["economy"] = econ

@@ -39,7 +39,7 @@ for needle, label in [
     ('"npc": true', "پرچم الحاق NPC"),
     ('npc_annexation', "رویداد الحاق NPC"),
     ('Deterministic.chance(0.40)', "شانس دترمینستیک الحاق NPC"),
-    ('decisive := abs(float(war["progress"])) >= 100.0', "فقط پیروزی قاطع (نه تایماوت)"),
+    ('decisive: bool = abs(float(war["progress"])) >= 100.0', "فقط پیروزی قاطع (نه تایماوت)"),
     ('_annex_npc_country(state, winner, loser', "فراخوانی در پایان جنگ NPC"),
 ]:
     if needle in wm:
