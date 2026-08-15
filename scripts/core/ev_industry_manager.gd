@@ -4,7 +4,6 @@ extends Node
 # سهم خودروی برقی. این صنعت به کاهش آلودگی و وابستگی به سوخت کمک می‌کند
 # اما به برق و مواد اولیه نیاز دارد. پیوند: انرژی، معدن، محیط‌زیست.
 
-signal ev_adoption_changed(share: float)
 
 var battery_capacity: float = 0.15  # ظرفیت تولید باطری (نسبی)
 var battery_research: float = 0.10
@@ -133,7 +132,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		energy["fuel_import_dep"] = clampf(float(energy.get("fuel_import_dep", 0.5)) - new_share * 0.02, 0.0, 1.0)
 		state["energy_policy"] = energy
 
-	emit_signal("ev_adoption_changed", new_share)
 	state["ev_policy"] = p
 	return state
 

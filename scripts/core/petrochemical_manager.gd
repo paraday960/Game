@@ -4,7 +4,6 @@ extends Node
 # نفت خام به محصولات با ارزش افزوده بالا تبدیل می‌شود؛
 # کاهش خام‌فروشی و افزایش درآمد ارزی. پیوند: انرژی، صنعت، تجارت.
 
-signal petrochemical_output_changed(output: float)
 
 var feedstock: float = 0.40        # تأمین خوراک
 var plants: float = 0.20           # مجتمع‌های پتروشیمی
@@ -117,7 +116,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		energy["raw_export_dep"] = clampf(float(energy.get("raw_export_dep", 0.6)) - output * 0.004, 0.0, 1.0)
 		state["energy_policy"] = energy
 
-	emit_signal("petrochemical_output_changed", total_output)
 	state["petrochemical_policy"] = p
 	return state
 

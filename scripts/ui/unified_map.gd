@@ -5,7 +5,6 @@ signal country_selected(code)
 signal unit_selected(code, unit_id)
 signal route_selected(route)
 signal view_changed(center, zoom)
-signal zoom_tier_changed(tier)
 
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 const MapFxLayerClass = preload("res://scripts/ui/map_fx_layer.gd")
@@ -62,7 +61,6 @@ var _pinch_center:=Vector2.ZERO
 var _ignore_mouse_until_ms:=0
 var _motion_until_ms:=0
 var _settled_redraw_pending:=false
-var _last_tier := ""
 var _layer_value_cache: Dictionary = {}
 var _cache_tick: int = -1
 var _cache_layer: String = ""
@@ -1170,8 +1168,6 @@ func _draw_selected_outline():
 
 func _draw_map_hud():
 	var tier = _zoom_tier()
-	if tier != _last_tier:
-		_last_tier = tier; emit_signal("zoom_tier_changed", tier)
 	var panel = Rect2(14, 14, 320, 92)
 	# پنل شیشه‌ای: شفاف‌تر + هایلایت لبه بالا + سایه
 	draw_rect(panel, Color(0.006, 0.022, 0.039, 0.82), true)

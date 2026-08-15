@@ -5,7 +5,6 @@ extends Node
 # درآمد را کم می‌کند و رفاه را تحت‌تأثیر قرار می‌دهد.
 # پیوند: اقتصاد، رفاه، صنایع، رضایت مردم.
 
-signal tax_revenue_changed(total_revenue: float)
 
 var tax_rates: Dictionary = {
 	"income": 0.12,
@@ -126,7 +125,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 			budget["deficit"] = maxf(0.0, float(budget["deficit"]) - revenue * 0.5)
 		state["budget"] = budget
 
-	emit_signal("tax_revenue_changed", revenue)
 	return state
 
 func get_summary(state: Dictionary) -> Dictionary:

@@ -4,7 +4,6 @@ extends Node
 # تجاری‌سازی پژوهش. این لایه پل بین دانشگاه/پژوهش و صنعت است؛
 # نوآوری را به محصول و درآمد تبدیل می‌کند. پیوند: آموزش، پژوهش، صنعت.
 
-signal knowledge_businesses_changed(count: int)
 
 var tech_parks: float = 0.10
 var incubators: float = 0.15
@@ -135,7 +134,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		research["innovation_index"] = clampf(research_innov + knowledge_index * 0.002, 0.0, 1.0)
 		state["research_policy"] = research
 
-	emit_signal("knowledge_businesses_changed", new_businesses)
 	state["knowledge_economy_policy"] = p
 	return state
 

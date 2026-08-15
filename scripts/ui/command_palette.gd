@@ -2,7 +2,6 @@ extends Control
 # جست‌وجوی فرمان، کشور و سامانه؛ مسیر سریع برای بازیکن حرفه‌ای و موبایل
 
 signal item_chosen(kind, id)
-signal closed
 
 const PersianFont = preload("res://assets/fonts/Vazirmatn-Regular.ttf")
 const TouchScrollClass = preload("res://scripts/ui/touch_scroll_container.gd")
@@ -41,7 +40,6 @@ func open_palette(initial_query: String = ""):
 func close_palette():
 	if not visible: return
 	hide()
-	emit_signal("closed")
 
 func _build():
 	var dim = ColorRect.new(); dim.set_anchors_preset(Control.PRESET_FULL_RECT); dim.color = Color(0.0,0.01,0.02,0.78); dim.mouse_filter = Control.MOUSE_FILTER_STOP; dim.gui_input.connect(_on_dim_input); add_child(dim)

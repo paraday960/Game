@@ -4,7 +4,6 @@ extends Node
 # و صادرات دفاعی. کاهش وابستگی به واردات اسلحه، بازدارندگی
 # و درآمد ارزی. پیوند: نظامی، صنعت، پژوهش، روابط خارجی.
 
-signal defense_industry_changed(self_sufficiency: float)
 
 var production: float = 0.15
 var r_and_d: float = 0.10
@@ -127,7 +126,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		military["import_dependency"] = clampf(float(military.get("import_dependency", 0.6)) - new_self * 0.003, 0.0, 1.0)
 		state["military"] = military
 
-	emit_signal("defense_industry_changed", new_self)
 	state["defense_industry_policy"] = p
 	return state
 

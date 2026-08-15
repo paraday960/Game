@@ -4,7 +4,6 @@ extends Node
 # پزشکی. این صنعت به ارزآوری، اشتغال کادر درمان و قدرت نرم کمک می‌کند
 # اما به زیرساخت بهداشت و ثبات نیاز دارد. پیوند: بهداشت، گردشگری، دیپلماسی.
 
-signal health_tourists_changed(count: float)
 
 var hospitals: float = 0.20        # بیمارستان‌های بین‌المللی
 var medical_quality: float = 0.30
@@ -143,7 +142,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		dip["soft_power"] = clampf(float(dip.get("soft_power", 35.0)) + new_count * 0.0001, 0.0, 100.0)
 		state["diplomacy"] = dip
 
-	emit_signal("health_tourists_changed", new_count)
 	state["health_tourism_policy"] = p
 	return state
 

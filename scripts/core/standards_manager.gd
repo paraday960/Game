@@ -5,7 +5,6 @@ extends Node
 # کیفیت کلید پذیرش کالای داخلی در بازارهای جهانی است.
 # پیوند: تجارت خارجی، صادرات، اعتماد مصرف‌کننده.
 
-signal certified_firms_changed(count: int)
 
 var metrology: float = 0.20
 var labs: float = 0.15
@@ -117,7 +116,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		pop["happiness"] = clampf(float(pop.get("happiness", 0.5)) + srv * 0.0006, 0.0, 1.0)
 		state["population"] = pop
 
-	emit_signal("certified_firms_changed", int(p["certified_firms"]))
 	state["standards_policy"] = p
 	return state
 

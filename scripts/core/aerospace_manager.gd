@@ -4,7 +4,6 @@ extends Node
 # ماهواره‌ای. به نظارت زمینی، مخابرات، پیش‌بینی آب‌وهوا و
 # قدرت نرم کمک می‌کند. پیوند: فناوری، دفاع، ارتباطات.
 
-signal satellite_count_changed(count: int)
 
 var launch_capacity: float = 0.05
 var satellite_manufacturing: float = 0.10
@@ -129,7 +128,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		dip["soft_power"] = clampf(float(dip.get("soft_power", 35.0)) + sat_count * 0.05, 0.0, 100.0)
 		state["diplomacy"] = dip
 
-	emit_signal("satellite_count_changed", sat_count)
 	state["aerospace_policy"] = p
 	return state
 

@@ -5,7 +5,6 @@ extends Node
 # تجارت و اشتغال است و بر قدرت نرم کشور می‌افزاید.
 # پیوند: اقتصاد، گردشگری، دیپلماسی.
 
-signal passengers_changed(count: int)
 
 var airports: float = 0.15
 var fleet: float = 0.10
@@ -119,7 +118,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		dip["soft_power"] = clampf(float(dip.get("soft_power", 35.0)) + cap * 0.03, 0.0, 100.0)
 		state["diplomacy"] = dip
 
-	emit_signal("passengers_changed", int(p["passengers_m"]))
 	state["aviation_policy"] = p
 	return state
 

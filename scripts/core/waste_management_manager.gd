@@ -4,7 +4,6 @@ extends Node
 # و کاهش دفن. این سیستم به بهداشت، کاهش آلودگی و حتی
 # تولید انرژی/درآمد کمک می‌کند. پیوند: محیط‌زیست، انرژی، رفاه.
 
-signal recycling_rate_changed(rate: float)
 
 var collection: float = 0.40
 var separation: float = 0.15
@@ -138,7 +137,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		)
 		state["health"] = health
 
-	emit_signal("recycling_rate_changed", recycling_rate)
 	state["waste_management_policy"] = p
 	return state
 

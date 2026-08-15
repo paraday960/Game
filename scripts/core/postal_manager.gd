@@ -5,7 +5,6 @@ extends Node
 # فقرات فروش آنلاین SMEها و دسترسی روستایی است.
 # پیوند: بنگاه‌های کوچک، توسعه روستایی، رفاه و GDP.
 
-signal parcels_changed(count: int)
 
 var network: float = 0.30
 var sorting: float = 0.15
@@ -125,7 +124,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 		pop["happiness"] = clampf(float(pop.get("happiness", 0.5)) + tr * 0.0005, 0.0, 1.0)
 		state["population"] = pop
 
-	emit_signal("parcels_changed", int(p["parcels_m"]))
 	state["postal_policy"] = p
 	return state
 

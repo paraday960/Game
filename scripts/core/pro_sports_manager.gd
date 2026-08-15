@@ -2,7 +2,6 @@ extends Node
 # اقتصاد ورزش حرفه‌ای — لیگ‌های پولی، زیرساخت، میزبانی رویداد، آکادمی و صادرات صنعت ورزش.
 # کلید state جدا از sports_policy قدیمی: pro_sports_policy
 
-signal sports_industry_changed(index: float)
 
 var leagues: float = 0.20
 var infrastructure: float = 0.20
@@ -61,7 +60,6 @@ func simulate(state: Dictionary, tick: int) -> Dictionary:
 	if tourism.has("tourists"): tourism["tourists"]=float(tourism.get("tourists",0))+ev*50.0; state["tourism"]=tourism
 	var culture=state.get("culture_policy",{})
 	if not culture.is_empty(): culture["soft_power"]=clampf(float(culture.get("soft_power",40))+ev*0.002,5,100); state["culture_policy"]=culture
-	emit_signal("sports_industry_changed", index)
 	state["pro_sports_policy"]=p
 	return state
 
