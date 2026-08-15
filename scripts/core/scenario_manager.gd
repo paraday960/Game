@@ -225,8 +225,13 @@ func _objective_progress(objective: Dictionary, current) -> float:
 		return 1.0 if current is Array and current.has(objective.get("target")) else 0.0
 	if not (current is int or current is float):
 		return 0.0
-	var start = float(objective.get("start_value", 0.0))
-	var target = float(objective.get("target", 0.0))
+	# بازرسی ۱۴۰۵ (عمق‌بخشی ۲۸): start_value می‌تواند null باشد وقتی مسیر هدف
+	# در state اولیه وجود ندارد (مثل environment.* که سامانه بعداً می‌سازد)؛
+	# float(null) در Godot خطای «Nonexistent float constructor» می‌دهد.
+	var start_raw = objective.get("start_value", 0.0)
+	var target_raw = objective.get("target", 0.0)
+	var start = float(start_raw) if (start_raw is int or start_raw is float) else 0.0
+	var target = float(target_raw) if (target_raw is int or target_raw is float) else 0.0
 	var value = float(current)
 	if mode == "lte":
 		if value <= target:
