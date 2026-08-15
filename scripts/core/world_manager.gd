@@ -739,7 +739,13 @@ func simulate_npc_month(state: Dictionary, turn: int, forced: Dictionary = {}) -
 	# بازیکنِ بحران‌زده: رشد اقتصادی کمتری می‌گیرند و روابطشان با بازیکن تیره
 	# می‌شود. دترمینستیک — فقط از شاخص بحران.
 	var player_crisis_weight := _player_crisis_weight(state)
-	if player_crisis_weight >= 2.5:
+	# آستانهٔ سرایت: فقط بحران‌های واقعاً شدید و پایدار (وزن ≥ ۵) روابط همسایه‌ها
+	# را خراب می‌کنند — بحران‌های خفیف/موقتی نباید جهان را از خود برنجانند.
+	# کولداون ۶ ماهه: سرایت هر ۱۸۰ روز بیشتر از یک بار رخ نمی‌دهد تا روابط
+	# به‌خاطر بحران‌های پشت‌سرهم (که با شانس هر ماه فعال می‌شوند) آب نشود.
+	var last_contagion_turn := int(state.get("world", {}).get("last_contagion_turn", -999))
+	if player_crisis_weight >= 5.0 and (turn - last_contagion_turn) >= 180:
+		state["world"]["last_contagion_turn"] = turn
 		var player_borders: Array = countries.get(player_id, {}).get("borders", [])
 		var contagion_hit := false
 		for nid in player_borders:

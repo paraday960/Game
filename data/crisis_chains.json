@@ -541,16 +541,21 @@
       "max_instances": 1,
       "world_scope": true,
       "trigger": {
-        "mode": "all",
+        "mode": "any",
         "conditions": [
           {
             "path": "economy.gdp_per_capita",
             "op": ">",
             "value": 0.0
+          },
+          {
+            "path": "commodities.prices.نفت",
+            "op": ">",
+            "value": 95.0
           }
         ]
       },
-      "chance": 0.1,
+      "chance": 0.025,
       "entry_decision": "oil_shock",
       "stages": [
         {
@@ -577,6 +582,20 @@
               "value": 0.015,
               "min": 0.0,
               "max": 0.5
+            },
+            {
+              "path": "global_market.world_stock_index",
+              "op": "mul",
+              "value": 0.93,
+              "min": 150.0,
+              "max": 3000.0
+            },
+            {
+              "path": "global_market.risk_sentiment",
+              "op": "add",
+              "value": 0.1,
+              "min": 0.05,
+              "max": 0.95
             }
           ],
           "persist_effects": [
@@ -637,6 +656,13 @@
               "value": 0.002,
               "min": 0.0,
               "max": 1.0
+            },
+            {
+              "path": "global_market.world_stock_index",
+              "op": "mul",
+              "value": 0.995,
+              "min": 150.0,
+              "max": 3000.0
             }
           ]
         },
@@ -866,16 +892,21 @@
       "max_instances": 1,
       "world_scope": true,
       "trigger": {
-        "mode": "all",
+        "mode": "any",
         "conditions": [
           {
             "path": "economy.gdp_per_capita",
             "op": ">",
             "value": 0.0
+          },
+          {
+            "path": "commodities.prices.نفت",
+            "op": ">",
+            "value": 100.0
           }
         ]
       },
-      "chance": 0.08,
+      "chance": 0.02,
       "entry_decision": "chokepoint",
       "stages": [
         {
@@ -902,6 +933,20 @@
               "value": 0.98,
               "min": -1000000000000000.0,
               "max": 1000000000000000.0
+            },
+            {
+              "path": "global_market.world_stock_index",
+              "op": "mul",
+              "value": 0.97,
+              "min": 150.0,
+              "max": 3000.0
+            },
+            {
+              "path": "global_market.risk_sentiment",
+              "op": "add",
+              "value": 0.07,
+              "min": 0.05,
+              "max": 0.95
             }
           ],
           "persist_effects": [
@@ -1027,7 +1072,7 @@
           }
         ]
       },
-      "chance": 0.1,
+      "chance": 0.05,
       "entry_decision": "ai_revolution",
       "stages": [
         {
@@ -1061,6 +1106,13 @@
               "value": 0.04,
               "min": 0.0,
               "max": 1.0
+            },
+            {
+              "path": "global_market.world_stock_index",
+              "op": "mul",
+              "value": 1.08,
+              "min": 150.0,
+              "max": 3000.0
             }
           ],
           "persist_effects": [

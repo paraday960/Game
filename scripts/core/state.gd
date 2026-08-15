@@ -237,6 +237,7 @@ func init_default_state():
 		"trade": {"exports": 80_000_000_000.0, "imports": 70_000_000_000.0, "balance": 10_000_000_000.0},
 		"tourism": {"visitors": 5_000_000, "revenue": 5_000_000_000.0},
 		"stock_market": {"index": 1000.0, "growth": 0.05},
+		"global_market": {"world_stock_index": 1000.0, "usd_index": 100.0, "risk_sentiment": 0.30, "history": [], "crash_recent": false, "last_crash_turn": -99},
 		"agriculture": {"production": 100.0, "food_security": 0.85},
 		"industry": {"output": 100.0, "capacity_usage": 0.75},
 		"family": {"marriage_rate": 0.007, "divorce_rate": 0.002, "fertility": 1.8},

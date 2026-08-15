@@ -68,6 +68,28 @@ func apply_scenario(state: Dictionary, id: String, start_tick: int = 0) -> Dicti
 	state = TimeManager.ensure_time(state)
 	var start_day = TimeManager.get_total_days(state)
 	var definition: Dictionary = scenarios[id]
+	# شرایط اولیهٔ سناریو (عمق‌بخشی ۱۱): سناریوهای تاریخی مثل «شوک نفتی ۱۹۷۳»
+	# کشور را در وضعیت واقعیِ آن بحران قرار می‌دهند — نه فقط اهداف.
+	for effect in definition.get("startup_effects", []):
+		_apply_startup_effect(state, effect)
+	# اگر سناریو بخواهد یک بحران فعال داشته باشد (events_active)
+	for crisis_def in definition.get("startup_crises", []):
+		state["events_active"] = state.get("events_active", [])
+		state["crisis_cooldowns"] = state.get("crisis_cooldowns", {})
+		state["events_active"].append({
+			"instance_id": "%s_%d" % [str(crisis_def.get("type", "crisis")), start_tick],
+			"type": str(crisis_def.get("type", "crisis")),
+			"title": str(crisis_def.get("title", "بحران")),
+			"severity": int(crisis_def.get("severity", 3)),
+			"status": "active",
+			"started_tick": start_tick,
+			"started_day": start_day,
+			"expires_day": start_day + int(crisis_def.get("duration_days", 180)),
+			"stage": 0,
+			"stage_count": int(crisis_def.get("stage_count", 1)),
+			"stage_name_fa": str(crisis_def.get("stage_name_fa", "")),
+			"persist_effects": crisis_def.get("persist_effects", []).duplicate(true)
+		})
 	var objectives: Array = []
 	for raw_objective in definition.get("objectives", []):
 		var objective: Dictionary = raw_objective.duplicate(true)
@@ -217,6 +239,34 @@ func _objective_progress(objective: Dictionary, current) -> float:
 	if target <= start:
 		return 0.0
 	return clamp((value - start) / max(target - start, 0.000001), 0.0, 1.0)
+
+# اعمال یک اثر startup روی state (add/mul/set با min/max) — الگوی crisis_chains
+func _apply_startup_effect(state: Dictionary, effect: Dictionary) -> void:
+	var parts: Array = str(effect.get("path", "")).split(".")
+	if parts.size() < 2:
+		return
+	var current = state
+	for i in range(parts.size() - 1):
+		if not current is Dictionary or not current.has(str(parts[i])):
+			return
+		current = current[str(parts[i])]
+	var leaf: String = str(parts[parts.size() - 1])
+	if not current is Dictionary:
+		return
+	var op: String = str(effect.get("op", "add"))
+	var value: float = float(effect.get("value", 0.0))
+	var old: float = float(current.get(leaf, 0.0))
+	var new_val: float = old
+	match op:
+		"add":
+			new_val = old + value
+		"mul":
+			new_val = old * value
+		"set":
+			new_val = value
+	if effect.has("min") or effect.has("max"):
+		new_val = clampf(new_val, float(effect.get("min", -1e18)), float(effect.get("max", 1e18)))
+	current[leaf] = new_val
 
 func _metric_value(state: Dictionary, path: String):
 	match path:

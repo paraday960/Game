@@ -190,8 +190,15 @@ func _crisis_reaction(state: Dictionary, country_id: String, turn: int, current_
 	var mil: Dictionary = state.get("military", {})
 	var deterrence := float(mil.get("deterrence", 60.0))
 	# بحران خفیف = دنیا بی‌تفاوت است
-	if crisis_weight < 2.5:
+	if crisis_weight < 4.5:
 		return {}
+	# کولداون واکنش: هر کشور حداکثر هر ۱۲ ماه یک‌بار به بحرانِ شما واکنش نشان
+	# می‌دهد تا بحران‌های پشت‌سرهم باعث تحریم/جنگ بی‌پایان نشوند.
+	var react_cd_map: Dictionary = world.get("crisis_reaction_cooldown", {})
+	if turn - int(react_cd_map.get(country_id, -999)) < 12:
+		return {}
+	react_cd_map[country_id] = turn
+	world["crisis_reaction_cooldown"] = react_cd_map
 
 	# ۱) دشمن فرصت‌طلب: تحریم/جنگ علیه بازیکنِ بحران‌زده (در دنیای واقعی رایج است)
 	if stance == "hostile":

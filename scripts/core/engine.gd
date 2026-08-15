@@ -2520,6 +2520,10 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var commodity_result = CommodityManager.simulate_month(snapshot, turn)
 	snapshot = commodity_result.state
 	_collect_events(commodity_result, "commodities", snapshot, turn, generated_events, "trade_event")
+	# بازار مالی جهانی (عمق‌بخشی ۱۱): شاخص سهام جهانی، دلار و ریسک جهانی
+	var global_market_result = GlobalMarketManager.simulate_month(snapshot, turn)
+	snapshot = global_market_result.state
+	_collect_events(global_market_result, "global_market", snapshot, turn, generated_events, "global_market_event")
 	# سازمان‌های بین‌المللی: عضویت، هزینه‌ها و قطعنامه‌ها
 	var org_result = OrgManager.simulate_month(snapshot, turn)
 	snapshot = org_result.state

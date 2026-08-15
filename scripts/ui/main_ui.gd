@@ -3537,6 +3537,17 @@ func _build_banking_card(st: Dictionary):
 	_bar(card, "سلامت بانک‌ها", float(bk.get("bank_health", 0.7)))
 	_row(card, "ذخیره قانونی", PersianFormatter.to_persian_digits("%.0f٪" % (float(bk.get("reserve_ratio", 0.12)) * 100.0)))
 	_bar(card, "نظارت بانکی", float(bk.get("supervision", 0.5)))
+	# ── بازار مالی جهانی (عمق‌بخشی ۱۱) ──
+	var gm: Dictionary = st.get("global_market", {})
+	if not gm.is_empty():
+		var ws_index := float(gm.get("world_stock_index", 1000.0))
+		var usd_idx := float(gm.get("usd_index", 100.0))
+		var risk := float(gm.get("risk_sentiment", 0.30))
+		var wsi_color: Color = ACCENT_GREEN if ws_index >= 1000.0 else ACCENT_RED
+		var usd_color: Color = ACCENT_GOLD if usd_idx >= 100.0 else ACCENT_RED
+		_row(card, "🌍 شاخص سهام جهانی", PersianFormatter.to_persian_digits("%.0f" % ws_index), wsi_color)
+		_row(card, "💵 شاخص دلار", PersianFormatter.to_persian_digits("%.1f" % usd_idx), usd_color)
+		_bar(card, "⚡ احساس ریسک جهانی", risk)
 	var crisis: Dictionary = bk.get("crisis", {})
 	if not crisis.is_empty():
 		var crisis_lbl = Label.new()

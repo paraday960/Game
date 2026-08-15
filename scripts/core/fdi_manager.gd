@@ -31,6 +31,10 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var corruption := float(pol.get("corruption", 0.3))
 	var infra_q := float(infra.get("quality", 0.6))
 	var attractiveness := stability * 0.3 + infra_q * 0.2 + ip * 0.15 - corruption * 0.25 - restrictions * 0.15 - float(sanctions) * 0.1
+	# جو جهانی (عمق‌بخشی ۱۱): شاخص سهام جهانی و ریسک جهانی روی جریان سرمایه اثر
+	# می‌گذارند — در بحران مالی جهانی، حتی کشورِ با ثبات هم FDI کم می‌گیرد.
+	var global_factor := float(econ.get("fdi_global_factor", 0.0))
+	attractiveness += global_factor
 	inflow = clampf(inflow + (attractiveness - 0.25) * 0.03 + zones * 0.005, 0.0, 0.95)
 	fdi["inflow"] = inflow
 
