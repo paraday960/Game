@@ -99,6 +99,7 @@ jobs:
           godot --headless --path . --import --verbose
 
       - name: Run simulation and UI tests
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           python3 tests/validate_engine_version.py
@@ -107,30 +108,33 @@ jobs:
           python3 tests/validate_world_map.py
           python3 tests/validate_country_maps.py
           python3 tests/validate_engine_contracts.py
-          godot --headless --path . res://tests/test_scene.tscn
-          godot --headless --path . res://tests/test_long.tscn
-          godot --headless --path . -s res://tests/test_ui.gd
-          godot --headless --path . -s res://tests/test_save_compat.gd
+          # هر تست Godot سقف زمانی دارد تا گیرکردنِ یک تست، جوپ را برای همیشه
+          # متوقف نکند (بیلدهای قبلی ۲.۵ دقیقه بودند؛ برخی ران‌ها >۵ ساعت گیر
+          # کرده بودند). شکستِ timeout با پیام واضح گزارش می‌شود.
+          timeout 180 godot --headless --path . res://tests/test_scene.tscn || { echo "TIMEOUT/FAIL: test_scene.tscn"; exit 1; }
+          timeout 240 godot --headless --path . res://tests/test_long.tscn || { echo "TIMEOUT/FAIL: test_long.tscn"; exit 1; }
+          timeout 120 godot --headless --path . -s res://tests/test_ui.gd || { echo "TIMEOUT/FAIL: test_ui.gd"; exit 1; }
+          timeout 120 godot --headless --path . -s res://tests/test_save_compat.gd || { echo "TIMEOUT/FAIL: test_save_compat.gd"; exit 1; }
 
           # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet
-          godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1 &
+          timeout 120 godot --headless --path . -s res://tests/test_network_host.gd > /tmp/network-host.log 2>&1 &
           HOST_PID=$!
           sleep 1
           CLIENT_STATUS=0
           HOST_STATUS=0
-          godot --headless --path . -s res://tests/test_network_client.gd > /tmp/network-client.log 2>&1 || CLIENT_STATUS=$?
+          timeout 120 godot --headless --path . -s res://tests/test_network_client.gd > /tmp/network-client.log 2>&1 || CLIENT_STATUS=$?
           wait "$HOST_PID" || HOST_STATUS=$?
           cat /tmp/network-host.log
           cat /tmp/network-client.log
           test "$HOST_STATUS" -eq 0 -a "$CLIENT_STATUS" -eq 0
 
           # تست رقابتی واقعی: دو کشور و State مستقل روی ENet
-          godot --headless --path . -s res://tests/test_competitive_host.gd > /tmp/competitive-host.log 2>&1 &
+          timeout 120 godot --headless --path . -s res://tests/test_competitive_host.gd > /tmp/competitive-host.log 2>&1 &
           COMP_HOST_PID=$!
           sleep 1
           COMP_CLIENT_STATUS=0
           COMP_HOST_STATUS=0
-          godot --headless --path . -s res://tests/test_competitive_client.gd > /tmp/competitive-client.log 2>&1 || COMP_CLIENT_STATUS=$?
+          timeout 120 godot --headless --path . -s res://tests/test_competitive_client.gd > /tmp/competitive-client.log 2>&1 || COMP_CLIENT_STATUS=$?
           wait "$COMP_HOST_PID" || COMP_HOST_STATUS=$?
           cat /tmp/competitive-host.log
           cat /tmp/competitive-client.log
