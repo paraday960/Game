@@ -1247,14 +1247,14 @@ func _add_news_card(item: Dictionary):
 
 	# تیتر
 	var headline = Label.new()
-	headline.text = str(item.get("headline", ""))
+	headline.text = PersianFormatter.to_persian_digits(str(item.get("headline", "")))
 	headline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	headline.add_theme_font_size_override("font_size", 23)
 	headline.modulate = Color(0.96, 0.975, 0.99)
 	box.add_child(headline)
 	# متن خبر
 	var body = Label.new()
-	body.text = str(item.get("body", ""))
+	body.text = PersianFormatter.to_persian_digits(str(item.get("body", "")))
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_theme_font_size_override("font_size", 18)
 	body.modulate = TEXT_MUTED
@@ -7696,7 +7696,7 @@ func _build_selected_country_card(state: Dictionary, target: String, parent_over
 	var incoming_offer = WorldManager.find_offer(state.get("world", {}), target)
 	if not incoming_offer.is_empty():
 		var offer_box = Label.new()
-		offer_box.text = "📨 %s — %s" % [str(incoming_offer.get("offer_text", "پیشنهاد")), str(incoming_offer.get("message", ""))]
+		offer_box.text = "📨 %s — %s" % [PersianFormatter.to_persian_digits(str(incoming_offer.get("offer_text", "پیشنهاد"))), PersianFormatter.to_persian_digits(str(incoming_offer.get("message", "")))]
 		offer_box.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		offer_box.modulate = Color(0.55, 0.85, 1.0)
 		card.add_child(offer_box)
@@ -8403,6 +8403,7 @@ func _event_text_fa(event: Dictionary) -> String:
 func _toast(msg: String):
 	if msg == null or msg.strip_edges() == "":
 		return
+	msg = PersianFormatter.to_persian_digits(msg)
 	toast_generation += 1
 	if is_instance_valid(toast_lbl):toast_lbl.text=msg
 	var severity="danger" if "⚠" in msg or "خطا" in msg or "ناموفق" in msg else ("success" if "✅" in msg or "شد" in msg or "ذخیره" in msg else "info")

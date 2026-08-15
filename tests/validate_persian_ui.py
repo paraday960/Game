@@ -84,6 +84,32 @@ main = read("scripts/ui/main_ui.gd")
 uses = main.count("PersianFormatter.")
 check("استفاده‌ی گسترده از PersianFormatter", uses > 20, "تنها %d استفاده — احتمال نشت اعداد انگلیسی" % uses)
 
+# ── 4) نقاط مرکزی نمایش باید ارقام را تبدیل کنند (پویش پیام‌های رویداد) ──
+# ۷۱ پیام رویداد با %d/%.Nf در core/systems ساخته می‌شوند؛ نمایش باید مرکزی
+# تبدیل کند تا اعداد انگلیسی به بازیکن نرسند.
+toast = main[main.index("func _toast"):main.index("func _toast") + 400]
+check(
+    "تبدیل ارقام در _toast",
+    "PersianFormatter.to_persian_digits(msg)" in toast,
+    "_toast باید ارقام پیام را مرکزی تبدیل کند",
+)
+news_card = main[main.index("func _add_news_card"):main.index("func _add_news_card") + 2600]
+check(
+    "تبدیل ارقام تیتر خبر",
+    'headline.text = PersianFormatter.to_persian_digits(str(item.get("headline", "")))' in news_card,
+    "تیتر خبر باید ارقام فارسی داشته باشد",
+)
+check(
+    "تبدیل ارقام متن خبر",
+    'body.text = PersianFormatter.to_persian_digits(str(item.get("body", "")))' in news_card,
+    "متن خبر باید ارقام فارسی داشته باشد",
+)
+check(
+    "تبدیل ارقام پیشنهاد ورودی",
+    'PersianFormatter.to_persian_digits(str(incoming_offer.get("offer_text"' in main,
+    "متن پیشنهاد ورودی باید ارقام فارسی داشته باشد",
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))
