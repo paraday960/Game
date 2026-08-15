@@ -976,7 +976,10 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 	var _econ_before: Dictionary = snapshot.get("economy", {})
 	var _extra_before: float = float(_econ_before.get("extra_spending_daily", 0.0))
 	var _debt_before: float = float(_econ_before.get("national_debt", 0.0))
-	if cmd.type == "budget_allocate":
+	if cmd.type == "next_tick":
+		# نشانگر پایان نوبت — بدون اثر مستقیم؛ شبیه‌سازی روز در ادامه انجام می‌شود
+		pass
+	elif cmd.type == "budget_allocate":
 		var allocs = cmd.payload.get("allocations", {})
 		for k in allocs.keys():
 			if snapshot["economy"]["budget_allocations"].has(k):
