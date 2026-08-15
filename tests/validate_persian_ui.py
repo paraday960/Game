@@ -185,6 +185,23 @@ check(
     "تیتر و متن تیتر اول باید ارقام فارسی داشته باشند",
 )
 
+# ── 9) نقل‌قول دوره‌ای رهبر (عمق‌بخشی ۳۲) ─────────────────────────────
+check(
+    "نقل‌قول رهبر",
+    "func _leader_quote" in main and "❝" in main and "_leader_quote(st)" in main,
+    "نقل‌قول دوره‌ای رهبر ساخته/وصل نشده است",
+)
+check(
+    "نقل‌قول واکنشی است",
+    "at_war" in main and "pool" in main and "Deterministic" in main,
+    "نقل‌قول باید به وضعیت کشور (جنگ/بحران/شادی) واکنش دهد",
+)
+check(
+    "بدون خطای نوع at_war",
+    "var at_war: bool" in main,
+    "at_war باید نوع صریح bool داشته باشد (خطای استنتاج)",
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))

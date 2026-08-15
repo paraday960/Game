@@ -1478,6 +1478,53 @@ func _on_market(resource: String, action: String, amount: float):
 
 # 🎁 پاداش روزانه (استریک ورود)
 # ── کارت رهبر: محبوبیت جهانی، وضعیت پنهان/آشکار، کودتا و پیروزی ──
+func _leader_quote(st: Dictionary) -> String:
+	# نقل‌قول واکنشی رهبر به وضعیت کشور (دترمینستیک بر اساس تیک و شاخص‌ها)
+	var tick := int(st.get("tick", 0))
+	var happy := float(st.get("population", {}).get("happiness", 0.5))
+	var stability := float(st.get("politics", {}).get("stability", 0.5))
+	var growth := float(st.get("economy", {}).get("growth_rate", 0.0))
+	var at_war: bool = st.get("world", {}).get("wars", {}) is Dictionary and not st.get("world", {}).get("wars", {}).is_empty()
+	var crises: Array = _active_crises(st)
+	var pool: Array
+	if at_war:
+		pool = [
+			"ملت در کنار ارتش ایستاده است؛ این طوفان نیز می‌گذرد.",
+			"هر روز مقاومت، فردای پیروزی را نزدیک‌تر می‌کند.",
+			"ما صلح می‌خواهیم اما تسلیم هرگز."
+		]
+	elif not crises.is_empty():
+		pool = [
+			"بحران‌ها شخصیت یک ملت را می‌سازند.",
+			"در سخت‌ترین روزها، آرامش رهبری امنیت مردم است.",
+			"ما از این بحران قوی‌تر بیرون خواهیم آمد."
+		]
+	elif happy >= 0.65 and stability >= 0.6:
+		pool = [
+			"رضایت مردم، بزرگ‌ترین سرمایه‌ی ملی است.",
+			"آینده‌ی روشن، پاداش امروزِ سخت‌کوشان است.",
+			"پیشرفت واقعی وقتی دیده می‌شود که مردمش را خندان کند."
+		]
+	elif happy < 0.45:
+		pool = [
+			"صدای مردم را می‌شنوم؛ پاسخ آن را با عمل خواهم داد.",
+			"سخت‌ترین کارها را باید در سخت‌ترین روزها انجام داد.",
+			"اعتماد از دست رفته، با شفافیت بازمی‌گردد."
+		]
+	elif growth > 0.03:
+		pool = [
+			"اقتصادِ در حال رشد، امیدِ فردا را تأمین می‌کند.",
+			"رشد تولید، زبان گویای سیاست درست است."
+		]
+	else:
+		pool = [
+			"مسیر پیشرفت، صبوری و پایداری می‌خواهد.",
+			"هر روز، گامی تازه به‌سوی کشوری بهتر.",
+			"تدبیر امروز، آرامش فردا را می‌سازد."
+		]
+	var idx := Deterministic.next_int_range(0, pool.size() - 1) if Deterministic else (tick % pool.size())
+	return str(pool[idx % pool.size()])
+
 func _build_leader_card(st: Dictionary):
 	var leader: Dictionary = st.get("leader", {})
 	if leader.is_empty():
@@ -1571,6 +1618,19 @@ func _build_leader_card(st: Dictionary):
 	hint.add_theme_font_size_override("font_size", 17)
 	hint.modulate = TEXT_FAINT
 	card.add_child(hint)
+	# نقل‌قول دوره‌ای رهبر (عمق‌بخشی ۳۲) — واکنش شخصیت رهبر به وضعیت کشور
+	var quote := _leader_quote(st)
+	if quote != "":
+		var quote_lbl = Label.new()
+		quote_lbl.text = "❝%s❞" % quote
+		quote_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		quote_lbl.add_theme_font_size_override("font_size", 16)
+		quote_lbl.modulate = Color(0.86, 0.90, 1.0)
+		var quote_name = Label.new()
+		quote_name.text = "— %s" % str(leader.get("name_fa", "رهبر"))
+		quote_name.add_theme_font_size_override("font_size", 13); quote_name.modulate = TEXT_FAINT
+		quote_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		card.add_child(quote_lbl); card.add_child(quote_name)
 	# دکمه پنهان/آشکار — فقط در جنگ
 	var at_war := false
 	for war_key in st.get("world", {}).get("wars", {}).keys():
