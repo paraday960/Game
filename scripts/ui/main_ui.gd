@@ -1703,6 +1703,7 @@ func _build_dashboard():
 	_build_weather_and_municipal_card(st)
 	_build_monthly_report_card(st)
 	_build_timeline_card(st)
+	_build_history_timeline_card(st)
 
 	# هشدار بحران‌ها
 	var crises = _active_crises(st)
@@ -1963,6 +1964,57 @@ func _build_timeline_card(state: Dictionary):
 	rewind.disabled = not AuditManager.can_rewind(state, 1)
 	rewind.tooltip_text = "وضعیت ماه فعلی کنار گذاشته می‌شود؛ Saveهای دیسک حذف نمی‌شوند."
 	rewind.pressed.connect(FeedbackManager.play_click); rewind.pressed.connect(_on_rewind_month); card.add_child(rewind)
+
+func _event_tick_date(e: Dictionary, state: Dictionary) -> String:
+	# هر تیک = یک ماه بازی؛ سال شروع از ساعت بازی (۲۰۲۷) و ماه از باقی‌مانده‌ی تیک.
+	var tick := int(e.get("tick", int(state.get("tick", 0))))
+	var start_year := int(state.get("clock", {}).get("year", 2027))
+	var month_n := (tick % 12) + 1
+	var year := start_year + int(floor(float(tick) / 12.0))
+	return "%s %s" % [TimeManager.month_name(month_n), PersianFormatter.to_persian_digits(str(year))]
+
+func _event_icon(e: Dictionary) -> String:
+	var t := str(e.get("type", ""))
+	var d: Dictionary = e.get("data", {})
+	var et := str(d.get("event", {}).get("type", t)) if t == "system_event" else t
+	var low := et.to_lower()
+	for h in ["war", "attack", "invasion", "missile", "assassin"]:
+		if low.contains(h):
+			return "⚔️"
+	for h in ["crisis", "debt", "disaster", "epidemic", "riot", "protest", "collapse", "shortage", "hyperinflation", "famine", "default", "resign", "impeach", "sanction"]:
+		if low.contains(h):
+			return "🚨"
+	for h in ["peace", "treaty", "alliance", "victory", "breakthrough", "olympics", "record", "boom", "sector_boost"]:
+		if low.contains(h):
+			return "🏆"
+	for h in ["election", "referendum", "coup"]:
+		if low.contains(h):
+			return "🗳️"
+	return "📌"
+
+func _build_history_timeline_card(state: Dictionary):
+	# خط زمانی تاریخی: رویدادهای مهم کشور با تاریخ بازی (ماندگار در EventLog/Save)
+	var card = _card("🗺 خط زمانی تاریخ کشور")
+	var events: Array = EventLog.get_last(400)
+	events.reverse()
+	var shown := 0
+	for e in events:
+		if shown >= 8:
+			break
+		if not _event_is_important(e):
+			continue
+		var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 6); card.add_child(row)
+		var icon = Label.new(); icon.text = _event_icon(e); icon.add_theme_font_size_override("font_size", 17); row.add_child(icon)
+		var date = Label.new(); date.text = _event_tick_date(e, state); date.custom_minimum_size = Vector2(128, 0)
+		date.add_theme_font_size_override("font_size", 14); date.modulate = ACCENT_TEAL; row.add_child(date)
+		var text = Label.new(); text.text = _event_text_fa(e); text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.add_theme_font_size_override("font_size", 15); text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.modulate = Color(0.85, 0.88, 0.95); row.add_child(text)
+		shown += 1
+	if shown == 0:
+		var none = Label.new(); none.text = "هنوز رویداد مهمی ثبت نشده است — با ادامه‌ی بازی، تاریخ حکومت شما اینجا شکل می‌گیرد."
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; none.add_theme_font_size_override("font_size", 15)
+		none.modulate = TEXT_MUTED; card.add_child(none)
 
 func _on_rewind_month():
 	if P2PManager.is_network_active() and not P2PManager.is_host:

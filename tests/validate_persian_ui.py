@@ -145,6 +145,28 @@ check(
     "توابع طبقه‌بندی رویداد برای صدا حذف شده‌اند",
 )
 
+# ── 7) خط زمانی تاریخ کشور (عمق‌بخشی ۳۰) ─────────────────────────────
+check(
+    "کارت خط زمانی تاریخی وجود دارد",
+    "func _build_history_timeline_card" in main and "func _event_tick_date" in main and "func _event_icon" in main,
+    "کارت خط زمانی تاریخی کشور ساخته نشده است",
+)
+check(
+    "خط زمانی از EventLog و فیلتر اهمیت",
+    "EventLog.get_last(400)" in main and "_event_is_important(e)" in main,
+    "خط زمانی باید از EventLog با فیلتر رویدادهای مهم ساخته شود",
+)
+check(
+    "تاریخ فارسی در خط زمانی",
+    "TimeManager.month_name" in main and "to_persian_digits(str(year))" in main and "func _event_tick_date" in main,
+    "تاریخ خط زمانی باید فارسی باشد",
+)
+check(
+    "اتصال به داشبورد",
+    "_build_history_timeline_card(st)" in main,
+    "کارت خط زمانی به داشبورد متصل نیست",
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))
