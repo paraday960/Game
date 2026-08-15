@@ -20,10 +20,6 @@ func ensure(state: Dictionary) -> Dictionary:
 		}
 	return state
 
-func get_rate(state: Dictionary) -> float:
-	return float(state.get("central_bank", {}).get("exchange_rate", 1.0))
-
-# ── مداخله ارزی: هزینه ذخایر، تقویت نرخ ──
 func can_intervene(state: Dictionary) -> Dictionary:
 	state = ensure(state)
 	var reserves := float(state.get("economy", {}).get("foreign_reserves", 0.0))

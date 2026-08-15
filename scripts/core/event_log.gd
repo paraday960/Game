@@ -41,9 +41,6 @@ func rollback_transaction():
 	_transaction_events = []
 	_transaction_active = false
 
-func is_transaction_active() -> bool:
-	return _transaction_active
-
 func log_event(type: String, data: Dictionary, tick: int = -1, version: int = -1):
 	var evt = {
 		"id": -1 if _transaction_active else _next_event_id(),
@@ -83,17 +80,6 @@ func get_events(filter_type: String = "") -> Array:
 func get_last(n: int = 10) -> Array:
 	var start = max(0, events.size() - n)
 	return events.slice(start, events.size()).duplicate(true)
-
-func replay(from_tick: int = 0) -> Array:
-	# خروجی مرتب برای بازپخش ممیزی؛ بازسازی Snapshot در SaveManager انجام می‌شود.
-	var replay_events = []
-	for e in events:
-		if int(e.get("tick", -1)) >= from_tick:
-			replay_events.append(e.duplicate(true))
-	return replay_events
-
-func export_json() -> String:
-	return JSON.stringify(events)
 
 func import_events(imported: Array) -> bool:
 	var clean: Array = []

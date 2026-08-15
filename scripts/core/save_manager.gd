@@ -205,9 +205,6 @@ func maybe_autosave(tick: int) -> Dictionary:
 func get_autosave_metadata() -> Dictionary:
 	return _read_metadata(AUTOSAVE_PATH)
 
-func has_save(path: String = DEFAULT_PATH) -> bool:
-	return FileAccess.file_exists(path)
-
 func delete_save(path: String = DEFAULT_PATH) -> bool:
 	var ok = true
 	for candidate in [path, path + ".tmp", path + ".bak"]:

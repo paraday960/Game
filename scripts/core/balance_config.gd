@@ -32,10 +32,6 @@ func get_value(path: String, fallback):
 		current = current[part]
 	return current
 
-func get_section(name: String) -> Dictionary:
-	var section = data.get(name, {})
-	return section.duplicate(true) if section is Dictionary else {}
-
 func is_valid() -> bool:
 	return not data.is_empty() and load_errors.is_empty()
 

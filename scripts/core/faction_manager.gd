@@ -216,12 +216,3 @@ func apply_action(state: Dictionary, faction: String, action: String) -> Diction
 	state["factions"] = factions
 	state["policies"] = policies
 	return {"success": true, "state": state, "events": events}
-
-func get_faction_status(faction: String, loyalty: float) -> String:
-	if loyalty < CRISIS_THRESHOLD:
-		return "بحرانی"
-	if loyalty < 40.0:
-		return "ناراضی"
-	if loyalty > 70.0:
-		return "وفادار"
-	return "متوازن"

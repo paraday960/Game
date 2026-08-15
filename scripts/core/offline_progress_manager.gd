@@ -72,7 +72,3 @@ func claim_offline(state: Dictionary) -> Dictionary:
 	return {"success": true, "hours": hours, "bonus": bonus, "state": state}
 
 # ریست پس از ذخیره/بارگذاری جدید (پاداش فقط یک بار در نشست)
-func reset_for_session() -> void:
-	meta["offline_claimed"] = false
-	meta["last_exit_unix"] = Time.get_unix_time_from_system()
-	save_meta()

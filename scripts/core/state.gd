@@ -381,13 +381,3 @@ func get_value(path: String):
 		else:
 			return null
 	return current
-
-func apply_delta(path: String, delta):
-	var parts = path.split(".")
-	var current = state
-	for i in range(parts.size() - 1):
-		current = current[parts[i]]
-	var last = parts[-1]
-	if current is Dictionary and current.has(last):
-		if typeof(current[last]) == TYPE_FLOAT or typeof(current[last]) == TYPE_INT:
-			current[last] += delta

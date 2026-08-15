@@ -40,8 +40,5 @@ func shuffle_array(arr: Array) -> Array:
 		copy[j] = tmp
 	return copy
 
-func get_seed() -> int:
-	return _seed
-
 func get_state() -> int:
 	return _state

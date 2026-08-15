@@ -51,9 +51,6 @@ func reload() -> bool:
 func is_valid() -> bool:
 	return technologies.size() >= 18 and load_errors.is_empty()
 
-func get_technology(id: String) -> Dictionary:
-	return technologies.get(id, {}).duplicate(true)
-
 func get_technology_name(id: String) -> String:
 	return str(technologies.get(id, {}).get("name_fa", id))
 
@@ -158,12 +155,6 @@ func _sync_branch_float(tech_state: Dictionary, branch: String):
 	branches[branch] = float(clampi(int(levels.get(branch, 0)), 0, BRANCH_MAX_LEVEL)) / float(BRANCH_MAX_LEVEL)
 	tech_state["branches"] = branches
 
-func sync_all_branch_floats(tech_state: Dictionary) -> Dictionary:
-	for branch in BRANCH_IDS:
-		_sync_branch_float(tech_state, branch)
-	return tech_state
-
-# هزینه ارتقا از سطح جاری به سطح بعد: سطح+۱ امتیاز (مسیر کامل یک شاخه ≈ ۴۶۵ امتیاز)
 func branch_upgrade_cost(current_level: int) -> float:
 	return float(clampi(current_level, 0, BRANCH_MAX_LEVEL - 1) + 1)
 

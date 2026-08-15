@@ -96,9 +96,6 @@ func is_valid() -> bool:
 			return false
 	return true
 
-func has_country(code: String) -> bool:
-	return countries.has(code)
-
 func get_units(code: String) -> Array:
 	return countries.get(code, {}).get("units", [])
 
