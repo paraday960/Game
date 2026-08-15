@@ -10,6 +10,7 @@ extends Node
 
 const BASE_INDEX := 1000.0
 const BASE_USD := 100.0
+const BASE_GLOBAL_RATE := 0.045  # نرخ بهره جهانی (فدرال رزرو/ECB)
 
 func ensure(state: Dictionary) -> Dictionary:
 	if not state.has("global_market") or not state["global_market"] is Dictionary:
@@ -17,6 +18,8 @@ func ensure(state: Dictionary) -> Dictionary:
 			"world_stock_index": BASE_INDEX,
 			"usd_index": BASE_USD,
 			"risk_sentiment": 0.30,
+			"global_rate": BASE_GLOBAL_RATE,
+			"rate_history": [],
 			"history": [],
 			"crash_recent": false,
 			"last_crash_turn": -99
@@ -101,6 +104,28 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	stock_drift += Deterministic.next_range(-0.8, 0.8)
 	usd_drift += Deterministic.next_range(-0.4, 0.4)
 
+	# ── چرخه نرخ بهره جهانی (عمق‌بخشی ۱۲) ──
+	# بانک مرکزی بزرگ (فدرال رزرو/ECB) با تورم/رکود جهانی، نرخ بهره را
+	# تنظیم می‌کند؛ این نرخ روی هزینه پول همه کشورها اثر می‌گذارد.
+	var global_rate := float(gm.get("global_rate", BASE_GLOBAL_RATE))
+	var rate_drift := 0.0
+	var cur_index := float(gm.get("world_stock_index", BASE_INDEX))
+	# تورم جهانی بالا → انقباض (نرخ بالا)
+	if oil > 95.0 or risk > 0.6:
+		rate_drift += 0.004
+	elif cur_index < 800.0 and risk < 0.4:
+		# رکود → انبساط (نرخ پایین)
+		rate_drift -= 0.005
+	# بازگشت تدریجی به میانگین
+	rate_drift += (BASE_GLOBAL_RATE - global_rate) * 0.05
+	global_rate = clampf(global_rate + rate_drift, 0.005, 0.15)
+	gm["global_rate"] = global_rate
+	var rate_hist: Array = gm.get("rate_history", [])
+	rate_hist.append({"turn": turn, "rate": global_rate})
+	while rate_hist.size() > 60:
+		rate_hist.pop_front()
+	gm["rate_history"] = rate_hist
+
 	# ── اعمال ──
 	var index := float(gm.get("world_stock_index", BASE_INDEX))
 	var usd := float(gm.get("usd_index", BASE_USD))
@@ -131,6 +156,15 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	confidence = clampf(confidence + (index / BASE_INDEX - 1.0) * 0.05 - (risk - 0.3) * 0.10, 0.10, 0.95)
 	sm["investor_confidence"] = confidence
 	state["stock_market"] = sm
+	# ── اثر نرخ بهره جهانی روی بانک مرکزی داخلی (عمق‌بخشی ۱۲) ──
+	# کشورهای کوچک/وابسته نرخ‌شان را به نرخ جهانی نزدیک می‌کنند (جریان سرمایه)؛
+	# بانک مرکزی مستقل می‌تواند مقاومت کند. فشار ملایم — نه اجبار.
+	var cb: Dictionary = state.get("central_bank", {})
+	var cb_rate := float(cb.get("interest_rate", 0.10))
+	var independence := float(cb.get("independence", 0.70))
+	cb_rate = clampf(cb_rate + (global_rate - cb_rate) * (1.0 - independence) * 0.03, 0.005, 0.60)
+	cb["interest_rate"] = cb_rate
+	state["central_bank"] = cb
 	state["economy"] = econ
 
 	return {"state": state, "events": events}

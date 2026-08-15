@@ -1467,6 +1467,12 @@ func _build_leader_card(st: Dictionary):
 		win_card.add_child(win_lbl)
 	# کارت اصلی رهبر
 	var card = _card("👤 رهبر کشور")
+	var leader_name := str(leader.get("name_fa", "رهبر ملی"))
+	var leader_age := int(leader.get("age", 0))
+	if leader_name != "رهبر ملی":
+		_row(card, "نام", leader_name)
+		if leader_age > 0:
+			_row(card, "سن", PersianFormatter.to_persian_digits(str(leader_age)) + " سال")
 	var hidden := bool(leader.get("hidden", false))
 	_row(card, "وضعیت", "🛡 پنهان (مکان امن)" if hidden else "☀ آشکار (در برابر مردم)")
 	var pop := clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
@@ -3548,6 +3554,8 @@ func _build_banking_card(st: Dictionary):
 		_row(card, "🌍 شاخص سهام جهانی", PersianFormatter.to_persian_digits("%.0f" % ws_index), wsi_color)
 		_row(card, "💵 شاخص دلار", PersianFormatter.to_persian_digits("%.1f" % usd_idx), usd_color)
 		_bar(card, "⚡ احساس ریسک جهانی", risk)
+		var g_rate := float(gm.get("global_rate", 0.045))
+		_row(card, "🏦 نرخ بهره جهانی", PersianFormatter.to_persian_digits("%.1f٪" % (g_rate * 100.0)), _color_for(1.0 - g_rate * 4.0))
 	var crisis: Dictionary = bk.get("crisis", {})
 	if not crisis.is_empty():
 		var crisis_lbl = Label.new()

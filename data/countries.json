@@ -57,7 +57,10 @@
         "TUR"
       ],
       "landlocked": true,
-      "area_km2": 86600.0
+      "area_km2": 86600.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ARG",
@@ -95,7 +98,10 @@
         "URY"
       ],
       "landlocked": false,
-      "area_km2": 2780400.0
+      "area_km2": 2780400.0,
+      "inflation_base": 0.5,
+      "interest_rate_base": 0.5,
+      "unemployment_base": 0.06
     },
     {
       "id": "ZAF",
@@ -134,7 +140,10 @@
         "ZWE"
       ],
       "landlocked": false,
-      "area_km2": 1221037.0
+      "area_km2": 1221037.0,
+      "inflation_base": 0.05,
+      "interest_rate_base": 0.08,
+      "unemployment_base": 0.32
     },
     {
       "id": "ALB",
@@ -171,7 +180,10 @@
         "UNK"
       ],
       "landlocked": false,
-      "area_km2": 28748.0
+      "area_km2": 28748.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "DEU",
@@ -213,7 +225,10 @@
         "CHE"
       ],
       "landlocked": false,
-      "area_km2": 357114.0
+      "area_km2": 357114.0,
+      "inflation_base": 0.024,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.031
     },
     {
       "id": "ATG",
@@ -245,7 +260,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 442.0
+      "area_km2": 442.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "AND",
@@ -280,7 +298,10 @@
         "ESP"
       ],
       "landlocked": true,
-      "area_km2": 468.0
+      "area_km2": 468.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "AGO",
@@ -317,7 +338,10 @@
         "NAM"
       ],
       "landlocked": false,
-      "area_km2": 1246700.0
+      "area_km2": 1246700.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "AUT",
@@ -358,7 +382,10 @@
         "CHE"
       ],
       "landlocked": true,
-      "area_km2": 83871.0
+      "area_km2": 83871.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.05
     },
     {
       "id": "ETH",
@@ -397,7 +424,10 @@
         "SDN"
       ],
       "landlocked": true,
-      "area_km2": 1104300.0
+      "area_km2": 1104300.0,
+      "inflation_base": 0.28,
+      "interest_rate_base": 0.18,
+      "unemployment_base": 0.03
     },
     {
       "id": "JOR",
@@ -435,7 +465,10 @@
         "SYR"
       ],
       "landlocked": false,
-      "area_km2": 89342.0
+      "area_km2": 89342.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ARM",
@@ -472,7 +505,10 @@
         "TUR"
       ],
       "landlocked": true,
-      "area_km2": 29743.0
+      "area_km2": 29743.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "URY",
@@ -507,7 +543,10 @@
         "BRA"
       ],
       "landlocked": false,
-      "area_km2": 181034.0
+      "area_km2": 181034.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ERI",
@@ -543,7 +582,10 @@
         "SDN"
       ],
       "landlocked": false,
-      "area_km2": 117600.0
+      "area_km2": 117600.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "UZB",
@@ -581,7 +623,10 @@
         "TKM"
       ],
       "landlocked": true,
-      "area_km2": 447400.0
+      "area_km2": 447400.0,
+      "inflation_base": 0.09,
+      "interest_rate_base": 0.14,
+      "unemployment_base": 0.07
     },
     {
       "id": "AUS",
@@ -613,7 +658,10 @@
       "generated_balance": false,
       "borders": [],
       "landlocked": false,
-      "area_km2": 7692024.0
+      "area_km2": 7692024.0,
+      "inflation_base": 0.036,
+      "interest_rate_base": 0.043,
+      "unemployment_base": 0.038
     },
     {
       "id": "EST",
@@ -648,7 +696,10 @@
         "RUS"
       ],
       "landlocked": false,
-      "area_km2": 45227.0
+      "area_km2": 45227.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ISR",
@@ -686,7 +737,10 @@
         "SYR"
       ],
       "landlocked": false,
-      "area_km2": 20770.0
+      "area_km2": 20770.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.047,
+      "unemployment_base": 0.035
     },
     {
       "id": "SVK",
@@ -724,7 +778,10 @@
         "UKR"
       ],
       "landlocked": true,
-      "area_km2": 49037.0
+      "area_km2": 49037.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SVN",
@@ -761,7 +818,10 @@
         "HUN"
       ],
       "landlocked": false,
-      "area_km2": 20273.0
+      "area_km2": 20273.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ESP",
@@ -799,7 +859,10 @@
         "MAR"
       ],
       "landlocked": false,
-      "area_km2": 505992.0
+      "area_km2": 505992.0,
+      "inflation_base": 0.032,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.121
     },
     {
       "id": "CPV",
@@ -831,7 +894,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 4033.0
+      "area_km2": 4033.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "AFG",
@@ -870,7 +936,10 @@
         "CHN"
       ],
       "landlocked": true,
-      "area_km2": 652230.0
+      "area_km2": 652230.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SLV",
@@ -905,7 +974,10 @@
         "HND"
       ],
       "landlocked": false,
-      "area_km2": 21041.0
+      "area_km2": 21041.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "DZA",
@@ -945,7 +1017,10 @@
         "MAR"
       ],
       "landlocked": false,
-      "area_km2": 2381741.0
+      "area_km2": 2381741.0,
+      "inflation_base": 0.06,
+      "interest_rate_base": 0.03,
+      "unemployment_base": 0.12
     },
     {
       "id": "ARE",
@@ -980,7 +1055,10 @@
         "SAU"
       ],
       "landlocked": false,
-      "area_km2": 83600.0
+      "area_km2": 83600.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "IDN",
@@ -1016,7 +1094,10 @@
         "PNG"
       ],
       "landlocked": false,
-      "area_km2": 1904569.0
+      "area_km2": 1904569.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.06,
+      "unemployment_base": 0.053
     },
     {
       "id": "UKR",
@@ -1056,7 +1137,10 @@
         "SVK"
       ],
       "landlocked": false,
-      "area_km2": 603500.0
+      "area_km2": 603500.0,
+      "inflation_base": 0.08,
+      "interest_rate_base": 0.2,
+      "unemployment_base": 0.18
     },
     {
       "id": "UGA",
@@ -1094,7 +1178,10 @@
         "TZA"
       ],
       "landlocked": true,
-      "area_km2": 241550.0
+      "area_km2": 241550.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ECU",
@@ -1129,7 +1216,10 @@
         "PER"
       ],
       "landlocked": false,
-      "area_km2": 276841.0
+      "area_km2": 276841.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "FSM",
@@ -1161,7 +1251,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 702.0
+      "area_km2": 702.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "USA",
@@ -1196,7 +1289,10 @@
         "MEX"
       ],
       "landlocked": false,
-      "area_km2": 9372610.0
+      "area_km2": 9372610.0,
+      "inflation_base": 0.031,
+      "interest_rate_base": 0.054,
+      "unemployment_base": 0.038
     },
     {
       "id": "ITA",
@@ -1235,7 +1331,10 @@
         "VAT"
       ],
       "landlocked": false,
-      "area_km2": 301336.0
+      "area_km2": 301336.0,
+      "inflation_base": 0.022,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.077
     },
     {
       "id": "IRN",
@@ -1275,7 +1374,10 @@
         "TKM"
       ],
       "landlocked": false,
-      "area_km2": 1648195.0
+      "area_km2": 1648195.0,
+      "inflation_base": 0.35,
+      "interest_rate_base": 0.3,
+      "unemployment_base": 0.09
     },
     {
       "id": "ISL",
@@ -1307,7 +1409,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 103000.0
+      "area_km2": 103000.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BRB",
@@ -1339,7 +1444,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 430.0
+      "area_km2": 430.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BHS",
@@ -1371,7 +1479,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 13943.0
+      "area_km2": 13943.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BHR",
@@ -1403,7 +1514,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 765.0
+      "area_km2": 765.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BRA",
@@ -1446,7 +1560,10 @@
         "VEN"
       ],
       "landlocked": false,
-      "area_km2": 8515767.0
+      "area_km2": 8515767.0,
+      "inflation_base": 0.043,
+      "interest_rate_base": 0.117,
+      "unemployment_base": 0.08
     },
     {
       "id": "BRN",
@@ -1480,7 +1597,10 @@
         "MYS"
       ],
       "landlocked": false,
-      "area_km2": 5765.0
+      "area_km2": 5765.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GBR",
@@ -1514,7 +1634,10 @@
         "IRL"
       ],
       "landlocked": false,
-      "area_km2": 242900.0
+      "area_km2": 242900.0,
+      "inflation_base": 0.034,
+      "interest_rate_base": 0.053,
+      "unemployment_base": 0.04
     },
     {
       "id": "BLR",
@@ -1552,7 +1675,10 @@
         "UKR"
       ],
       "landlocked": true,
-      "area_km2": 207600.0
+      "area_km2": 207600.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BGR",
@@ -1590,7 +1716,10 @@
         "TUR"
       ],
       "landlocked": false,
-      "area_km2": 110879.0
+      "area_km2": 110879.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BEL",
@@ -1627,7 +1756,10 @@
         "NLD"
       ],
       "landlocked": false,
-      "area_km2": 30528.0
+      "area_km2": 30528.0,
+      "inflation_base": 0.028,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.056
     },
     {
       "id": "BLZ",
@@ -1662,7 +1794,10 @@
         "MEX"
       ],
       "landlocked": false,
-      "area_km2": 22966.0
+      "area_km2": 22966.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BGD",
@@ -1697,7 +1832,10 @@
         "IND"
       ],
       "landlocked": false,
-      "area_km2": 147570.0
+      "area_km2": 147570.0,
+      "inflation_base": 0.09,
+      "interest_rate_base": 0.08,
+      "unemployment_base": 0.05
     },
     {
       "id": "BEN",
@@ -1734,7 +1872,10 @@
         "TGO"
       ],
       "landlocked": false,
-      "area_km2": 112622.0
+      "area_km2": 112622.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BTN",
@@ -1769,7 +1910,10 @@
         "IND"
       ],
       "landlocked": true,
-      "area_km2": 38394.0
+      "area_km2": 38394.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BWA",
@@ -1806,7 +1950,10 @@
         "ZWE"
       ],
       "landlocked": true,
-      "area_km2": 582000.0
+      "area_km2": 582000.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BDI",
@@ -1842,7 +1989,10 @@
         "TZA"
       ],
       "landlocked": true,
-      "area_km2": 27834.0
+      "area_km2": 27834.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BFA",
@@ -1881,7 +2031,10 @@
         "TGO"
       ],
       "landlocked": true,
-      "area_km2": 272967.0
+      "area_km2": 272967.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BIH",
@@ -1917,7 +2070,10 @@
         "SRB"
       ],
       "landlocked": false,
-      "area_km2": 51209.0
+      "area_km2": 51209.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "BOL",
@@ -1955,7 +2111,10 @@
         "PER"
       ],
       "landlocked": true,
-      "area_km2": 1098581.0
+      "area_km2": 1098581.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TJK",
@@ -1992,7 +2151,10 @@
         "UZB"
       ],
       "landlocked": true,
-      "area_km2": 143100.0
+      "area_km2": 143100.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TZA",
@@ -2033,7 +2195,10 @@
         "ZMB"
       ],
       "landlocked": false,
-      "area_km2": 945087.0
+      "area_km2": 945087.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "THA",
@@ -2070,7 +2235,10 @@
         "MYS"
       ],
       "landlocked": false,
-      "area_km2": 513120.0
+      "area_km2": 513120.0,
+      "inflation_base": 0.015,
+      "interest_rate_base": 0.025,
+      "unemployment_base": 0.01
     },
     {
       "id": "TKM",
@@ -2107,7 +2275,10 @@
         "UZB"
       ],
       "landlocked": true,
-      "area_km2": 488100.0
+      "area_km2": 488100.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TUR",
@@ -2148,7 +2319,10 @@
         "SYR"
       ],
       "landlocked": false,
-      "area_km2": 783562.0
+      "area_km2": 783562.0,
+      "inflation_base": 0.4,
+      "interest_rate_base": 0.45,
+      "unemployment_base": 0.093
     },
     {
       "id": "TTO",
@@ -2180,7 +2354,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 5130.0
+      "area_km2": 5130.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TUN",
@@ -2215,7 +2392,10 @@
         "LBY"
       ],
       "landlocked": false,
-      "area_km2": 163610.0
+      "area_km2": 163610.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TON",
@@ -2247,7 +2427,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 747.0
+      "area_km2": 747.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TUV",
@@ -2279,7 +2462,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 26.0
+      "area_km2": 26.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TGO",
@@ -2315,7 +2501,10 @@
         "GHA"
       ],
       "landlocked": false,
-      "area_km2": 56785.0
+      "area_km2": 56785.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "JAM",
@@ -2347,7 +2536,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 10991.0
+      "area_km2": 10991.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SLB",
@@ -2379,7 +2571,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 28896.0
+      "area_km2": 28896.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MHL",
@@ -2411,7 +2606,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 181.0
+      "area_km2": 181.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CAF",
@@ -2450,7 +2648,10 @@
         "SDN"
       ],
       "landlocked": true,
-      "area_km2": 622984.0
+      "area_km2": 622984.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "IRL",
@@ -2484,7 +2685,10 @@
         "GBR"
       ],
       "landlocked": false,
-      "area_km2": 70273.0
+      "area_km2": 70273.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.045
     },
     {
       "id": "COD",
@@ -2526,7 +2730,10 @@
         "ZMB"
       ],
       "landlocked": false,
-      "area_km2": 2344858.0
+      "area_km2": 2344858.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "DOM",
@@ -2560,7 +2767,10 @@
         "HTI"
       ],
       "landlocked": false,
-      "area_km2": 48671.0
+      "area_km2": 48671.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MKD",
@@ -2598,7 +2808,10 @@
         "SRB"
       ],
       "landlocked": true,
-      "area_km2": 25713.0
+      "area_km2": 25713.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CZE",
@@ -2635,7 +2848,10 @@
         "SVK"
       ],
       "landlocked": true,
-      "area_km2": 78865.0
+      "area_km2": 78865.0,
+      "inflation_base": 0.045,
+      "interest_rate_base": 0.07,
+      "unemployment_base": 0.025
     },
     {
       "id": "COG",
@@ -2673,7 +2889,10 @@
         "GAB"
       ],
       "landlocked": false,
-      "area_km2": 342000.0
+      "area_km2": 342000.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "DJI",
@@ -2709,7 +2928,10 @@
         "SOM"
       ],
       "landlocked": false,
-      "area_km2": 23200.0
+      "area_km2": 23200.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "DNK",
@@ -2743,7 +2965,10 @@
         "DEU"
       ],
       "landlocked": false,
-      "area_km2": 43094.0
+      "area_km2": 43094.0,
+      "inflation_base": 0.026,
+      "interest_rate_base": 0.035,
+      "unemployment_base": 0.05
     },
     {
       "id": "DMA",
@@ -2775,7 +3000,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 751.0
+      "area_km2": 751.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "RWA",
@@ -2812,7 +3040,10 @@
         "UGA"
       ],
       "landlocked": true,
-      "area_km2": 26338.0
+      "area_km2": 26338.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "RUS",
@@ -2859,7 +3090,10 @@
         "UKR"
       ],
       "landlocked": false,
-      "area_km2": 17098242.0
+      "area_km2": 17098242.0,
+      "inflation_base": 0.075,
+      "interest_rate_base": 0.16,
+      "unemployment_base": 0.03
     },
     {
       "id": "ROU",
@@ -2897,7 +3131,10 @@
         "UKR"
       ],
       "landlocked": false,
-      "area_km2": 238391.0
+      "area_km2": 238391.0,
+      "inflation_base": 0.055,
+      "interest_rate_base": 0.07,
+      "unemployment_base": 0.055
     },
     {
       "id": "ZMB",
@@ -2938,7 +3175,10 @@
         "ZWE"
       ],
       "landlocked": true,
-      "area_km2": 752612.0
+      "area_km2": 752612.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "ZWE",
@@ -2975,7 +3215,10 @@
         "ZMB"
       ],
       "landlocked": true,
-      "area_km2": 390757.0
+      "area_km2": 390757.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "STP",
@@ -3007,7 +3250,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 964.0
+      "area_km2": 964.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CIV",
@@ -3045,7 +3291,10 @@
         "MLI"
       ],
       "landlocked": false,
-      "area_km2": 322463.0
+      "area_km2": 322463.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "WSM",
@@ -3077,7 +3326,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 2842.0
+      "area_km2": 2842.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SMR",
@@ -3111,7 +3363,10 @@
         "ITA"
       ],
       "landlocked": true,
-      "area_km2": 61.0
+      "area_km2": 61.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LKA",
@@ -3145,7 +3400,10 @@
         "IND"
       ],
       "landlocked": false,
-      "area_km2": 65610.0
+      "area_km2": 65610.0,
+      "inflation_base": 0.25,
+      "interest_rate_base": 0.12,
+      "unemployment_base": 0.06
     },
     {
       "id": "LCA",
@@ -3177,7 +3435,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 616.0
+      "area_km2": 616.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "VCT",
@@ -3209,7 +3470,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 389.0
+      "area_km2": 389.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "KNA",
@@ -3241,7 +3505,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 261.0
+      "area_km2": 261.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SEN",
@@ -3279,7 +3546,10 @@
         "MRT"
       ],
       "landlocked": false,
-      "area_km2": 196722.0
+      "area_km2": 196722.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SGP",
@@ -3311,7 +3581,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 710.0
+      "area_km2": 710.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.037,
+      "unemployment_base": 0.03
     },
     {
       "id": "SWE",
@@ -3346,7 +3619,10 @@
         "NOR"
       ],
       "landlocked": false,
-      "area_km2": 450295.0
+      "area_km2": 450295.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.04,
+      "unemployment_base": 0.08
     },
     {
       "id": "CHE",
@@ -3384,7 +3660,10 @@
         "DEU"
       ],
       "landlocked": true,
-      "area_km2": 41284.0
+      "area_km2": 41284.0,
+      "inflation_base": 0.02,
+      "interest_rate_base": 0.017,
+      "unemployment_base": 0.04
     },
     {
       "id": "SWZ",
@@ -3419,7 +3698,10 @@
         "ZAF"
       ],
       "landlocked": true,
-      "area_km2": 17364.0
+      "area_km2": 17364.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SDN",
@@ -3459,7 +3741,10 @@
         "SSD"
       ],
       "landlocked": false,
-      "area_km2": 1886068.0
+      "area_km2": 1886068.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SSD",
@@ -3498,7 +3783,10 @@
         "UGA"
       ],
       "landlocked": true,
-      "area_km2": 619745.0
+      "area_km2": 619745.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SUR",
@@ -3534,7 +3822,10 @@
         "GUY"
       ],
       "landlocked": false,
-      "area_km2": 163820.0
+      "area_km2": 163820.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SYR",
@@ -3572,7 +3863,10 @@
         "TUR"
       ],
       "landlocked": false,
-      "area_km2": 185180.0
+      "area_km2": 185180.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SOM",
@@ -3608,7 +3902,10 @@
         "KEN"
       ],
       "landlocked": false,
-      "area_km2": 637657.0
+      "area_km2": 637657.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SLE",
@@ -3643,7 +3940,10 @@
         "LBR"
       ],
       "landlocked": false,
-      "area_km2": 71740.0
+      "area_km2": 71740.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "SYC",
@@ -3675,7 +3975,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 452.0
+      "area_km2": 452.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "TLS",
@@ -3709,7 +4012,10 @@
         "IDN"
       ],
       "landlocked": false,
-      "area_km2": 14874.0
+      "area_km2": 14874.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CHL",
@@ -3745,7 +4051,10 @@
         "PER"
       ],
       "landlocked": false,
-      "area_km2": 756102.0
+      "area_km2": 756102.0,
+      "inflation_base": 0.04,
+      "interest_rate_base": 0.09,
+      "unemployment_base": 0.088
     },
     {
       "id": "SRB",
@@ -3786,7 +4095,10 @@
         "ROU"
       ],
       "landlocked": true,
-      "area_km2": 88361.0
+      "area_km2": 88361.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "IRQ",
@@ -3825,7 +4137,10 @@
         "TUR"
       ],
       "landlocked": false,
-      "area_km2": 438317.0
+      "area_km2": 438317.0,
+      "inflation_base": 0.04,
+      "interest_rate_base": 0.15,
+      "unemployment_base": 0.16
     },
     {
       "id": "SAU",
@@ -3865,7 +4180,10 @@
         "YEM"
       ],
       "landlocked": false,
-      "area_km2": 2149690.0
+      "area_km2": 2149690.0,
+      "inflation_base": 0.02,
+      "interest_rate_base": 0.055,
+      "unemployment_base": 0.048
     },
     {
       "id": "OMN",
@@ -3901,7 +4219,10 @@
         "YEM"
       ],
       "landlocked": false,
-      "area_km2": 309500.0
+      "area_km2": 309500.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GHA",
@@ -3937,7 +4258,10 @@
         "TGO"
       ],
       "landlocked": false,
-      "area_km2": 238533.0
+      "area_km2": 238533.0,
+      "inflation_base": 0.35,
+      "interest_rate_base": 0.29,
+      "unemployment_base": 0.04
     },
     {
       "id": "FRA",
@@ -3978,7 +4302,10 @@
         "CHE"
       ],
       "landlocked": false,
-      "area_km2": 551695.0
+      "area_km2": 551695.0,
+      "inflation_base": 0.028,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.073
     },
     {
       "id": "PSE",
@@ -4015,7 +4342,10 @@
         "JOR"
       ],
       "landlocked": false,
-      "area_km2": 6220.0
+      "area_km2": 6220.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "FIN",
@@ -4051,7 +4381,10 @@
         "RUS"
       ],
       "landlocked": false,
-      "area_km2": 338424.0
+      "area_km2": 338424.0,
+      "inflation_base": 0.028,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.07
     },
     {
       "id": "FJI",
@@ -4083,7 +4416,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 18272.0
+      "area_km2": 18272.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "PHL",
@@ -4115,7 +4451,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 342353.0
+      "area_km2": 342353.0,
+      "inflation_base": 0.05,
+      "interest_rate_base": 0.065,
+      "unemployment_base": 0.045
     },
     {
       "id": "CYP",
@@ -4147,7 +4486,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 9251.0
+      "area_km2": 9251.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "KGZ",
@@ -4184,7 +4526,10 @@
         "UZB"
       ],
       "landlocked": true,
-      "area_km2": 199951.0
+      "area_km2": 199951.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "KAZ",
@@ -4222,7 +4567,10 @@
         "UZB"
       ],
       "landlocked": true,
-      "area_km2": 2724900.0
+      "area_km2": 2724900.0,
+      "inflation_base": 0.08,
+      "interest_rate_base": 0.16,
+      "unemployment_base": 0.05
     },
     {
       "id": "QAT",
@@ -4256,7 +4604,10 @@
         "SAU"
       ],
       "landlocked": false,
-      "area_km2": 11586.0
+      "area_km2": 11586.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LAO",
@@ -4294,7 +4645,10 @@
         "VNM"
       ],
       "landlocked": true,
-      "area_km2": 236800.0
+      "area_km2": 236800.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LBN",
@@ -4329,7 +4683,10 @@
         "SYR"
       ],
       "landlocked": false,
-      "area_km2": 10452.0
+      "area_km2": 10452.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LVA",
@@ -4366,7 +4723,10 @@
         "RUS"
       ],
       "landlocked": false,
-      "area_km2": 64559.0
+      "area_km2": 64559.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LSO",
@@ -4400,7 +4760,10 @@
         "ZAF"
       ],
       "landlocked": true,
-      "area_km2": 30355.0
+      "area_km2": 30355.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "POL",
@@ -4440,7 +4803,10 @@
         "UKR"
       ],
       "landlocked": false,
-      "area_km2": 312679.0
+      "area_km2": 312679.0,
+      "inflation_base": 0.04,
+      "interest_rate_base": 0.06,
+      "unemployment_base": 0.03
     },
     {
       "id": "LUX",
@@ -4476,7 +4842,10 @@
         "DEU"
       ],
       "landlocked": true,
-      "area_km2": 2586.0
+      "area_km2": 2586.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LBR",
@@ -4512,7 +4881,10 @@
         "SLE"
       ],
       "landlocked": false,
-      "area_km2": 111369.0
+      "area_km2": 111369.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LBY",
@@ -4551,7 +4923,10 @@
         "TUN"
       ],
       "landlocked": false,
-      "area_km2": 1759540.0
+      "area_km2": 1759540.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LTU",
@@ -4588,7 +4963,10 @@
         "RUS"
       ],
       "landlocked": false,
-      "area_km2": 65300.0
+      "area_km2": 65300.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "LIE",
@@ -4623,7 +5001,10 @@
         "CHE"
       ],
       "landlocked": true,
-      "area_km2": 160.0
+      "area_km2": 160.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MDG",
@@ -4655,7 +5036,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 587041.0
+      "area_km2": 587041.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MWI",
@@ -4691,7 +5075,10 @@
         "ZMB"
       ],
       "landlocked": true,
-      "area_km2": 118484.0
+      "area_km2": 118484.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MLT",
@@ -4723,7 +5110,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 316.0
+      "area_km2": 316.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MDV",
@@ -4755,7 +5145,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 300.0
+      "area_km2": 300.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MYS",
@@ -4791,7 +5184,10 @@
         "THA"
       ],
       "landlocked": false,
-      "area_km2": 330803.0
+      "area_km2": 330803.0,
+      "inflation_base": 0.025,
+      "interest_rate_base": 0.03,
+      "unemployment_base": 0.034
     },
     {
       "id": "MLI",
@@ -4831,7 +5227,10 @@
         "SEN"
       ],
       "landlocked": true,
-      "area_km2": 1240192.0
+      "area_km2": 1240192.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "HUN",
@@ -4871,7 +5270,10 @@
         "UKR"
       ],
       "landlocked": true,
-      "area_km2": 93028.0
+      "area_km2": 93028.0,
+      "inflation_base": 0.06,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.042
     },
     {
       "id": "MAR",
@@ -4907,7 +5309,10 @@
         "ESP"
       ],
       "landlocked": false,
-      "area_km2": 446550.0
+      "area_km2": 446550.0,
+      "inflation_base": 0.04,
+      "interest_rate_base": 0.03,
+      "unemployment_base": 0.11
     },
     {
       "id": "EGY",
@@ -4944,7 +5349,10 @@
         "SDN"
       ],
       "landlocked": false,
-      "area_km2": 1002450.0
+      "area_km2": 1002450.0,
+      "inflation_base": 0.3,
+      "interest_rate_base": 0.25,
+      "unemployment_base": 0.07
     },
     {
       "id": "MNG",
@@ -4979,7 +5387,10 @@
         "RUS"
       ],
       "landlocked": true,
-      "area_km2": 1564110.0
+      "area_km2": 1564110.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MRT",
@@ -5016,7 +5427,10 @@
         "ESH"
       ],
       "landlocked": false,
-      "area_km2": 1030700.0
+      "area_km2": 1030700.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MUS",
@@ -5048,7 +5462,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 2040.0
+      "area_km2": 2040.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MOZ",
@@ -5087,7 +5504,10 @@
         "ZWE"
       ],
       "landlocked": false,
-      "area_km2": 801590.0
+      "area_km2": 801590.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MDA",
@@ -5122,7 +5542,10 @@
         "UKR"
       ],
       "landlocked": true,
-      "area_km2": 33846.0
+      "area_km2": 33846.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MCO",
@@ -5156,7 +5579,10 @@
         "FRA"
       ],
       "landlocked": false,
-      "area_km2": 2.02
+      "area_km2": 2.02,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MNE",
@@ -5194,7 +5620,10 @@
         "SRB"
       ],
       "landlocked": false,
-      "area_km2": 13812.0
+      "area_km2": 13812.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "MEX",
@@ -5230,7 +5659,10 @@
         "USA"
       ],
       "landlocked": false,
-      "area_km2": 1964375.0
+      "area_km2": 1964375.0,
+      "inflation_base": 0.046,
+      "interest_rate_base": 0.11,
+      "unemployment_base": 0.029
     },
     {
       "id": "MMR",
@@ -5268,7 +5700,10 @@
         "THA"
       ],
       "landlocked": false,
-      "area_km2": 676578.0
+      "area_km2": 676578.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "NRU",
@@ -5300,7 +5735,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 21.0
+      "area_km2": 21.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "NAM",
@@ -5337,7 +5775,10 @@
         "ZMB"
       ],
       "landlocked": false,
-      "area_km2": 825615.0
+      "area_km2": 825615.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "NOR",
@@ -5373,7 +5814,10 @@
         "RUS"
       ],
       "landlocked": false,
-      "area_km2": 323802.0
+      "area_km2": 323802.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.036
     },
     {
       "id": "NPL",
@@ -5408,7 +5852,10 @@
         "IND"
       ],
       "landlocked": true,
-      "area_km2": 147181.0
+      "area_km2": 147181.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "NER",
@@ -5448,7 +5895,10 @@
         "NGA"
       ],
       "landlocked": true,
-      "area_km2": 1267000.0
+      "area_km2": 1267000.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "NGA",
@@ -5485,7 +5935,10 @@
         "NER"
       ],
       "landlocked": false,
-      "area_km2": 923768.0
+      "area_km2": 923768.0,
+      "inflation_base": 0.25,
+      "interest_rate_base": 0.22,
+      "unemployment_base": 0.05
     },
     {
       "id": "NZL",
@@ -5517,7 +5970,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 270467.0
+      "area_km2": 270467.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.055,
+      "unemployment_base": 0.038
     },
     {
       "id": "NIC",
@@ -5552,7 +6008,10 @@
         "HND"
       ],
       "landlocked": false,
-      "area_km2": 130373.0
+      "area_km2": 130373.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "HTI",
@@ -5586,7 +6045,10 @@
         "DOM"
       ],
       "landlocked": false,
-      "area_km2": 27750.0
+      "area_km2": 27750.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "NLD",
@@ -5621,7 +6083,10 @@
         "DEU"
       ],
       "landlocked": false,
-      "area_km2": 41850.0
+      "area_km2": 41850.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.036
     },
     {
       "id": "IND",
@@ -5660,7 +6125,10 @@
         "PAK"
       ],
       "landlocked": false,
-      "area_km2": 3287590.0
+      "area_km2": 3287590.0,
+      "inflation_base": 0.054,
+      "interest_rate_base": 0.065,
+      "unemployment_base": 0.07
     },
     {
       "id": "HND",
@@ -5696,7 +6164,10 @@
         "NIC"
       ],
       "landlocked": false,
-      "area_km2": 112492.0
+      "area_km2": 112492.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "VAT",
@@ -5731,7 +6202,10 @@
         "ITA"
       ],
       "landlocked": true,
-      "area_km2": 0.44
+      "area_km2": 0.44,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "VUT",
@@ -5763,7 +6237,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 12189.0
+      "area_km2": 12189.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "VEN",
@@ -5799,7 +6276,10 @@
         "GUY"
       ],
       "landlocked": false,
-      "area_km2": 916445.0
+      "area_km2": 916445.0,
+      "inflation_base": 0.4,
+      "interest_rate_base": 0.4,
+      "unemployment_base": 0.08
     },
     {
       "id": "VNM",
@@ -5835,7 +6315,10 @@
         "LAO"
       ],
       "landlocked": false,
-      "area_km2": 331212.0
+      "area_km2": 331212.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.02
     },
     {
       "id": "PRY",
@@ -5871,7 +6354,10 @@
         "BRA"
       ],
       "landlocked": true,
-      "area_km2": 406752.0
+      "area_km2": 406752.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "PLW",
@@ -5903,7 +6389,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 459.0
+      "area_km2": 459.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "PAN",
@@ -5938,7 +6427,10 @@
         "CRI"
       ],
       "landlocked": false,
-      "area_km2": 75417.0
+      "area_km2": 75417.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "PNG",
@@ -5972,7 +6464,10 @@
         "IDN"
       ],
       "landlocked": false,
-      "area_km2": 462840.0
+      "area_km2": 462840.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "PAK",
@@ -6009,7 +6504,10 @@
         "IRN"
       ],
       "landlocked": false,
-      "area_km2": 881912.0
+      "area_km2": 881912.0,
+      "inflation_base": 0.28,
+      "interest_rate_base": 0.22,
+      "unemployment_base": 0.06
     },
     {
       "id": "PRT",
@@ -6043,7 +6541,10 @@
         "ESP"
       ],
       "landlocked": false,
-      "area_km2": 92090.0
+      "area_km2": 92090.0,
+      "inflation_base": 0.026,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.065
     },
     {
       "id": "PER",
@@ -6081,7 +6582,10 @@
         "ECU"
       ],
       "landlocked": false,
-      "area_km2": 1285216.0
+      "area_km2": 1285216.0,
+      "inflation_base": 0.03,
+      "interest_rate_base": 0.065,
+      "unemployment_base": 0.07
     },
     {
       "id": "TCD",
@@ -6120,7 +6624,10 @@
         "SDN"
       ],
       "landlocked": true,
-      "area_km2": 1284000.0
+      "area_km2": 1284000.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CHN",
@@ -6169,7 +6676,10 @@
         "VNM"
       ],
       "landlocked": false,
-      "area_km2": 9706961.0
+      "area_km2": 9706961.0,
+      "inflation_base": 0.002,
+      "interest_rate_base": 0.034,
+      "unemployment_base": 0.052
     },
     {
       "id": "JPN",
@@ -6201,7 +6711,10 @@
       "generated_balance": false,
       "borders": [],
       "landlocked": false,
-      "area_km2": 377930.0
+      "area_km2": 377930.0,
+      "inflation_base": 0.028,
+      "interest_rate_base": 0.001,
+      "unemployment_base": 0.026
     },
     {
       "id": "CRI",
@@ -6236,7 +6749,10 @@
         "PAN"
       ],
       "landlocked": false,
-      "area_km2": 51100.0
+      "area_km2": 51100.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "KHM",
@@ -6272,7 +6788,10 @@
         "VNM"
       ],
       "landlocked": false,
-      "area_km2": 181035.0
+      "area_km2": 181035.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CMR",
@@ -6311,7 +6830,10 @@
         "NGA"
       ],
       "landlocked": false,
-      "area_km2": 475442.0
+      "area_km2": 475442.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "CAN",
@@ -6345,7 +6867,10 @@
         "USA"
       ],
       "landlocked": false,
-      "area_km2": 9984670.0
+      "area_km2": 9984670.0,
+      "inflation_base": 0.031,
+      "interest_rate_base": 0.05,
+      "unemployment_base": 0.055
     },
     {
       "id": "KOR",
@@ -6379,7 +6904,10 @@
         "PRK"
       ],
       "landlocked": false,
-      "area_km2": 100210.0
+      "area_km2": 100210.0,
+      "inflation_base": 0.025,
+      "interest_rate_base": 0.035,
+      "unemployment_base": 0.027
     },
     {
       "id": "PRK",
@@ -6415,7 +6943,10 @@
         "RUS"
       ],
       "landlocked": false,
-      "area_km2": 120538.0
+      "area_km2": 120538.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "HRV",
@@ -6453,7 +6984,10 @@
         "SVN"
       ],
       "landlocked": false,
-      "area_km2": 56594.0
+      "area_km2": 56594.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "COL",
@@ -6491,7 +7025,10 @@
         "VEN"
       ],
       "landlocked": false,
-      "area_km2": 1141748.0
+      "area_km2": 1141748.0,
+      "inflation_base": 0.08,
+      "interest_rate_base": 0.12,
+      "unemployment_base": 0.1
     },
     {
       "id": "KEN",
@@ -6529,7 +7066,10 @@
         "UGA"
       ],
       "landlocked": false,
-      "area_km2": 580367.0
+      "area_km2": 580367.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.125,
+      "unemployment_base": 0.056
     },
     {
       "id": "CUB",
@@ -6561,7 +7101,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 109884.0
+      "area_km2": 109884.0,
+      "inflation_base": 0.3,
+      "interest_rate_base": 0.3,
+      "unemployment_base": 0.03
     },
     {
       "id": "COM",
@@ -6593,7 +7136,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 1862.0
+      "area_km2": 1862.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "KWT",
@@ -6628,7 +7174,10 @@
         "SAU"
       ],
       "landlocked": false,
-      "area_km2": 17818.0
+      "area_km2": 17818.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "KIR",
@@ -6660,7 +7209,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 811.0
+      "area_km2": 811.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GAB",
@@ -6696,7 +7248,10 @@
         "GNQ"
       ],
       "landlocked": false,
-      "area_km2": 267668.0
+      "area_km2": 267668.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GMB",
@@ -6730,7 +7285,10 @@
         "SEN"
       ],
       "landlocked": false,
-      "area_km2": 10689.0
+      "area_km2": 10689.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GRD",
@@ -6762,7 +7320,10 @@
       "generated_balance": true,
       "borders": [],
       "landlocked": false,
-      "area_km2": 344.0
+      "area_km2": 344.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GEO",
@@ -6799,7 +7360,10 @@
         "TUR"
       ],
       "landlocked": false,
-      "area_km2": 69700.0
+      "area_km2": 69700.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GTM",
@@ -6836,7 +7400,10 @@
         "MEX"
       ],
       "landlocked": false,
-      "area_km2": 108889.0
+      "area_km2": 108889.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GUY",
@@ -6872,7 +7439,10 @@
         "VEN"
       ],
       "landlocked": false,
-      "area_km2": 214969.0
+      "area_km2": 214969.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GIN",
@@ -6911,7 +7481,10 @@
         "SLE"
       ],
       "landlocked": false,
-      "area_km2": 245857.0
+      "area_km2": 245857.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GNQ",
@@ -6946,7 +7519,10 @@
         "GAB"
       ],
       "landlocked": false,
-      "area_km2": 28051.0
+      "area_km2": 28051.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GNB",
@@ -6981,7 +7557,10 @@
         "SEN"
       ],
       "landlocked": false,
-      "area_km2": 36125.0
+      "area_km2": 36125.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "YEM",
@@ -7016,7 +7595,10 @@
         "SAU"
       ],
       "landlocked": false,
-      "area_km2": 527968.0
+      "area_km2": 527968.0,
+      "inflation_base": 0.07,
+      "interest_rate_base": 0.1,
+      "unemployment_base": 0.09
     },
     {
       "id": "GRC",
@@ -7053,7 +7635,10 @@
         "MKD"
       ],
       "landlocked": false,
-      "area_km2": 131990.0
+      "area_km2": 131990.0,
+      "inflation_base": 0.027,
+      "interest_rate_base": 0.045,
+      "unemployment_base": 0.11
     }
   ]
 }

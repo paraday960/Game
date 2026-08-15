@@ -148,6 +148,13 @@ func apply_country_profile(state: Dictionary, country_id: String) -> Dictionary:
 	state["population"]["total"] = float(profile["population"])
 	state["military"]["power"] = float(profile["military_power"])
 	state["military"]["readiness"] = clamp(0.45 + float(profile["military_power"]) / 250.0, 0.45, 0.88)
+	# ── داده کلان واقعی کشور (عمق‌بخشی ۱۲) ──
+	# هر کشور با تورم/بهره/بیکاری پایهٔ واقعی خودش شروع می‌کند — مثل دنیای
+	# واقعی: ژاپن با تورم ~۲٪، ترکیه با ~۴۰٪، آرژانتین با ~۵۰٪.
+	state["economy"]["inflation"] = float(profile.get("inflation_base", 0.07))
+	state["economy"]["unemployment"] = float(profile.get("unemployment_base", 0.09))
+	state["central_bank"]["interest_rate"] = float(profile.get("interest_rate_base", 0.10))
+	state["central_bank"]["manual_rate"] = float(profile.get("interest_rate_base", 0.10))
 	var tech_level = float(profile["tech_level"])
 	# سیستم سطوح ۳۰: مقدار float سازگاری و سطح هر شاخه از تکنولوژی کشور
 	var tech_state: Dictionary = state.get("technology", {})

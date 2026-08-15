@@ -19,8 +19,22 @@ const ANNEX_DISTANCE_DEG := 16.0
 # ── تضمین ساختار رهبر در state ──
 func ensure(state: Dictionary) -> Dictionary:
 	if not state.has("leader"):
+		# ── شخصیت‌پردازی رهبر (عمق‌بخشی ۱۲) ──
+		# نام و سن تصادفیِ دترمینستیک از نام‌های فارسی؛ هر رهبر یک شخص است
+		# نه «رهبر ملی» بی‌نام. ویژگی‌ها با رویدادهای بزرگ کسب می‌شوند.
+		var first_names := ["آرش", "بهرام", "کاوه", "داریوش", "فریدون", "گردآفرید",
+			"هوشنگ", "ایرج", "تهماسب", "کیان", "رستم", "سپهر", "مهرداد", "نرسی",
+			"پرویز", "جمشید", "خشایار", "لهراسب", "مهراب", "نوشین"]
+		var last_names := ["میرزایی", "کیانی", "رستمی", "بهرامی", "سپهری", "آذری",
+			"جهانبخش", "خسروی", "دلیری", "رادمنش", "سامانی", "شیرازی", "فرزام",
+			"کامروا", "مهربان", "نیک‌نام", "همایون", "یگانه"]
+		var name_idx := Deterministic.next_int_range(0, first_names.size() - 1)
+		var family_idx := Deterministic.next_int_range(0, last_names.size() - 1)
+		var leader_age := Deterministic.next_int_range(48, 68)
 		state["leader"] = {
-			"name_fa": "رهبر ملی", "alive": true, "popularity_world": 50.0,
+			"name_fa": "%s %s" % [first_names[name_idx], last_names[family_idx]],
+			"age": leader_age,
+			"alive": true, "popularity_world": 50.0,
 			"hidden": false, "mode": "leader", "country_status": "independent",
 			"rebellion": {}, "traits": []
 		}
