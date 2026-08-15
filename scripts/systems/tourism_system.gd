@@ -109,6 +109,3 @@ func compute(state: Dictionary, tick: int) -> Dictionary:
 	state["tourism"] = tourism
 
 	return {"success": true, "state": state, "events": events}
-
-func pop_total(state: Dictionary) -> float:
-	return state.get("population",{}).get("total",85_000_000)

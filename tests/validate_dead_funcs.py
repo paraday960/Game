@@ -106,8 +106,31 @@ check(
     "توابع مرده: %s" % (dead or "—"),
 )
 
+# ── 2) فایل‌های یتیم: اسکریپت‌های غیرautoload که هیچ رفرنسی ندارند ─────
+# (host_manager.gd و command_bus.gd در عمق‌بخشی ۳۵ حذف شدند — هرگز استفاده نمی‌شدند)
+proj = read("project.godot")
+AUTOLOAD_PATHS = set(re.findall(r'="\*?res://([^"]+\.gd)"', proj))
+REFERENCED_SCRIPTS = set()
+for src2 in all_src.values():
+    for m in re.finditer(r'preload\("res://([^"]+\.gd)"\)', src2):
+        REFERENCED_SCRIPTS.add(m.group(1))
+    for m in re.finditer(r'"res://([^"]+\.gd)"', src2):
+        REFERENCED_SCRIPTS.add(m.group(1))
+
+orphan_files = []
+for f in glob.glob("scripts/multiplayer/*.gd") + glob.glob("scripts/core/*.gd"):
+    if f in AUTOLOAD_PATHS or f in REFERENCED_SCRIPTS:
+        continue
+    orphan_files.append(f)
+
+check(
+    "بدون اسکریپت یتیم در core/multiplayer",
+    not orphan_files,
+    "فایل‌های یتیم: %s" % (orphan_files or "—"),
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))
     sys.exit(1)
-print("==> پین توابع فراخوانی‌نشده سبز است")
+print("==> پین توابع/فایل‌های مرده سبز است")

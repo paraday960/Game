@@ -449,12 +449,6 @@ func unmark_turn_finished():
 func all_turns_finished() -> bool:
 	return MultiplayerCampaignManager.all_turns_finished()
 
-func get_turn_finished_map() -> Dictionary:
-	return MultiplayerCampaignManager.get_turn_finished_snapshot()
-
-func has_local_finished() -> bool:
-	return MultiplayerCampaignManager.has_finished(host_id)
-
 @rpc("any_peer","call_remote","reliable")
 func _receive_turn_finished():
 	if not is_host or not competitive_mode: return

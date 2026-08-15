@@ -12,6 +12,3 @@ func log_event(state: Dictionary, event_type: String, data: Dictionary):
 		"data": data,
 		"tick": state.get("tick", 0)
 	}
-
-func clamp01(v: float) -> float:
-	return clamp(v, 0.0, 1.0)

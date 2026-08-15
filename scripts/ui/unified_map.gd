@@ -175,9 +175,6 @@ func focus_country(code: String):
 	_emit_view()
 	queue_redraw()
 
-func get_view_state() -> Dictionary:
-	return {"center": camera_center, "zoom": zoom_level}
-
 func _draw():
 	_update_projection()
 	var low_detail=_motion_active()
