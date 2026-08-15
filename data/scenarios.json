@@ -1,596 +1,596 @@
 {
- "version": "1.0.0",
- "default_scenario": "balanced",
- "scenarios": [
-  {
-   "id": "balanced",
-   "name_fa": "توسعه متوازن",
-   "difficulty_fa": "معمولی",
-   "description": "اقتصاد، رفاه، ثبات، سلامت و آموزش را هم‌زمان ارتقا دهید.",
-   "deadline_days": 1080,
-   "completion_rule": "all",
-   "reward_xp": 350,
-   "reward_legacy": 40,
-   "objectives": [
+  "version": "1.0.0",
+  "default_scenario": "balanced",
+  "scenarios": [
     {
-     "id": "balanced_happiness",
-     "title_fa": "شادی عمومی ۶۸٪",
-     "path": "population.happiness",
-     "mode": "gte",
-     "value": 0.68
+      "id": "balanced",
+      "name_fa": "توسعه متوازن",
+      "difficulty_fa": "معمولی",
+      "difficulty_multiplier": 1.0,
+      "description": "اقتصاد، رفاه، ثبات، سلامت و آموزش را هم‌زمان ارتقا دهید.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 350,
+      "reward_legacy": 40,
+      "objectives": [
+        {
+          "id": "balanced_happiness",
+          "title_fa": "شادی عمومی ۶۸٪",
+          "path": "population.happiness",
+          "mode": "gte",
+          "value": 0.68
+        },
+        {
+          "id": "balanced_stability",
+          "title_fa": "ثبات کشور ۶۸٪",
+          "path": "politics.stability",
+          "mode": "gte",
+          "value": 0.68
+        },
+        {
+          "id": "balanced_income",
+          "title_fa": "رشد ۲۵٪ درآمد سرانه",
+          "path": "economy.gdp_per_capita",
+          "mode": "increase_ratio",
+          "value": 0.25
+        },
+        {
+          "id": "balanced_health",
+          "title_fa": "کیفیت سلامت ۷۰٪",
+          "path": "health.quality",
+          "mode": "gte",
+          "value": 0.7
+        },
+        {
+          "id": "balanced_education",
+          "title_fa": "کیفیت آموزش ۶۵٪",
+          "path": "education.quality",
+          "mode": "gte",
+          "value": 0.65
+        }
+      ]
     },
     {
-     "id": "balanced_stability",
-     "title_fa": "ثبات کشور ۶۸٪",
-     "path": "politics.stability",
-     "mode": "gte",
-     "value": 0.68
+      "id": "economic_miracle",
+      "name_fa": "معجزه اقتصادی",
+      "difficulty_fa": "سخت",
+      "difficulty_multiplier": 1.15,
+      "description": "در دو سال اقتصاد را جهش دهید و هم‌زمان تورم و بیکاری را مهار کنید.",
+      "deadline_days": 720,
+      "completion_rule": "all",
+      "reward_xp": 500,
+      "reward_legacy": 65,
+      "objectives": [
+        {
+          "id": "econ_gdp",
+          "title_fa": "رشد ۴۰٪ تولید داخلی",
+          "path": "economy.gdp",
+          "mode": "increase_ratio",
+          "value": 0.4
+        },
+        {
+          "id": "econ_jobs",
+          "title_fa": "بیکاری حداکثر ۶٪",
+          "path": "economy.unemployment",
+          "mode": "lte",
+          "value": 0.06
+        },
+        {
+          "id": "econ_prices",
+          "title_fa": "تورم حداکثر ۸٪",
+          "path": "economy.inflation",
+          "mode": "lte",
+          "value": 0.08
+        },
+        {
+          "id": "econ_exports",
+          "title_fa": "رشد ۲۵٪ صادرات",
+          "path": "trade.exports",
+          "mode": "increase_ratio",
+          "value": 0.25
+        }
+      ]
     },
     {
-     "id": "balanced_income",
-     "title_fa": "رشد ۲۵٪ درآمد سرانه",
-     "path": "economy.gdp_per_capita",
-     "mode": "increase_ratio",
-     "value": 0.25
+      "id": "regional_power",
+      "name_fa": "قدرت منطقه‌ای",
+      "difficulty_fa": "سخت",
+      "difficulty_multiplier": 1.15,
+      "description": "با دیپلماسی، اتحاد و آمادگی دفاعی به قدرت تعیین‌کننده منطقه تبدیل شوید.",
+      "deadline_days": 900,
+      "completion_rule": "all",
+      "reward_xp": 520,
+      "reward_legacy": 70,
+      "objectives": [
+        {
+          "id": "power_score",
+          "title_fa": "افزایش ۲۰ واحدی قدرت",
+          "path": "indicators.power_score",
+          "mode": "increase_add",
+          "value": 20
+        },
+        {
+          "id": "power_influence",
+          "title_fa": "نفوذ جهانی ۶۰",
+          "path": "diplomacy.influence",
+          "mode": "gte",
+          "value": 60
+        },
+        {
+          "id": "power_alliances",
+          "title_fa": "تشکیل دو اتحاد",
+          "path": "world.alliances_count",
+          "mode": "gte",
+          "value": 2
+        },
+        {
+          "id": "power_readiness",
+          "title_fa": "آمادگی دفاعی ۷۸٪",
+          "path": "military.readiness",
+          "mode": "gte",
+          "value": 0.78
+        }
+      ]
     },
     {
-     "id": "balanced_health",
-     "title_fa": "کیفیت سلامت ۷۰٪",
-     "path": "health.quality",
-     "mode": "gte",
-     "value": 0.7
+      "id": "survival_year",
+      "name_fa": "سال بقا",
+      "difficulty_fa": "بحرانی",
+      "difficulty_multiplier": 1.3,
+      "description": "یک سال در برابر بحران‌ها دوام بیاورید؛ اهداف باید در پایان سال هم برقرار باشند.",
+      "deadline_days": 360,
+      "completion_rule": "deadline",
+      "reward_xp": 450,
+      "reward_legacy": 55,
+      "objectives": [
+        {
+          "id": "survive_happiness",
+          "title_fa": "شادی حداقل ۳۵٪",
+          "path": "population.happiness",
+          "mode": "gte",
+          "value": 0.35
+        },
+        {
+          "id": "survive_stability",
+          "title_fa": "ثبات حداقل ۳۰٪",
+          "path": "politics.stability",
+          "mode": "gte",
+          "value": 0.3
+        },
+        {
+          "id": "survive_debt",
+          "title_fa": "بدهی حداکثر ۱۲۰٪ تولید",
+          "path": "economy.debt_to_gdp",
+          "mode": "lte",
+          "value": 1.2
+        },
+        {
+          "id": "survive_peace",
+          "title_fa": "بدون جنگ فعال در پایان سال",
+          "path": "world.active_wars_count",
+          "mode": "lte",
+          "value": 0
+        }
+      ]
     },
     {
-     "id": "balanced_education",
-     "title_fa": "کیفیت آموزش ۶۵٪",
-     "path": "education.quality",
-     "mode": "gte",
-     "value": 0.65
+      "id": "green_future",
+      "name_fa": "آینده سبز",
+      "difficulty_fa": "سخت",
+      "difficulty_multiplier": 1.15,
+      "description": "اقتصاد را به انرژی پاک، هوای سالم و فناوری سبز منتقل کنید.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 500,
+      "reward_legacy": 65,
+      "objectives": [
+        {
+          "id": "green_share",
+          "title_fa": "سهم انرژی سبز ۳۸٪",
+          "path": "environment.green_energy_share",
+          "mode": "gte",
+          "value": 0.38
+        },
+        {
+          "id": "green_air",
+          "title_fa": "کیفیت هوا ۷۲٪",
+          "path": "environment.air_quality",
+          "mode": "gte",
+          "value": 0.72
+        },
+        {
+          "id": "green_carbon",
+          "title_fa": "انتشار کربن حداکثر ۴۵٪",
+          "path": "environment.carbon_emission",
+          "mode": "lte",
+          "value": 0.45
+        },
+        {
+          "id": "green_tech",
+          "title_fa": "فناوری هیدروژن سبز",
+          "path": "technology.unlocked",
+          "mode": "contains",
+          "value": "green_hydrogen"
+        }
+      ]
+    },
+    {
+      "id": "innovation_leader",
+      "name_fa": "رهبر نوآوری",
+      "difficulty_fa": "بسیار سخت",
+      "difficulty_multiplier": 1.45,
+      "description": "سرمایه انسانی، پژوهش، فناوری و فضا را به سطح یک کشور پیشرو برسانید.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 600,
+      "reward_legacy": 80,
+      "objectives": [
+        {
+          "id": "innovation_unlocks",
+          "title_fa": "بازکردن ۱۰ فناوری",
+          "path": "technology.unlocked_count",
+          "mode": "gte",
+          "value": 10
+        },
+        {
+          "id": "innovation_education",
+          "title_fa": "کیفیت آموزش ۷۰٪",
+          "path": "education.quality",
+          "mode": "gte",
+          "value": 0.7
+        },
+        {
+          "id": "innovation_rate",
+          "title_fa": "سرعت پژوهش سالانه ۱۲",
+          "path": "technology.research_rate",
+          "mode": "gte",
+          "value": 12
+        },
+        {
+          "id": "innovation_space",
+          "title_fa": "سطح فضایی ۳۰٪",
+          "path": "space.level",
+          "mode": "gte",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "oil_shock_1973",
+      "name_fa": "شوک نفتی ۱۹۷۳",
+      "difficulty_fa": "سخت",
+      "difficulty_multiplier": 1.15,
+      "description": "تحریم نفتی اوپک، قیمت نفت را چهار برابر کرد. کشور با تورم وارداتی و رکود دست‌وپنجه نرم می‌کند؛ هر تصمیم، آینده‌ی انرژی کشور را می‌سازد.",
+      "deadline_days": 1440,
+      "completion_rule": "all",
+      "reward_xp": 600,
+      "reward_legacy": 70,
+      "startup_effects": [
+        {
+          "path": "commodities.prices.نفت",
+          "op": "set",
+          "value": 160.0,
+          "min": 30.0,
+          "max": 180.0
+        },
+        {
+          "path": "commodities.prices.گاز",
+          "op": "set",
+          "value": 7.5,
+          "min": 1.2,
+          "max": 8.0
+        },
+        {
+          "path": "economy.inflation",
+          "op": "add",
+          "value": 0.15,
+          "min": 0.0,
+          "max": 0.5
+        },
+        {
+          "path": "economy.growth_rate",
+          "op": "add",
+          "value": -0.03,
+          "min": -0.05,
+          "max": 0.08
+        },
+        {
+          "path": "economy.foreign_reserves",
+          "op": "mul",
+          "value": 0.8,
+          "min": 0.0,
+          "max": 1000000000000000.0
+        },
+        {
+          "path": "politics.tension",
+          "op": "add",
+          "value": 0.1,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "path": "global_market.world_stock_index",
+          "op": "mul",
+          "value": 0.8,
+          "min": 150.0,
+          "max": 3000.0
+        },
+        {
+          "path": "global_market.risk_sentiment",
+          "op": "set",
+          "value": 0.75,
+          "min": 0.05,
+          "max": 0.95
+        }
+      ],
+      "startup_crises": [
+        {
+          "type": "oil_shock_world",
+          "title": "شوک نفتی ۱۹۷۳",
+          "severity": 3,
+          "duration_days": 360,
+          "stage": 0,
+          "stage_count": 3,
+          "stage_name_fa": "جهش قیمت نفت"
+        }
+      ],
+      "objectives": [
+        {
+          "id": "os73_inflation",
+          "title_fa": "کاهش تورم به زیر ۱۵٪",
+          "path": "economy.inflation",
+          "mode": "lte",
+          "value": 0.15
+        },
+        {
+          "id": "os73_reserves",
+          "title_fa": "بازسازی ذخایر ارزی",
+          "path": "economy.foreign_reserves",
+          "mode": "gte",
+          "value": 50000000000.0
+        },
+        {
+          "id": "os73_growth",
+          "title_fa": "بازگشت رشد مثبت",
+          "path": "economy.growth_rate",
+          "mode": "gte",
+          "value": 0.015
+        },
+        {
+          "id": "os73_stability",
+          "title_fa": "ثبات سیاسی ۵۵٪",
+          "path": "politics.stability",
+          "mode": "gte",
+          "value": 0.55
+        }
+      ]
+    },
+    {
+      "id": "financial_crisis_2008",
+      "name_fa": "بحران مالی ۲۰۰۸",
+      "difficulty_fa": "بسیار سخت",
+      "difficulty_multiplier": 1.45,
+      "description": "حباب مسکن ترکید و بحران بانکی جهان را گرفت. نجات بانک‌ها یا انضباط؟ رکود جهانی صادرات و سرمایه را خشک کرده است.",
+      "deadline_days": 1440,
+      "completion_rule": "all",
+      "reward_xp": 650,
+      "reward_legacy": 75,
+      "startup_effects": [
+        {
+          "path": "global_market.world_stock_index",
+          "op": "set",
+          "value": 420.0,
+          "min": 150.0,
+          "max": 3000.0
+        },
+        {
+          "path": "global_market.risk_sentiment",
+          "op": "set",
+          "value": 0.92,
+          "min": 0.05,
+          "max": 0.95
+        },
+        {
+          "path": "stock_market.index",
+          "op": "mul",
+          "value": 0.55,
+          "min": 10.0,
+          "max": 1000000000.0
+        },
+        {
+          "path": "stock_market.investor_confidence",
+          "op": "set",
+          "value": 0.2,
+          "min": 0.05,
+          "max": 0.95
+        },
+        {
+          "path": "banking.bank_health",
+          "op": "set",
+          "value": 0.3,
+          "min": 0.05,
+          "max": 0.98
+        },
+        {
+          "path": "economy.growth_rate",
+          "op": "add",
+          "value": -0.04,
+          "min": -0.05,
+          "max": 0.08
+        },
+        {
+          "path": "economy.unemployment",
+          "op": "add",
+          "value": 0.05,
+          "min": 0.015,
+          "max": 0.4
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "mul",
+          "value": 1.1,
+          "min": 0.0,
+          "max": 1000000000000000.0
+        }
+      ],
+      "startup_crises": [
+        {
+          "type": "banking_chain",
+          "title": "بحران بانکی ۲۰۰۸",
+          "severity": 3,
+          "duration_days": 420,
+          "stage": 0,
+          "stage_count": 3,
+          "stage_name_fa": "هجوم سپرده‌ها"
+        }
+      ],
+      "objectives": [
+        {
+          "id": "fc08_banks",
+          "title_fa": "سلامت بانک‌ها ۶۰٪",
+          "path": "banking.bank_health",
+          "mode": "gte",
+          "value": 0.6
+        },
+        {
+          "id": "fc08_growth",
+          "title_fa": "بازگشت رشد ۲٪",
+          "path": "economy.growth_rate",
+          "mode": "gte",
+          "value": 0.02
+        },
+        {
+          "id": "fc08_unemploy",
+          "title_fa": "بیکاری زیر ۱۰٪",
+          "path": "economy.unemployment",
+          "mode": "lte",
+          "value": 0.1
+        },
+        {
+          "id": "fc08_confidence",
+          "title_fa": "اعتماد سرمایه‌گذار ۵۵٪",
+          "path": "stock_market.investor_confidence",
+          "mode": "gte",
+          "value": 0.55
+        }
+      ]
+    },
+    {
+      "id": "pandemic_2020",
+      "name_fa": "همه‌گیری ۲۰۲۰",
+      "difficulty_fa": "سخت",
+      "difficulty_multiplier": 1.15,
+      "description": "ویروس تازه کل جهان را قرنطینه کرد. قرنطینه‌ی سنگین یا اقتصاد باز؟ سلامت در برابر معیشت؛ هر ماه تصمیم دشوارتر می‌شود.",
+      "deadline_days": 1080,
+      "completion_rule": "all",
+      "reward_xp": 600,
+      "reward_legacy": 70,
+      "startup_effects": [
+        {
+          "path": "health.quality",
+          "op": "add",
+          "value": -0.1,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "path": "health.coverage",
+          "op": "add",
+          "value": -0.08,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "path": "economy.growth_rate",
+          "op": "add",
+          "value": -0.05,
+          "min": -0.05,
+          "max": 0.08
+        },
+        {
+          "path": "economy.unemployment",
+          "op": "add",
+          "value": 0.06,
+          "min": 0.015,
+          "max": 0.4
+        },
+        {
+          "path": "economy.national_debt",
+          "op": "mul",
+          "value": 1.15,
+          "min": 0.0,
+          "max": 1000000000000000.0
+        },
+        {
+          "path": "population.happiness",
+          "op": "add",
+          "value": -0.12,
+          "min": 0.05,
+          "max": 0.95
+        },
+        {
+          "path": "welfare.poverty",
+          "op": "add",
+          "value": 0.05,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "path": "global_market.world_stock_index",
+          "op": "mul",
+          "value": 0.7,
+          "min": 150.0,
+          "max": 3000.0
+        },
+        {
+          "path": "global_market.risk_sentiment",
+          "op": "set",
+          "value": 0.85,
+          "min": 0.05,
+          "max": 0.95
+        }
+      ],
+      "startup_crises": [
+        {
+          "type": "epidemic_wave2",
+          "title": "همه‌گیری ۲۰۲۰",
+          "severity": 3,
+          "duration_days": 360,
+          "stage": 0,
+          "stage_count": 3,
+          "stage_name_fa": "موج نخست و قرنطینه"
+        }
+      ],
+      "objectives": [
+        {
+          "id": "pan20_health",
+          "title_fa": "بازگشت سلامت ۶۰٪",
+          "path": "health.quality",
+          "mode": "gte",
+          "value": 0.6
+        },
+        {
+          "id": "pan20_vaccine",
+          "title_fa": "واکسیناسیون ۷۰٪",
+          "path": "health.vaccination",
+          "mode": "gte",
+          "value": 0.7
+        },
+        {
+          "id": "pan20_recovery",
+          "title_fa": "بازگشت رشد ۳٪",
+          "path": "economy.growth_rate",
+          "mode": "gte",
+          "value": 0.03
+        },
+        {
+          "id": "pan20_unemploy",
+          "title_fa": "بیکاری زیر ۱۲٪",
+          "path": "economy.unemployment",
+          "mode": "lte",
+          "value": 0.12
+        }
+      ]
     }
-   ],
-   "difficulty_multiplier": 1.0
-  },
-  {
-   "id": "economic_miracle",
-   "name_fa": "معجزه اقتصادی",
-   "difficulty_fa": "سخت",
-   "description": "در دو سال اقتصاد را جهش دهید و هم‌زمان تورم و بیکاری را مهار کنید.",
-   "deadline_days": 720,
-   "completion_rule": "all",
-   "reward_xp": 500,
-   "reward_legacy": 65,
-   "objectives": [
-    {
-     "id": "econ_gdp",
-     "title_fa": "رشد ۴۰٪ تولید داخلی",
-     "path": "economy.gdp",
-     "mode": "increase_ratio",
-     "value": 0.4
-    },
-    {
-     "id": "econ_jobs",
-     "title_fa": "بیکاری حداکثر ۶٪",
-     "path": "economy.unemployment",
-     "mode": "lte",
-     "value": 0.06
-    },
-    {
-     "id": "econ_prices",
-     "title_fa": "تورم حداکثر ۸٪",
-     "path": "economy.inflation",
-     "mode": "lte",
-     "value": 0.08
-    },
-    {
-     "id": "econ_exports",
-     "title_fa": "رشد ۲۵٪ صادرات",
-     "path": "trade.exports",
-     "mode": "increase_ratio",
-     "value": 0.25
-    }
-   ],
-   "difficulty_multiplier": 1.15
-  },
-  {
-   "id": "regional_power",
-   "name_fa": "قدرت منطقه‌ای",
-   "difficulty_fa": "سخت",
-   "description": "با دیپلماسی، اتحاد و آمادگی دفاعی به قدرت تعیین‌کننده منطقه تبدیل شوید.",
-   "deadline_days": 900,
-   "completion_rule": "all",
-   "reward_xp": 520,
-   "reward_legacy": 70,
-   "objectives": [
-    {
-     "id": "power_score",
-     "title_fa": "افزایش ۲۰ واحدی قدرت",
-     "path": "indicators.power_score",
-     "mode": "increase_add",
-     "value": 20
-    },
-    {
-     "id": "power_influence",
-     "title_fa": "نفوذ جهانی ۶۰",
-     "path": "diplomacy.influence",
-     "mode": "gte",
-     "value": 60
-    },
-    {
-     "id": "power_alliances",
-     "title_fa": "تشکیل دو اتحاد",
-     "path": "world.alliances_count",
-     "mode": "gte",
-     "value": 2
-    },
-    {
-     "id": "power_readiness",
-     "title_fa": "آمادگی دفاعی ۷۸٪",
-     "path": "military.readiness",
-     "mode": "gte",
-     "value": 0.78
-    }
-   ],
-   "difficulty_multiplier": 1.15
-  },
-  {
-   "id": "survival_year",
-   "name_fa": "سال بقا",
-   "difficulty_fa": "بحرانی",
-   "description": "یک سال در برابر بحران‌ها دوام بیاورید؛ اهداف باید در پایان سال هم برقرار باشند.",
-   "deadline_days": 360,
-   "completion_rule": "deadline",
-   "reward_xp": 450,
-   "reward_legacy": 55,
-   "objectives": [
-    {
-     "id": "survive_happiness",
-     "title_fa": "شادی حداقل ۳۵٪",
-     "path": "population.happiness",
-     "mode": "gte",
-     "value": 0.35
-    },
-    {
-     "id": "survive_stability",
-     "title_fa": "ثبات حداقل ۳۰٪",
-     "path": "politics.stability",
-     "mode": "gte",
-     "value": 0.3
-    },
-    {
-     "id": "survive_debt",
-     "title_fa": "بدهی حداکثر ۱۲۰٪ تولید",
-     "path": "economy.debt_to_gdp",
-     "mode": "lte",
-     "value": 1.2
-    },
-    {
-     "id": "survive_peace",
-     "title_fa": "بدون جنگ فعال در پایان سال",
-     "path": "world.active_wars_count",
-     "mode": "lte",
-     "value": 0
-    }
-   ],
-   "difficulty_multiplier": 1.3
-  },
-  {
-   "id": "green_future",
-   "name_fa": "آینده سبز",
-   "difficulty_fa": "سخت",
-   "description": "اقتصاد را به انرژی پاک، هوای سالم و فناوری سبز منتقل کنید.",
-   "deadline_days": 1080,
-   "completion_rule": "all",
-   "reward_xp": 500,
-   "reward_legacy": 65,
-   "objectives": [
-    {
-     "id": "green_share",
-     "title_fa": "سهم انرژی سبز ۳۸٪",
-     "path": "environment.green_energy_share",
-     "mode": "gte",
-     "value": 0.38
-    },
-    {
-     "id": "green_air",
-     "title_fa": "کیفیت هوا ۷۲٪",
-     "path": "environment.air_quality",
-     "mode": "gte",
-     "value": 0.72
-    },
-    {
-     "id": "green_carbon",
-     "title_fa": "انتشار کربن حداکثر ۴۵٪",
-     "path": "environment.carbon_emission",
-     "mode": "lte",
-     "value": 0.45
-    },
-    {
-     "id": "green_tech",
-     "title_fa": "فناوری هیدروژن سبز",
-     "path": "technology.unlocked",
-     "mode": "contains",
-     "value": "green_hydrogen"
-    }
-   ],
-   "difficulty_multiplier": 1.15
-  },
-  {
-   "id": "innovation_leader",
-   "name_fa": "رهبر نوآوری",
-   "difficulty_fa": "بسیار سخت",
-   "description": "سرمایه انسانی، پژوهش، فناوری و فضا را به سطح یک کشور پیشرو برسانید.",
-   "deadline_days": 1080,
-   "completion_rule": "all",
-   "reward_xp": 600,
-   "reward_legacy": 80,
-   "objectives": [
-    {
-     "id": "innovation_unlocks",
-     "title_fa": "بازکردن ۱۰ فناوری",
-     "path": "technology.unlocked_count",
-     "mode": "gte",
-     "value": 10
-    },
-    {
-     "id": "innovation_education",
-     "title_fa": "کیفیت آموزش ۷۰٪",
-     "path": "education.quality",
-     "mode": "gte",
-     "value": 0.7
-    },
-    {
-     "id": "innovation_rate",
-     "title_fa": "سرعت پژوهش سالانه ۱۲",
-     "path": "technology.research_rate",
-     "mode": "gte",
-     "value": 12
-    },
-    {
-     "id": "innovation_space",
-     "title_fa": "سطح فضایی ۳۰٪",
-     "path": "space.level",
-     "mode": "gte",
-     "value": 0.3
-    }
-   ],
-   "difficulty_multiplier": 1.45
-  },
-  {
-   "id": "oil_shock_1973",
-   "name_fa": "شوک نفتی ۱۹۷۳",
-   "difficulty_fa": "سخت",
-   "description": "تحریم نفتی اوپک، قیمت نفت را چهار برابر کرد. کشور با تورم وارداتی و رکود دست‌وپنجه نرم می‌کند؛ هر تصمیم، آینده‌ی انرژی کشور را می‌سازد.",
-   "deadline_days": 1440,
-   "completion_rule": "all",
-   "reward_xp": 600,
-   "reward_legacy": 70,
-   "startup_effects": [
-    {
-     "path": "commodities.prices.نفت",
-     "op": "set",
-     "value": 160.0,
-     "min": 30.0,
-     "max": 180.0
-    },
-    {
-     "path": "commodities.prices.گاز",
-     "op": "set",
-     "value": 7.5,
-     "min": 1.2,
-     "max": 8.0
-    },
-    {
-     "path": "economy.inflation",
-     "op": "add",
-     "value": 0.15,
-     "min": 0.0,
-     "max": 0.5
-    },
-    {
-     "path": "economy.growth_rate",
-     "op": "add",
-     "value": -0.03,
-     "min": -0.05,
-     "max": 0.08
-    },
-    {
-     "path": "economy.foreign_reserves",
-     "op": "mul",
-     "value": 0.8,
-     "min": 0.0,
-     "max": 1000000000000000.0
-    },
-    {
-     "path": "politics.tension",
-     "op": "add",
-     "value": 0.1,
-     "min": 0.0,
-     "max": 1.0
-    },
-    {
-     "path": "global_market.world_stock_index",
-     "op": "mul",
-     "value": 0.8,
-     "min": 150.0,
-     "max": 3000.0
-    },
-    {
-     "path": "global_market.risk_sentiment",
-     "op": "set",
-     "value": 0.75,
-     "min": 0.05,
-     "max": 0.95
-    }
-   ],
-   "startup_crises": [
-    {
-     "type": "oil_shock_world",
-     "title": "شوک نفتی ۱۹۷۳",
-     "severity": 3,
-     "duration_days": 360,
-     "stage": 0,
-     "stage_count": 3,
-     "stage_name_fa": "جهش قیمت نفت"
-    }
-   ],
-   "objectives": [
-    {
-     "id": "os73_inflation",
-     "title_fa": "کاهش تورم به زیر ۱۵٪",
-     "path": "economy.inflation",
-     "mode": "lte",
-     "value": 0.15
-    },
-    {
-     "id": "os73_reserves",
-     "title_fa": "بازسازی ذخایر ارزی",
-     "path": "economy.foreign_reserves",
-     "mode": "gte",
-     "value": 50000000000.0
-    },
-    {
-     "id": "os73_growth",
-     "title_fa": "بازگشت رشد مثبت",
-     "path": "economy.growth_rate",
-     "mode": "gte",
-     "value": 0.015
-    },
-    {
-     "id": "os73_stability",
-     "title_fa": "ثبات سیاسی ۵۵٪",
-     "path": "politics.stability",
-     "mode": "gte",
-     "value": 0.55
-    }
-   ],
-   "difficulty_multiplier": 1.15
-  },
-  {
-   "id": "financial_crisis_2008",
-   "name_fa": "بحران مالی ۲۰۰۸",
-   "difficulty_fa": "بسیار سخت",
-   "description": "حباب مسکن ترکید و بحران بانکی جهان را گرفت. نجات بانک‌ها یا انضباط؟ رکود جهانی صادرات و سرمایه را خشک کرده است.",
-   "deadline_days": 1440,
-   "completion_rule": "all",
-   "reward_xp": 650,
-   "reward_legacy": 75,
-   "startup_effects": [
-    {
-     "path": "global_market.world_stock_index",
-     "op": "set",
-     "value": 420.0,
-     "min": 150.0,
-     "max": 3000.0
-    },
-    {
-     "path": "global_market.risk_sentiment",
-     "op": "set",
-     "value": 0.92,
-     "min": 0.05,
-     "max": 0.95
-    },
-    {
-     "path": "stock_market.index",
-     "op": "mul",
-     "value": 0.55,
-     "min": 10.0,
-     "max": 1000000000.0
-    },
-    {
-     "path": "stock_market.investor_confidence",
-     "op": "set",
-     "value": 0.2,
-     "min": 0.05,
-     "max": 0.95
-    },
-    {
-     "path": "banking.bank_health",
-     "op": "set",
-     "value": 0.3,
-     "min": 0.05,
-     "max": 0.98
-    },
-    {
-     "path": "economy.growth_rate",
-     "op": "add",
-     "value": -0.04,
-     "min": -0.05,
-     "max": 0.08
-    },
-    {
-     "path": "economy.unemployment",
-     "op": "add",
-     "value": 0.05,
-     "min": 0.015,
-     "max": 0.4
-    },
-    {
-     "path": "economy.national_debt",
-     "op": "mul",
-     "value": 1.1,
-     "min": 0.0,
-     "max": 1000000000000000.0
-    }
-   ],
-   "startup_crises": [
-    {
-     "type": "banking_chain",
-     "title": "بحران بانکی ۲۰۰۸",
-     "severity": 3,
-     "duration_days": 420,
-     "stage": 0,
-     "stage_count": 3,
-     "stage_name_fa": "هجوم سپرده‌ها"
-    }
-   ],
-   "objectives": [
-    {
-     "id": "fc08_banks",
-     "title_fa": "سلامت بانک‌ها ۶۰٪",
-     "path": "banking.bank_health",
-     "mode": "gte",
-     "value": 0.6
-    },
-    {
-     "id": "fc08_growth",
-     "title_fa": "بازگشت رشد ۲٪",
-     "path": "economy.growth_rate",
-     "mode": "gte",
-     "value": 0.02
-    },
-    {
-     "id": "fc08_unemploy",
-     "title_fa": "بیکاری زیر ۱۰٪",
-     "path": "economy.unemployment",
-     "mode": "lte",
-     "value": 0.1
-    },
-    {
-     "id": "fc08_confidence",
-     "title_fa": "اعتماد سرمایه‌گذار ۵۵٪",
-     "path": "stock_market.investor_confidence",
-     "mode": "gte",
-     "value": 0.55
-    }
-   ],
-   "difficulty_multiplier": 1.45
-  },
-  {
-   "id": "pandemic_2020",
-   "name_fa": "همه‌گیری ۲۰۲۰",
-   "difficulty_fa": "سخت",
-   "description": "ویروس تازه کل جهان را قرنطینه کرد. قرنطینه‌ی سنگین یا اقتصاد باز؟ سلامت در برابر معیشت؛ هر ماه تصمیم دشوارتر می‌شود.",
-   "deadline_days": 1080,
-   "completion_rule": "all",
-   "reward_xp": 600,
-   "reward_legacy": 70,
-   "startup_effects": [
-    {
-     "path": "health.quality",
-     "op": "add",
-     "value": -0.1,
-     "min": 0.0,
-     "max": 1.0
-    },
-    {
-     "path": "health.coverage",
-     "op": "add",
-     "value": -0.08,
-     "min": 0.0,
-     "max": 1.0
-    },
-    {
-     "path": "economy.growth_rate",
-     "op": "add",
-     "value": -0.05,
-     "min": -0.05,
-     "max": 0.08
-    },
-    {
-     "path": "economy.unemployment",
-     "op": "add",
-     "value": 0.06,
-     "min": 0.015,
-     "max": 0.4
-    },
-    {
-     "path": "economy.national_debt",
-     "op": "mul",
-     "value": 1.15,
-     "min": 0.0,
-     "max": 1000000000000000.0
-    },
-    {
-     "path": "population.happiness",
-     "op": "add",
-     "value": -0.12,
-     "min": 0.05,
-     "max": 0.95
-    },
-    {
-     "path": "welfare.poverty",
-     "op": "add",
-     "value": 0.05,
-     "min": 0.0,
-     "max": 1.0
-    },
-    {
-     "path": "global_market.world_stock_index",
-     "op": "mul",
-     "value": 0.7,
-     "min": 150.0,
-     "max": 3000.0
-    },
-    {
-     "path": "global_market.risk_sentiment",
-     "op": "set",
-     "value": 0.85,
-     "min": 0.05,
-     "max": 0.95
-    }
-   ],
-   "startup_crises": [
-    {
-     "type": "epidemic_wave2",
-     "title": "همه‌گیری ۲۰۲۰",
-     "severity": 3,
-     "duration_days": 360,
-     "stage": 0,
-     "stage_count": 3,
-     "stage_name_fa": "موج نخست و قرنطینه"
-    }
-   ],
-   "objectives": [
-    {
-     "id": "pan20_health",
-     "title_fa": "بازگشت سلامت ۶۰٪",
-     "path": "health.quality",
-     "mode": "gte",
-     "value": 0.6
-    },
-    {
-     "id": "pan20_vaccine",
-     "title_fa": "واکسیناسیون ۷۰٪",
-     "path": "health.vaccination",
-     "mode": "gte",
-     "value": 0.7
-    },
-    {
-     "id": "pan20_recovery",
-     "title_fa": "بازگشت رشد ۳٪",
-     "path": "economy.growth_rate",
-     "mode": "gte",
-     "value": 0.03
-    },
-    {
-     "id": "pan20_unemploy",
-     "title_fa": "بیکاری زیر ۱۲٪",
-     "path": "economy.unemployment",
-     "mode": "lte",
-     "value": 0.12
-    }
-   ],
-   "difficulty_multiplier": 1.15
-  }
- ]
+  ]
 }
