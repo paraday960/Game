@@ -450,8 +450,8 @@
             },
             {
               "path": "economy.national_debt",
-              "op": "add",
-              "value": 2500000000.0,
+              "op": "gdp_ratio",
+              "value": 0.005,
               "min": 0.0
             }
           ],
@@ -788,8 +788,8 @@
           "on_enter_effects": [
             {
               "path": "economy.national_debt",
-              "op": "add",
-              "value": 6000000000.0,
+              "op": "gdp_ratio",
+              "value": 0.012,
               "min": 0.0
             },
             {
@@ -1285,8 +1285,8 @@
             },
             {
               "path": "economy.national_debt",
-              "op": "add",
-              "value": 2000000000.0,
+              "op": "gdp_ratio",
+              "value": 0.004,
               "min": 0.0
             }
           ]
@@ -1584,8 +1584,8 @@
           "persist_effects": [
             {
               "path": "economy.national_debt",
-              "op": "add",
-              "value": 1500000000.0
+              "op": "gdp_ratio",
+              "value": 0.003
             },
             {
               "path": "population.happiness",

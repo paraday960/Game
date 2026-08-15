@@ -61,10 +61,20 @@ def apply_effect(state, eff):
             new = old * value
         elif op == "set":
             new = value
+        elif op == "gdp_ratio":
+            # هزینه/درآمد نسبی به GDP (کسر GDP، نه مقدار ثابت) — هماهنگ با DecisionManager
+            gdp = state.get("economy", {}).get("gdp", 500e9) if isinstance(state.get("economy"), dict) else 500e9
+            try:
+                gdp = float(gdp)
+            except (TypeError, ValueError):
+                gdp = 500e9
+            new = old + value * gdp
         else:
             return
-        if lo is not None and hi is not None:
-            new = clamp(new, float(lo), float(hi))
+        if lo is not None:
+            new = max(new, float(lo))
+        if hi is not None:
+            new = min(new, float(hi))
         cur[leaf] = new
 
 

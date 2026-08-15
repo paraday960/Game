@@ -14,14 +14,14 @@ const TEMPLATES = {
 			{"id": "import", "text": "واردات فوری آب و غذا", "consequence": "ذخایر سریع‌تر ترمیم می‌شود اما بدهی افزایش می‌یابد.", "effects": [
 				{"path":"resources.inventory.غذا","op":"add","value":25.0,"min":0.0,"max":150.0},
 				{"path":"resources.inventory.آب","op":"add","value":20.0,"min":0.0,"max":150.0},
-				{"path":"economy.national_debt","op":"add","value":3000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0060}]},
 			{"id": "ration", "text": "سهمیه‌بندی سراسری", "consequence": "مصرف مهار می‌شود ولی رضایت عمومی کاهش می‌یابد.", "effects": [
 				{"path":"resources.inventory.آب","op":"add","value":12.0,"min":0.0,"max":150.0},
 				{"path":"population.happiness","op":"add","value":-0.035,"min":0.0,"max":1.0}]},
 			{"id": "irrigation", "text": "سرمایه‌گذاری در آبیاری نوین", "consequence": "هزینه زیاد است اما کشاورزی و زیرساخت پایدارتر می‌شوند.", "effects": [
 				{"path":"agriculture.irrigated_land","op":"add","value":0.08,"min":0.0,"max":1.0},
 				{"path":"infrastructure.quality","op":"add","value":0.012,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":5000000000.0}]}
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0100}]}
 		]
 	},
 	"epidemic_outbreak": {
@@ -31,7 +31,7 @@ const TEMPLATES = {
 			{"id":"mobilize", "text":"بسیج کامل نظام سلامت", "consequence":"آمادگی و پوشش درمان بالا می‌رود و بدهی افزایش می‌یابد.", "effects":[
 				{"path":"health.epidemic_readiness","op":"add","value":0.15,"min":0.0,"max":1.0},
 				{"path":"health.coverage","op":"add","value":0.05,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":4000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0080}]},
 			{"id":"targeted", "text":"محدودیت هدفمند و واکسیناسیون", "consequence":"تعادل میان اقتصاد و سلامت حفظ می‌شود.", "effects":[
 				{"path":"health.vaccination","op":"add","value":0.07,"min":0.0,"max":1.0},
 				{"path":"health.epidemic_readiness","op":"add","value":0.08,"min":0.0,"max":1.0},
@@ -53,7 +53,7 @@ const TEMPLATES = {
 			{"id":"welfare", "text":"بسته فوری معیشتی", "consequence":"رضایت سریع بالا می‌رود اما بدهی بیشتر می‌شود.", "effects":[
 				{"path":"population.happiness","op":"add","value":0.05,"min":0.0,"max":1.0},
 				{"path":"welfare.poverty","op":"add","value":-0.025,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":6000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0120}]},
 			{"id":"repress", "text":"سرکوب امنیتی", "consequence":"خیابان موقتاً آرام می‌شود ولی اعتماد و مشروعیت افت می‌کند.", "effects":[
 				{"path":"politics.tension","op":"add","value":-0.04,"min":0.0,"max":1.0},
 				{"path":"politics.trust","op":"add","value":-0.08,"min":0.0,"max":1.0},
@@ -86,7 +86,7 @@ const TEMPLATES = {
 			{"id":"mobilize", "text":"آماده‌باش محدود", "consequence":"بازدارندگی بالا می‌رود اما هزینه و تنش افزایش می‌یابد.", "effects":[
 				{"path":"military.readiness","op":"add","value":0.06,"min":0.0,"max":1.0},
 				{"path":"politics.tension","op":"add","value":0.025,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":1500000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0030}]},
 			{"id":"ignore", "text":"عدم واکنش", "consequence":"هزینه‌ای ندارد ولی آمادگی و اعتماد عمومی کاهش می‌یابد.", "effects":[
 				{"path":"military.readiness","op":"add","value":-0.04,"min":0.0,"max":1.0},
 				{"path":"population.happiness","op":"add","value":-0.015,"min":0.0,"max":1.0}]}
@@ -99,7 +99,7 @@ const TEMPLATES = {
 			{"id":"counter", "text":"پاسخ فنی و ضدحمله محدود", "consequence":"آمادگی سایبری بالا می‌رود اما هزینه امنیتی دارد.", "effects":[
 				{"path":"intelligence.cyber_readiness","op":"add","value":0.09,"min":0.0,"max":1.0},
 				{"path":"security.cyber","op":"add","value":0.07,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":1800000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0036}]},
 			{"id":"isolate", "text":"قطع موقت شبکه‌های حساس", "consequence":"خسارت مهار می‌شود اما اقتصاد دیجیتال کند می‌شود.", "effects":[
 				{"path":"infrastructure.quality","op":"add","value":-0.01,"min":0.0,"max":1.0},
 				{"path":"economy.growth_rate","op":"add","value":-0.002,"min":-0.05,"max":0.08}]},
@@ -115,7 +115,7 @@ const TEMPLATES = {
 			{"id":"full_response", "text":"بسیج ملی امداد", "consequence":"واکنش سریع و پرهزینه، آمادگی آینده را بالا می‌برد.", "effects":[
 				{"path":"emergency.preparedness","op":"add","value":0.08,"min":0.0,"max":1.0},
 				{"path":"population.happiness","op":"add","value":0.02,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":5000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0100}]},
 			{"id":"regional", "text":"واگذاری به دولت‌های محلی", "consequence":"هزینه کمتر است؛ نتیجه به کارآمدی محلی وابسته می‌ماند.", "effects":[
 				{"path":"administration.decentralization","op":"add","value":0.04,"min":0.0,"max":1.0},
 				{"path":"emergency.response_time","op":"add","value":-0.5,"min":1.0,"max":60.0}]},
@@ -131,7 +131,7 @@ const TEMPLATES = {
 			{"id":"export", "text":"مشوق هدفمند صادرات", "consequence":"صادرات و صنعت تقویت می‌شود اما دولت هزینه می‌کند.", "effects":[
 				{"path":"trade.exports","op":"mul","value":1.04,"min":0.0},
 				{"path":"industry.productivity","op":"add","value":0.015,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":2200000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0044}]},
 			{"id":"tariff", "text":"تعرفه موقت واردات", "consequence":"واردات کم می‌شود ولی تورم افزایش می‌یابد.", "effects":[
 				{"path":"trade.tariff_rate","op":"add","value":0.04,"min":0.0,"max":0.8},
 				{"path":"trade.imports","op":"mul","value":0.97,"min":0.0},
@@ -148,11 +148,11 @@ const TEMPLATES = {
 			{"id":"build", "text":"طرح ملی ساخت مسکن", "consequence":"عرضه و رضایت بالا می‌رود اما بدهی سنگین‌تر می‌شود.", "effects":[
 				{"path":"physical.housing_units","op":"add","value":350000.0,"min":0.0},
 				{"path":"population.happiness","op":"add","value":0.025,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":7000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0140}]},
 			{"id":"rent", "text":"حمایت اجاره و وام هدفمند", "consequence":"فشار کوتاه‌مدت کاهش می‌یابد ولی ریشه کمبود باقی می‌ماند.", "effects":[
 				{"path":"households_detail_full.housing_own","op":"add","value":0.015,"min":0.0,"max":1.0},
 				{"path":"welfare.poverty","op":"add","value":-0.01,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":2500000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0050}]},
 			{"id":"deregulate", "text":"آزادسازی ساخت‌وساز", "consequence":"عرضه ارزان‌تر می‌شود اما گسترش بی‌رویه شهری بالا می‌رود.", "effects":[
 				{"path":"physical.housing_units","op":"add","value":180000.0,"min":0.0},
 				{"path":"settlements_detail.sprawl","op":"add","value":0.04,"min":0.0,"max":1.0}]}
@@ -164,7 +164,7 @@ const TEMPLATES = {
 		"choices":[
 			{"id":"emergency_clearance","text":"قرارداد اضطراری برف‌روبی","consequence":"راه‌ها سریع‌تر باز می‌شوند اما بدهی افزایش می‌یابد.","effects":[
 				{"path":"municipal_services.roads_blocked","op":"add","value":-0.45,"min":0,"max":1},
-				{"path":"economy.national_debt","op":"add","value":3000000000}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0060}]},
 			{"id":"mobilize","text":"بسیج ارتش و نیروهای امدادی","consequence":"انسداد کاهش می‌یابد اما آمادگی نظامی افت می‌کند.","effects":[
 				{"path":"municipal_services.roads_blocked","op":"add","value":-0.30,"min":0,"max":1},
 				{"path":"military.readiness","op":"add","value":-0.03,"min":0.1,"max":1},
@@ -177,15 +177,15 @@ const TEMPLATES = {
 	"urban_flood": {
 		"title":"سیلاب و آب‌گرفتگی شهری","description":"بارش شدید، ضعف زهکشی و انسداد مسیرها به خانه‌ها و کسب‌وکارها آسیب زده است.",
 		"choices":[
-			{"id":"pump","text":"تخلیه اضطراری و پمپ سیار","consequence":"راه‌ها باز می‌شوند و هزینه مالی ایجاد می‌شود.","effects":[{"path":"municipal_services.roads_blocked","op":"add","value":-0.35,"min":0,"max":1},{"path":"economy.national_debt","op":"add","value":2200000000}]},
-			{"id":"rebuild","text":"بازسازی زهکشی","consequence":"راه‌حل پایدارتر ولی گران‌تر است.","effects":[{"path":"municipal_services.drainage","op":"add","value":0.08,"min":0,"max":1},{"path":"economy.national_debt","op":"add","value":4500000000}]},
+			{"id":"pump","text":"تخلیه اضطراری و پمپ سیار","consequence":"راه‌ها باز می‌شوند و هزینه مالی ایجاد می‌شود.","effects":[{"path":"municipal_services.roads_blocked","op":"add","value":-0.35,"min":0,"max":1},{"path":"economy.national_debt","op":"gdp_ratio","value":0.0044}]},
+			{"id":"rebuild","text":"بازسازی زهکشی","consequence":"راه‌حل پایدارتر ولی گران‌تر است.","effects":[{"path":"municipal_services.drainage","op":"add","value":0.08,"min":0,"max":1},{"path":"economy.national_debt","op":"gdp_ratio","value":0.0090}]},
 			{"id":"local","text":"واگذاری به شهرداری‌های محلی","consequence":"هزینه کمتر، اما اعتماد عمومی اندکی افت می‌کند.","effects":[{"path":"administration.decentralization","op":"add","value":0.03,"min":0,"max":1},{"path":"politics.trust","op":"add","value":-0.01,"min":0,"max":1}]}
 		]
 	},
 	"heatwave_crisis": {
 		"title":"موج گرمای شدید","description":"تقاضای آب و برق افزایش یافته و سلامت سالمندان و کارگران فضای باز در خطر است.",
 		"choices":[
-			{"id":"cooling","text":"مراکز خنک‌کننده اضطراری","consequence":"تلفات و نارضایتی کم می‌شود و دولت هزینه می‌کند.","effects":[{"path":"municipal_services.heat_readiness","op":"add","value":0.10,"min":0,"max":1},{"path":"health.quality","op":"add","value":0.02,"min":0,"max":1},{"path":"economy.national_debt","op":"add","value":1800000000}]},
+			{"id":"cooling","text":"مراکز خنک‌کننده اضطراری","consequence":"تلفات و نارضایتی کم می‌شود و دولت هزینه می‌کند.","effects":[{"path":"municipal_services.heat_readiness","op":"add","value":0.10,"min":0,"max":1},{"path":"health.quality","op":"add","value":0.02,"min":0,"max":1},{"path":"economy.national_debt","op":"gdp_ratio","value":0.0036}]},
 			{"id":"ration","text":"مدیریت مصرف آب و برق","consequence":"ذخایر حفظ و رضایت کمی کاهش می‌یابد.","effects":[{"path":"resources.inventory.آب","op":"add","value":8,"min":0,"max":150},{"path":"resources.inventory.برق","op":"add","value":6,"min":0,"max":200},{"path":"population.happiness","op":"add","value":-0.01,"min":0.05,"max":0.95}]},
 			{"id":"ignore","text":"ادامه روال عادی","consequence":"هزینه ندارد ولی سلامت و اعتماد آسیب می‌بیند.","effects":[{"path":"health.quality","op":"add","value":-0.03,"min":0,"max":1},{"path":"politics.trust","op":"add","value":-0.02,"min":0,"max":1}]}
 		]
@@ -193,7 +193,7 @@ const TEMPLATES = {
 	"heating_crisis": {
 		"title":"کمبود گرمایش زمستانی","description":"کمبود برق و گاز، خانه‌ها و مراکز درمانی را در سرمای شدید تحت فشار قرار داده است.",
 		"choices":[
-			{"id":"import_energy","text":"واردات اضطراری انرژی","consequence":"گرمایش تأمین و بدهی افزایش می‌یابد.","effects":[{"path":"resources.inventory.برق","op":"add","value":15,"min":0,"max":200},{"path":"resources.inventory.گاز","op":"add","value":15,"min":0,"max":150},{"path":"economy.national_debt","op":"add","value":2800000000}]},
+			{"id":"import_energy","text":"واردات اضطراری انرژی","consequence":"گرمایش تأمین و بدهی افزایش می‌یابد.","effects":[{"path":"resources.inventory.برق","op":"add","value":15,"min":0,"max":200},{"path":"resources.inventory.گاز","op":"add","value":15,"min":0,"max":150},{"path":"economy.national_debt","op":"gdp_ratio","value":0.0056}]},
 			{"id":"priority","text":"اولویت بیمارستان‌ها و خانه‌ها","consequence":"سلامت حفظ ولی صنعت با افت تولید روبه‌رو می‌شود.","effects":[{"path":"health.quality","op":"add","value":0.015,"min":0,"max":1},{"path":"industry.output","op":"mul","value":0.98,"min":0}]},
 			{"id":"ration_heat","text":"سهمیه‌بندی گرمایش","consequence":"ذخایر حفظ ولی شادی مردم کاهش می‌یابد.","effects":[{"path":"resources.inventory.گاز","op":"add","value":7,"min":0,"max":150},{"path":"population.happiness","op":"add","value":-0.025,"min":0.05,"max":0.95}]}
 		]
@@ -205,7 +205,7 @@ const TEMPLATES = {
 			{"id":"research", "text":"افزایش حمایت پژوهشی", "consequence":"خروج نخبگان کم و توان فناوری بیشتر می‌شود؛ هزینه مالی دارد.", "effects":[
 				{"path":"elites_detail.brain_drain","op":"add","value":-0.05,"min":0.0,"max":1.0},
 				{"path":"technology.research_rate","op":"add","value":1.5,"min":0.0},
-				{"path":"economy.national_debt","op":"add","value":2000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0040}]},
 			{"id":"freedom", "text":"اصلاح فضای علمی و اجتماعی", "consequence":"اعتماد و ماندگاری نخبگان بالا می‌رود ولی تنش سیاسی کوتاه‌مدت ممکن است.", "effects":[
 				{"path":"elites_detail.brain_drain","op":"add","value":-0.035,"min":0.0,"max":1.0},
 				{"path":"culture.media_freedom","op":"add","value":0.04,"min":0.0,"max":1.0},
@@ -222,7 +222,7 @@ const TEMPLATES = {
 			{"id":"subsidy","text":"یارانه‌ی کالاهای اساسی","consequence":"فشار معیشت کم می‌شود اما بدهی و کسری بالا می‌رود.","effects":[
 				{"path":"population.happiness","op":"add","value":0.03,"min":0.0,"max":1.0},
 				{"path":"welfare.poverty","op":"add","value":-0.02,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":5000000000.0}]},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0100}]},
 			{"id":"price_control","text":"کنترل قیمت و سهمیه‌بندی","consequence":"تورم ظاهری مهار می‌شود ولی کمبود و بازار سیاه رشد می‌کند.","effects":[
 				{"path":"economy.inflation","op":"add","value":-0.01,"min":0.0,"max":0.5},
 				{"path":"shadow.size","op":"add","value":0.03,"min":0.0,"max":1.0},
@@ -293,15 +293,15 @@ const TEMPLATES = {
 		"choices": [
 			{"id":"subsidize","text":"یارانه‌ی سوخت و حامل‌های انرژی","consequence":"فشار معیشت کم می‌شود ولی بودجه و بدهی سنگین می‌شود.","effects":[
 				{"path":"population.happiness","op":"add","value":0.025,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":4000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0080},
 				{"path":"economy.inflation","op":"add","value":-0.006,"min":0.0,"max":0.5}]},
 			{"id":"liberalize","text":"آزادسازی قیمت انرژی","consequence":"بودجه سبک می‌شود ولی تورم و نارضایتی می‌آید.","effects":[
-				{"path":"economy.foreign_reserves","op":"add","value":1500000000.0,"min":0.0},
+				{"path":"economy.foreign_reserves","op":"gdp_ratio","value":0.0030,"min":0.0},
 				{"path":"economy.inflation","op":"add","value":0.012,"min":0.0,"max":0.5},
 				{"path":"population.happiness","op":"add","value":-0.025,"min":0.0,"max":1.0}]},
 			{"id":"green","text":"تسریع گذار به انرژی پاک","consequence":"هزینه‌ی کوتاه‌مدت اما استقلال بلندمدت.","effects":[
 				{"path":"environment.green_energy_share","op":"add","value":0.03,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":5000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0100},
 				{"path":"commodities.prices.نفت","op":"mul","value":0.95,"min":30.0,"max":180.0}]}
 		]
 	},
@@ -311,7 +311,7 @@ const TEMPLATES = {
 		"choices": [
 			{"id":"guarantee","text":"ضمانت کامل سپرده‌ها","consequence":"هجوم متوقف می‌شود ولی بدهی سنگین می‌شود.","effects":[
 				{"path":"financial_services.trust_banks","op":"add","value":0.05,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":7000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0140},
 				{"path":"banking.bank_health","op":"add","value":0.02,"min":0.0,"max":1.0}]},
 			{"id":"liquidity","text":"تزریق نقدینگی اضطراری","consequence":"بانک‌ها سرپا می‌مانند ولی تورم شعله می‌کشد.","effects":[
 				{"path":"economy.inflation","op":"add","value":0.008,"min":0.0,"max":0.5},
@@ -329,11 +329,11 @@ const TEMPLATES = {
 		"choices": [
 			{"id":"full","text":"نجات کامل با بودجه‌ی دولتی","consequence":"ثبات بازمی‌گردد ولی بدهی و خشم عمومی می‌آید.","effects":[
 				{"path":"banking.bank_health","op":"add","value":0.06,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":9000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0180},
 				{"path":"population.happiness","op":"add","value":-0.02,"min":0.0,"max":1.0}]},
 			{"id":"partial","text":"نجات جزئی و ادغام","consequence":"هزینه کمتر، اما اعتماد کامل بازنمی‌گردد.","effects":[
 				{"path":"banking.bank_health","op":"add","value":0.03,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":4000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0080},
 				{"path":"financial_services.trust_banks","op":"add","value":-0.02,"min":0.0,"max":1.0}]},
 			{"id":"private","text":"واگذاری به بخش خصوصی","consequence":"بازار درست می‌شود ولی ریسک فروپاشی تک‌تک بانک‌ها می‌ماند.","effects":[
 				{"path":"banking.bank_health","op":"add","value":-0.02,"min":0.0,"max":1.0},
@@ -347,7 +347,7 @@ const TEMPLATES = {
 		"choices": [
 			{"id":"alt_route","text":"فعال‌سازی مسیر جایگزین","consequence":"تجارت می‌چرخد ولی هزینه‌ی حمل و بدهی بالا می‌رود.","effects":[
 				{"path":"transport_detail.logistics_efficiency","op":"add","value":0.02,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":3000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0060},
 				{"path":"trade.balance","op":"mul","value":0.995,"min":0.0}]},
 			{"id":"stockpile","text":"تکمیل ذخیره‌ی راهبردی سوخت","consequence":"امنیت انرژی حفظ می‌شود ولی ذخایر ارزی می‌سوزد.","effects":[
 				{"path":"resources.inventory.نفت","op":"add","value":8.0,"min":0.0},
@@ -419,7 +419,7 @@ const TEMPLATES = {
 		"choices": [
 			{"id":"shelter","text":"پذیرش و اسکان بشردوستانه","consequence":"هزینه‌ی رفاه بالا می‌رود ولی اعتبار انسانی می‌آید.","effects":[
 				{"path":"welfare.poverty","op":"add","value":-0.01,"min":0.0,"max":1.0},
-				{"path":"economy.national_debt","op":"add","value":3000000000.0},
+				{"path":"economy.national_debt","op":"gdp_ratio","value":0.0060},
 				{"path":"diplomacy.influence","op":"add","value":2.0,"min":0.0,"max":100.0}]},
 			{"id":"restrict","text":"محدودیت و دیوار مرزی","consequence":"هزینه‌ی فوری کم می‌شود ولی تنش مرزی و فشار می‌ماند.","effects":[
 				{"path":"population.migration_net","op":"add","value":-80000.0},
@@ -564,6 +564,14 @@ static func _apply_effect(state: Dictionary, effect: Dictionary):
 	match str(effect.get("op", "add")):
 		"mul": new_value *= float(effect.get("value", 1.0))
 		"set": new_value = float(effect.get("value", new_value))
+		# هزینه/درآمد نسبی به GDP: مقدار به‌صورت کسر GDP تفسیر می‌شود
+		"gdp_ratio":
+			var base_gdp: float = 500_000_000_000.0
+			if state.has("economy") and state["economy"] is Dictionary:
+				var gdp_val = state["economy"].get("gdp", base_gdp)
+				if gdp_val is int or gdp_val is float:
+					base_gdp = float(gdp_val)
+			new_value += float(effect.get("value", 0.0)) * base_gdp
 		_: new_value += float(effect.get("value", 0.0))
 	if effect.has("min"):
 		new_value = max(new_value, float(effect["min"]))

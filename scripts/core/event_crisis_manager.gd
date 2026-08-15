@@ -129,7 +129,7 @@ const CRISES = [
 		"duration_days": 45,
 		"immediate_effects": [
 			{"path": "infrastructure.quality", "op": "add", "value": -0.02, "min": 0.0, "max": 1.0},
-			{"path": "economy.national_debt", "op": "add", "value": 3000000000.0, "min": 0.0}
+			{"path": "economy.national_debt", "op": "gdp_ratio", "value": 0.006, "min": 0.0}
 		],
 		"persist_effects": [
 			{"path": "population.happiness", "op": "add", "value": -0.003, "min": 0.05, "max": 0.95}
@@ -448,6 +448,14 @@ func _apply_path_effect(state: Dictionary, effect: Dictionary):
 	match str(effect.get("op", "add")):
 		"mul": new_value *= float(effect.get("value", 1.0))
 		"set": new_value = float(effect.get("value", new_value))
+		# هزینه/درآمد نسبی به GDP (کسر GDP، نه مقدار ثابت)
+		"gdp_ratio":
+			var base_gdp: float = 500_000_000_000.0
+			if state.has("economy") and state["economy"] is Dictionary:
+				var gdp_val = state["economy"].get("gdp", base_gdp)
+				if gdp_val is int or gdp_val is float:
+					base_gdp = float(gdp_val)
+			new_value += float(effect.get("value", 0.0)) * base_gdp
 		_: new_value += float(effect.get("value", 0.0))
 	if effect.has("min"):
 		new_value = max(new_value, float(effect["min"]))
