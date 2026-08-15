@@ -395,7 +395,7 @@ func _country_layer_value(code: String, profile: Dictionary) -> float:
 		"industry": result = float(full_state.get("industry", {}).get("output", 100.0))/150.0 if code == player_country else clamp(0.20+wealth*0.60,0.10,0.90)
 		"trade_layer", "trade": result = float(full_state.get("trade", {}).get("export_diversity", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
 		"tourism": result = float(full_state.get("tourism", {}).get("service_quality", 0.60)) if code == player_country else clamp(0.25+wealth*0.50,0.10,0.85)
-		"central_bank": result = 1.0 - float(full_state.get("central_bank", {}).get("inflation", 0.08))/0.30 if code == player_country else clamp(wealth,0.10,0.90)
+		"central_bank": result = 1.0 - float(full_state.get("economy", {}).get("inflation", 0.08))/0.30 if code == player_country else clamp(wealth,0.10,0.90)
 		"stock_market": result = float(full_state.get("stock_market", {}).get("investor_confidence", 0.60)) if code == player_country else clamp(wealth*0.8,0.10,0.90)
 		"retail": result = float(full_state.get("retail", {}).get("competition", 0.60)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)
 		"fuel_stations": result = float(full_state.get("fuel_stations", {}).get("coverage", 0.75)) if code == player_country else clamp(0.30+wealth*0.50,0.10,0.90)

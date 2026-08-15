@@ -16,7 +16,7 @@ func decide(state: Dictionary, tick: int) -> Array:
 		var budget_cmd = build_budget_command(state, "ذخیره")
 		if budget_cmd != null:
 			cmds.append(budget_cmd)
-		if cb.get("inflation",0.08) > 0.15:
+		if float(econ.get("inflation", 0.08)) > 0.15:
 			var new_rate = clamp(cb.get("interest_rate",0.15)+0.01, 0.05, 0.40)
 			cmds.append(GameCommand.create_monetary_policy("manual_rate", new_rate))
 

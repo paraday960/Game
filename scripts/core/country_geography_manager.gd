@@ -219,7 +219,7 @@ func get_unit_metrics(code: String, unit_id: String, state: Dictionary) -> Dicti
 		"industry": clamp(float(industry.get("output",100.0))/150.0 + local_noise.call("ind")*0.10, 0.10, 0.95) if is_player else clamp(0.20+wealth*0.60,0.10,0.90),
 		"trade": clamp(float(trade.get("export_diversity",0.60)) + local_noise.call("trade")*0.12, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
 		"tourism": clamp(float(tourism.get("service_quality",0.60)) + local_noise.call("tour")*0.10, 0.10, 0.85) if is_player else clamp(0.25+wealth*0.50,0.10,0.85),
-		"central_bank": clamp(1.0 - float(central_bank.get("inflation",0.08))/0.30, 0.10, 0.90) if is_player else clamp(wealth,0.10,0.90),
+		"central_bank": clamp(1.0 - float(state.get("economy", {}).get("inflation",0.08))/0.30, 0.10, 0.90) if is_player else clamp(wealth,0.10,0.90),
 		"stock_market": clamp(float(stock_market.get("investor_confidence",0.60)) + local_noise.call("stock")*0.10, 0.10, 0.90) if is_player else clamp(wealth*0.8,0.10,0.90),
 		"retail": clamp(float(retail.get("competition",0.60)) + local_noise.call("retail")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),
 		"fuel_stations": clamp(float(fuel.get("coverage",0.75)) + local_noise.call("fuel")*0.10, 0.10, 0.90) if is_player else clamp(0.30+wealth*0.50,0.10,0.90),

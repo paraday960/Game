@@ -1,55 +1,58 @@
 {
-  "balance_version": "2.1.0",
-  "notes": "منبع واحد مقادیر قابل تنظیم موتور - فقط با تست بلندمدت تغییر کند",
-  "simulation": {
-    "days_per_month": 30,
-    "decision_lifetime_days": 30,
-    "autosave_interval_turns": 1,
-    "analytics_interval_turns": 1,
-    "analytics_max_samples": 120
-  },
-  "resources": {
-    "energy_crisis_factor": 0.5,
-    "energy_crisis_threshold": 20,
-    "energy_recovery_threshold": 50,
-    "food_crisis_threshold": 30,
-    "food_recovery_threshold": 60,
-    "storage_base": 100,
-    "depletion_rate": 0.01
-  },
-  "economy": {
-    "tax_base": 0.2,
-    "growth_base": 0.02,
-    "debt_interest": 0.12,
-    "debt_ceiling": 2.0,
-    "inflation_initial": 0.08,
-    "unemployment_initial": 0.08
-  },
-  "population": {
-    "birth_base": 15,
-    "death_base": 8,
-    "participation": 0.65,
-    "happiness_initial": 0.6,
-    "happiness_critical": 0.3
-  },
-  "politics": {
-    "stability_initial": 0.6,
-    "riot_threshold": 0.8,
-    "corruption_initial": 0.3,
-    "policy_capital_max": 5.0,
-    "policy_capital_regen": 0.01
-  },
-  "military": {
-    "budget_share": 0.08,
-    "readiness_initial": 0.7,
-    "maintenance": 0.15
-  },
-  "progression": {
-    "combo_threshold": 0.002,
-    "max_combo": 5,
-    "xp_per_score": 0.01,
-    "level_xp": 100,
-    "stable_streak_happiness": 0.5,
-    "stable_streak_stability": 0.5
-  }
+ "balance_version": "2.1.0",
+ "notes": "منبع واحد مقادیر قابل تنظیم موتور - فقط با تست بلندمدت تغییر کند",
+ "simulation": {
+  "days_per_month": 30,
+  "decision_lifetime_days": 30,
+  "autosave_interval_turns": 1,
+  "analytics_interval_turns": 1,
+  "analytics_max_samples": 120
+ },
+ "resources": {
+  "energy_crisis_factor": 0.5,
+  "energy_crisis_threshold": 20,
+  "energy_recovery_threshold": 50,
+  "food_crisis_threshold": 30,
+  "food_recovery_threshold": 60,
+  "storage_base": 100,
+  "depletion_rate": 0.01
+ },
+ "economy": {
+  "tax_base": 0.2,
+  "growth_base": 0.02,
+  "debt_interest": 0.12,
+  "debt_ceiling": 2.0,
+  "inflation_initial": 0.08,
+  "unemployment_initial": 0.08
+ },
+ "population": {
+  "birth_base": 15,
+  "death_base": 8,
+  "participation": 0.65,
+  "happiness_initial": 0.6,
+  "happiness_critical": 0.3
+ },
+ "politics": {
+  "stability_initial": 0.6,
+  "riot_threshold": 0.8,
+  "corruption_initial": 0.3,
+  "policy_capital_max": 5.0,
+  "policy_capital_regen": 0.01
+ },
+ "military": {
+  "budget_share": 0.08,
+  "readiness_initial": 0.7,
+  "maintenance": 0.15
+ },
+ "progression": {
+  "combo_threshold": 0.002,
+  "max_combo": 5,
+  "xp_per_score": 0.01,
+  "level_xp": 100,
+  "stable_streak_happiness": 0.5,
+  "stable_streak_stability": 0.5
+ },
+ "monetary": {
+  "neutral_real_rate": 0.02
+ }
 }
