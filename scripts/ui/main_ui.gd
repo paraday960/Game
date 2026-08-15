@@ -7367,13 +7367,29 @@ func _show_comparison_panel():
 	var title_a = Label.new(); title_a.text = "A: %s" % metrics_a.get("name_fa",""); title_a.modulate = Color(0.4,0.85,1.0); col_a.add_child(title_a)
 	var title_b = Label.new(); title_b.text = "B: %s" % metrics_b.get("name_fa",""); title_b.modulate = Color(1.0,0.85,0.4); col_b.add_child(title_b)
 
-	var systems_to_compare = ["population","gdp","infrastructure","satisfaction","security","agriculture","industry","health","education","military_score"]
-	for sys_key in systems_to_compare:
+	var systems_to_compare = [
+		["population_relative", "جمعیت"],
+		["economy_relative", "اقتصاد"],
+		["infrastructure", "زیرساخت"],
+		["satisfaction", "رضایت"],
+		["security", "امنیت"],
+		["agriculture", "کشاورزی"],
+		["industry", "صنعت"],
+		["health", "سلامت"],
+		["education", "آموزش"],
+		["military_score", "قدرت نظامی"],
+	]
+	for entry in systems_to_compare:
+		var sys_key: String = str(entry[0])
+		var sys_label: String = str(entry[1])
 		var row = HBoxContainer.new()
 		compare_card.add_child(row)
-		var label = Label.new(); label.text = sys_key; label.custom_minimum_size = Vector2(110,0); row.add_child(label)
+		var label = Label.new(); label.text = sys_label; label.custom_minimum_size = Vector2(110,0); row.add_child(label)
 		var val_a = float(metrics_a.get(sys_key,0.5))
 		var val_b = float(metrics_b.get(sys_key,0.5))
+		if sys_key == "military_score":
+			val_a = clampf(val_a / 100.0, 0.0, 1.0); val_b = clampf(val_b / 100.0, 0.0, 1.0)
+		val_a = clampf(val_a, 0.0, 1.0); val_b = clampf(val_b, 0.0, 1.0)
 		var bar_a = ProgressBar.new(); bar_a.max_value = 1.0; bar_a.value = val_a; bar_a.custom_minimum_size = Vector2(140,14); row.add_child(bar_a)
 		var bar_b = ProgressBar.new(); bar_b.max_value = 1.0; bar_b.value = val_b; bar_b.custom_minimum_size = Vector2(140,14); row.add_child(bar_b)
 		var diff = val_a - val_b

@@ -110,6 +110,23 @@ check(
     "متن پیشنهاد ورودی باید ارقام فارسی داشته باشد",
 )
 
+# ── 5) مقایسهگر: برچسب فارسی + کلیدهای نرمالشده (پویش مقایسه) ─────────
+cmp_start = main.index("func _show_comparison_panel")
+cmp_end = main.index("func _on_clear_comparison")
+cmp_body = main[cmp_start:cmp_end]
+check(
+    "مقایسهگر برچسب فارسی دارد",
+    '"جمعیت"' in cmp_body and "sys_label" in cmp_body and 'label.text = sys_label' in cmp_body,
+    "برچسبهای مقایسهگر باید فارسی باشند (نه کلید خام انگلیسی)",
+)
+check(
+    "مقایسهگر کلیدهای نرمال‌شده دارد",
+    '"population_relative"' in cmp_body and '"economy_relative"' in cmp_body
+    and '"population"' not in cmp_body.replace('"population_relative"', "")
+    and "military_score" in cmp_body and "/ 100.0" in cmp_body,
+    "مقایسهگر باید population_relative/economy_relative و نرمال‌سازی military_score داشته باشد",
+)
+
 print()
 if FAIL:
     print("==> %d شکست" % len(FAIL))
