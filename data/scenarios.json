@@ -291,7 +291,8 @@
           "path": "economy.foreign_reserves",
           "op": "mul",
           "value": 0.8,
-          "min": 0.0
+          "min": 0.0,
+          "max": 1000000000000000.0
         },
         {
           "path": "politics.tension",
@@ -385,7 +386,8 @@
           "path": "stock_market.index",
           "op": "mul",
           "value": 0.55,
-          "min": 10.0
+          "min": 10.0,
+          "max": 1000000000.0
         },
         {
           "path": "stock_market.investor_confidence",
@@ -419,7 +421,8 @@
           "path": "economy.national_debt",
           "op": "mul",
           "value": 1.1,
-          "min": 0.0
+          "min": 0.0,
+          "max": 1000000000000000.0
         }
       ],
       "startup_crises": [
@@ -506,7 +509,8 @@
           "path": "economy.national_debt",
           "op": "mul",
           "value": 1.15,
-          "min": 0.0
+          "min": 0.0,
+          "max": 1000000000000000.0
         },
         {
           "path": "population.happiness",
