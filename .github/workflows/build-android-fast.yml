@@ -1,0 +1,157 @@
+name: Build Android APK (Fast) - شبیه ساز کشور
+
+env:
+  GODOT_VERSION: "4.7.1"
+  GODOT_CHANNEL: "stable"
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Godot 4.7.1 export templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/4.7.1.stable
+          key: godot-${{ runner.os }}-4.7.1-stable-export-templates-v1
+
+      - name: Install Godot 4.7.1 stable + Templates
+        run: |
+          set -euo pipefail
+          TAG="${GODOT_VERSION}-${GODOT_CHANNEL}"
+          ARCHIVE="Godot_v${TAG}_linux.x86_64.zip"
+          TEMPLATE_ARCHIVE="Godot_v${TAG}_export_templates.tpz"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_CHANNEL}"
+
+          echo "Downloading Godot ${TAG}..."
+          wget -q "https://github.com/godotengine/godot/releases/download/${TAG}/${ARCHIVE}"
+          unzip -q "$ARCHIVE"
+          chmod +x "Godot_v${TAG}_linux.x86_64"
+          sudo mv "Godot_v${TAG}_linux.x86_64" /usr/local/bin/godot
+
+          if [ ! -f "$TEMPLATE_DIR/android_debug.apk" ]; then
+            echo "Downloading Godot ${TAG} export templates..."
+            wget -q "https://github.com/godotengine/godot/releases/download/${TAG}/${TEMPLATE_ARCHIVE}"
+            unzip -q "$TEMPLATE_ARCHIVE"
+            mkdir -p "$TEMPLATE_DIR"
+            mv templates/* "$TEMPLATE_DIR/"
+          else
+            echo "Using cached Godot export templates."
+          fi
+
+          echo "Godot installed:"
+          godot --version | tee /tmp/godot-version.txt
+          grep -q "^${GODOT_VERSION}.${GODOT_CHANNEL}.official" /tmp/godot-version.txt
+
+      - name: Create debug keystore
+        run: |
+          keytool -genkey -v -keystore "$PWD/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          echo "Keystore created"
+          mkdir -p build
+
+      - name: Configure Godot export settings (SDK + keystore)
+        run: |
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.tres << EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
+          export/android/debug_keystore = "$PWD/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          export/android/force_system_user = false
+          export/android/shutdown_adb_on_exit = true
+          EOF
+          echo "Editor settings written"
+          sed -i "s|keystore/debug=\"\"|keystore/debug=\"$PWD/debug.keystore\"|" export_presets.cfg
+          grep -q 'keystore/debug_user' export_presets.cfg || sed -i 's|keystore/debug=.*|&\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"|' export_presets.cfg
+          sed -i "s|keystore/release=\"ci-release.keystore\"|keystore/release=\"$PWD/ci-release.keystore\"|" export_presets.cfg
+          grep 'keystore' export_presets.cfg
+
+      - name: Godot Import and parse validation
+        run: |
+          godot --headless --path . --import --verbose
+
+      - name: Run lightweight Python tests (fast, deterministic)
+        run: |
+          set -euo pipefail
+          python3 tests/validate_engine_version.py
+          python3 tests/validate_engine_contracts.py
+          python3 tests/validate_ui_architecture.py
+          python3 tests/validate_country_data.py
+          python3 tests/validate_world_map.py
+          python3 tests/validate_country_maps.py
+          python3 tests/validate_crisis_chains.py
+          python3 tests/validate_annexation.py
+          python3 tests/validate_reactivity_layer.py
+          python3 tests/validate_gdp_channel.py
+          python3 tests/validate_budget_chain.py
+          python3 tests/validate_budget_levers.py
+          python3 tests/validate_ai_policies.py
+          python3 tests/validate_latches.py
+          python3 tests/validate_state_keys.py
+          python3 tests/validate_orphan_wiring.py
+          python3 tests/validate_debt_channel.py
+          python3 tests/sim_longrun.py
+          python3 tests/sim_crisis_longrun.py
+
+      - name: Export Android APK (Release)
+        run: |
+          mkdir -p build
+          if [ ! -f ci-release.keystore ]; then
+            keytool -genkeypair -v -keystore ci-release.keystore -alias game \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Country Simulator, OU=Game, O=OpenSource, L=Internet, C=US"
+          fi
+          godot --headless --path . --export-release "Android" build/country-sim.apk --verbose
+          ls -lh build/
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/*.apk
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "ساخت خودکار ${{ github.run_number }} - شبیه ساز کشور"
+          body: |
+            🎮 شبیه‌ساز کشور - ساخت خودکار اندروید (سریع)
+
+            ### نصب:
+            - فایل `country-sim.apk` را دانلود کنید
+            - در گوشی گزینه "نصب از منابع ناشناس" را فعال کنید
+            - نصب کنید
+
+            - ساخته شده در: ${{ github.event.head_commit.timestamp }}
+            - موتور: Godot ${{ env.GODOT_VERSION }} stable
+            - کامیت: ${{ github.sha }}
+
+            ✅ رایگان و متن‌باز - مطابق قانون ۵ پروژه
+          files: |
+            build/country-sim.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
