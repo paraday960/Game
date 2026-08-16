@@ -86,8 +86,8 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var at_war: bool = not world.get("wars", {}).is_empty()
 
 	var coup_list: Array = []
-	for f in figures:
-		f = _normalize_figure(f, "x")
+	for i in range(figures.size()):
+		var f: Dictionary = _normalize_figure(figures[i], "x")
 		var faction := str(f.get("faction", ""))
 		var fl := float(factions.get(faction, {}).get("loyalty", 50.0))
 		var support := float(f.get("support", 0.0))
@@ -108,7 +108,9 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		if fl < 35.0:
 			ambition = clampf(ambition + 0.8, 0.0, 100.0)
 		else:
-			ambition = clampf(ambition + Deterministic.next_range(-0.3, 0.3), 0.0, 100.0)
+			# نوسان فرمول‌محور دترمینستیک — بدون مصرف RNG تا توالی تصادفی
+			# سایر سیستم‌ها/تست‌ها جابه‌جا نشود (قفل دترمینستیک چندنفره)
+			ambition = clampf(ambition + 0.25 * sin(float(turn * 3 + i) * 0.7), 0.0, 100.0)
 		f["support"] = support
 		f["loyalty"] = loyalty
 		f["ambition"] = ambition
@@ -123,7 +125,7 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		elif status == "plotting":
 			if support < 45.0 or loyalty > 55.0:
 				f["status"] = "restless"
-			elif Deterministic.chance(COUP_CHANCE):
+			elif (turn * 37 + i * 13) % 100 < int(COUP_CHANCE * 100.0):
 				coup_list.append(str(f.get("id", "")))
 	rivals["figures"] = figures
 
