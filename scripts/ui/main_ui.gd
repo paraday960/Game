@@ -9212,6 +9212,7 @@ func _command_queue_key(cmd) -> String:
 		"leader_hidden": return "leader_hidden:" + str(p.get("hidden", false))
 		"leader_name": return "leader_name"
 		"leader_action": return "leaderact:" + str(p.get("action", "")) + ":" + str(p.get("value", ""))
+		"rivals_action": return "rivalsact:" + str(p.get("action", "")) + ":" + str(p.get("target", ""))
 		"country_select": return "country_select"
 		"next_tick": return "next_tick"
 		# عمق ۱۸ تا ۲۰: پیشوندها باید دقیقاً با متای دکمه‌ها (cmd_key) یکسان باشند

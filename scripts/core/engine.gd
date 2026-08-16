@@ -13,6 +13,7 @@ const SUPPORTED_COMMANDS = [
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
 	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
 	"assassinate", "leader_hidden", "leader_name", "leader_action", "faction_action", "faction_deal", "set_war_goal",
+	"rivals_action",
 	"general_recruit", "general_assign", "media_policy", "media_campaign",
 	"commodity_trade", "org_toggle", "org_vote",
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
@@ -884,6 +885,27 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 					return {"valid": false, "reason": la_dialogue_check.reason}
 			else:
 				return {"valid": false, "reason": "اقدام رهبر نامعتبر است"}
+		elif cmd.type == "rivals_action":
+			var ra_action := str(cmd.payload.get("action", ""))
+			var ra_target := str(cmd.payload.get("target", ""))
+			if ra_action == "coopt":
+				var ra_coopt_check = RivalsManager.can_coopt(state, ra_target, cmd.tick)
+				if not ra_coopt_check.valid:
+					return {"valid": false, "reason": ra_coopt_check.reason}
+			elif ra_action == "exile":
+				var ra_exile_check = RivalsManager.can_exile(state, ra_target, cmd.tick)
+				if not ra_exile_check.valid:
+					return {"valid": false, "reason": ra_exile_check.reason}
+			elif ra_action == "negotiate":
+				var ra_negotiate_check = RivalsManager.can_negotiate(state, ra_target, cmd.tick)
+				if not ra_negotiate_check.valid:
+					return {"valid": false, "reason": ra_negotiate_check.reason}
+			elif ra_action == "surveil":
+				var ra_surveil_check = RivalsManager.can_surveil(state, ra_target, cmd.tick)
+				if not ra_surveil_check.valid:
+					return {"valid": false, "reason": ra_surveil_check.reason}
+			else:
+				return {"valid": false, "reason": "اقدام رقبای داخلی نامعتبر است"}
 		elif cmd.type == "research_start":
 			var tech_id = str(cmd.payload.get("tech_id", ""))
 			var technology_check = TechnologyManager.can_start(state, tech_id)
@@ -1062,6 +1084,18 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for la_ev in la_result.get("events", []):
 			if la_ev is Dictionary:
 				EventLog.log_event("leader_event", la_ev, cmd.tick, cmd.version)
+	elif cmd.type == "rivals_action":
+		var ra_action := str(cmd.payload.get("action", ""))
+		var ra_result: Dictionary
+		match ra_action:
+			"coopt": ra_result = RivalsManager.coopt(snapshot, str(cmd.payload.get("target", "")), cmd.tick)
+			"exile": ra_result = RivalsManager.exile(snapshot, str(cmd.payload.get("target", "")), cmd.tick)
+			"negotiate": ra_result = RivalsManager.negotiate(snapshot, str(cmd.payload.get("target", "")), cmd.tick)
+			"surveil": ra_result = RivalsManager.surveil(snapshot, str(cmd.payload.get("target", "")), cmd.tick)
+		snapshot = ra_result.state
+		for ra_ev in ra_result.get("events", []):
+			if ra_ev is Dictionary:
+				EventLog.log_event("rivals_event", ra_ev, cmd.tick, cmd.version)
 	elif cmd.type == "budget_allocate":
 		var allocs = cmd.payload.get("allocations", {})
 		for k in allocs.keys():
@@ -2448,6 +2482,7 @@ func _month_open(snapshot: Dictionary, turn: int) -> Dictionary:
 	var generated_events: Array = []
 	snapshot = LeaderManager.ensure(snapshot)
 	snapshot = FactionManager.ensure(snapshot)
+	snapshot = RivalsManager.ensure(snapshot)
 	snapshot = GeneralsManager.ensure(snapshot)
 	snapshot = MediaManager.ensure(snapshot)
 	snapshot = CommodityManager.ensure(snapshot)
@@ -2965,6 +3000,10 @@ func _month_close(snapshot: Dictionary, turn: int, generated_events: Array) -> D
 	var npc_assassination = LeaderManager.npc_assassination_attempt(snapshot, turn)
 	snapshot = npc_assassination.state
 	_collect_events(npc_assassination, "leadership", snapshot, turn, generated_events, "leadership_event")
+	# رقبای داخلی: دریفت ماهانه، توطئه و کودتاهای شکست‌خورده (عمق‌بخشی ۴۹)
+	var rivals_result = RivalsManager.simulate_month(snapshot, turn)
+	snapshot = rivals_result.state
+	_collect_events(rivals_result, "rivals", snapshot, turn, generated_events, "rivals_event")
 	# پیروزی: سه شاخه اصلی در سطح ۳۰ → عصر طلایی
 	var victory_result = TechnologyManager.check_victory(snapshot, turn)
 	snapshot = victory_result.state

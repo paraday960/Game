@@ -131,6 +131,10 @@ static func create_leader_action(action: String, value: String = ""):
 	# اقدام فعال رهبر (عمق‌بخشی ۴۷): سخنرانی/سبک/حضور میدانی
 	return _self_script().new("leader_action", {"action": action, "value": value})
 
+static func create_rivals_action(action: String, target_id: String = ""):
+	# رقبای داخلی (عمق‌بخشی ۴۹): همکاری/مذاکره/تبعید/زیر نظر گرفتن
+	return _self_script().new("rivals_action", {"action": action, "target": target_id})
+
 static func create_faction_action(faction: String, action: String):
 	return _self_script().new("faction_action", {"faction": faction, "action": action})
 
