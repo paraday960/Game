@@ -395,6 +395,7 @@ func inspection(state: Dictionary, tick: int) -> Dictionary:
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure(state)
+	state = FactionManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var pol: Dictionary = state.get("politics", {})
 	var factions: Dictionary = state.get("factions", {})
@@ -443,6 +444,7 @@ func amnesty(state: Dictionary, tick: int) -> Dictionary:
 	if not bool(prison_result.get("success", false)):
 		return {"success": false, "reason": str(prison_result.get("reason", "عفو ممکن نیست")), "state": state, "events": []}
 	state = prison_result.state
+	state = FactionManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var pol: Dictionary = state.get("politics", {})
 	var factions: Dictionary = state.get("factions", {})
@@ -476,6 +478,7 @@ func honors(state: Dictionary, tick: int) -> Dictionary:
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure(state)
+	state = FactionManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var vt: Dictionary = state.get("veterans", {})
 	var mil: Dictionary = state.get("military", {})
@@ -514,6 +517,7 @@ func un_address(state: Dictionary, tick: int) -> Dictionary:
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure(state)
+	state = MediaManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var dip: Dictionary = state.get("diplomacy", {})
 	var relations: Dictionary = dip.get("relations", {})
@@ -548,6 +552,7 @@ func interview(state: Dictionary, tick: int) -> Dictionary:
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure(state)
+	state = MediaManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var media: Dictionary = state.get("media", {})
 	var pop: Dictionary = state.get("population", {})
@@ -588,6 +593,7 @@ func summit(state: Dictionary, tick: int) -> Dictionary:
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure(state)
+	state = FactionManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var econ: Dictionary = state.get("economy", {})
 	var cycle: Dictionary = econ.get("cycle", {})
@@ -627,6 +633,7 @@ func dialogue(state: Dictionary, tick: int) -> Dictionary:
 	if not check.valid:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	state = ensure(state)
+	state = FactionManager.ensure(state)
 	var leader: Dictionary = state["leader"]
 	var ethnicity: Dictionary = state.get("ethnicity", {})
 	var pol: Dictionary = state.get("politics", {})

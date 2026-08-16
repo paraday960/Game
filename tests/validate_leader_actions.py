@@ -83,6 +83,11 @@ check("سازمان ملل", "سازمان ملل" in lm and 'relations[cid]' in
 check("پروپاگاندا (رسانه مهارشده)", 'if freedom < 0.35:' in lm, "واکنش به رسانه مهارشده نیست")
 check("اعتماد سرمایه‌گذاران", 'cycle["confidence"]' in lm, "دیدار سرمایه‌داران کانال واقعی ندارد")
 check("تنش قومی", 'ethnicity["tension"]' in lm, "گفتگوی ملی کانال تنش قومی ندارد")
+# مالکیت یکتا: ساختار جناح‌ها/رسانه فقط از مدیر مالک ساخته می‌شود (نه دیکشنری خالی)
+check("مالکیت factions از FactionManager", "state = FactionManager.ensure(state)" in lm,
+      "اقدام رهبری ساختار جناح‌ها را دور می‌زند (کرش faction_manager)")
+check("مالکیت media از MediaManager", "state = MediaManager.ensure(state)" in lm,
+      "اقدام رهبری ساختار رسانه را دور می‌زند")
 
 # 6) فرمان و موتور
 cmd = read(os.path.join(ROOT, "scripts", "core", "command.gd"))
