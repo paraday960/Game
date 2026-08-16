@@ -146,6 +146,7 @@ const SYSTEM_FA := {
 	"elites": "نخبگان",
 	"households": "خانوارها",
 	"leader": "رهبری",
+	"rivals": "رقبای داخلی",
 	"map_advanced": "نقشه پیشرفته",
 	"migration": "مهاجرت",
 	"officials_managers": "مدیران و مقامات",
