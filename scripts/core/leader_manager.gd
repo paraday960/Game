@@ -39,7 +39,11 @@ func ensure(state: Dictionary) -> Dictionary:
 			"rebellion": {}, "traits": [],
 			# عمق‌بخشی ۴۷ — اقدامات فعال رهبر
 			"style": "moderate", "last_speech_turn": -99, "last_presence_turn": -99,
-			"presence_boost_until": 0
+			"presence_boost_until": 0,
+			# عمق‌بخشی ۴۸ — اقدامات رهبری عمیق‌تر
+			"last_inspection_turn": -99, "last_amnesty_turn": -99, "last_honors_turn": -99,
+			"last_un_address_turn": -99, "last_interview_turn": -99, "last_summit_turn": -99,
+			"last_dialogue_turn": -99
 		}
 	var world: Dictionary = state.get("world", {})
 	if not world.has("leader_deaths"):
@@ -51,12 +55,19 @@ func ensure(state: Dictionary) -> Dictionary:
 	if not world.has("rebel_regions"):
 		world["rebel_regions"] = {}
 	state["world"] = world
-	# سازگاری با state قدیمی (عمق‌بخشی ۴۷)
+	# سازگاری با state قدیمی (عمق‌بخشی ۴۷ و ۴۸)
 	var leader: Dictionary = state["leader"]
 	leader["style"] = str(leader.get("style", "moderate"))
 	leader["last_speech_turn"] = int(leader.get("last_speech_turn", -99))
 	leader["last_presence_turn"] = int(leader.get("last_presence_turn", -99))
 	leader["presence_boost_until"] = int(leader.get("presence_boost_until", 0))
+	leader["last_inspection_turn"] = int(leader.get("last_inspection_turn", -99))
+	leader["last_amnesty_turn"] = int(leader.get("last_amnesty_turn", -99))
+	leader["last_honors_turn"] = int(leader.get("last_honors_turn", -99))
+	leader["last_un_address_turn"] = int(leader.get("last_un_address_turn", -99))
+	leader["last_interview_turn"] = int(leader.get("last_interview_turn", -99))
+	leader["last_summit_turn"] = int(leader.get("last_summit_turn", -99))
+	leader["last_dialogue_turn"] = int(leader.get("last_dialogue_turn", -99))
 	state["leader"] = leader
 	return state
 
@@ -228,6 +239,14 @@ func set_hidden(state: Dictionary, hidden: bool, turn: int) -> Dictionary:
 # ────────────────────────────────────────────────────────────────────────────
 const SPEECH_COOLDOWN := 3
 const PRESENCE_COOLDOWN := 6
+# ── اقدامات رهبری عمیق‌تر (عمق‌بخشی ۴۸) ──
+const INSPECTION_COOLDOWN := 4
+const AMNESTY_COOLDOWN := 8
+const HONORS_COOLDOWN := 6
+const UN_ADDRESS_COOLDOWN := 12
+const INTERVIEW_COOLDOWN := 4
+const SUMMIT_COOLDOWN := 6
+const DIALOGUE_COOLDOWN := 6
 const STYLES := {
 	"moderate": {"name_fa": "متعادل", "desc_fa": "بدون اثر ویژه؛ کم‌ریسک"},
 	"populist": {"name_fa": "مردمی", "desc_fa": "شادی مردم ↑ هر ماه؛ نخبگان و هزینهٔ سیاست ناراضی"},
@@ -351,6 +370,280 @@ func presence(state: Dictionary, tick: int) -> Dictionary:
 	events.append({"type": "leader_presence",
 		"message": "🏃 رهبر به میان مردم و مناطق بحران‌زده رفت؛ ثبات و رضایت تقویت شد (۳ ماه اثر ماندگار)"})
 	return {"success": true, "state": state, "events": events}
+
+# ────────────────────────────────────────────────────────────────────────────
+# اقدامات رهبری عمیق‌تر (عمق‌بخشی ۴۸): بازدید سرزده، عفو عمومی، نشان ملی،
+# سخنرانی سازمان ملل، گفتگوی تلویزیونی، دیدار سرمایه‌داران، گفتگوی ملی اقوام.
+# هر اقدام روی کانال‌های واقعی state می‌نشیند (نه فانتوم) و بده‌بستان دارد:
+# سود برای یک بخش، هزینه برای بخش دیگر — مطابق اصل ۲.۲ (هیچ عمل بدون پیامد نیست).
+# ────────────────────────────────────────────────────────────────────────────
+
+# 🏙️ بازدید سرزده: فساد را رو می‌کند و اعتماد می‌سازد؛ شبکه‌های ذی‌نفع می‌خروشند
+func can_inspection(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_inspection_turn", -99)) + INSPECTION_COOLDOWN > tick:
+		return {"valid": false, "reason": "بازدید سرزده به تازگی انجام شده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	if float(state.get("politics", {}).get("corruption", 0.3)) < 0.05:
+		return {"valid": false, "reason": "فساد آن‌قدر پایین است که بازدید سرزده موضوعی ندارد"}
+	return {"valid": true, "reason": ""}
+
+func inspection(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_inspection(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var pol: Dictionary = state.get("politics", {})
+	var factions: Dictionary = state.get("factions", {})
+	var corruption := float(pol.get("corruption", 0.3))
+	leader["last_inspection_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	pol["corruption"] = clampf(corruption - 0.02, 0.0, 1.0)
+	pol["trust"] = clampf(float(pol.get("trust", 0.55)) + 0.02, 0.05, 1.0)
+	if corruption > 0.5:
+		if factions.has("نخبگان اقتصادی"):
+			factions["نخبگان اقتصادی"]["loyalty"] = clampf(float(factions["نخبگان اقتصادی"].get("loyalty", 55.0)) - 3.0, 0.0, 100.0)
+		state["leader"] = leader
+		state["politics"] = pol
+		state["factions"] = factions
+		return {"success": true, "state": state, "events": [{
+			"type": "leader_inspection",
+			"message": "🏙️ بازدید سرزده رهبر فساد نهفته را رو کرد؛ شبکه‌های ذی‌نفع خشمگین‌اند اما اعتماد مردم جهش کرد"}]}
+	state["leader"] = leader
+	state["politics"] = pol
+	state["factions"] = factions
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_inspection",
+		"message": "🏙️ بازدید سرزده رهبر از نهادها؛ کارمندان سرپا ایستادند و فساد مهار شد"}]}
+
+# 📜 عفو عمومی رهبر: از کانال واقعی برنامهٔ عفو زندان می‌گذرد (مالکیت یکتای
+# PrisonManager حفظ می‌شود) و لایهٔ رهبری — سرمایهٔ سیاسی، جناح‌ها، محبوبیت — را می‌افزاید.
+func can_amnesty(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_amnesty_turn", -99)) + AMNESTY_COOLDOWN > tick:
+		return {"valid": false, "reason": "عفو عمومی رهبر به تازگی اعلام شده؛ عفوهای پیاپی مشروعیت را می‌سوزاند"}
+	if tick - int(state.get("prison_policy", {}).get("last_amnesty", -99)) < 8:
+		return {"valid": false, "reason": "عفو سراسری هر ۸ نوبت یک بار ممکن است"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 1.0:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	if float(state.get("prison", {}).get("population", 80000.0)) < 5000.0:
+		return {"valid": false, "reason": "جمعیت زندان آن‌قدر کم است که عفو عمومی موضوعی ندارد"}
+	return {"valid": true, "reason": ""}
+
+func amnesty(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_amnesty(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var prison_result = PrisonManager.amnesty_program(state, tick)
+	if not bool(prison_result.get("success", false)):
+		return {"success": false, "reason": str(prison_result.get("reason", "عفو ممکن نیست")), "state": state, "events": []}
+	state = prison_result.state
+	var leader: Dictionary = state["leader"]
+	var pol: Dictionary = state.get("politics", {})
+	var factions: Dictionary = state.get("factions", {})
+	leader["last_amnesty_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 1.0)
+	pol["trust"] = clampf(float(pol.get("trust", 0.55)) + 0.01, 0.05, 1.0)
+	if factions.has("نخبگان اقتصادی"):
+		factions["نخبگان اقتصادی"]["loyalty"] = clampf(float(factions["نخبگان اقتصادی"].get("loyalty", 55.0)) - 2.0, 0.0, 100.0)
+	if factions.has("روحانیت"):
+		factions["روحانیت"]["loyalty"] = clampf(float(factions["روحانیت"].get("loyalty", 55.0)) + 1.0, 0.0, 100.0)
+	leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 1.0, 0.0, 100.0)
+	state["leader"] = leader
+	state["politics"] = pol
+	state["factions"] = factions
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_amnesty",
+		"message": "📜 رهبر با فرمان شخصی عفو عمومی اعلام کرد؛ نخبگان ناخرسندند اما مردم و روحانیت آن را ستودند"}]}
+
+# 🎖️ نشان ملی: تکریم واقعی از کانال recognition کهنه‌سربازان + روحیهٔ ارتش
+func can_honors(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_honors_turn", -99)) + HONORS_COOLDOWN > tick:
+		return {"valid": false, "reason": "مراسم نشان ملی به تازگی برگزار شده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	return {"valid": true, "reason": ""}
+
+func honors(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_honors(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var vt: Dictionary = state.get("veterans", {})
+	var mil: Dictionary = state.get("military", {})
+	var factions: Dictionary = state.get("factions", {})
+	leader["last_honors_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	vt["recognition"] = clampf(float(vt.get("recognition", 0.7)) + 0.08, 0.05, 1.0)
+	mil["morale"] = clampf(float(mil.get("morale", 0.7)) + 0.02, 0.0, 1.0)
+	if factions.has("ارتش"):
+		factions["ارتش"]["loyalty"] = clampf(float(factions["ارتش"].get("loyalty", 55.0)) + 3.0, 0.0, 100.0)
+	leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 1.0, 0.0, 100.0)
+	state["leader"] = leader
+	state["veterans"] = vt
+	state["military"] = mil
+	state["factions"] = factions
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_honors",
+		"message": "🎖️ رهبر نشان ملی به قهرمانان و کهنه‌سربازان اعطا کرد؛ روحیه ارتش و جایگاه ایثارگران بالا رفت"}]}
+
+# 🕊️ سخنرانی سازمان ملل: نفوذ نرم جهانی؛ نیازمند عضویت و حضور آشکار رهبر
+func can_un_address(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_un_address_turn", -99)) + UN_ADDRESS_COOLDOWN > tick:
+		return {"valid": false, "reason": "رهبر به تازگی در سازمان ملل سخنرانی کرده؛ کمی صبر کنید"}
+	if bool(leader.get("hidden", false)):
+		return {"valid": false, "reason": "رهبر پنهان نمی‌تواند در سازمان ملل حاضر شود"}
+	if not bool(state.get("intl_orgs", {}).get("memberships", {}).get("سازمان ملل", false)):
+		return {"valid": false, "reason": "کشور عضو سازمان ملل نیست"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 1.0:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	return {"valid": true, "reason": ""}
+
+func un_address(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_un_address(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var dip: Dictionary = state.get("diplomacy", {})
+	var relations: Dictionary = dip.get("relations", {})
+	var media: Dictionary = state.get("media", {})
+	leader["last_un_address_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 1.0)
+	for cid in relations.keys():
+		relations[cid] = clampf(float(relations[cid]) + 1.5, 0.0, 100.0)
+	dip["relations"] = relations
+	state["diplomacy"] = dip
+	media["trust"] = clampf(float(media.get("trust", 0.55)) + 0.02, 0.05, 1.0)
+	state["media"] = media
+	leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 3.0, 0.0, 100.0)
+	state["leader"] = leader
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_un_address",
+		"message": "🕊️ سخنرانی رهبر در مجمع سازمان ملل؛ روابط جهانی گرم و محبوبیت بین‌المللی رهبر جهش کرد"}]}
+
+# 📺 گفتگوی تلویزیونی: در رسانهٔ آزاد اعتماد می‌سازد؛ زیر رسانهٔ مهارشده
+# «پروپاگاندا» خوانده می‌شود و آبروی جهانی می‌سوزاند
+func can_interview(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_interview_turn", -99)) + INTERVIEW_COOLDOWN > tick:
+		return {"valid": false, "reason": "گفتگوی تلویزیونی به تازگی پخش شده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	return {"valid": true, "reason": ""}
+
+func interview(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_interview(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var media: Dictionary = state.get("media", {})
+	var pop: Dictionary = state.get("population", {})
+	var freedom := float(state.get("culture", {}).get("media_freedom", 0.5))
+	var trust := float(media.get("trust", 0.55))
+	leader["last_interview_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	if freedom < 0.35:
+		media["trust"] = clampf(trust - 0.01, 0.05, 1.0)
+		leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 1.0, 0.0, 100.0)
+		state["media"] = media
+		state["leader"] = leader
+		return {"success": true, "state": state, "events": [{
+			"type": "leader_interview",
+			"message": "📺 گفتگوی رهبر زیر سایهٔ رسانهٔ مهارشده؛ جهان آن را تبلیغاتی خواند و محبوبیت جهانی افت کرد"}]}
+	media["trust"] = clampf(trust + 0.03, 0.05, 1.0)
+	pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.01, 0.05, 1.0)
+	leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 1.0, 0.0, 100.0)
+	state["media"] = media
+	state["population"] = pop
+	state["leader"] = leader
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_interview",
+		"message": "📺 گفتگوی تلویزیونی رهبر با مردم؛ اعتماد رسانه و نشاط عمومی بالا رفت"}]}
+
+# 💼 دیدار سرمایه‌داران: اعتماد سرمایه‌گذاران را بالا می‌برد؛ پوپولیست‌ها ناخرسند
+func can_summit(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_summit_turn", -99)) + SUMMIT_COOLDOWN > tick:
+		return {"valid": false, "reason": "دیدار سرمایه‌داران به تازگی برگزار شده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	return {"valid": true, "reason": ""}
+
+func summit(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_summit(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var econ: Dictionary = state.get("economy", {})
+	var cycle: Dictionary = econ.get("cycle", {})
+	var factions: Dictionary = state.get("factions", {})
+	if cycle.is_empty():
+		cycle = {"phase": "growth", "months_left": 5.0, "confidence": 55.0}
+	leader["last_summit_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	cycle["confidence"] = clampf(float(cycle.get("confidence", 55.0)) + 4.0, 5.0, 95.0)
+	econ["cycle"] = cycle
+	state["economy"] = econ
+	if factions.has("نخبگان اقتصادی"):
+		factions["نخبگان اقتصادی"]["loyalty"] = clampf(float(factions["نخبگان اقتصادی"].get("loyalty", 55.0)) + 2.0, 0.0, 100.0)
+	if factions.has("پوپولیست‌ها"):
+		factions["پوپولیست‌ها"]["loyalty"] = clampf(float(factions["پوپولیست‌ها"].get("loyalty", 55.0)) - 1.0, 0.0, 100.0)
+	state["factions"] = factions
+	state["leader"] = leader
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_summit",
+		"message": "💼 دیدار رهبر با سرمایه‌داران؛ اعتماد سرمایه‌گذاران تقویت شد ولی پوپولیست‌ها آن را به نفع ثروتمندان خواندند"}]}
+
+# 🕌 گفتگوی ملی اقوام و مذاهب: تنش هویتی را می‌خواباند؛ وقتی تنش پایین است
+# برگزاری آن نمایشی و بی‌محتواست
+func can_dialogue(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_dialogue_turn", -99)) + DIALOGUE_COOLDOWN > tick:
+		return {"valid": false, "reason": "گفتگوی ملی به تازگی برگزار شده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	if float(state.get("ethnicity", {}).get("tension", 0.3)) < 0.15:
+		return {"valid": false, "reason": "تنش قومی پایین است؛ گفتگوی ملی اکنون دستاوردی ندارد"}
+	return {"valid": true, "reason": ""}
+
+func dialogue(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_dialogue(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var ethnicity: Dictionary = state.get("ethnicity", {})
+	var pol: Dictionary = state.get("politics", {})
+	var factions: Dictionary = state.get("factions", {})
+	leader["last_dialogue_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	ethnicity["tension"] = clampf(float(ethnicity.get("tension", 0.3)) - 0.03, 0.0, 1.0)
+	pol["stability"] = clampf(float(pol.get("stability", 0.6)) + 0.01, 0.05, 1.0)
+	if factions.has("روحانیت"):
+		factions["روحانیت"]["loyalty"] = clampf(float(factions["روحانیت"].get("loyalty", 55.0)) + 2.0, 0.0, 100.0)
+	state["ethnicity"] = ethnicity
+	state["politics"] = pol
+	state["factions"] = factions
+	state["leader"] = leader
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_dialogue",
+		"message": "🕌 گفتگوی ملی رهبر با نمایندگان اقوام و مذاهب؛ تنش هویتی فروکش کرد و همبستگی ملی تقویت شد"}]}
 
 # ────────────────────────────────────────────────────────────────────────────
 # ترور — شرط فناوری‌ها و توازن حمله/دفاع

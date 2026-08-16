@@ -145,6 +145,7 @@ const SYSTEM_FA := {
 	"crisis": "بحران‌ها",
 	"elites": "نخبگان",
 	"households": "خانوارها",
+	"leader": "رهبری",
 	"map_advanced": "نقشه پیشرفته",
 	"migration": "مهاجرت",
 	"officials_managers": "مدیران و مقامات",

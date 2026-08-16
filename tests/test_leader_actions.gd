@@ -86,6 +86,151 @@ func _init():
 	else:
 		print("✓ کولداون سخنرانی کار می‌کند")
 
+	# ── سناریو ۶: بازدید سرزده → فساد کم می‌شود ──
+	var state6: Dictionary = GS.state.duplicate(true)
+	state6 = LM.ensure(state6)
+	state6["politics"]["corruption"] = 0.60
+	var corrupt0 := float(state6["politics"]["corruption"])
+	var r8 = GE.tick(state6, GS.version, 0, [CS.create_leader_action("inspection")])
+	if not r8.success:
+		fails.append("بازدید سرزده ناموفق: %s" % r8.reason)
+	else:
+		state6 = r8.state
+		var corrupt1 := float(state6["politics"]["corruption"])
+		if corrupt1 >= corrupt0:
+			fails.append("بازدید سرزده فساد را کم نکرد (%.2f → %.2f)" % [corrupt0, corrupt1])
+		else:
+			print("✓ بازدید سرزده: فساد %.2f → %.2f" % [corrupt0, corrupt1])
+
+	# ── سناریو ۷: عفو عمومی رهبر → جمعیت زندان کم می‌شود (کانال واقعی) ──
+	var state7: Dictionary = GS.state.duplicate(true)
+	state7 = LM.ensure(state7)
+	var prison0 := float(state7.get("prison", {}).get("population", 80000.0))
+	var r9 = GE.tick(state7, GS.version, 0, [CS.create_leader_action("amnesty")])
+	if not r9.success:
+		fails.append("عفو عمومی ناموفق: %s" % r9.reason)
+	else:
+		state7 = r9.state
+		var prison1 := float(state7.get("prison", {}).get("population", 80000.0))
+		if prison1 >= prison0:
+			fails.append("عفو عمومی جمعیت زندان را کم نکرد (%.0f → %.0f)" % [prison0, prison1])
+		else:
+			print("✓ عفو عمومی رهبر: زندانیان %.0f → %.0f" % [prison0, prison1])
+
+	# ── سناریو ۸: نشان ملی → تکریم کهنه‌سربازان از کانال recognition ──
+	var state8: Dictionary = GS.state.duplicate(true)
+	state8 = LM.ensure(state8)
+	var rec0 := float(state8.get("veterans", {}).get("recognition", 0.7))
+	var r10 = GE.tick(state8, GS.version, 0, [CS.create_leader_action("honors")])
+	if not r10.success:
+		fails.append("نشان ملی ناموفق: %s" % r10.reason)
+	else:
+		state8 = r10.state
+		var rec1 := float(state8.get("veterans", {}).get("recognition", 0.7))
+		if rec1 <= rec0:
+			fails.append("نشان ملی تکریم کهنه‌سربازان را بالا نبرد (%.2f → %.2f)" % [rec0, rec1])
+		else:
+			print("✓ نشان ملی: تکریم %.2f → %.2f" % [rec0, rec1])
+
+	# ── سناریو ۹: سخنرانی سازمان ملل — بدون عضویت رد می‌شود؛ با عضویت اثر می‌گذارد ──
+	var state9: Dictionary = GS.state.duplicate(true)
+	state9 = LM.ensure(state9)
+	state9["intl_orgs"]["memberships"]["سازمان ملل"] = false
+	var r11 = GE.tick(state9, GS.version, 0, [CS.create_leader_action("un_address")])
+	if r11.success:
+		fails.append("سخنرانی سازمان ملل بدون عضویت پذیرفته شد")
+	else:
+		print("✓ سخنرانی سازمان ملل بدون عضویت رد می‌شود")
+	var state9b: Dictionary = GS.state.duplicate(true)
+	state9b = LM.ensure(state9b)
+	var rel0 := 0.0
+	for cid in state9b.get("diplomacy", {}).get("relations", {}).keys():
+		rel0 += float(state9b["diplomacy"]["relations"][cid])
+	var r12 = GE.tick(state9b, GS.version, 0, [CS.create_leader_action("un_address")])
+	if not r12.success:
+		fails.append("سخنرانی سازمان ملل با عضویت ناموفق: %s" % r12.reason)
+	else:
+		state9b = r12.state
+		var rel1 := 0.0
+		for cid in state9b.get("diplomacy", {}).get("relations", {}).keys():
+			rel1 += float(state9b["diplomacy"]["relations"][cid])
+		if rel1 <= rel0:
+			fails.append("سخنرانی سازمان ملل روابط را گرم نکرد (%.0f → %.0f)" % [rel0, rel1])
+		else:
+			print("✓ سخنرانی سازمان ملل: مجموع روابط %.0f → %.0f" % [rel0, rel1])
+
+	# ── سناریو ۱۰: گفتگوی تلویزیونی — رسانهٔ آزاد اعتماد می‌سازد، مهارشده پروپاگاندا ──
+	var state10: Dictionary = GS.state.duplicate(true)
+	state10 = LM.ensure(state10)
+	state10["culture"]["media_freedom"] = 0.60
+	var trust0 := float(state10.get("media", {}).get("trust", 0.55))
+	var r13 = GE.tick(state10, GS.version, 0, [CS.create_leader_action("interview")])
+	if not r13.success:
+		fails.append("گفتگوی تلویزیونی ناموفق: %s" % r13.reason)
+	else:
+		state10 = r13.state
+		var trust1 := float(state10.get("media", {}).get("trust", 0.55))
+		if trust1 <= trust0:
+			fails.append("گفتگو در رسانهٔ آزاد اعتماد را بالا نبرد")
+		else:
+			print("✓ گفتگو در رسانهٔ آزاد: اعتماد %.2f → %.2f" % [trust0, trust1])
+	var state10b: Dictionary = GS.state.duplicate(true)
+	state10b = LM.ensure(state10b)
+	state10b["culture"]["media_freedom"] = 0.20
+	var trust0b := float(state10b.get("media", {}).get("trust", 0.55))
+	var r14 = GE.tick(state10b, GS.version, 0, [CS.create_leader_action("interview")])
+	if not r14.success:
+		fails.append("گفتگو در رسانهٔ مهارشده ناموفق: %s" % r14.reason)
+	else:
+		state10b = r14.state
+		var trust1b := float(state10b.get("media", {}).get("trust", 0.55))
+		if trust1b >= trust0b:
+			fails.append("گفتگو زیر رسانهٔ مهارشده اعتماد را نسوزاند (پروپاگاندا)")
+		else:
+			print("✓ گفتگو زیر رسانهٔ مهارشده: اعتماد %.2f → %.2f (پروپاگاندا)" % [trust0b, trust1b])
+
+	# ── سناریو ۱۱: دیدار سرمایه‌داران → اعتماد سرمایه‌گذاران بالا ──
+	var state11: Dictionary = GS.state.duplicate(true)
+	state11 = LM.ensure(state11)
+	var conf0 := float(state11.get("economy", {}).get("cycle", {}).get("confidence", 55.0))
+	var r15 = GE.tick(state11, GS.version, 0, [CS.create_leader_action("summit")])
+	if not r15.success:
+		fails.append("دیدار سرمایه‌داران ناموفق: %s" % r15.reason)
+	else:
+		state11 = r15.state
+		var conf1 := float(state11.get("economy", {}).get("cycle", {}).get("confidence", 55.0))
+		if conf1 <= conf0:
+			fails.append("دیدار سرمایه‌داران اعتماد را بالا نبرد (%.1f → %.1f)" % [conf0, conf1])
+		else:
+			print("✓ دیدار سرمایه‌داران: اعتماد %.1f → %.1f" % [conf0, conf1])
+
+	# ── سناریو ۱۲: گفتگوی ملی اقوام → تنش هویتی کم می‌شود ──
+	var state12: Dictionary = GS.state.duplicate(true)
+	state12 = LM.ensure(state12)
+	state12["ethnicity"]["tension"] = 0.50
+	var ten0 := float(state12["ethnicity"]["tension"])
+	var r16 = GE.tick(state12, GS.version, 0, [CS.create_leader_action("dialogue")])
+	if not r16.success:
+		fails.append("گفتگوی ملی ناموفق: %s" % r16.reason)
+	else:
+		state12 = r16.state
+		var ten1 := float(state12["ethnicity"]["tension"])
+		if ten1 >= ten0:
+			fails.append("گفتگوی ملی تنش قومی را کم نکرد (%.2f → %.2f)" % [ten0, ten1])
+		else:
+			print("✓ گفتگوی ملی اقوام: تنش %.2f → %.2f" % [ten0, ten1])
+
+	# ── سناریو ۱۳: کولداون بازدید سرزده ──
+	var state13: Dictionary = GS.state.duplicate(true)
+	state13 = LM.ensure(state13)
+	state13["politics"]["corruption"] = 0.60
+	var r17 = GE.tick(state13, GS.version, 0, [CS.create_leader_action("inspection")])
+	var r18 = GE.tick(r17.state, r17.version, r17.tick, [CS.create_leader_action("inspection")])
+	if r18.success:
+		fails.append("بازدید سرزده دوم در دورهٔ کولداون پذیرفته شد")
+	else:
+		print("✓ کولداون بازدید سرزده کار می‌کند")
+
 	if fails.is_empty():
 		print("\n=== ✅ LEADER ACTIONS TEST PASSED ===")
 		quit(0)

@@ -854,6 +854,34 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 				var la_presence_check = LeaderManager.can_presence(state, cmd.tick)
 				if not la_presence_check.valid:
 					return {"valid": false, "reason": la_presence_check.reason}
+			elif la_action == "inspection":
+				var la_inspection_check = LeaderManager.can_inspection(state, cmd.tick)
+				if not la_inspection_check.valid:
+					return {"valid": false, "reason": la_inspection_check.reason}
+			elif la_action == "amnesty":
+				var la_amnesty_check = LeaderManager.can_amnesty(state, cmd.tick)
+				if not la_amnesty_check.valid:
+					return {"valid": false, "reason": la_amnesty_check.reason}
+			elif la_action == "honors":
+				var la_honors_check = LeaderManager.can_honors(state, cmd.tick)
+				if not la_honors_check.valid:
+					return {"valid": false, "reason": la_honors_check.reason}
+			elif la_action == "un_address":
+				var la_un_check = LeaderManager.can_un_address(state, cmd.tick)
+				if not la_un_check.valid:
+					return {"valid": false, "reason": la_un_check.reason}
+			elif la_action == "interview":
+				var la_interview_check = LeaderManager.can_interview(state, cmd.tick)
+				if not la_interview_check.valid:
+					return {"valid": false, "reason": la_interview_check.reason}
+			elif la_action == "summit":
+				var la_summit_check = LeaderManager.can_summit(state, cmd.tick)
+				if not la_summit_check.valid:
+					return {"valid": false, "reason": la_summit_check.reason}
+			elif la_action == "dialogue":
+				var la_dialogue_check = LeaderManager.can_dialogue(state, cmd.tick)
+				if not la_dialogue_check.valid:
+					return {"valid": false, "reason": la_dialogue_check.reason}
 			else:
 				return {"valid": false, "reason": "اقدام رهبر نامعتبر است"}
 		elif cmd.type == "research_start":
@@ -1023,6 +1051,13 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 			"speech": la_result = LeaderManager.speech(snapshot, str(cmd.payload.get("value", "hope")), cmd.tick)
 			"style": la_result = LeaderManager.set_style(snapshot, str(cmd.payload.get("value", "moderate")), cmd.tick)
 			"presence": la_result = LeaderManager.presence(snapshot, cmd.tick)
+			"inspection": la_result = LeaderManager.inspection(snapshot, cmd.tick)
+			"amnesty": la_result = LeaderManager.amnesty(snapshot, cmd.tick)
+			"honors": la_result = LeaderManager.honors(snapshot, cmd.tick)
+			"un_address": la_result = LeaderManager.un_address(snapshot, cmd.tick)
+			"interview": la_result = LeaderManager.interview(snapshot, cmd.tick)
+			"summit": la_result = LeaderManager.summit(snapshot, cmd.tick)
+			"dialogue": la_result = LeaderManager.dialogue(snapshot, cmd.tick)
 		snapshot = la_result.state
 		for la_ev in la_result.get("events", []):
 			if la_ev is Dictionary:
