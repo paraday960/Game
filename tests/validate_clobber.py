@@ -97,7 +97,7 @@ for f in sorted(glob.glob(os.path.join(SCRIPTS, "**", "*.gd"), recursive=True)):
                 "civic_manager.gd", "dilemma_manager.gd", "ethnicity_manager.gd",
                 "media_manager.gd", "migration_manager.gd", "prison_manager.gd",
                 "shadow_manager.gd", "central_bank_system.gd", "economy_system.gd",
-                "judicial_system.gd", "military_system.gd",
+                "judicial_system.gd", "military_system.gd", "leader_manager.gd",
             }:
                 continue
             suspects.append((rel, section, field, rhs.strip()[:80]))

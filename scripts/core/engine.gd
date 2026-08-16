@@ -12,7 +12,7 @@ const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
 	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
-	"assassinate", "leader_hidden", "leader_name", "faction_action", "faction_deal", "set_war_goal",
+	"assassinate", "leader_hidden", "leader_name", "leader_action", "faction_action", "faction_deal", "set_war_goal",
 	"general_recruit", "general_assign", "media_policy", "media_campaign",
 	"commodity_trade", "org_toggle", "org_vote",
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
@@ -837,6 +837,25 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var name_check: String = str(cmd.payload.get("name", "")).strip_edges()
 			if name_check.length() < 2 or name_check.length() > 30:
 				return {"valid": false, "reason": "نام رهبر باید بین ۲ تا ۳۰ نویسه باشد"}
+		elif cmd.type == "leader_action":
+			var la_action := str(cmd.payload.get("action", ""))
+			var la_value := str(cmd.payload.get("value", ""))
+			if la_action == "speech":
+				if not la_value in ["hope", "resolve", "unite"]:
+					return {"valid": false, "reason": "سبک سخنرانی نامعتبر است"}
+				var la_speech_check = LeaderManager.can_speech(state, cmd.tick)
+				if not la_speech_check.valid:
+					return {"valid": false, "reason": la_speech_check.reason}
+			elif la_action == "style":
+				var la_style_check = LeaderManager.can_style(state, la_value)
+				if not la_style_check.valid:
+					return {"valid": false, "reason": la_style_check.reason}
+			elif la_action == "presence":
+				var la_presence_check = LeaderManager.can_presence(state, cmd.tick)
+				if not la_presence_check.valid:
+					return {"valid": false, "reason": la_presence_check.reason}
+			else:
+				return {"valid": false, "reason": "اقدام رهبر نامعتبر است"}
 		elif cmd.type == "research_start":
 			var tech_id = str(cmd.payload.get("tech_id", ""))
 			var technology_check = TechnologyManager.can_start(state, tech_id)
@@ -997,6 +1016,17 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 	if cmd.type == "next_tick":
 		# نشانگر پایان نوبت — بدون اثر مستقیم؛ شبیه‌سازی روز در ادامه انجام می‌شود
 		pass
+	elif cmd.type == "leader_action":
+		var la_action := str(cmd.payload.get("action", ""))
+		var la_result: Dictionary
+		match la_action:
+			"speech": la_result = LeaderManager.speech(snapshot, str(cmd.payload.get("value", "hope")), cmd.tick)
+			"style": la_result = LeaderManager.set_style(snapshot, str(cmd.payload.get("value", "moderate")), cmd.tick)
+			"presence": la_result = LeaderManager.presence(snapshot, cmd.tick)
+		snapshot = la_result.state
+		for la_ev in la_result.get("events", []):
+			if la_ev is Dictionary:
+				EventLog.log_event("leader_event", la_ev, cmd.tick, cmd.version)
 	elif cmd.type == "budget_allocate":
 		var allocs = cmd.payload.get("allocations", {})
 		for k in allocs.keys():

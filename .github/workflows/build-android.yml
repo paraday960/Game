@@ -122,6 +122,7 @@ jobs:
           timeout 120 godot --headless --path . -s res://tests/test_cabinet_life.gd || { echo "TIMEOUT/FAIL: test_cabinet_life.gd"; exit 1; }
           timeout 120 godot --headless --path . -s res://tests/test_promise_accountability.gd || { echo "TIMEOUT/FAIL: test_promise_accountability.gd"; exit 1; }
           timeout 120 godot --headless --path . -s res://tests/test_faction_depth.gd || { echo "TIMEOUT/FAIL: test_faction_depth.gd"; exit 1; }
+          timeout 120 godot --headless --path . -s res://tests/test_leader_actions.gd || { echo "TIMEOUT/FAIL: test_leader_actions.gd"; exit 1; }
 
           # تست یکپارچه واقعی: دو پردازش Godot از طریق ENet.
           # هر نمونه در دایرکتوری خودش اجرا می‌شود تا race روی .godot (cache مشترک)

@@ -1656,6 +1656,61 @@ func _build_leader_card(st: Dictionary):
 		why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(why)
 
+	# ── اقدامات فعال رهبر (عمق‌بخشی ۴۷) ──
+	if str(leader.get("mode", "leader")) == "leader":
+		var act_title = Label.new(); act_title.text = "🎯 اقدامات رهبر"
+		act_title.add_theme_font_size_override("font_size", 18); act_title.modulate = ACCENT_GOLD
+		card.add_child(act_title)
+		var style := str(leader.get("style", "moderate"))
+		_row(card, "سبک رهبری", LeaderManager.get_style_name(style))
+		var style_row = HBoxContainer.new(); style_row.add_theme_constant_override("separation", 4); card.add_child(style_row)
+		for st_id in LeaderManager.STYLES.keys():
+			var st_def: Dictionary = LeaderManager.STYLES[st_id]
+			var st_btn = Button.new(); st_btn.text = str(st_def.get("name_fa", st_id))
+			st_btn.tooltip_text = str(st_def.get("desc_fa", ""))
+			st_btn.disabled = str(st_id) == style
+			st_btn.custom_minimum_size = Vector2(0, 36); st_btn.add_theme_font_size_override("font_size", 13)
+			st_btn.pressed.connect(FeedbackManager.play_click)
+			st_btn.pressed.connect(_on_leader_style.bind(str(st_id)))
+			_mark_decision_button(st_btn, "leaderstyle:" + str(st_id))
+			style_row.add_child(st_btn)
+		var speech_check = LeaderManager.can_speech(st, int(st.get("tick", 0)))
+		var speech_row = HBoxContainer.new(); speech_row.add_theme_constant_override("separation", 4); card.add_child(speech_row)
+		for sp in [["hope", "🕊️ امیدبخش"], ["resolve", "⚔️ قاطع"], ["unite", "🤝 متحدکننده"]]:
+			var sp_btn = Button.new(); sp_btn.text = sp[1]
+			sp_btn.disabled = not speech_check.valid
+			sp_btn.tooltip_text = "واکنش به وضعیت کشور — «حرف بی‌عمل» اعتماد می‌سوزاند" if speech_check.valid else str(speech_check.reason)
+			sp_btn.custom_minimum_size = Vector2(0, 36); sp_btn.add_theme_font_size_override("font_size", 13)
+			sp_btn.pressed.connect(FeedbackManager.play_click)
+			sp_btn.pressed.connect(_on_leader_speech.bind(str(sp[0])))
+			_mark_decision_button(sp_btn, "leaderspeech:" + str(sp[0]))
+			speech_row.add_child(sp_btn)
+		var presence_check = LeaderManager.can_presence(st, int(st.get("tick", 0)))
+		var pres_btn = Button.new(); pres_btn.text = "🏃 حضور میدانی در بحران"
+		pres_btn.disabled = not presence_check.valid
+		pres_btn.tooltip_text = "رفتن رهبر به میان مردم؛ ۳ ماه تقویت ثبات و رضایت" if presence_check.valid else str(presence_check.reason)
+		pres_btn.custom_minimum_size = Vector2(0, 40); pres_btn.add_theme_font_size_override("font_size", 15)
+		pres_btn.pressed.connect(FeedbackManager.play_click)
+		pres_btn.pressed.connect(_on_leader_presence)
+		_mark_decision_button(pres_btn, "leaderpresence")
+		card.add_child(pres_btn)
+
+func _on_leader_style(style: String):
+	if _queue_decision(GameCommandClass.create_leader_action("style", style), "👤 سبک رهبری: " + LeaderManager.get_style_name(style)):
+		_toast("👤 سبک رهبری «" + LeaderManager.get_style_name(style) + "» ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_speech(tone: String):
+	var tone_fa: String = {"hope": "امیدبخش", "resolve": "قاطع", "unite": "متحدکننده"}.get(tone, tone)
+	if _queue_decision(GameCommandClass.create_leader_action("speech", tone), "🎤 سخنرانی " + tone_fa):
+		_toast("🎤 سخنرانی " + tone_fa + " ثبت شد — با پایان نوبت ایراد می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_presence():
+	if _queue_decision(GameCommandClass.create_leader_action("presence"), "🏃 حضور میدانی رهبر"):
+		_toast("🏃 حضور میدانی ثبت شد — با پایان نوبت رهبر به میان مردم می‌رود")
+		_switch_tab("dashboard")
+
 func _on_leader_hidden_toggle(hidden: bool):
 	var cmd = GameCommandClass.create_leader_hidden(hidden)
 	if _queue_decision(cmd, "🛡 پنهان‌سازی رهبر" if hidden else "☀ آشکار شدن رهبر"):
@@ -9053,6 +9108,7 @@ func _command_queue_key(cmd) -> String:
 		"assassinate": return "assassinate:" + str(p.get("target", ""))
 		"leader_hidden": return "leader_hidden:" + str(p.get("hidden", false))
 		"leader_name": return "leader_name"
+		"leader_action": return "leaderact:" + str(p.get("action", "")) + ":" + str(p.get("value", ""))
 		"country_select": return "country_select"
 		"next_tick": return "next_tick"
 		# عمق ۱۸ تا ۲۰: پیشوندها باید دقیقاً با متای دکمه‌ها (cmd_key) یکسان باشند

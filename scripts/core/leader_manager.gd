@@ -36,7 +36,10 @@ func ensure(state: Dictionary) -> Dictionary:
 			"age": leader_age,
 			"alive": true, "popularity_world": 50.0,
 			"hidden": false, "mode": "leader", "country_status": "independent",
-			"rebellion": {}, "traits": []
+			"rebellion": {}, "traits": [],
+			# عمق‌بخشی ۴۷ — اقدامات فعال رهبر
+			"style": "moderate", "last_speech_turn": -99, "last_presence_turn": -99,
+			"presence_boost_until": 0
 		}
 	var world: Dictionary = state.get("world", {})
 	if not world.has("leader_deaths"):
@@ -48,6 +51,13 @@ func ensure(state: Dictionary) -> Dictionary:
 	if not world.has("rebel_regions"):
 		world["rebel_regions"] = {}
 	state["world"] = world
+	# سازگاری با state قدیمی (عمق‌بخشی ۴۷)
+	var leader: Dictionary = state["leader"]
+	leader["style"] = str(leader.get("style", "moderate"))
+	leader["last_speech_turn"] = int(leader.get("last_speech_turn", -99))
+	leader["last_presence_turn"] = int(leader.get("last_presence_turn", -99))
+	leader["presence_boost_until"] = int(leader.get("presence_boost_until", 0))
+	state["leader"] = leader
 	return state
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -76,6 +86,43 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	# ── ویژگی‌های رهبر: کسب از رویدادهای بزرگ + اثر ماهانه ──
 	_acquire_traits_from_history(state, turn)
 	_apply_trait_effects(state)
+
+	# ── اثر سبک رهبری (عمق‌بخشی ۴۷) ──
+	var style := str(leader.get("style", "moderate"))
+	var pol2: Dictionary = state.get("politics", {})
+	var pop2: Dictionary = state.get("population", {})
+	var factions2: Dictionary = state.get("factions", {})
+	var tech2: Dictionary = state.get("technology", {})
+	match style:
+		"populist":
+			pop2["happiness"] = clampf(float(pop2.get("happiness", 0.6)) + 0.004, 0.05, 1.0)
+			if factions2.has("نخبگان اقتصادی"):
+				factions2["نخبگان اقتصادی"]["loyalty"] = clampf(float(factions2["نخبگان اقتصادی"].get("loyalty", 55.0)) - 0.3, 0.0, 100.0)
+		"authoritarian":
+			pol2["stability"] = clampf(float(pol2.get("stability", 0.6)) + 0.004, 0.05, 1.0)
+			var media_c: Dictionary = state.get("culture", {})
+			media_c["media_freedom"] = clampf(float(media_c.get("media_freedom", 0.5)) - 0.001, 0.05, 1.0)
+			state["culture"] = media_c
+			pol2["tension"] = clampf(float(pol2.get("tension", 0.3)) + 0.001, 0.0, 1.0)
+		"technocrat":
+			# تقویت دانشمندان (منبع واقعی؛ elites_system ظرفیت را از آن می‌سازد)
+			var elites2: Dictionary = state.get("elites_detail", {})
+			elites2["scientific"] = float(elites2.get("scientific", 10000.0)) + 400.0
+			state["elites_detail"] = elites2
+			pop2["happiness"] = clampf(float(pop2.get("happiness", 0.6)) - 0.001, 0.05, 1.0)
+	state["politics"] = pol2
+	state["population"] = pop2
+	state["factions"] = factions2
+	state["technology"] = tech2
+
+	# ── اثر حضور میدانی (۳ ماه تقویت) ──
+	if turn < int(leader.get("presence_boost_until", 0)):
+		var pol3: Dictionary = state.get("politics", {})
+		var pop3: Dictionary = state.get("population", {})
+		pol3["stability"] = clampf(float(pol3.get("stability", 0.6)) + 0.008, 0.05, 1.0)
+		pop3["happiness"] = clampf(float(pop3.get("happiness", 0.6)) + 0.008, 0.05, 1.0)
+		state["politics"] = pol3
+		state["population"] = pop3
 
 	# ── محبوبیت جهانی: اثر اعمال رهبر در جهان ──
 	var pop: float = clampf(float(leader.get("popularity_world", 50.0)), 0.0, 100.0)
@@ -175,6 +222,135 @@ func set_hidden(state: Dictionary, hidden: bool, turn: int) -> Dictionary:
 		events.append({"type": "leader_visible", "message": "رهبر آشکارا در برابر مردم ظاهر شد؛ روحیه ملی بالا رفت اما او در معرض خطر بیشتری است"})
 	state["leader"] = leader
 	return {"state": state, "events": events}
+
+# ────────────────────────────────────────────────────────────────────────────
+# اقدامات فعال رهبر (عمق‌بخشی ۴۷): سخنرانی، سبک رهبری، حضور میدانی
+# ────────────────────────────────────────────────────────────────────────────
+const SPEECH_COOLDOWN := 3
+const PRESENCE_COOLDOWN := 6
+const STYLES := {
+	"moderate": {"name_fa": "متعادل", "desc_fa": "بدون اثر ویژه؛ کم‌ریسک"},
+	"populist": {"name_fa": "مردمی", "desc_fa": "شادی مردم ↑ هر ماه؛ نخبگان و هزینهٔ سیاست ناراضی"},
+	"authoritarian": {"name_fa": "اقتدارگرا", "desc_fa": "ثبات ↑ و رسانه مهار؛ تنش خارجی و نارضایتی نخبگان"},
+	"technocrat": {"name_fa": "تکنوکرات", "desc_fa": "بهره‌وری و پژوهش ↑؛ شادی مردم کمی ↓"}
+}
+
+func get_style_name(style: String) -> String:
+	return str(STYLES.get(style, STYLES["moderate"]).get("name_fa", style))
+
+func can_speech(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_speech_turn", -99)) + SPEECH_COOLDOWN > tick:
+		return {"valid": false, "reason": "رهبر به تازگی سخنرانی کرده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	return {"valid": true, "reason": ""}
+
+func speech(state: Dictionary, tone: String, tick: int) -> Dictionary:
+	var check := can_speech(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var events: Array = []
+	var pol: Dictionary = state.get("politics", {})
+	var pop: Dictionary = state.get("population", {})
+	var econ: Dictionary = state.get("economy", {})
+	var world: Dictionary = state.get("world", {})
+	var happiness := float(pop.get("happiness", 0.6))
+	var stability := float(pol.get("stability", 0.6))
+	var at_war: bool = not world.get("wars", {}).is_empty()
+	var growth := float(econ.get("growth_rate", 0.0))
+	leader["last_speech_turn"] = tick
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	var tone_fa := ""
+	match tone:
+		"hope":
+			tone_fa = "امیدبخش"
+			# در رکود/بحران: امید واقعی می‌دهد؛ اگر وضعیت خوب باشد «حرف بی‌عمل» است
+			if happiness < 0.5 or stability < 0.5 or growth < 0.01:
+				pop["happiness"] = clampf(happiness + 0.03, 0.05, 1.0)
+				pol["stability"] = clampf(stability + 0.02, 0.05, 1.0)
+				events.append({"type": "leader_speech", "tone": tone,
+					"message": "🎤 سخنرانی امیدبخش رهبر در بحران؛ مردم به آینده امیدوار شدند"})
+			else:
+				pol["trust"] = clampf(float(pol.get("trust", 0.55)) - 0.02, 0.05, 1.0)
+				events.append({"type": "leader_speech", "tone": tone,
+					"message": "🎤 سخنرانی رهبر بی‌محتوا بود؛ «حرف بی‌عمل» اعتماد را کم کرد"})
+		"resolve":
+			tone_fa = "قاطع"
+			if at_war:
+				state["military"]["morale"] = clampf(float(state.get("military", {}).get("morale", 0.7)) + 0.02, 0.0, 1.0)
+				pol["stability"] = clampf(stability + 0.015, 0.05, 1.0)
+				events.append({"type": "leader_speech", "tone": tone,
+					"message": "🎤 سخنرانی قاطع رهبر در جنگ؛ روحیه ارتش و ثبات ملی تقویت شد"})
+			else:
+				pol["tension"] = clampf(float(pol.get("tension", 0.3)) + 0.02, 0.0, 1.0)
+				events.append({"type": "leader_speech", "tone": tone,
+					"message": "🎤 سخنرانی جنگ‌طلبانه بدون جنگ؛ تنش داخلی بالا رفت"})
+		"unite":
+			tone_fa = "متحدکننده"
+			pol["trust"] = clampf(float(pol.get("trust", 0.55)) + 0.02, 0.05, 1.0)
+			pol["tension"] = clampf(float(pol.get("tension", 0.3)) - 0.02, 0.0, 1.0)
+			events.append({"type": "leader_speech", "tone": tone,
+				"message": "🎤 سخنرانی متحدکننده رهبر؛ اعتماد ملی و همبستگی بالا رفت"})
+		_:
+			return {"success": false, "reason": "سبک سخنرانی نامعتبر است", "state": state, "events": events}
+	leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 1.0, 0.0, 100.0)
+	state["leader"] = leader
+	state["population"] = pop
+	state["politics"] = pol
+	return {"success": true, "state": state, "events": events}
+
+func can_style(state: Dictionary, style: String) -> Dictionary:
+	if not STYLES.has(style):
+		return {"valid": false, "reason": "سبک رهبری نامعتبر است"}
+	return {"valid": true, "reason": ""}
+
+func set_style(state: Dictionary, style: String, turn: int) -> Dictionary:
+	if not STYLES.has(style):
+		return {"success": false, "reason": "سبک رهبری نامعتبر است", "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var old_style := str(leader.get("style", "moderate"))
+	leader["style"] = style
+	state["leader"] = leader
+	return {"success": true, "state": state, "events": [{
+		"type": "leader_style", "style": style,
+		"message": "👤 سبک رهبری «%s» جایگزین «%s» شد — اثر آن از همین ماه در کشور دیده می‌شود" % [get_style_name(style), get_style_name(old_style)]
+	}]}
+
+func can_presence(state: Dictionary, tick: int) -> Dictionary:
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	if int(leader.get("last_presence_turn", -99)) + PRESENCE_COOLDOWN > tick:
+		return {"valid": false, "reason": "رهبر به تازگی در میدان حاضر شده؛ کمی صبر کنید"}
+	if float(state.get("policies", {}).get("political_capital", 0.0)) < 0.5:
+		return {"valid": false, "reason": "سرمایه سیاسی کافی نیست"}
+	return {"valid": true, "reason": ""}
+
+func presence(state: Dictionary, tick: int) -> Dictionary:
+	var check := can_presence(state, tick)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var leader: Dictionary = state["leader"]
+	var events: Array = []
+	leader["last_presence_turn"] = tick
+	leader["presence_boost_until"] = tick + 3  # ۳ ماه تقویت
+	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
+	var pol: Dictionary = state.get("politics", {})
+	var pop: Dictionary = state.get("population", {})
+	pol["stability"] = clampf(float(pol.get("stability", 0.6)) + 0.015, 0.05, 1.0)
+	pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.015, 0.05, 1.0)
+	leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) + 2.0, 0.0, 100.0)
+	state["leader"] = leader
+	state["politics"] = pol
+	state["population"] = pop
+	events.append({"type": "leader_presence",
+		"message": "🏃 رهبر به میان مردم و مناطق بحران‌زده رفت؛ ثبات و رضایت تقویت شد (۳ ماه اثر ماندگار)"})
+	return {"success": true, "state": state, "events": events}
 
 # ────────────────────────────────────────────────────────────────────────────
 # ترور — شرط فناوری‌ها و توازن حمله/دفاع
