@@ -170,31 +170,31 @@ func _init():
 	var state10: Dictionary = GS.state.duplicate(true)
 	state10 = LM.ensure(state10)
 	state10["culture"]["media_freedom"] = 0.60
-	var trust0 := float(state10.get("media", {}).get("trust", 0.55))
+	var mtrust0 := float(state10.get("media", {}).get("trust", 0.55))
 	var r13 = GE.tick(state10, GS.version, 0, [CS.create_leader_action("interview")])
 	if not r13.success:
 		fails.append("گفتگوی تلویزیونی ناموفق: %s" % r13.reason)
 	else:
 		state10 = r13.state
-		var trust1 := float(state10.get("media", {}).get("trust", 0.55))
-		if trust1 <= trust0:
+		var mtrust1 := float(state10.get("media", {}).get("trust", 0.55))
+		if mtrust1 <= mtrust0:
 			fails.append("گفتگو در رسانهٔ آزاد اعتماد را بالا نبرد")
 		else:
-			print("✓ گفتگو در رسانهٔ آزاد: اعتماد %.2f → %.2f" % [trust0, trust1])
+			print("✓ گفتگو در رسانهٔ آزاد: اعتماد %.2f → %.2f" % [mtrust0, mtrust1])
 	var state10b: Dictionary = GS.state.duplicate(true)
 	state10b = LM.ensure(state10b)
 	state10b["culture"]["media_freedom"] = 0.20
-	var trust0b := float(state10b.get("media", {}).get("trust", 0.55))
+	var mtrust0b := float(state10b.get("media", {}).get("trust", 0.55))
 	var r14 = GE.tick(state10b, GS.version, 0, [CS.create_leader_action("interview")])
 	if not r14.success:
 		fails.append("گفتگو در رسانهٔ مهارشده ناموفق: %s" % r14.reason)
 	else:
 		state10b = r14.state
-		var trust1b := float(state10b.get("media", {}).get("trust", 0.55))
-		if trust1b >= trust0b:
+		var mtrust1b := float(state10b.get("media", {}).get("trust", 0.55))
+		if mtrust1b >= mtrust0b:
 			fails.append("گفتگو زیر رسانهٔ مهارشده اعتماد را نسوزاند (پروپاگاندا)")
 		else:
-			print("✓ گفتگو زیر رسانهٔ مهارشده: اعتماد %.2f → %.2f (پروپاگاندا)" % [trust0b, trust1b])
+			print("✓ گفتگو زیر رسانهٔ مهارشده: اعتماد %.2f → %.2f (پروپاگاندا)" % [mtrust0b, mtrust1b])
 
 	# ── سناریو ۱۱: دیدار سرمایه‌داران → اعتماد سرمایه‌گذاران بالا ──
 	var state11: Dictionary = GS.state.duplicate(true)
