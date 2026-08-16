@@ -1764,6 +1764,76 @@ func _build_leader_card(st: Dictionary):
 		_mark_decision_button(dia_btn, "leaderdialogue")
 		act_row2.add_child(dia_btn)
 
+		# ── رقبای داخلی (عمق‌بخشی ۴۹) ──
+		st = RivalsManager.ensure(st)
+		var rivals_state: Dictionary = st.get("rivals", {})
+		var rivals_figures: Array = rivals_state.get("figures", [])
+		var rv_title = Label.new(); rv_title.text = "⚔️ رقبای داخلی"
+		rv_title.add_theme_font_size_override("font_size", 18); rv_title.modulate = ACCENT_GOLD
+		card.add_child(rv_title)
+		_bar(card, "شاخص تهدید داخلی", clampf(float(rivals_state.get("threat", 0.0)), 0.0, 1.0))
+		_row(card, "کودتاهای شکست‌خورده", PersianFormatter.to_persian_digits(str(int(rivals_state.get("coup_attempts", 0)))))
+		for rival_figure in rivals_figures:
+			var rival_id := str(rival_figure.get("id", ""))
+			var rival_name := str(rival_figure.get("name_fa", ""))
+			var rival_faction := str(rival_figure.get("faction", ""))
+			var rival_status := str(rival_figure.get("status", "loyal"))
+			var rival_status_fa := str(RivalsManager.STATUS_FA.get(rival_status, rival_status))
+			var rv_head_row = HBoxContainer.new(); rv_head_row.add_theme_constant_override("separation", 8); card.add_child(rv_head_row)
+			var rv_name_lbl = Label.new(); rv_name_lbl.text = "%s — %s" % [rival_name, rival_faction]
+			rv_name_lbl.add_theme_font_size_override("font_size", 15)
+			rv_name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			rv_head_row.add_child(rv_name_lbl)
+			var rv_status_lbl = Label.new(); rv_status_lbl.text = rival_status_fa
+			rv_status_lbl.add_theme_font_size_override("font_size", 14)
+			rv_status_lbl.modulate = _color_for(0.3 if rival_status == "plotting" else 0.75)
+			rv_head_row.add_child(rv_status_lbl)
+			var rv_stats_lbl = Label.new()
+			rv_stats_lbl.text = "حمایت %s · جاه‌طلبی %s · وفاداری %s" % [
+				PersianFormatter.to_persian_digits(str(int(float(rival_figure.get("support", 0.0))))),
+				PersianFormatter.to_persian_digits(str(int(float(rival_figure.get("ambition", 0.0))))),
+				PersianFormatter.to_persian_digits(str(int(float(rival_figure.get("loyalty", 0.0)))))]
+			rv_stats_lbl.add_theme_font_size_override("font_size", 13)
+			rv_stats_lbl.modulate = TEXT_FAINT
+			card.add_child(rv_stats_lbl)
+			var rv_btn_row = HBoxContainer.new(); rv_btn_row.add_theme_constant_override("separation", 4); card.add_child(rv_btn_row)
+			var rv_coopt_check = RivalsManager.can_coopt(st, rival_id, int(st.get("tick", 0)))
+			var rv_coopt_btn = Button.new(); rv_coopt_btn.text = "🤝 همکاری"
+			rv_coopt_btn.disabled = not rv_coopt_check.valid
+			rv_coopt_btn.tooltip_text = "دعوت به هیئت دولت؛ وفاداری می‌خرد ولی کمی فساد می‌آورد" if rv_coopt_check.valid else str(rv_coopt_check.reason)
+			rv_coopt_btn.custom_minimum_size = Vector2(0, 32); rv_coopt_btn.add_theme_font_size_override("font_size", 12)
+			rv_coopt_btn.pressed.connect(FeedbackManager.play_click)
+			rv_coopt_btn.pressed.connect(_on_rivals_coopt.bind(rival_id))
+			_mark_decision_button(rv_coopt_btn, "rivalscoopt:" + rival_id)
+			rv_btn_row.add_child(rv_coopt_btn)
+			var rv_nego_check = RivalsManager.can_negotiate(st, rival_id, int(st.get("tick", 0)))
+			var rv_nego_btn = Button.new(); rv_nego_btn.text = "🗣️ مذاکره"
+			rv_nego_btn.disabled = not rv_nego_check.valid
+			rv_nego_btn.tooltip_text = "وفاداری بالا و جاه‌طلبی پایین" if rv_nego_check.valid else str(rv_nego_check.reason)
+			rv_nego_btn.custom_minimum_size = Vector2(0, 32); rv_nego_btn.add_theme_font_size_override("font_size", 12)
+			rv_nego_btn.pressed.connect(FeedbackManager.play_click)
+			rv_nego_btn.pressed.connect(_on_rivals_negotiate.bind(rival_id))
+			_mark_decision_button(rv_nego_btn, "rivalsnegotiate:" + rival_id)
+			rv_btn_row.add_child(rv_nego_btn)
+			var rv_surv_check = RivalsManager.can_surveil(st, rival_id, int(st.get("tick", 0)))
+			var rv_surv_btn = Button.new(); rv_surv_btn.text = "🕵️ زیر نظر"
+			rv_surv_btn.disabled = not rv_surv_check.valid
+			rv_surv_btn.tooltip_text = "سرویس اطلاعات توطئه را افشا می‌کند" if rv_surv_check.valid else str(rv_surv_check.reason)
+			rv_surv_btn.custom_minimum_size = Vector2(0, 32); rv_surv_btn.add_theme_font_size_override("font_size", 12)
+			rv_surv_btn.pressed.connect(FeedbackManager.play_click)
+			rv_surv_btn.pressed.connect(_on_rivals_surveil.bind(rival_id))
+			_mark_decision_button(rv_surv_btn, "rivalssurveil:" + rival_id)
+			rv_btn_row.add_child(rv_surv_btn)
+			var rv_exile_check = RivalsManager.can_exile(st, rival_id, int(st.get("tick", 0)))
+			var rv_exile_btn = Button.new(); rv_exile_btn.text = "🚪 تبعید"
+			rv_exile_btn.disabled = not rv_exile_check.valid
+			rv_exile_btn.tooltip_text = "فقط توطئه‌گر اثبات‌شده؛ جناحش را می‌رنجاند" if rv_exile_check.valid else str(rv_exile_check.reason)
+			rv_exile_btn.custom_minimum_size = Vector2(0, 32); rv_exile_btn.add_theme_font_size_override("font_size", 12)
+			rv_exile_btn.pressed.connect(FeedbackManager.play_click)
+			rv_exile_btn.pressed.connect(_on_rivals_exile.bind(rival_id))
+			_mark_decision_button(rv_exile_btn, "rivalsexile:" + rival_id)
+			rv_btn_row.add_child(rv_exile_btn)
+
 func _on_leader_style(style: String):
 	if _queue_decision(GameCommandClass.create_leader_action("style", style), "👤 سبک رهبری: " + LeaderManager.get_style_name(style)):
 		_toast("👤 سبک رهبری «" + LeaderManager.get_style_name(style) + "» ثبت شد — با پایان نوبت اعمال می‌شود")
@@ -1813,6 +1883,26 @@ func _on_leader_summit():
 func _on_leader_dialogue():
 	if _queue_decision(GameCommandClass.create_leader_action("dialogue"), "🕌 گفتگوی ملی اقوام و مذاهب"):
 		_toast("🕌 گفتگوی ملی ثبت شد — با پایان نوبت برگزار می‌شود")
+		_switch_tab("dashboard")
+
+func _on_rivals_coopt(rival_id: String):
+	if _queue_decision(GameCommandClass.create_rivals_action("coopt", rival_id), "🤝 همکاری با رقیب"):
+		_toast("🤝 دعوت رقیب به هیئت دولت ثبت شد — با پایان نوبت اعمال می‌شود")
+		_switch_tab("dashboard")
+
+func _on_rivals_negotiate(rival_id: String):
+	if _queue_decision(GameCommandClass.create_rivals_action("negotiate", rival_id), "🗣️ مذاکره با رقیب"):
+		_toast("🗣️ مذاکره با رقیب ثبت شد — با پایان نوبت برگزار می‌شود")
+		_switch_tab("dashboard")
+
+func _on_rivals_surveil(rival_id: String):
+	if _queue_decision(GameCommandClass.create_rivals_action("surveil", rival_id), "🕵️ زیر نظر گرفتن رقیب"):
+		_toast("🕵️ پروندهٔ نظارت ثبت شد — با پایان نوبت سرویس اطلاعات وارد عمل می‌شود")
+		_switch_tab("dashboard")
+
+func _on_rivals_exile(rival_id: String):
+	if _queue_decision(GameCommandClass.create_rivals_action("exile", rival_id), "🚪 تبعید رقیب"):
+		_toast("🚪 فرمان تبعید ثبت شد — با پایان نوبت اجرا می‌شود")
 		_switch_tab("dashboard")
 
 func _on_leader_hidden_toggle(hidden: bool):
