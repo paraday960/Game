@@ -135,6 +135,9 @@ func _init():
 	# ── سناریو ۹: سخنرانی سازمان ملل — بدون عضویت رد می‌شود؛ با عضویت اثر می‌گذارد ──
 	var state9: Dictionary = GS.state.duplicate(true)
 	state9 = LM.ensure(state9)
+	if not state9.has("intl_orgs"):
+		state9["intl_orgs"] = {"memberships": {"سازمان ملل": true, "اوپک": false, "اتحادیه منطقه‌ای": true},
+			"next_vote_turn": 4, "pending_vote": {}, "votes_history": []}
 	state9["intl_orgs"]["memberships"]["سازمان ملل"] = false
 	var r11 = GE.tick(state9, GS.version, 0, [CS.create_leader_action("un_address")])
 	if r11.success:
@@ -143,6 +146,10 @@ func _init():
 		print("✓ سخنرانی سازمان ملل بدون عضویت رد می‌شود")
 	var state9b: Dictionary = GS.state.duplicate(true)
 	state9b = LM.ensure(state9b)
+	if not state9b.has("intl_orgs"):
+		state9b["intl_orgs"] = {"memberships": {"سازمان ملل": true, "اوپک": false, "اتحادیه منطقه‌ای": true},
+			"next_vote_turn": 4, "pending_vote": {}, "votes_history": []}
+	state9b["intl_orgs"]["memberships"]["سازمان ملل"] = true
 	var rel0 := 0.0
 	for cid in state9b.get("diplomacy", {}).get("relations", {}).keys():
 		rel0 += float(state9b["diplomacy"]["relations"][cid])
