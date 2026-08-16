@@ -42,12 +42,24 @@ lm = read(os.path.join(ROOT, "scripts", "core", "leader_manager.gd"))
 for key in ['"style"', '"last_speech_turn"', '"last_presence_turn"', '"presence_boost_until"']:
     if key not in lm:
         check("state: %s" % key, False, "کلید در leader_manager نیست")
+# عمق‌بخشی ۴۸ — کلیدهای کول‌داون اقدامات جدید
+for key in ["last_inspection_turn", "last_amnesty_turn", "last_honors_turn",
+            "last_un_address_turn", "last_interview_turn", "last_summit_turn",
+            "last_dialogue_turn"]:
+    if '"%s"' % key not in lm:
+        check("state: %s" % key, False, "کلید کول‌داون در leader_manager نیست")
 
 # 2) توابع مدیر
 for marker in ["func can_speech", "func speech", "func can_style", "func set_style",
                "func can_presence", "func presence", "const STYLES", "func get_style_name"]:
     if marker not in lm:
         check("مدیر: %s" % marker, False, "نیست")
+# عمق‌بخشی ۴۸ — اقدامات جدید (can + اجرا)
+for action in ["inspection", "amnesty", "honors", "un_address", "interview",
+               "summit", "dialogue"]:
+    for marker in ["func can_%s" % action, "func %s(" % action]:
+        if marker not in lm:
+            check("مدیر ۴۸: %s" % marker, False, "نیست")
 
 # 3) سه تن سخنرانی + حرف بی‌عمل
 for tone in ["hope", "resolve", "unite"]:
@@ -63,20 +75,62 @@ check("اثر تکنوکرات", 'elites2["scientific"]' in lm, "اثر تکنو
 check("اثر مردمی", 'pop2["happiness"]' in lm and '"نخبگان اقتصادی"' in lm, "اثر مردمی نیست")
 check("اثر اقتدارگرا", 'media_freedom' in lm, "اثر اقتدارگرا نیست")
 
-# 5) فرمان و موتور
+# 5) کانال‌های واقعی اقدامات ۴۸ (فانتوم ممنوع — اصل ۲.۲)
+check("بازدید سرزده", "بازدید سرزده" in lm and 'pol["corruption"]' in lm, "بازدید سرزده/فساد نیست")
+check("عفو از کانال زندان", "PrisonManager.amnesty_program" in lm, "عفو رهبر از کانال واقعی زندان نمی‌گذرد")
+check("نشان از کانال recognition", 'vt["recognition"]' in lm, "نشان ملی کانال تکریم واقعی ندارد")
+check("سازمان ملل", "سازمان ملل" in lm and 'relations[cid]' in lm, "سخنرانی سازمان ملل نیست")
+check("پروپاگاندا (رسانه مهارشده)", 'if freedom < 0.35:' in lm, "واکنش به رسانه مهارشده نیست")
+check("اعتماد سرمایه‌گذاران", 'cycle["confidence"]' in lm, "دیدار سرمایه‌داران کانال واقعی ندارد")
+check("تنش قومی", 'ethnicity["tension"]' in lm, "گفتگوی ملی کانال تنش قومی ندارد")
+
+# 6) فرمان و موتور
 cmd = read(os.path.join(ROOT, "scripts", "core", "command.gd"))
 check("فرمان", "create_leader_action" in cmd, "create_leader_action نیست")
 eng = read(os.path.join(ROOT, "scripts", "core", "engine.gd"))
 for marker in ['"leader_action"', "LeaderManager.can_speech", "LeaderManager.presence", "LeaderManager.set_style"]:
     if marker not in eng:
         check("موتور: %s" % marker, False, "نیست")
+for marker in ["LeaderManager.can_inspection", "LeaderManager.inspection",
+               "LeaderManager.can_amnesty", "LeaderManager.amnesty",
+               "LeaderManager.can_honors", "LeaderManager.honors",
+               "LeaderManager.can_un_address", "LeaderManager.un_address",
+               "LeaderManager.can_interview", "LeaderManager.interview",
+               "LeaderManager.can_summit", "LeaderManager.summit",
+               "LeaderManager.can_dialogue", "LeaderManager.dialogue"]:
+    if marker not in eng:
+        check("موتور ۴۸: %s" % marker, False, "نیست")
 
-# 6) UI
+# 7) هوش منحصربه‌فرد رهبر (اصل ۲.۲.۷)
+lai_path = os.path.join(ROOT, "scripts", "ai", "leader_ai.gd")
+if not os.path.exists(lai_path):
+    check("هوش رهبر", False, "scripts/ai/leader_ai.gd نیست")
+else:
+    lai = read(lai_path)
+    check("هوش رهبر", "func diagnose" in lai and '"system": "leader"' in lai, "تشخیص رهبری نیست")
+
+# 8) UI
 ui = read(os.path.join(ROOT, "scripts", "ui", "main_ui.gd"))
 for marker in ["اقدامات رهبر", "_on_leader_speech", "_on_leader_style", "_on_leader_presence",
                "leaderspeech:", "leaderstyle:", "leaderpresence"]:
     if marker not in ui:
         check("UI: %s" % marker, False, "نیست")
+for marker in ["_on_leader_inspection", "_on_leader_amnesty", "_on_leader_honors",
+               "_on_leader_un_address", "_on_leader_interview", "_on_leader_summit",
+               "_on_leader_dialogue", "leaderinspection", "leaderamnesty", "leaderhonors",
+               "leaderunaddress", "leaderinterview", "leadersummit", "leaderdialogue"]:
+    if marker not in ui:
+        check("UI ۴۸: %s" % marker, False, "نیست")
+check("برچسب رهبری در SYSTEM_FA", '"leader": "رهبری"' in ui, "قانون ۶ برای سامانه رهبری نیست")
+
+# 9) تست گودو در CI
+tl = read(os.path.join(ROOT, "tests", "test_leader_actions.gd"))
+for marker in ["create_leader_action(\"inspection\")", "create_leader_action(\"amnesty\")",
+               "create_leader_action(\"honors\")", "create_leader_action(\"un_address\")",
+               "create_leader_action(\"interview\")", "create_leader_action(\"summit\")",
+               "create_leader_action(\"dialogue\")"]:
+    if marker not in tl:
+        check("تست گودو: %s" % marker, False, "نیست")
 
 print()
 if FAIL:

@@ -1696,6 +1696,73 @@ func _build_leader_card(st: Dictionary):
 		_mark_decision_button(pres_btn, "leaderpresence")
 		card.add_child(pres_btn)
 
+		# ── اقدامات رهبری عمیق‌تر (عمق‌بخشی ۴۸) ──
+		var insp_check = LeaderManager.can_inspection(st, int(st.get("tick", 0)))
+		var amn_check = LeaderManager.can_amnesty(st, int(st.get("tick", 0)))
+		var hon_check = LeaderManager.can_honors(st, int(st.get("tick", 0)))
+		var una_check = LeaderManager.can_un_address(st, int(st.get("tick", 0)))
+		var int_check = LeaderManager.can_interview(st, int(st.get("tick", 0)))
+		var sum_check = LeaderManager.can_summit(st, int(st.get("tick", 0)))
+		var dia_check = LeaderManager.can_dialogue(st, int(st.get("tick", 0)))
+		var act_row1 = HBoxContainer.new(); act_row1.add_theme_constant_override("separation", 4); card.add_child(act_row1)
+		var act_row2 = HBoxContainer.new(); act_row2.add_theme_constant_override("separation", 4); card.add_child(act_row2)
+		var insp_btn = Button.new(); insp_btn.text = "🏙️ بازدید سرزده"
+		insp_btn.disabled = not insp_check.valid
+		insp_btn.tooltip_text = "فساد را رو می‌کند و اعتماد می‌سازد؛ شبکه‌های فاسد می‌خورند" if insp_check.valid else str(insp_check.reason)
+		insp_btn.custom_minimum_size = Vector2(0, 34); insp_btn.add_theme_font_size_override("font_size", 12)
+		insp_btn.pressed.connect(FeedbackManager.play_click)
+		insp_btn.pressed.connect(_on_leader_inspection)
+		_mark_decision_button(insp_btn, "leaderinspection")
+		act_row1.add_child(insp_btn)
+		var amn_btn = Button.new(); amn_btn.text = "📜 عفو عمومی"
+		amn_btn.disabled = not amn_check.valid
+		amn_btn.tooltip_text = "عفو سراسری زندانیان؛ مردم شاد و نخبگان ناراضی" if amn_check.valid else str(amn_check.reason)
+		amn_btn.custom_minimum_size = Vector2(0, 34); amn_btn.add_theme_font_size_override("font_size", 12)
+		amn_btn.pressed.connect(FeedbackManager.play_click)
+		amn_btn.pressed.connect(_on_leader_amnesty)
+		_mark_decision_button(amn_btn, "leaderamnesty")
+		act_row1.add_child(amn_btn)
+		var hon_btn = Button.new(); hon_btn.text = "🎖️ نشان ملی"
+		hon_btn.disabled = not hon_check.valid
+		hon_btn.tooltip_text = "تکریم قهرمانان؛ روحیه ارتش و رضایت کهنه‌سربازان" if hon_check.valid else str(hon_check.reason)
+		hon_btn.custom_minimum_size = Vector2(0, 34); hon_btn.add_theme_font_size_override("font_size", 12)
+		hon_btn.pressed.connect(FeedbackManager.play_click)
+		hon_btn.pressed.connect(_on_leader_honors)
+		_mark_decision_button(hon_btn, "leaderhonors")
+		act_row1.add_child(hon_btn)
+		var una_btn = Button.new(); una_btn.text = "🕊️ سازمان ملل"
+		una_btn.disabled = not una_check.valid
+		una_btn.tooltip_text = "نفوذ نرم جهانی؛ نیازمند عضویت و حضور آشکار" if una_check.valid else str(una_check.reason)
+		una_btn.custom_minimum_size = Vector2(0, 34); una_btn.add_theme_font_size_override("font_size", 12)
+		una_btn.pressed.connect(FeedbackManager.play_click)
+		una_btn.pressed.connect(_on_leader_un_address)
+		_mark_decision_button(una_btn, "leaderunaddress")
+		act_row1.add_child(una_btn)
+		var int_btn = Button.new(); int_btn.text = "📺 گفتگوی تلویزیونی"
+		int_btn.disabled = not int_check.valid
+		int_btn.tooltip_text = "در رسانه آزاد اعتماد می‌سازد؛ زیر رسانه مهارشده تبلیغاتی دیده می‌شود" if int_check.valid else str(int_check.reason)
+		int_btn.custom_minimum_size = Vector2(0, 34); int_btn.add_theme_font_size_override("font_size", 12)
+		int_btn.pressed.connect(FeedbackManager.play_click)
+		int_btn.pressed.connect(_on_leader_interview)
+		_mark_decision_button(int_btn, "leaderinterview")
+		act_row2.add_child(int_btn)
+		var sum_btn = Button.new(); sum_btn.text = "💼 دیدار سرمایه‌داران"
+		sum_btn.disabled = not sum_check.valid
+		sum_btn.tooltip_text = "اعتماد سرمایه‌گذاران بالا می‌رود؛ پوپولیست‌ها ناخرسند" if sum_check.valid else str(sum_check.reason)
+		sum_btn.custom_minimum_size = Vector2(0, 34); sum_btn.add_theme_font_size_override("font_size", 12)
+		sum_btn.pressed.connect(FeedbackManager.play_click)
+		sum_btn.pressed.connect(_on_leader_summit)
+		_mark_decision_button(sum_btn, "leadersummit")
+		act_row2.add_child(sum_btn)
+		var dia_btn = Button.new(); dia_btn.text = "🕌 گفتگوی ملی اقوام"
+		dia_btn.disabled = not dia_check.valid
+		dia_btn.tooltip_text = "تنش هویتی را می‌خواباند؛ وقتی تنش پایین است بی‌اثر" if dia_check.valid else str(dia_check.reason)
+		dia_btn.custom_minimum_size = Vector2(0, 34); dia_btn.add_theme_font_size_override("font_size", 12)
+		dia_btn.pressed.connect(FeedbackManager.play_click)
+		dia_btn.pressed.connect(_on_leader_dialogue)
+		_mark_decision_button(dia_btn, "leaderdialogue")
+		act_row2.add_child(dia_btn)
+
 func _on_leader_style(style: String):
 	if _queue_decision(GameCommandClass.create_leader_action("style", style), "👤 سبک رهبری: " + LeaderManager.get_style_name(style)):
 		_toast("👤 سبک رهبری «" + LeaderManager.get_style_name(style) + "» ثبت شد — با پایان نوبت اعمال می‌شود")
@@ -1710,6 +1777,41 @@ func _on_leader_speech(tone: String):
 func _on_leader_presence():
 	if _queue_decision(GameCommandClass.create_leader_action("presence"), "🏃 حضور میدانی رهبر"):
 		_toast("🏃 حضور میدانی ثبت شد — با پایان نوبت رهبر به میان مردم می‌رود")
+		_switch_tab("dashboard")
+
+func _on_leader_inspection():
+	if _queue_decision(GameCommandClass.create_leader_action("inspection"), "🏙️ بازدید سرزده رهبر"):
+		_toast("🏙️ بازدید سرزده ثبت شد — با پایان نوبت انجام می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_amnesty():
+	if _queue_decision(GameCommandClass.create_leader_action("amnesty"), "📜 عفو عمومی"):
+		_toast("📜 عفو عمومی ثبت شد — با پایان نوبت اعلام می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_honors():
+	if _queue_decision(GameCommandClass.create_leader_action("honors"), "🎖️ اعطای نشان ملی"):
+		_toast("🎖️ نشان ملی ثبت شد — با پایان نوبت اعطا می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_un_address():
+	if _queue_decision(GameCommandClass.create_leader_action("un_address"), "🕊️ سخنرانی در سازمان ملل"):
+		_toast("🕊️ سخنرانی سازمان ملل ثبت شد — با پایان نوبت ایراد می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_interview():
+	if _queue_decision(GameCommandClass.create_leader_action("interview"), "📺 گفتگوی تلویزیونی"):
+		_toast("📺 گفتگوی تلویزیونی ثبت شد — با پایان نوبت پخش می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_summit():
+	if _queue_decision(GameCommandClass.create_leader_action("summit"), "💼 دیدار با سرمایه‌داران"):
+		_toast("💼 دیدار سرمایه‌داران ثبت شد — با پایان نوبت برگزار می‌شود")
+		_switch_tab("dashboard")
+
+func _on_leader_dialogue():
+	if _queue_decision(GameCommandClass.create_leader_action("dialogue"), "🕌 گفتگوی ملی اقوام و مذاهب"):
+		_toast("🕌 گفتگوی ملی ثبت شد — با پایان نوبت برگزار می‌شود")
 		_switch_tab("dashboard")
 
 func _on_leader_hidden_toggle(hidden: bool):
