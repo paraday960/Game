@@ -561,7 +561,8 @@ func interview(state: Dictionary, tick: int) -> Dictionary:
 	leader["last_interview_turn"] = tick
 	state["policies"]["political_capital"] = max(0.0, float(state["policies"].get("political_capital", 0.0)) - 0.5)
 	if freedom < 0.35:
-		media["trust"] = clampf(trust - 0.01, 0.05, 1.0)
+		# جریمه از مجموع دریفت‌های مثبت ماهانهٔ رسانه (~+۰٫۰۱) بزرگ‌تر است تا جهت اثر تضمین شود
+		media["trust"] = clampf(trust - 0.03, 0.05, 1.0)
 		leader["popularity_world"] = clampf(float(leader.get("popularity_world", 50.0)) - 1.0, 0.0, 100.0)
 		state["media"] = media
 		state["leader"] = leader
