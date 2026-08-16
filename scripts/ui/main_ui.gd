@@ -2674,6 +2674,17 @@ func _build_parliament_card(st: Dictionary):
 	var last: Dictionary = par.get("last_result", {})
 	if not last.is_empty():
 		_row(card, "نتیجه انتخابات گذشته", "پیروزی با %s٪" % PersianFormatter.to_persian_digits(str(int(float(last.get("support", 0.5)) * 100.0))) if bool(last.get("won", false)) else "اقلیت مجلس")
+		var pk := int(last.get("promises_kept", 0)); var pb := int(last.get("promises_broken", 0))
+		if pk > 0 or pb > 0:
+			var pr_lbl = Label.new()
+			if pb > 0:
+				pr_lbl.text = "💔 %s وعده شکسته — رأی‌دهندگان بی‌اعتماد شدند" % PersianFormatter.to_persian_digits(str(pb))
+				pr_lbl.modulate = Color(1.0, 0.55, 0.5)
+			else:
+				pr_lbl.text = "✅ هر %s وعده محقق شد — اعتماد و ماندات قوی" % PersianFormatter.to_persian_digits(str(pk))
+				pr_lbl.modulate = Color(0.5, 0.9, 0.65)
+			pr_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; pr_lbl.add_theme_font_size_override("font_size", 15)
+			card.add_child(pr_lbl)
 	# وعده‌ها (۶ نوبت آخر قبل از انتخابات)
 	var promises: Array = par.get("promises", [])
 	if turns_left <= 6 and turns_left > 0:
@@ -2686,11 +2697,11 @@ func _build_parliament_card(st: Dictionary):
 			var info: Dictionary = ParliamentManager.PROMISES[pid]
 			var row = HBoxContainer.new(); row.add_theme_constant_override("separation", 8); card.add_child(row)
 			var info_col = VBoxContainer.new(); info_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; info_col.add_theme_constant_override("separation", 2); row.add_child(info_col)
-			var name = Label.new(); name.text = str(info.get("name_fa", pid)) + (" ✔" if promises.has(pid) else "")
+			var name = Label.new(); name.text = str(info.get("name_fa", pid)) + (" ✔" if ParliamentManager.has_promise(promises, pid) else "")
 			name.add_theme_font_size_override("font_size", 17); info_col.add_child(name)
 			var eff = Label.new(); eff.text = str(info.get("effect", "")); eff.add_theme_font_size_override("font_size", 13); eff.modulate = TEXT_FAINT; info_col.add_child(eff)
 			var btn = Button.new(); btn.text = "انتخاب"; btn.custom_minimum_size = Vector2(90, 40)
-			btn.disabled = promises.has(pid) or promises.size() >= 2
+			btn.disabled = ParliamentManager.has_promise(promises, pid) or promises.size() >= 2
 			btn.add_theme_font_size_override("font_size", 15)
 			btn.pressed.connect(FeedbackManager.play_click)
 			btn.pressed.connect(_on_promise.bind(pid))

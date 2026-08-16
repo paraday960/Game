@@ -13,14 +13,59 @@ extends Node
 # ────────────────────────────────────────────────────────────────────────────
 
 const ELECTION_INTERVAL := 48
+# هر وعده یک «تعهد قابل سنجش» است: متریک و جهتِ محقق‌شدن (عمق‌بخشی ۴۵).
+# در انتخابات به‌جای اجرای اتفاقی، بررسی می‌شود که آیا بازیکن واقعاً آن را
+# محقق کرده است؛ وعدهٔ شکسته رأی و اعتماد می‌سوزاند.
 const PROMISES := {
-	"tax_cut": {"name_fa": "کاهش مالیات", "effect": "رشد خصوصی +، درآمد دولت −"},
-	"welfare_expand": {"name_fa": "گسترش رفاه", "effect": "شادی +، بودجه −"},
-	"infra_boom": {"name_fa": "جهش زیرساخت", "effect": "زیرساخت +، بدهی +"},
-	"security_line": {"name_fa": "خط امنیتی قاطع", "effect": "ارتش +، تنش منطقه‌ای +"},
-	"fight_corruption": {"name_fa": "مبارزه با فساد", "effect": "فساد −، فشار نخبگان"},
-	"green_turn": {"name_fa": "چرخش سبز", "effect": "انرژی پاک +، محبوبیت جهانی +"}
+	"tax_cut": {"name_fa": "کاهش مالیات", "effect": "رشد خصوصی +، درآمد دولت −",
+		"metric": "economy.tax_rate", "direction": "down"},
+	"welfare_expand": {"name_fa": "گسترش رفاه", "effect": "شادی +، بودجه −",
+		"metric": "population.happiness", "direction": "up"},
+	"infra_boom": {"name_fa": "جهش زیرساخت", "effect": "زیرساخت +، بدهی +",
+		"metric": "infrastructure.quality", "direction": "up"},
+	"security_line": {"name_fa": "خط امنیتی قاطع", "effect": "ارتش +، تنش منطقه‌ای +",
+		"metric": "military.power", "direction": "up"},
+	"fight_corruption": {"name_fa": "مبارزه با فساد", "effect": "فساد −، فشار نخبگان",
+		"metric": "politics.corruption", "direction": "down"},
+	"green_turn": {"name_fa": "چرخش سبز", "effect": "انرژی پاک +، محبوبیت جهانی +",
+		"metric": "technology.branches.انرژی_پاک", "direction": "up"}
 }
+
+# ── کمکی: خواندن متریک از مسیر و بررسی محقق‌شدن ──
+func _read_metric(state: Dictionary, path: String) -> float:
+	var current: Variant = state
+	for part in path.split("."):
+		if current is Dictionary and current.has(part):
+			current = current[part]
+		else:
+			return -1.0
+	return float(current) if current is float or current is int else -1.0
+
+func _promise_kept(state: Dictionary, promise: Dictionary) -> bool:
+	var pid := str(promise.get("id", ""))
+	var definition: Dictionary = PROMISES.get(pid, {})
+	var metric := str(definition.get("metric", ""))
+	var direction := str(definition.get("direction", "up"))
+	var baseline := float(promise.get("baseline", -1.0))
+	var current := _read_metric(state, metric)
+	if baseline < 0.0 or current < 0.0:
+		return false
+	# آستانه: تغییر واقعی لازم است نه نوسان جزیی
+	if direction == "down":
+		return current < baseline - 0.005
+	return current > baseline + 0.005
+
+func promise_ids(promises: Array) -> Array:
+	var out: Array = []
+	for p in promises:
+		if p is Dictionary:
+			out.append(str(p.get("id", "")))
+		else:
+			out.append(str(p))
+	return out
+
+func has_promise(promises: Array, pid: String) -> bool:
+	return promise_ids(promises).has(pid)
 
 func ensure(state: Dictionary) -> Dictionary:
 	if not state.has("parliament"):
@@ -65,9 +110,10 @@ func can_promise(state: Dictionary, promise_id: String) -> Dictionary:
 	var par: Dictionary = state["parliament"]
 	if int(par.get("next_election_turn", 0)) > int(state.get("tick", 0)) + 6:
 		return {"valid": false, "reason": "وعده‌ها فقط در ۶ نوبت پایانی قبل از انتخابات ثبت می‌شوند"}
-	if par.get("promises", []).size() >= 2:
+	var promises: Array = par.get("promises", [])
+	if promises.size() >= 2:
 		return {"valid": false, "reason": "حداکثر ۲ وعده می‌توانید بدهید"}
-	if par.get("promises", []).has(promise_id):
+	if has_promise(promises, promise_id):
 		return {"valid": false, "reason": "این وعده قبلاً ثبت شده"}
 	return {"valid": true, "reason": ""}
 
@@ -78,7 +124,13 @@ func add_promise(state: Dictionary, promise_id: String) -> Dictionary:
 		return {"success": false, "reason": check.reason, "state": state, "events": []}
 	var par: Dictionary = state["parliament"]
 	var promises: Array = par.get("promises", [])
-	promises.append(promise_id)
+	# baseline از وضعیت فعلی متریک — مبنای سنجش محقق‌شدن در انتخابات
+	var definition: Dictionary = PROMISES[promise_id]
+	promises.append({
+		"id": promise_id,
+		"promised_turn": int(state.get("tick", 0)),
+		"baseline": _read_metric(state, str(definition.get("metric", "")))
+	})
 	par["promises"] = promises
 	state["parliament"] = par
 	return {"success": true, "state": state,
@@ -103,13 +155,13 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 	var trust := float(media.get("trust", 0.55))
 	var media_approval := MediaManager.overall_approval(state)
 
-	# پشتیبانی از شاخص‌ها + وعده‌ها
+	# پشتیبانی از شاخص‌ها + وعده‌ها (وعده‌ها رأی می‌آورند — اما باید محقق شوند)
 	var support := 0.35 + happiness * 0.3 + stability * 0.15 + media_approval / 100.0 * 0.2
 	support -= unemployment * 0.8 + inflation * 0.6 + corruption * 0.4
 	if at_war:
 		support -= 0.03
-	for pid in par.get("promises", []):
-		support += 0.02  # وعده‌ها رأی می‌آورند
+	for pr in par.get("promises", []):
+		support += 0.02
 	support += (float(pol.get("political_capital", 0.0)) - 2.5) * 0.01
 	par["support"] = clampf(support, 0.05, 0.95)
 
@@ -129,31 +181,35 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 		par["snap_used"] = false
 		var promises: Array = par.get("promises", [])
 		par["promises"] = []
-		# اثر وعده‌های محقق‌شده (ماندات)
-		var promise_effects := 0.0
-		for pid in promises:
-			match str(pid):
-				"tax_cut":
-					econ["tax_rate"] = clampf(float(econ.get("tax_rate", 0.2)) - 0.02, 0.05, 0.45)
-					promise_effects += 0.02
-				"welfare_expand":
-					pop["happiness"] = clampf(float(pop.get("happiness", 0.6)) + 0.02, 0.05, 1.0)
-					promise_effects += 0.01
-				"infra_boom":
-					state.get("infrastructure", {})["quality"] = clampf(float(state.get("infrastructure", {}).get("quality", 0.55)) + 0.01, 0.05, 1.0)
-					econ["national_debt"] = float(econ.get("national_debt", 0.0)) + float(econ.get("gdp", 1.0)) * 0.005
-					promise_effects += 0.01
-				"security_line":
-					state.get("military", {})["power"] = float(state.get("military", {}).get("power", 50.0)) * 1.02
-					promise_effects += 0.01
-				"fight_corruption":
-					pol["corruption"] = clampf(float(pol.get("corruption", 0.3)) - 0.03, 0.0, 1.0)
-					promise_effects += 0.01
-				"green_turn":
-					state.get("technology", {}).get("branches", {})["انرژی_پاک"] = clampf(float(state.get("technology", {}).get("branches", {}).get("انرژی_پاک", 0.15)) + 0.01, 0.0, 1.0)
-					promise_effects += 0.01
+		# پاسخگویی وعده‌ها (عمق‌بخشی ۴۵): به‌جای اجرای اتفاقی، سنجش محقق‌شدن.
+		# وعدهٔ محقق‌شده → ماندات و اعتماد؛ وعدهٔ شکسته → رأی و اعتماد می‌سوزد.
+		var kept_count := 0
+		var broken_count := 0
+		var broken_names: Array = []
+		for pr in promises:
+			var pid := str(pr.get("id", ""))
+			if _promise_kept(state, pr):
+				kept_count += 1
+				events.append({"type": "promise_kept", "promise_id": pid,
+					"message": "✅ وعدهٔ «%s» محقق شد؛ رأی‌دهندگان به عمل دولت رأی دادند" % PROMISES.get(pid, {}).get("name_fa", pid)})
+			else:
+				broken_count += 1
+				broken_names.append(str(PROMISES.get(pid, {}).get("name_fa", pid)))
+				media["trust"] = clampf(float(media.get("trust", 0.55)) - 0.02, 0.05, 1.0)
+				pol["trust"] = clampf(float(pol.get("trust", 0.55)) - 0.02, 0.05, 1.0)
+		if broken_count > 0:
+			events.append({"type": "broken_promise", "count": broken_count,
+				"message": "💔 وعده‌های شکسته: «%s» — رأی‌دهندگان ناامید و بی‌اعتماد شدند" % "، ".join(broken_names)})
+		# ماندات: وعده‌های محقق‌شده دستور قوی می‌سازند؛ شکسته‌ها آن را می‌شکنند
+		var promise_effects := float(kept_count) * 0.02 - float(broken_count) * 0.03
+		result_support = clampf(result_support + promise_effects, 0.05, 0.95)
+		result_mandate = clampf((result_support - 0.35) / 0.3, 0.15, 1.0)
+		won = result_support >= 0.42
+		par["last_result"] = {"turn": turn, "support": result_support, "mandate": result_mandate, "won": won, "promises_kept": kept_count, "promises_broken": broken_count}
+		par["mandate"] = result_mandate
 		var history: Array = par.get("history", [])
-		history.append({"turn": turn, "support": result_support, "mandate": result_mandate, "won": won, "promises": promises.duplicate()})
+		history.append({"turn": turn, "support": result_support, "mandate": result_mandate, "won": won,
+			"promises_kept": kept_count, "promises_broken": broken_count, "promises": promises.duplicate()})
 		while history.size() > 20:
 			history.pop_front()
 		par["history"] = history
