@@ -48,6 +48,13 @@ func ensure(state: Dictionary) -> Dictionary:
 			"figures": [], "threat": 0.15, "coup_attempts": 0,
 			"last_exile_turn": -99, "last_surveil_turn": -99, "last_recruit_turn": -99
 		}
+		state["rivals"]["figures"] = []
+		# پر کردن اولیه فقط هنگام ساخت بخش — جایگزینی بعدی فقط از مسیر
+		# simulate_month و با رعایت RECRUIT_COOLDOWN انجام می‌شود (تبعید اثر دارد)
+		var fill_figures: Array = state["rivals"]["figures"]
+		while fill_figures.size() < MAX_FIGURES:
+			state = _spawn_figure(state, int(state.get("tick", 0)))
+			fill_figures = state["rivals"]["figures"]
 	var rivals: Dictionary = state["rivals"]
 	rivals["threat"] = clampf(float(rivals.get("threat", 0.15)), 0.0, 1.0)
 	rivals["coup_attempts"] = int(rivals.get("coup_attempts", 0))
@@ -59,10 +66,6 @@ func ensure(state: Dictionary) -> Dictionary:
 		figures[i] = _normalize_figure(figures[i], "%d_%d" % [int(rivals.get("last_recruit_turn", 0)), i])
 	rivals["figures"] = figures
 	state["rivals"] = rivals
-	while figures.size() < MAX_FIGURES:
-		state = _spawn_figure(state, int(state.get("tick", 0)))
-		rivals = state["rivals"]
-		figures = rivals["figures"]
 	return state
 
 # ── شبیه‌سازی ماهانه: دریفت حمایت/جاه‌طلبی/وفاداری، توطئه و کودتا ──

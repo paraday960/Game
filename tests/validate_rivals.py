@@ -71,6 +71,8 @@ check("نوشتن latchها", 'rivals["last_exile_turn"] = tick' in rm and 'riva
       "نوشتن latchها نیست")
 check("سقف تعداد رقبا", "figures.size() < MAX_FIGURES" in rm and "remove_at" in rm,
       "آرایهٔ رقبا سقف ندارد (نشت رشد)")
+check("جایگزینی فقط با کول‌داون", "while fill_figures.size() < MAX_FIGURES:" in rm,
+      "ensure بلافاصله رقیب تبعیدشده را جایگزین می‌کند (کول‌داون استخدام دور می‌خورد)")
 
 # 6) فرمان و موتور
 cmd = read(os.path.join(ROOT, "scripts", "core", "command.gd"))

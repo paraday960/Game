@@ -10,6 +10,7 @@ func _init():
 	var GE = root.get_node("GameEngine")
 	var CS = load("res://scripts/core/command.gd")
 	var RM = root.get_node("RivalsManager")
+	var LM = root.get_node("LeaderManager")
 
 	# ── سناریو ۱: ساختار اولیه ──
 	var rv_state: Dictionary = GS.state.duplicate(true)
@@ -92,7 +93,8 @@ func _init():
 		var rs_support := float(rs_found.get("support", 99.0))
 		if str(rs_found.get("status", "")) == "plotting":
 			fails.append("نظارت توطئه را نشکست")
-		elif rs_support > 55.0:
+		elif rs_support > 62.0:
+			# ۸۰ − ۲۵ = ۵۵ + حداکثر دریفت ماهانه ≈ ۷ (اسلک)
 			fails.append("نظارت حمایت توطئه‌گر را نریخت (%.1f)" % rs_support)
 		else:
 			print("✓ نظارت: توطئه شکست و حمایت به %.1f ریخت" % rs_support)
@@ -127,6 +129,7 @@ func _init():
 	# ── سناریو ۶: کودتا همیشه می‌شکند — رهبر برکنارنشدنی است ──
 	var rp_state: Dictionary = GS.state.duplicate(true)
 	rp_state = RM.ensure(rp_state)
+	rp_state = LM.ensure(rp_state)
 	rp_state["rivals"]["figures"][0]["status"] = "plotting"
 	rp_state["rivals"]["figures"][0]["support"] = 90.0
 	rp_state["rivals"]["figures"][0]["ambition"] = 90.0
