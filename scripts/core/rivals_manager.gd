@@ -365,9 +365,9 @@ func _spawn_figure(state: Dictionary, turn: int) -> Dictionary:
 	var figures: Array = rivals.get("figures", [])
 	var index := figures.size()
 	var id := "%d_%d" % [turn, index]
-	var first := FIRST_NAMES[(turn * 3 + index) % FIRST_NAMES.size()]
-	var last := LAST_NAMES[(turn * 7 + index * 5) % LAST_NAMES.size()]
-	var faction := FactionManager.FACTIONS[(turn + index) % FactionManager.FACTIONS.size()]
+	var first: String = FIRST_NAMES[(turn * 3 + index) % FIRST_NAMES.size()]
+	var last: String = LAST_NAMES[(turn * 7 + index * 5) % LAST_NAMES.size()]
+	var faction: String = FactionManager.FACTIONS[(turn + index) % FactionManager.FACTIONS.size()]
 	var faction_power := float(state.get("factions", {}).get(faction, {}).get("power", 45.0))
 	var figure := {
 		"id": id, "name_fa": "%s %s" % [first, last], "faction": faction,
