@@ -12,7 +12,7 @@ const SUPPORTED_COMMANDS = [
 	"next_tick", "tax_set", "budget_allocate", "monetary_policy", "tariff_set", "research_start", "diplomacy",
 	"country_select", "policy_change", "municipal_action", "military_program", "military_doctrine", "national_project", "cabinet_change", "law_change", "intelligence_operation", "decision_resolve",
 	"trade_route_attack", "chokepoint_action", "map_operation", "battle_plan", "construction", "map_building",
-	"assassinate", "leader_hidden", "leader_name", "faction_action", "set_war_goal",
+	"assassinate", "leader_hidden", "leader_name", "faction_action", "faction_deal", "set_war_goal",
 	"general_recruit", "general_assign", "media_policy", "media_campaign",
 	"commodity_trade", "org_toggle", "org_vote",
 	"snap_election", "campaign_promise", "forex_intervene", "forex_devalue",
@@ -494,6 +494,11 @@ func _validate_commands(commands: Array, state: Dictionary, expected_tick: int, 
 			var faction_check = FactionManager.can_action(state, faction_name, str(cmd.payload.get("action", "")))
 			if not faction_check.valid:
 				return {"valid": false, "reason": faction_check.reason}
+		elif cmd.type == "faction_deal":
+			var fd_faction = str(cmd.payload.get("faction", ""))
+			var fd_check = FactionManager.can_deal(state, fd_faction, str(cmd.payload.get("deal_id", "")))
+			if not fd_check.valid:
+				return {"valid": false, "reason": fd_check.reason}
 		elif cmd.type == "set_war_goal":
 			var wg_target = str(cmd.payload.get("target", ""))
 			var wg_goal = str(cmd.payload.get("goal", ""))
@@ -1016,6 +1021,12 @@ func _apply_command_to_snapshot(snapshot: Dictionary, cmd) -> Dictionary:
 		for ev in faction_result.get("events", []):
 			if ev is Dictionary:
 				EventLog.log_event("faction_event", ev, cmd.tick, cmd.version)
+	elif cmd.type == "faction_deal":
+		var fd_result = FactionManager.make_deal(snapshot, str(cmd.payload.get("faction", "")), str(cmd.payload.get("deal_id", "")), cmd.tick)
+		snapshot = fd_result.state
+		for fd_ev in fd_result.get("events", []):
+			if fd_ev is Dictionary:
+				EventLog.log_event("faction_event", fd_ev, cmd.tick, cmd.version)
 	elif cmd.type == "set_war_goal":
 		var wg_target2 = str(cmd.payload.get("target", ""))
 		if snapshot.get("world", {}).get("wars", {}).has(wg_target2):

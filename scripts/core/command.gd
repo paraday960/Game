@@ -130,6 +130,10 @@ static func create_leader_name(name: String):
 static func create_faction_action(faction: String, action: String):
 	return _self_script().new("faction_action", {"faction": faction, "action": action})
 
+static func create_faction_deal(faction: String, deal_id: String):
+	# معامله با جناح (عمق‌بخشی ۴۶): قول در ازای حمایت
+	return _self_script().new("faction_deal", {"faction": faction, "deal_id": deal_id})
+
 static func create_set_war_goal(target: String, goal: String):
 	return _self_script().new("set_war_goal", {"target": target, "goal": goal})
 

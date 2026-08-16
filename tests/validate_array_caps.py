@@ -66,7 +66,7 @@ LOCAL_ARRAYS = {
     "participants", "translated", "prerequisite_names", "unlocked_names",
     "lines", "matches", "shade_pts", "_confetti", "_stars", "_shooting_stars",
     "_dust", "_note_cache", "_unit_screen_records", "_city_screen_records",
-    "tick_events", "generated_events", "events_out",  # محلیِ هر تیک (در state ذخیره نمی‌شوند)
+    "tick_events", "generated_events", "events_out", "remaining",  # محلیِ هر تیک (در state ذخیره نمی‌شوند)
 }
 
 suspicious = []

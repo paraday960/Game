@@ -13,6 +13,109 @@ extends Node
 
 const FACTIONS := ["ارتش", "روحانیت", "نخبگان اقتصادی", "تکنوکرات‌ها", "پوپولیست‌ها", "رسانه"]
 const CRISIS_THRESHOLD := 22.0
+# معاملات جناح‌ها (عمق‌بخشی ۴۶): بازیکن به جناح قول می‌دهد یک اقدام مشخص را
+# انجام دهد؛ اگر به قولش عمل کند، وفاداری و نفوذ پاداش می‌گیرد؛ اگر نشکند،
+# وفاداری می‌سوزد و بحران نزدیک‌تر می‌شود (پاسخگویی مثل وعده‌های انتخاباتی).
+const DEALS := {
+	"ارتش": [
+		{"id": "defense_commit", "title_fa": "تعهد بودجهٔ دفاعی", "desc_fa": "سهم دفاع را به ۱۲٪ برسانید",
+			"metric": "economy.budget_allocations.ارتش", "direction": "gte", "target": 0.10, "loyalty": 15.0, "power": 2.0},
+		{"id": "war_ready", "title_fa": "آمادگی رزمی", "desc_fa": "آمادگی ارتش را به ۷۵٪ برسانید",
+			"metric": "military.readiness", "direction": "gte", "target": 0.75, "loyalty": 10.0, "power": 1.5}
+	],
+	"روحانیت": [
+		{"id": "family_law", "title_fa": "قانون حمایت از خانواده", "desc_fa": "قانون حمایت از خانواده را تصویب کنید",
+			"metric": "legislation.enacted.family_support_law", "direction": "exists", "target": 1.0, "loyalty": 15.0, "power": 1.5},
+		{"id": "moral_stability", "title_fa": "آرامش اجتماعی", "desc_fa": "تنش اجتماعی را زیر ۲۵٪ نگه دارید",
+			"metric": "politics.tension", "direction": "lte", "target": 0.30, "loyalty": 10.0, "power": 1.0}
+	],
+	"نخبگان اقتصادی": [
+		{"id": "tax_relief", "title_fa": "کاهش مالیات", "desc_fa": "نرخ مالیات را به ۱۵٪ برسانید",
+			"metric": "economy.tax_rate", "direction": "lte", "target": 0.18, "loyalty": 15.0, "power": 2.0},
+		{"id": "business_stability", "title_fa": "ثبات برای سرمایه", "desc_fa": "ثبات سیاسی را بالای ۶۵٪ نگه دارید",
+			"metric": "politics.stability", "direction": "gte", "target": 0.60, "loyalty": 10.0, "power": 1.5}
+	],
+	"تکنوکرات‌ها": [
+		{"id": "tech_funding", "title_fa": "بودجهٔ فناوری", "desc_fa": "سهم فناوری را به ۸٪ برسانید",
+			"metric": "economy.budget_allocations.فناوری", "direction": "gte", "target": 0.06, "loyalty": 15.0, "power": 2.0},
+		{"id": "research_boost", "title_fa": "جهش پژوهش", "desc_fa": "نرخ پژوهش را بالای ۱۲ نگه دارید",
+			"metric": "technology.research_rate", "direction": "gte", "target": 10.0, "loyalty": 10.0, "power": 1.5}
+	],
+	"پوپولیست‌ها": [
+		{"id": "welfare_boost", "title_fa": "بستهٔ رفاهی", "desc_fa": "سهم رفاه را به ۱۸٪ برسانید",
+			"metric": "economy.budget_allocations.رفاه", "direction": "gte", "target": 0.17, "loyalty": 12.0, "power": 1.5},
+		{"id": "anti_elite", "title_fa": "مالیات سنگین بر ثروت", "desc_fa": "نرخ مالیات را بالای ۲۵٪ نگه دارید",
+			"metric": "economy.tax_rate", "direction": "gte", "target": 0.25, "loyalty": 10.0, "power": 1.5}
+	],
+	"رسانه": [
+		{"id": "press_freedom", "title_fa": "آزادی رسانه", "desc_fa": "قانون آزادی اطلاعات را تصویب کنید",
+			"metric": "legislation.enacted.freedom_of_information", "direction": "exists", "target": 1.0, "loyalty": 12.0, "power": 2.0},
+		{"id": "transparency", "title_fa": "شفافیت", "desc_fa": "فساد را زیر ۲۰٪ نگه دارید",
+			"metric": "politics.corruption", "direction": "lte", "target": 0.25, "loyalty": 10.0, "power": 1.0}
+	]
+}
+
+func get_deals(faction: String) -> Array:
+	return DEALS.get(faction, []).duplicate(true)
+
+func _read_metric(state: Dictionary, path: String) -> float:
+	var current: Variant = state
+	for part in path.split("."):
+		if current is Dictionary and current.has(part):
+			current = current[part]
+		else:
+			return -1.0
+	return float(current) if current is float or current is int else -1.0
+
+func _deal_kept(state: Dictionary, deal: Dictionary) -> bool:
+	var metric := str(deal.get("metric", ""))
+	var direction := str(deal.get("direction", "gte"))
+	var target := float(deal.get("target", 0.0))
+	var current := _read_metric(state, metric)
+	if current < 0.0:
+		return false
+	match direction:
+		"lte": return current <= target
+		"exists": return current >= 0.0
+	return current >= target
+
+func can_deal(state: Dictionary, faction: String, deal_id: String) -> Dictionary:
+	if not FACTIONS.has(faction):
+		return {"valid": false, "reason": "جناح نامعتبر است"}
+	var found := false
+	for deal in get_deals(faction):
+		if str(deal.get("id", "")) == deal_id:
+			found = true
+			break
+	if not found:
+		return {"valid": false, "reason": "معامله نامعتبر است"}
+	state = ensure(state)
+	var f: Dictionary = state["factions"].get(faction, {})
+	for active in f.get("deals", []):
+		if str(active.get("id", "")) == deal_id:
+			return {"valid": false, "reason": "این معامله قبلاً ثبت شده"}
+	if f.get("deals", []).size() >= 2:
+		return {"valid": false, "reason": "حداکثر ۲ معاملهٔ فعال با هر جناح"}
+	return {"valid": true, "reason": ""}
+
+func make_deal(state: Dictionary, faction: String, deal_id: String, turn: int) -> Dictionary:
+	var check := can_deal(state, faction, deal_id)
+	if not check.valid:
+		return {"success": false, "reason": check.reason, "state": state, "events": []}
+	state = ensure(state)
+	var f: Dictionary = state["factions"][faction]
+	var deals: Array = f.get("deals", [])
+	deals.append({"id": deal_id, "promised_turn": turn})
+	f["deals"] = deals
+	state["factions"][faction] = f
+	var title := ""
+	for deal in get_deals(faction):
+		if str(deal.get("id", "")) == deal_id:
+			title = str(deal.get("title_fa", deal_id))
+			break
+	return {"success": true, "state": state, "events": [{
+		"type": "faction_deal", "faction": faction, "deal_id": deal_id,
+		"message": "🤝 «%s» به %s قول داد: «%s»" % [title, faction, title]}]}
 
 func ensure(state: Dictionary) -> Dictionary:
 	if not state.has("factions"):
@@ -110,6 +213,47 @@ func simulate_month(state: Dictionary, turn: int) -> Dictionary:
 			state = crisis.state
 			events.append_array(crisis.events)
 			f = factions[fid]
+
+	# ── پاسخگویی معاملات (عمق‌بخشی ۴۶) ──
+	# هر معاملهٔ ثبت‌شده بررسی می‌شود: محقق → پاداش وفاداری/نفوذ؛
+	# محقق‌نشده → وفاداری می‌سوزد (شکستن قول به جناح).
+	for fid in FACTIONS:
+		var f: Dictionary = factions[fid]
+		var active_deals: Array = f.get("deals", [])
+		if active_deals.is_empty():
+			continue
+		var remaining: Array = []
+		for active in active_deals:
+			var deal_def := {}
+			for dd in get_deals(fid):
+				if str(dd.get("id", "")) == str(active.get("id", "")):
+					deal_def = dd
+					break
+			if deal_def.is_empty():
+				continue
+			if _deal_kept(state, deal_def):
+				f["loyalty"] = clampf(float(f["loyalty"]) + float(deal_def.get("loyalty", 10.0)), 0.0, 100.0)
+				f["power"] = clampf(float(f["power"]) + float(deal_def.get("power", 1.0)), 5.0, 95.0)
+				events.append({"type": "faction_deal_kept", "faction": fid, "deal_id": str(deal_def.get("id", "")),
+					"message": "✅ «%s» به قول خود عمل کرد؛ %s وفادارتر و قدرتمندتر شد" % [str(deal_def.get("title_fa", "معامله")), fid]})
+			else:
+				f["loyalty"] = clampf(float(f["loyalty"]) - 18.0, 0.0, 100.0)
+				events.append({"type": "faction_deal_broken", "faction": fid, "deal_id": str(deal_def.get("id", "")),
+					"message": "💔 «%s» قول خود را به %s شکست؛ وفاداری جناح به‌شدت کاهش یافت" % [str(deal_def.get("title_fa", "معامله")), fid]})
+				remaining.append(active)  # معاملهٔ شکسته دوباره قابل پیشنهاد می‌شود
+		f["deals"] = remaining
+
+	# ── واکنش جناح‌ها به قوانین (گسترش، عمق‌بخشی ۴۶) ──
+	var enacted: Dictionary = state.get("legislation", {}).get("enacted", {})
+	if enacted.has("investment_code"):
+		elites["loyalty"] = clampf(float(elites["loyalty"]) + 2.0, 0.0, 100.0)
+	if enacted.has("labor_protection"):
+		elites["loyalty"] = clampf(float(elites["loyalty"]) - 1.5, 0.0, 100.0)
+	if enacted.has("emergency_powers"):
+		army["loyalty"] = clampf(float(army["loyalty"]) + 2.0, 0.0, 100.0)
+	if enacted.has("anti_corruption_act"):
+		elites["loyalty"] = clampf(float(elites["loyalty"]) - 2.0, 0.0, 100.0)
+		media["loyalty"] = clampf(float(media["loyalty"]) + 1.5, 0.0, 100.0)
 
 	# ── اثر نفوذ جناح‌ها بر کشور ──
 	var elites_power := float(elites["power"]) / 100.0

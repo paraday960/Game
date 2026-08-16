@@ -2642,6 +2642,24 @@ func _build_factions_card(state: Dictionary):
 			btn.pressed.connect(_on_faction_action.bind(fid, act[0], act[1]))
 			_mark_decision_button(btn, "fac:" + fid + ":" + act[0])
 			btn_row.add_child(btn)
+		var deal_row = HBoxContainer.new(); deal_row.add_theme_constant_override("separation", 5); box.add_child(deal_row)
+		for deal in FactionManager.get_deals(fid):
+			var deal_check = FactionManager.can_deal(state, fid, str(deal.get("id", "")))
+			var dbtn = Button.new(); dbtn.text = "🤝 " + str(deal.get("title_fa", deal.get("id", "")))
+			dbtn.tooltip_text = str(deal.get("desc_fa", "")) if deal_check.valid else str(deal_check.reason)
+			dbtn.disabled = not deal_check.valid
+			dbtn.custom_minimum_size = Vector2(0, 36); dbtn.add_theme_font_size_override("font_size", 13)
+			dbtn.pressed.connect(FeedbackManager.play_click)
+			dbtn.pressed.connect(_on_faction_deal.bind(fid, str(deal.get("id", ""))))
+			_mark_decision_button(dbtn, "facdeal:" + fid + ":" + str(deal.get("id", "")))
+			deal_row.add_child(dbtn)
+		var active_deals: Array = f.get("deals", [])
+		if not active_deals.is_empty():
+			var deal_names: Array = []
+			for d in active_deals:
+				deal_names.append(str(d.get("id", "؟")))
+			var dl = Label.new(); dl.text = "⏳ معاملات فعال: " + "، ".join(deal_names)
+			dl.add_theme_font_size_override("font_size", 12); dl.modulate = ACCENT_GOLD; box.add_child(dl)
 
 func _faction_status_fa(loyalty: float) -> String:
 	if loyalty < 22.0:
@@ -2651,6 +2669,16 @@ func _faction_status_fa(loyalty: float) -> String:
 	if loyalty > 70.0:
 		return "وفادار"
 	return "متوازن"
+
+func _on_faction_deal(faction: String, deal_id: String):
+	var title := ""
+	for deal in FactionManager.get_deals(faction):
+		if str(deal.get("id", "")) == deal_id:
+			title = str(deal.get("title_fa", deal_id))
+			break
+	if _queue_decision(GameCommandClass.create_faction_deal(faction, deal_id), "🤝 معامله با " + faction + ": " + title):
+		_toast("🤝 معامله ثبت شد — با پایان نوبت به " + faction + " قول داده می‌شود")
+		_switch_tab("government")
 
 func _on_faction_action(faction: String, action: String, label: String):
 	var cmd = GameCommandClass.create_faction_action(faction, action)
@@ -8935,6 +8963,7 @@ func _command_queue_key(cmd) -> String:
 		"chokepoint_action": return "choke:" + str(p.get("chokepoint_id", ""))
 		"decision_resolve": return "dec:" + str(p.get("decision_id", ""))
 		"faction_action": return "fac:" + str(p.get("faction", "")) + ":" + str(p.get("action", ""))
+		"faction_deal": return "facdeal:" + str(p.get("faction", "")) + ":" + str(p.get("deal_id", ""))
 		"set_war_goal": return "wargoal:" + str(p.get("target", ""))
 		"general_recruit": return "general_recruit"
 		"general_assign": return "gen_assign:" + str(p.get("commander_id", "")) + ":" + str(p.get("war_target", ""))
