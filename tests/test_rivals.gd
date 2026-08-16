@@ -134,6 +134,7 @@ func _init():
 	rp_state["rivals"]["figures"][0]["support"] = 90.0
 	rp_state["rivals"]["figures"][0]["ambition"] = 90.0
 	rp_state["rivals"]["figures"][0]["loyalty"] = 20.0
+	rp_state["policies"]["political_capital"] = 2.0
 	var rp_id := str(rp_state["rivals"]["figures"][0]["id"])
 	var rp_stab0 := float(rp_state["politics"]["stability"])
 	var rp_cap0 := float(rp_state["policies"]["political_capital"])
