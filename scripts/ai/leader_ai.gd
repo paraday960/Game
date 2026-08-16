@@ -9,10 +9,8 @@ extends BaseAI
 
 func diagnose(state: Dictionary) -> Dictionary:
 	var leader: Dictionary = state.get("leader", {})
-	if leader.is_empty():
-		return {}
-	if str(leader.get("mode", "leader")) != "leader" or not bool(leader.get("alive", true)):
-		return {}
+	if leader.is_empty() or str(leader.get("mode", "leader")) != "leader" or not bool(leader.get("alive", true)):
+		return _profile(state)
 	var capital := float(state.get("policies", {}).get("political_capital", 0.0))
 	var corruption := float(state.get("politics", {}).get("corruption", 0.3))
 	var tension := float(state.get("ethnicity", {}).get("tension", 0.3))
@@ -47,7 +45,23 @@ func diagnose(state: Dictionary) -> Dictionary:
 		return _advice("🕊️ سخنرانی در سازمان ملل",
 			"سرمایهٔ سیاسی موجود است و رسانه آزاد؛ وقت نفوذ نرم جهانی رسیده است.",
 			0.2, "policies.political_capital", capital, 2.5)
-	return {}
+	return _profile(state)
+
+# پروندهٔ پایهٔ تشخیصی — همیشه غیرخالی تا شورای هوشمند همهٔ ۶۸ عامل را کامل ببیند
+func _profile(state: Dictionary) -> Dictionary:
+	var leader: Dictionary = state.get("leader", {})
+	var popularity := float(leader.get("popularity_world", 50.0))
+	return {
+		"system": "leader",
+		"title": "محبوبیت جهانی رهبر",
+		"metric_path": "leader.popularity_world",
+		"value": popularity,
+		"target": 55.0,
+		"health": clampf(popularity / 55.0, 0.0, 1.0),
+		"urgency": clampf((55.0 - popularity) / 55.0, 0.0, 1.0),
+		"budget_key": "ذخیره",
+		"reason": "محبوبیت جهانی رهبر زیر نقطهٔ تعادل است؛ دیپلماسی و اقدامات آشکار آن را بالا می‌برد."
+	}
 
 func _advice(title: String, reason: String, urgency: float, metric_path: String, value: float, target: float) -> Dictionary:
 	return {

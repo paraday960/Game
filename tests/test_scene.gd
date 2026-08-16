@@ -317,8 +317,8 @@ func _ready():
 
 	# هماهنگ‌کننده باید همه هوش‌ها را تحلیل و یک پیشنهاد معتبر تولید کند.
 	var diagnoses = AIAdvisor.analyze(s, t)
-	if AIAdvisor.agents.size() != 67 or diagnoses.size() != 67:
-		failed.append("شورای هوشمند همه ۶۶ سامانه را تحلیل نکرد")
+	if AIAdvisor.agents.size() != 68 or diagnoses.size() != 68:
+		failed.append("شورای هوشمند همه ۶۸ سامانه را تحلیل نکرد (شامل هوش رهبر — عمق‌بخشی ۴۸)")
 	else:
 		var advisor_cmds = AIAdvisor.build_autonomous_commands(s, t, 1)
 		if advisor_cmds.is_empty():
@@ -328,7 +328,7 @@ func _ready():
 			if not advisor_result.success:
 				failed.append("پیشنهاد شورای هوشمند نامعتبر بود: " + advisor_result.reason)
 			else:
-				print("AI advisor: 67 diagnoses + valid action OK")
+				print("AI advisor: 68 diagnoses + valid action OK")
 
 	# سیاست عمومی: فعال‌سازی اتمی، اثر روزانه و تعارض راهبردی
 	var policy_state = s.duplicate(true)
@@ -638,7 +638,7 @@ func _ready():
 		if broken_profiles.size() > 0:
 			failed.append("مسیر شاخص این هوش‌ها در وضعیت گم است: " + ", ".join(broken_profiles))
 		else:
-			print("AI diagnostic profiles: همه ۶۵ مسیر شاخص عددی قابل خواندن است: OK")
+			print("AI diagnostic profiles: همه ۶۸ مسیر شاخص عددی قابل خواندن است: OK")
 		var profiles_dir = DirAccess.open("res://scripts/ai")
 		var unmapped: Array = []
 		if profiles_dir != null:

@@ -38,6 +38,7 @@ const PROFILES = {
 	"interdependency": ["indicators.stability", 0.65, "low", "ذخیره", "تاب‌آوری جریان‌های کشور", 1.0],
 	"international_orgs": ["international_orgs.compliance", 0.70, "low", "اداره", "تعامل با سازمان‌های جهانی", 1.0],
 	"judicial": ["judicial.efficiency", 0.70, "low", "اداره", "کارآمدی قضایی", 1.0],
+	"leader": ["leader.popularity_world", 55.0, "low", "ذخیره", "محبوبیت جهانی رهبر", 100.0],
 	"migration": ["migration_detail.integration", 0.65, "low", "رفاه", "ادغام مهاجران", 1.0],
 	"military": ["military.readiness", 0.75, "low", "ارتش", "آمادگی دفاعی", 1.0],
 	"officials_managers": ["officials.competence", 0.70, "low", "اداره", "شایستگی مدیران", 1.0],

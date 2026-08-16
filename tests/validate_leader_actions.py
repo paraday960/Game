@@ -108,6 +108,14 @@ if not os.path.exists(lai_path):
 else:
     lai = read(lai_path)
     check("هوش رهبر", "func diagnose" in lai and '"system": "leader"' in lai, "تشخیص رهبری نیست")
+    check("پرونده پایه همیشه غیرخالی", "func _profile" in lai and "leader.popularity_world" in lai,
+          "تشخیص رهبر در حالت عادی خالی است (شورای هوشمند ناقص می‌شود)")
+bai = read(os.path.join(ROOT, "scripts", "ai", "base_ai.gd"))
+check("پرونده تشخیصی PROFILES رهبر", '"leader": ["leader.popularity_world"' in bai,
+      "رهبر در BaseAI.PROFILES نیست (نگهبان هوش test_scene می‌شکند)")
+ts = read(os.path.join(ROOT, "tests", "test_scene.gd"))
+check("شورای هوشمند ۶۸ عامل", "agents.size() != 68" in ts and "diagnoses.size() != 68" in ts,
+      "شمارش شورای هوشمند با هوش رهبر هماهنگ نیست")
 
 # 8) UI
 ui = read(os.path.join(ROOT, "scripts", "ui", "main_ui.gd"))
