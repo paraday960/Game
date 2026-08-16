@@ -112,7 +112,7 @@ func _init():
 		fails.append("تبعید ناموفق: %s" % rx_res.reason)
 	else:
 		rx_state = rx_res.state
-		var rx_size := rx_state["rivals"].get("figures", []).size()
+		var rx_size: int = rx_state["rivals"].get("figures", []).size()
 		if rx_size != 2:
 			fails.append("تبعید رقیب را حذف نکرد (اندازه %d)" % rx_size)
 		else:
@@ -155,7 +155,7 @@ func _init():
 		fails.append("نوبت رقبا ناموفق: %s" % rt_res.reason)
 	else:
 		rt_state = rt_res.state
-		var rt_size := rt_state["rivals"].get("figures", []).size()
+		var rt_size: int = rt_state["rivals"].get("figures", []).size()
 		var rt_threat := float(rt_state["rivals"].get("threat", -1.0))
 		if rt_size > 3:
 			fails.append("آرایهٔ رقبا بی‌سقف رشد کرد: %d" % rt_size)
